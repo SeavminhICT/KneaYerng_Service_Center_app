@@ -3,13 +3,39 @@
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', function () {
-    return view('welcome');
-});
+Route::redirect('/', '/login');
+
 
 Route::get('/dashboard', function () {
     return view('dashboard');
 })->middleware(['auth', 'verified'])->name('dashboard');
+
+Route::prefix('admin')->name('admin.')->middleware(['admin'])->group(function () {
+    Route::view('/dashboard', 'admin.dashboard')->name('dashboard');
+
+    Route::view('/categories', 'admin.categories.index')->name('categories.index');
+    Route::view('/categories/create', 'admin.categories.create')->name('categories.create');
+    Route::get('/categories/{category}/edit', function (\App\Models\Category $category) {
+        return view('admin.categories.edit', ['categoryId' => $category->id]);
+    })->name('categories.edit');
+
+    Route::view('/products', 'admin.products.index')->name('products.index');
+    Route::view('/products/create', 'admin.products.create')->name('products.create');
+    Route::get('/products/{product}/edit', function (\App\Models\Product $product) {
+        return view('admin.products.edit', ['productId' => $product->id]);
+    })->name('products.edit');
+
+    Route::view('/orders', 'admin.orders.index')->name('orders.index');
+    Route::get('/orders/{order}', function (\App\Models\Order $order) {
+        return view('admin.orders.show', ['orderId' => $order->id]);
+    })->name('orders.show');
+
+    Route::view('/customers', 'admin.customers.index')->name('customers.index');
+    Route::view('/payments', 'admin.payments.index')->name('payments.index');
+    Route::view('/reports', 'admin.reports.index')->name('reports.index');
+    Route::view('/settings', 'admin.settings.index')->name('settings.index');
+    Route::view('/users', 'admin.users.index')->name('users.index');
+});
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');

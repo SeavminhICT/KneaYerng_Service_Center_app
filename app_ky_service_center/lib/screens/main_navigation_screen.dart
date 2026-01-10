@@ -1,7 +1,7 @@
 import 'package:app_ky_service_center/screens/home/home_screen.dart';
 import 'package:flutter/material.dart';
 import 'repair/repair_screen.dart';
-import 'card/card_screen.dart';
+import 'cart/cart_screen.dart';
 import 'profile/profile_screen.dart';
 
 class MainNavigationScreen extends StatefulWidget {
@@ -17,7 +17,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   final List<Widget> _screens = const [
     HomeScreen(),
     RepairScreen(),
-    CardScreen(),
+    CartScreen(),
     ProfileScreen(),
   ];
 
@@ -45,15 +45,15 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
             label: "Repair",
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.credit_card),
-            label: "Card",
+            icon: Icon(Icons.shopping_cart),
+            label: "Cart",
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.person),
             label: "Profile",
           ),
         ],
-      ),
+      )
     );
   }
 }

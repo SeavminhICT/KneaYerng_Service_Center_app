@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
-import '../home/home_screen.dart';
+import 'package:lottie/lottie.dart';
 import 'login_screen.dart';
-import 'register_screen.dart';
-
+import '../main_navigation_screen.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -18,29 +17,30 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final List<Map<String, String>> pages = [
     {
       "title": "Explore a wide range of products",
-      "subtitle":
-      "Explore a wide range of products at your fingertips.",
-      "image": "🛒",
+      "subtitle": "Explore a wide range of products at your fingertips.",
     },
     {
       "title": "Unlock exclusive offers and discounts",
-      "subtitle":
-      "Get access to limited-time deals and promotions.",
-      "image": "🎟️",
+      "subtitle": "Get access to limited-time deals and promotions.",
     },
     {
       "title": "Safe and secure payments",
-      "subtitle":
-      "Trusted payment gateways for secure transactions.",
-      "image": "💳",
+      "subtitle": "Trusted payment gateways for secure transactions.",
     },
   ];
 
-  void _goToLogin() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => const LoginScreen()),
-    );
+  final List<String> lottieFiles = [
+    'assets/lottie/shopping.json',
+    'assets/lottie/discount.json',
+    'assets/lottie/payment.json',
+  ];
+
+  int get _lastPage => pages.length - 1;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
   }
 
   @override
@@ -50,13 +50,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            // Skip
+            // TOP BAR
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  // Back button
                   _currentPage > 0
                       ? IconButton(
                     icon: const Icon(Icons.arrow_back),
@@ -67,24 +66,24 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       );
                     },
                   )
-                      : const SizedBox(width: 48), // keeps layout balanced
+                      : const SizedBox(width: 48),
 
-                  // Skip button
-                  TextButton(
-                    onPressed: () {
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const HomeScreen(),
-                        ),
-                      );
-                    },
-                    child: const Text("Skip for now"),
-                  ),
+                  if (_currentPage != _lastPage)
+                    TextButton(
+                      onPressed: () {
+                        _controller.animateToPage(
+                          _lastPage,
+                          duration: const Duration(milliseconds: 300),
+                          curve: Curves.easeInOut,
+                        );
+                      },
+                      child: const Text("Skip"),
+                    ),
                 ],
               ),
             ),
 
+            // PAGES
             Expanded(
               child: PageView.builder(
                 controller: _controller,
@@ -104,9 +103,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Center(
-                          child: Text(
-                            pages[index]["image"]!,
-                            style: const TextStyle(fontSize: 80),
+                          child: Lottie.asset(
+                            lottieFiles[index],
+                            width: 180,
+                            height: 180,
+                            fit: BoxFit.contain,
                           ),
                         ),
                       ),
@@ -138,7 +139,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               ),
             ),
 
-            // Dots
+            // DOTS
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: List.generate(
@@ -159,91 +160,53 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
             const SizedBox(height: 20),
 
-            // Buttons
-            // Buttons
+            // BUTTONS
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: _currentPage == pages.length - 1
-              // ✅ LAST PAGE → TWO BUTTONS
-                  ? // LAST PAGE → Login + Get Started
-              Row(
+              child: _currentPage == _lastPage
+                  ? Row(
                 children: [
-                  // Login
                   Expanded(
-                    child: SizedBox(
-                      height: 50,
-                      child: OutlinedButton(
-                        onPressed: _goToLogin,
-                        style: OutlinedButton.styleFrom(
-                          side: const BorderSide(color: Color(0xFF00C2C7)),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14),
+                    child: OutlinedButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const LoginScreen(),
                           ),
-                        ),
-                        child: const Text(
-                          "Login",
-                          style: TextStyle(
-                            color: Color(0xFF00C2C7),
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
+                        );
+                      },
+                      child: const Text("Login"),
                     ),
                   ),
-
                   const SizedBox(width: 12),
-
-                  // Get Started → Register
                   Expanded(
-                    child: SizedBox(
-                      height: 50,
-                      child: ElevatedButton(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const RegisterScreen(),
-                            ),
-                          );
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF00C2C7),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14),
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) =>
+                            const MainNavigationScreen(),
                           ),
-                        ),
-                        child: const Text(
-                          "Get Started",
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                      ),
+                        );
+                      },
+                      child: const Text("Get Started"),
                     ),
                   ),
                 ],
               )
-              // 👉 PAGE 1–2 → NEXT BUTTON ONLY
                   : SizedBox(
                 width: double.infinity,
-                height: 50,
                 child: ElevatedButton(
                   onPressed: () {
                     _controller.nextPage(
-                      duration: const Duration(milliseconds: 300),
+                      duration:
+                      const Duration(milliseconds: 300),
                       curve: Curves.easeInOut,
                     );
                   },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF00C2C7),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                  ),
-                  child: const Text(
-                    "Next",
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+                  child: const Text("Next"),
                 ),
               ),
             ),

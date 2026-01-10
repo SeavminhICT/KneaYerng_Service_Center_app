@@ -26,13 +26,8 @@ class HomeScreen extends StatelessWidget {
                   IconButton(
                     icon: const Icon(Icons.notifications_none),
                     onPressed: () {
-                      Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(
-                          builder: (_) => const HomeScreen(),
-                      );
+                      // TODO: open notification screen later
                     },
-
                   ),
                 ],
               ),

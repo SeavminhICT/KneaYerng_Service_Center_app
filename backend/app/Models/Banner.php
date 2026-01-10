@@ -9,4 +9,8 @@ class Banner extends Model
 {
     /** @use HasFactory<\Database\Factories\BannerFactory> */
     use HasFactory;
+
+    protected $fillable = [
+        'image',
+    ];
 }

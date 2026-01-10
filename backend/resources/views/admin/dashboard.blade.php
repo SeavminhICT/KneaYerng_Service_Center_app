@@ -93,7 +93,7 @@
                             <th class="px-4 py-3">Customer</th>
                             <th class="px-4 py-3">Date</th>
                             <th class="px-4 py-3">Total</th>
-                            <th class="px-4 py-3">Status</th>
+                            <th class="px-4 py-3">Payment Status</th>
                             <th class="px-4 py-3 text-right">Action</th>
                         </tr>
                     </thead>
@@ -158,19 +158,24 @@
                 const ordersResponse = await window.adminApi.request('/api/orders?per_page=5');
                 if (ordersResponse.ok) {
                     const ordersData = await ordersResponse.json();
+                    const normalizePaymentStatus = function (status) {
+                        return status || 'pending';
+                    };
+                    const paymentOptions = ['pending', 'processing', 'success', 'failed'];
                     const rows = ordersData.data.map(function (order) {
-                        const statusClasses = {
-                            pending: 'bg-warning-50 text-warning-700 dark:bg-warning-500/10 dark:text-warning-100',
-                            processing: 'bg-primary-50 text-primary-700 dark:bg-primary-500/10 dark:text-primary-100',
-                            completed: 'bg-success-50 text-success-700 dark:bg-success-500/10 dark:text-success-100',
-                            cancelled: 'bg-danger-50 text-danger-700 dark:bg-danger-500/10 dark:text-danger-100',
-                        };
-                        const statusClass = statusClasses[order.status] || 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300';
-                        const paymentClass = order.payment_status === 'paid'
+                        const normalizedPaymentStatus = normalizePaymentStatus(order.payment_status);
+                        const paymentClass = normalizedPaymentStatus === 'success'
                             ? 'bg-success-50 text-success-700 dark:bg-success-500/10 dark:text-success-100'
-                            : order.payment_status === 'refunded'
+                            : normalizedPaymentStatus === 'failed'
                                 ? 'bg-danger-50 text-danger-700 dark:bg-danger-500/10 dark:text-danger-100'
-                                : 'bg-warning-50 text-warning-700 dark:bg-warning-500/10 dark:text-warning-100';
+                                : normalizedPaymentStatus === 'processing'
+                                    ? 'bg-primary-50 text-primary-700 dark:bg-primary-500/10 dark:text-primary-100'
+                                    : 'bg-warning-50 text-warning-700 dark:bg-warning-500/10 dark:text-warning-100';
+
+                        const paymentSelectOptions = paymentOptions.map(function (status) {
+                            const selected = status === normalizedPaymentStatus ? 'selected' : '';
+                            return `<option value="${status}" ${selected}>${status}</option>`;
+                        }).join('');
 
                         return `
                             <tr>
@@ -179,15 +184,61 @@
                                 <td class="px-4 py-3">${order.placed_at ? new Date(order.placed_at).toLocaleDateString() : '-'}</td>
                                 <td class="px-4 py-3">${new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(order.total_amount || 0)}</td>
                                 <td class="px-4 py-3">
-                                    <span class="rounded-full px-2 py-1 text-xs font-semibold ${paymentClass}">${order.payment_status}</span>
+                                    <span class="payment-badge rounded-full px-2 py-1 text-xs font-semibold ${paymentClass}" data-order-id="${order.id}">${normalizedPaymentStatus}</span>
                                 </td>
                                 <td class="px-4 py-3 text-right">
-                                    <a href="/admin/orders/${order.id}" class="text-xs font-semibold text-primary-600">View</a>
+                                    <div class="flex items-center justify-end gap-2">
+                                        <select class="payment-status-select h-9 rounded-lg border border-slate-200 bg-white px-2 text-xs text-slate-700 shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200" data-order-id="${order.id}" data-current="${normalizedPaymentStatus}">
+                                            ${paymentSelectOptions}
+                                        </select>
+                                        <a href="/admin/orders/${order.id}" class="text-xs font-semibold text-primary-600">View</a>
+                                    </div>
                                 </td>
                             </tr>
                         `;
                     }).join('');
                     document.getElementById('recent-orders-body').innerHTML = rows || '<tr><td class="px-4 py-6 text-center text-sm text-slate-500" colspan="6">No recent orders.</td></tr>';
+
+                    document.querySelectorAll('.payment-status-select').forEach(function (select) {
+                        select.addEventListener('change', async function (event) {
+                            const target = event.target;
+                            const orderId = target.dataset.orderId;
+                            const newStatus = target.value;
+                            const previousStatus = target.dataset.current;
+
+                            try {
+                                await window.adminApi.ensureCsrfCookie();
+                                const updateResponse = await window.adminApi.request('/api/orders/' + orderId, {
+                                    method: 'PATCH',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ payment_status: newStatus })
+                                });
+
+                                if (!updateResponse.ok) {
+                                    target.value = previousStatus;
+                                    return;
+                                }
+
+                                target.dataset.current = newStatus;
+                                const badge = document.querySelector('.payment-badge[data-order-id="' + orderId + '"]');
+                                if (badge) {
+                                    badge.textContent = newStatus;
+                                    badge.className = 'payment-badge rounded-full px-2 py-1 text-xs font-semibold ' + (
+                                        newStatus === 'success'
+                                            ? 'bg-success-50 text-success-700 dark:bg-success-500/10 dark:text-success-100'
+                                            : newStatus === 'failed'
+                                                ? 'bg-danger-50 text-danger-700 dark:bg-danger-500/10 dark:text-danger-100'
+                                                : newStatus === 'processing'
+                                                    ? 'bg-primary-50 text-primary-700 dark:bg-primary-500/10 dark:text-primary-100'
+                                                    : 'bg-warning-50 text-warning-700 dark:bg-warning-500/10 dark:text-warning-100'
+                                    );
+                                }
+                            } catch (error) {
+                                target.value = previousStatus;
+                                console.error(error);
+                            }
+                        });
+                    });
                 }
             } catch (error) {
                 console.error(error);

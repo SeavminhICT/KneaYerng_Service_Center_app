@@ -19,11 +19,19 @@ Route::prefix('admin')->name('admin.')->middleware(['admin'])->group(function ()
         return view('admin.categories.edit', ['categoryId' => $category->id]);
     })->name('categories.edit');
 
+    Route::view('/banners', 'admin.banners.index')->name('banners.index');
+
     Route::view('/products', 'admin.products.index')->name('products.index');
     Route::view('/products/create', 'admin.products.create')->name('products.create');
     Route::get('/products/{product}/edit', function (\App\Models\Product $product) {
         return view('admin.products.edit', ['productId' => $product->id]);
     })->name('products.edit');
+
+    Route::view('/accessories', 'admin.accessories.index')->name('accessories.index');
+    Route::view('/accessories/create', 'admin.accessories.create')->name('accessories.create');
+    Route::get('/accessories/{accessory}/edit', function (\App\Models\Accessory $accessory) {
+        return view('admin.accessories.edit', ['accessoryId' => $accessory->id]);
+    })->name('accessories.edit');
 
     Route::view('/orders', 'admin.orders.index')->name('orders.index');
     Route::get('/orders/{order}', function (\App\Models\Order $order) {

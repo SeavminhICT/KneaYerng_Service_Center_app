@@ -17,14 +17,14 @@ class ProductFactory extends Factory
     public function definition(): array
     {
         return [
-            'name' => fake()->words(3, true),
-            'description' => fake()->sentence(12),
-            'sku' => fake()->unique()->bothify('SKU-#####'),
-            'price' => fake()->randomFloat(2, 10, 500),
-            'discount' => fake()->randomFloat(2, 0, 50),
-            'stock' => fake()->numberBetween(0, 200),
+            'name' => $this->faker->words(3, true),
+            'description' => $this->faker->sentence(12),
+            'sku' => $this->faker->unique()->bothify('SKU-#####'),
+            'price' => $this->faker->randomFloat(2, 10, 500),
+            'discount' => $this->faker->randomFloat(2, 0, 50),
+            'stock' => $this->faker->numberBetween(0, 200),
             'status' => 'active',
-            'brand' => fake()->company(),
+            'brand' => $this->faker->company(),
             'storage_capacity' => ['64GB', '128GB'],
             'color' => ['Black', 'Silver'],
             'condition' => ['New'],

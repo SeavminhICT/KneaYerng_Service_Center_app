@@ -38,23 +38,32 @@
 
         <div class="mt-6">
             <p class="px-3 text-xs font-semibold uppercase tracking-widest text-slate-400">Catalog</p>
-            <div class="mt-3 space-y-2" x-data="{ open: {{ request()->routeIs('admin.categories.*') || request()->routeIs('admin.products.*') ? 'true' : 'false' }} }">
-                <button type="button" class="flex w-full items-center justify-between rounded-xl px-3 py-2 text-sm font-medium {{ request()->routeIs('admin.categories.*') || request()->routeIs('admin.products.*') ? $activeClass : $inactiveClass }}" @click="open = !open">
-                    <span class="flex items-center gap-3">
-                        <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
-                        </svg>
-                        Categories & Products
-                    </span>
-                    <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" :class="open ? 'rotate-180' : ''">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 9l6 6 6-6" />
+            <nav class="mt-3 space-y-2">
+                <a href="{{ route('admin.categories.index') }}" class="flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium {{ request()->routeIs('admin.categories.*') ? $activeClass : $inactiveClass }}">
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
                     </svg>
-                </button>
-                <div class="space-y-1 pl-11" x-show="open" x-transition>
-                    <a href="{{ route('admin.categories.index') }}" class="block rounded-lg px-3 py-2 text-sm {{ request()->routeIs('admin.categories.*') ? 'text-primary-600 dark:text-primary-400' : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white' }}">Categories</a>
-                    <a href="{{ route('admin.products.index') }}" class="block rounded-lg px-3 py-2 text-sm {{ request()->routeIs('admin.products.*') ? 'text-primary-600 dark:text-primary-400' : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white' }}">Products</a>
-                </div>
-            </div>
+                    Categories
+                </a>
+                <a href="{{ route('admin.products.index') }}" class="flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium {{ request()->routeIs('admin.products.*') ? $activeClass : $inactiveClass }}">
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 3l8 4-8 4-8-4 8-4zm0 8l8 4-8 4-8-4 8-4z" />
+                    </svg>
+                    Products
+                </a>
+                <a href="{{ route('admin.accessories.index') }}" class="flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium {{ request()->routeIs('admin.accessories.*') ? $activeClass : $inactiveClass }}">
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m6-6H6" />
+                    </svg>
+                    Accessories
+                </a>
+                <a href="{{ route('admin.banners.index') }}" class="flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium {{ request()->routeIs('admin.banners.*') ? $activeClass : $inactiveClass }}">
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 18H8m8 0h4M4 10h16M4 14h16" />
+                    </svg>
+                    Banners
+                </a>
+            </nav>
         </div>
 
         <div class="mt-6">

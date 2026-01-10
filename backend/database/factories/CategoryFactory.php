@@ -17,10 +17,10 @@ class CategoryFactory extends Factory
     public function definition(): array
     {
         return [
-            'name' => fake()->words(2, true),
-            'slug' => fake()->unique()->slug(),
+            'name' => $this->faker->words(2, true),
+            'slug' => $this->faker->unique()->slug(),
             'status' => 'active',
-            'sort_order' => fake()->numberBetween(0, 10),
+            'sort_order' => $this->faker->numberBetween(0, 10),
         ];
     }
 }

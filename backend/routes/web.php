@@ -38,6 +38,20 @@ Route::prefix('admin')->name('admin.')->middleware(['admin'])->group(function ()
         return view('admin.orders.show', ['orderId' => $order->id]);
     })->name('orders.show');
 
+    Route::view('/repairs', 'admin.repairs.index')->name('repairs.index');
+    Route::get('/repairs/{repair}', function (\App\Models\RepairRequest $repair) {
+        return view('admin.repairs.show', ['repairId' => $repair->id]);
+    })->name('repairs.show');
+
+    Route::view('/technicians', 'admin.technicians.index')->name('technicians.index');
+
+    Route::view('/inventory/parts', 'admin.inventory.parts')->name('inventory.parts');
+    Route::view('/inventory/warranties', 'admin.inventory.warranties')->name('inventory.warranties');
+
+    Route::view('/finance/invoices', 'admin.finance.invoices')->name('finance.invoices');
+    Route::view('/finance/payments', 'admin.finance.payments')->name('finance.payments');
+    Route::view('/finance/reports', 'admin.finance.reports')->name('finance.reports');
+
     Route::view('/customers', 'admin.customers.index')->name('customers.index');
     Route::view('/payments', 'admin.payments.index')->name('payments.index');
     Route::view('/reports', 'admin.reports.index')->name('reports.index');

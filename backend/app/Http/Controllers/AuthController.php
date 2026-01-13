@@ -241,7 +241,7 @@ class AuthController extends Controller
             $smsSent = $this->infobip->sendSms($user->phone, $message);
             $emailSent = $this->infobip->sendEmail($user->email, 'Your verification code', $message);
 
-            return $smsSent && $emailSent;
+            return $smsSent || $emailSent;
         } catch (\Throwable $exception) {
             report($exception);
 

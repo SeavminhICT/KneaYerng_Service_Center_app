@@ -91,6 +91,66 @@
         </div>
 
         <div class="mt-6">
+            <p class="px-3 text-xs font-semibold uppercase tracking-widest text-slate-400">Repairs</p>
+            <nav class="mt-3 space-y-2">
+                <a href="{{ route('admin.repairs.index') }}" class="flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium {{ request()->routeIs('admin.repairs.*') ? $activeClass : $inactiveClass }}">
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-3-3v6M4 7h16M6 21h12" />
+                    </svg>
+                    Repair Management
+                </a>
+                <a href="{{ route('admin.technicians.index') }}" class="flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium {{ request()->routeIs('admin.technicians.*') ? $activeClass : $inactiveClass }}">
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4M5 6h14M5 18h14" />
+                    </svg>
+                    Technicians
+                </a>
+            </nav>
+        </div>
+
+        <div class="mt-6">
+            <p class="px-3 text-xs font-semibold uppercase tracking-widest text-slate-400">Inventory</p>
+            <nav class="mt-3 space-y-2">
+                <a href="{{ route('admin.inventory.parts') }}" class="flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium {{ request()->routeIs('admin.inventory.parts') ? $activeClass : $inactiveClass }}">
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M4 4h16v6H4zM4 14h16v6H4z" />
+                    </svg>
+                    Parts Stock
+                </a>
+                <a href="{{ route('admin.inventory.warranties') }}" class="flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium {{ request()->routeIs('admin.inventory.warranties') ? $activeClass : $inactiveClass }}">
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4M4 7h16M7 21h10" />
+                    </svg>
+                    Warranty Records
+                </a>
+            </nav>
+        </div>
+
+        <div class="mt-6">
+            <p class="px-3 text-xs font-semibold uppercase tracking-widest text-slate-400">Finance</p>
+            <nav class="mt-3 space-y-2">
+                <a href="{{ route('admin.finance.invoices') }}" class="flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium {{ request()->routeIs('admin.finance.invoices') ? $activeClass : $inactiveClass }}">
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M7 4h10v16l-5-3-5 3V4z" />
+                    </svg>
+                    Invoices
+                </a>
+                <a href="{{ route('admin.finance.payments') }}" class="flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium {{ request()->routeIs('admin.finance.payments') ? $activeClass : $inactiveClass }}">
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 7h18v10H3zM7 15h3" />
+                    </svg>
+                    Payments
+                </a>
+                <a href="{{ route('admin.finance.reports') }}" class="flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium {{ request()->routeIs('admin.finance.reports') ? $activeClass : $inactiveClass }}">
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M4 21h16M8 17v-6m4 6V7m4 10v-4" />
+                    </svg>
+                    Revenue Reports
+                </a>
+            </nav>
+        </div>
+
+        <div class="mt-6">
             <p class="px-3 text-xs font-semibold uppercase tracking-widest text-slate-400">Access</p>
             <nav class="mt-3 space-y-2">
                 <a href="{{ route('admin.users.index') }}" class="flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium {{ request()->routeIs('admin.users.*') ? $activeClass : $inactiveClass }}">

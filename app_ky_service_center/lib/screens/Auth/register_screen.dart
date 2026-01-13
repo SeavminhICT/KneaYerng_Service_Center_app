@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../services/api_service.dart';
 import 'login_screen.dart';
-import '../main_navigation_screen.dart';
-import 'otp_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -13,7 +12,8 @@ class RegisterScreen extends StatefulWidget {
 class _RegisterScreenState extends State<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
 
-  final _nameCtrl = TextEditingController();
+  final _firstNameCtrl = TextEditingController();
+  final _lastNameCtrl = TextEditingController();
   final _emailCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
   final _confirmCtrl = TextEditingController();
@@ -25,7 +25,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   @override
   void dispose() {
-    _nameCtrl.dispose();
+    _firstNameCtrl.dispose();
+    _lastNameCtrl.dispose();
     _emailCtrl.dispose();
     _passwordCtrl.dispose();
     _confirmCtrl.dispose();
@@ -66,14 +67,26 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
                 const SizedBox(height: 28),
 
-                _label("Full Name"),
+                _label("First Name"),
                 _input(
-                  controller: _nameCtrl,
-                  hint: "Full Name",
+                  controller: _firstNameCtrl,
+                  hint: "First Name",
                   icon: Icons.person_outline,
                   validator: (v) =>
-                  v!.isEmpty ? "Full name is required" : null,
+                  v!.isEmpty ? "First name is required" : null,
                 ),
+
+                const SizedBox(height: 20),
+
+                _label("Last Name"),
+                _input(
+                  controller: _lastNameCtrl,
+                  hint: "Last Name",
+                  icon: Icons.person_outline,
+                  validator: (v) =>
+                  v!.isEmpty ? "Last name is required" : null,
+                ),
+
 
                 const SizedBox(height: 20),
 
@@ -177,29 +190,44 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         borderRadius: BorderRadius.circular(30),
                       ),
                     ),
-                    onPressed: !_agree || _loading
-                        ? null
-                        : () async {
-                      if (_formKey.currentState!.validate()) {
-                        setState(() => _loading = true);
-                        await Future.delayed(
-                            const Duration(seconds: 2));
-                        if (!mounted) return;
-                        setState(() => _loading = false);
-                        Navigator.push(
+                    onPressed: () async {
+                      if (!_formKey.currentState!.validate()) return;
+
+                      setState(() => _loading = true);
+
+                      final error = await ApiService.register(
+                        firstName: _firstNameCtrl.text.trim(),
+                        lastName: _lastNameCtrl.text.trim(),
+                        email: _emailCtrl.text.trim(),
+                        password: _passwordCtrl.text,
+                        confirmPassword: _confirmCtrl.text,
+                      );
+
+                      if (!mounted) return;
+                      setState(() => _loading = false);
+
+                      if (error == null) {
+                        // ✅ SUCCESS
+                        Navigator.pushReplacement(
                           context,
-                          MaterialPageRoute(
-                            builder: (_) => const OtpScreen(email: "example@email.com"),
-                          ),
+                          MaterialPageRoute(builder: (_) => const LoginScreen()),
+                        );
+                      } else {
+                        // ❌ SHOW REAL BACKEND ERROR
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text(error)),
                         );
                       }
                     },
                     child: _loading
-                        ? const CircularProgressIndicator(color: Colors.white)
-                        : const Text(
-                      "Create Account",
-                      style: TextStyle(fontSize: 16),
-                    ),
+                  ? const CircularProgressIndicator(
+                  color: Colors.white,
+                    strokeWidth: 2,
+                  )
+                      : const Text(
+                  "Create Account",
+                  style: TextStyle(fontSize: 16),
+                ),
                   ),
                 ),
 

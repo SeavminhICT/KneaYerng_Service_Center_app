@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../services/api_service.dart';
 import '../main_navigation_screen.dart';
 import 'register_screen.dart';
 
@@ -12,6 +13,19 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   bool rememberMe = false;
   bool obscurePassword = true;
+  final _formKey = GlobalKey<FormState>();
+  final _emailCtrl = TextEditingController();
+  final _passwordCtrl = TextEditingController();
+
+  bool _loading = false;
+
+  @override
+  void dispose() {
+    _emailCtrl.dispose();
+    _passwordCtrl.dispose();
+    super.dispose();
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -20,6 +34,7 @@ class _LoginScreenState extends State<LoginScreen> {
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 24),
+          key: _formKey,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -61,7 +76,14 @@ class _LoginScreenState extends State<LoginScreen> {
               // Email
               const Text("Email", style: TextStyle(fontWeight: FontWeight.w500)),
               const SizedBox(height: 8),
-              TextField(
+              TextFormField(
+                controller: _emailCtrl,
+                validator: (v) {
+                  if (v == null || v.isEmpty) {
+                    return 'Email required';
+                  }
+                  return null;
+                },
                 decoration: InputDecoration(
                   hintText: "johndoe@example.com",
                   border: OutlineInputBorder(
@@ -80,8 +102,18 @@ class _LoginScreenState extends State<LoginScreen> {
               const Text("Password",
                   style: TextStyle(fontWeight: FontWeight.w500)),
               const SizedBox(height: 8),
-              TextField(
+              TextFormField(
+                controller: _passwordCtrl,
                 obscureText: obscurePassword,
+                validator: (v) {
+                  if (v == null || v.isEmpty) {
+                    return 'Password required';
+                  }
+                  if (v.length < 6) {
+                    return 'Password must be at least 6 characters';
+                  }
+                  return null;
+                },
                 decoration: InputDecoration(
                   hintText: "Password",
                   suffixIcon: IconButton(
@@ -137,18 +169,41 @@ class _LoginScreenState extends State<LoginScreen> {
                       borderRadius: BorderRadius.circular(30),
                     ),
                   ),
-                  onPressed: () {
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const MainNavigationScreen(),
-                      ),
+                  onPressed: () async {
+                    if (!_formKey.currentState!.validate()) return;
+
+                    setState(() => _loading = true);
+
+                    final error = await ApiService.login(
+                      email: _emailCtrl.text.trim(),
+                      password: _passwordCtrl.text,
                     );
+
+                    if (!mounted) return;
+                    setState(() => _loading = false);
+
+                    if (error == null) {
+                      // ✅ Login success
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const MainNavigationScreen(),
+                        ),
+                      );
+                    } else {
+                      // ❌ Show backend error
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(error)),
+                      );
+                    }
                   },
-                  child: const Text(
-                    "Login",
-                    style: TextStyle(fontSize: 16),
-                  ),
+
+                  child: _loading
+                      ? const CircularProgressIndicator(
+                    color: Colors.white,
+                    strokeWidth: 2,
+                  )
+                      : const Text("Login"),
                 ),
               ),
 

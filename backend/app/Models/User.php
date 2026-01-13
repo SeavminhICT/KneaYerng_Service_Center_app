@@ -85,6 +85,16 @@ class User extends Authenticatable
         );
     }
 
+    public function repairRequests()
+    {
+        return $this->hasMany(RepairRequest::class, 'customer_id');
+    }
+
+    public function repairNotifications()
+    {
+        return $this->hasMany(RepairNotification::class);
+    }
+
     public function isAdmin(): bool
     {
         $adminEmails = (array) config('auth.admin_emails', []);

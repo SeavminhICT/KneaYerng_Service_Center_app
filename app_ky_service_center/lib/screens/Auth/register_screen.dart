@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../services/api_service.dart';
 import 'login_screen.dart';
+import '../main_navigation_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -73,7 +74,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   hint: "First Name",
                   icon: Icons.person_outline,
                   validator: (v) =>
-                  v!.isEmpty ? "First name is required" : null,
+                      v!.isEmpty ? "First name is required" : null,
                 ),
 
                 const SizedBox(height: 20),
@@ -83,10 +84,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   controller: _lastNameCtrl,
                   hint: "Last Name",
                   icon: Icons.person_outline,
-                  validator: (v) =>
-                  v!.isEmpty ? "Last name is required" : null,
+                  validator: (v) => v!.isEmpty ? "Last name is required" : null,
                 ),
-
 
                 const SizedBox(height: 20),
 
@@ -98,8 +97,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   keyboard: TextInputType.emailAddress,
                   validator: (v) {
                     if (v!.isEmpty) return "Email is required";
-                    if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
-                        .hasMatch(v)) {
+                    if (!RegExp(
+                      r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+                    ).hasMatch(v)) {
                       return "Invalid email format";
                     }
                     return null;
@@ -208,26 +208,30 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
                       if (error == null) {
                         // ✅ SUCCESS
+                        await _showRegisterSuccess(context);
+                        if (!mounted) return;
                         Navigator.pushReplacement(
                           context,
-                          MaterialPageRoute(builder: (_) => const LoginScreen()),
+                          MaterialPageRoute(
+                            builder: (_) => const MainNavigationScreen(),
+                          ),
                         );
                       } else {
                         // ❌ SHOW REAL BACKEND ERROR
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text(error)),
-                        );
+                        ScaffoldMessenger.of(
+                          context,
+                        ).showSnackBar(SnackBar(content: Text(error)));
                       }
                     },
                     child: _loading
-                  ? const CircularProgressIndicator(
-                  color: Colors.white,
-                    strokeWidth: 2,
-                  )
-                      : const Text(
-                  "Create Account",
-                  style: TextStyle(fontSize: 16),
-                ),
+                        ? const CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          )
+                        : const Text(
+                            "Create Account",
+                            style: TextStyle(fontSize: 16),
+                          ),
                   ),
                 ),
 
@@ -293,10 +297,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   // ---------- helpers ----------
   Widget _label(String text) {
-    return Text(
-      text,
-      style: const TextStyle(fontWeight: FontWeight.bold),
-    );
+    return Text(text, style: const TextStyle(fontWeight: FontWeight.bold));
   }
 
   Widget _input({
@@ -333,8 +334,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         hintText: hint,
         prefixIcon: const Icon(Icons.lock_outline),
         suffixIcon: IconButton(
-          icon:
-          Icon(obscure ? Icons.visibility_off : Icons.visibility),
+          icon: Icon(obscure ? Icons.visibility_off : Icons.visibility),
           onPressed: toggle,
         ),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
@@ -347,6 +347,46 @@ class _RegisterScreenState extends State<RegisterScreen> {
       radius: 26,
       backgroundColor: color,
       child: Icon(icon, color: Colors.white),
+    );
+  }
+
+  Future<void> _showRegisterSuccess(BuildContext context) async {
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        Future.delayed(const Duration(seconds: 1), () {
+          if (Navigator.of(dialogContext).canPop()) {
+            Navigator.of(dialogContext).pop();
+          }
+        });
+        return AlertDialog(
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TweenAnimationBuilder<double>(
+                tween: Tween(begin: 0.6, end: 1.0),
+                duration: const Duration(milliseconds: 350),
+                curve: Curves.easeOutBack,
+                builder: (context, scale, child) {
+                  return Transform.scale(scale: scale, child: child);
+                },
+                child: const Icon(
+                  Icons.check_circle,
+                  color: Colors.green,
+                  size: 72,
+                ),
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                "Register Successfully",
+                textAlign: TextAlign.center,
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

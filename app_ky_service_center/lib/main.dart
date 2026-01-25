@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'screens/Auth/onboarding_screen.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
+import 'screens/main_navigation_screen.dart';
+import 'services/api_service.dart';
 
 
 void main() {
@@ -13,9 +13,45 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
+    return MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: OnboardingScreen(),
+      home: const _StartupGate(),
+    );
+  }
+}
+
+class _StartupGate extends StatefulWidget {
+  const _StartupGate();
+
+  @override
+  State<_StartupGate> createState() => _StartupGateState();
+}
+
+class _StartupGateState extends State<_StartupGate> {
+  late Future<String?> _tokenFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _tokenFuture = ApiService.getToken();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<String?>(
+      future: _tokenFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+        final token = snapshot.data;
+        if (token != null && token.isNotEmpty) {
+          return const MainNavigationScreen();
+        }
+        return const OnboardingScreen();
+      },
     );
   }
 }

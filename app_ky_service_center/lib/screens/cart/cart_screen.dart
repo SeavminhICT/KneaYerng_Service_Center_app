@@ -1,44 +1,728 @@
 import 'package:flutter/material.dart';
+import '../../models/product.dart';
+import '../../models/cart_item.dart';
+import '../../services/cart_service.dart';
 
 class CartScreen extends StatelessWidget {
   const CartScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFFFF4CC),
-      body: SafeArea(
-        child: Column(
-          children: [
-            const Padding(
-              padding: EdgeInsets.all(16),
-              child: Text(
-                "My Cart",
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
+    return AnimatedBuilder(
+      animation: CartService.instance,
+      builder: (context, _) {
+        final items = CartService.instance.items;
+        final subtotal = CartService.instance.subtotal;
+        final totalItems = CartService.instance.totalItems;
+        final shipping = items.isEmpty ? 0.0 : 9.99;
+        final tax = subtotal * 0.08;
+        final total = subtotal + shipping + tax;
+        return Scaffold(
+          backgroundColor: const Color(0xFFF6F7FB),
+          body: SafeArea(
+            child: Column(
+              children: [
+                _CartAppBar(
+                  totalItems: totalItems,
+                  onBack: () => Navigator.of(context).maybePop(),
                 ),
-              ),
+                Expanded(
+                  child: items.isEmpty
+                      ? const _EmptyCart()
+                      : ListView(
+                          padding: const EdgeInsets.fromLTRB(16, 6, 16, 20),
+                          children: [
+                            Row(
+                              children: [
+                                Text(
+                                  '$totalItems items in cart',
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: Color(0xFF6B7280),
+                                  ),
+                                ),
+                                const Spacer(),
+                                TextButton(
+                                  onPressed: () {},
+                                  child: const Text('Edit'),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 10),
+                            ...items.map(
+                              (item) => Padding(
+                                padding: const EdgeInsets.only(bottom: 12),
+                                child: _CartItemCard(
+                                  item: item,
+                                  onRemove: () =>
+                                      CartService.instance.remove(item),
+                                  onQuantityChanged: (value) =>
+                                      CartService.instance.updateQuantity(
+                                    item,
+                                    value,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            const _PromoCodeCard(),
+                            const SizedBox(height: 14),
+                            _OrderSummary(
+                              subtotal: subtotal,
+                              shipping: shipping,
+                              tax: tax,
+                              total: total,
+                            ),
+                            const SizedBox(height: 16),
+                            const _SectionHeader(
+                              title: 'You might also like',
+                              action: 'See All',
+                            ),
+                            const SizedBox(height: 10),
+                            const _RecommendationsRow(),
+                            const SizedBox(height: 80),
+                          ],
+                        ),
+                ),
+                if (items.isNotEmpty)
+                  _CheckoutBar(
+                    total: total,
+                    onCheckout: () {},
+                  ),
+              ],
             ),
+          ),
+        );
+      },
+    );
+  }
+}
 
-            Expanded(
-              child: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: const [
-                    Icon(Icons.shopping_cart_outlined,
-                        size: 80, color: Colors.grey),
-                    SizedBox(height: 12),
-                    Text(
-                      "Your cart is empty",
-                      style: TextStyle(color: Colors.grey),
-                    ),
-                  ],
+class _CartAppBar extends StatelessWidget {
+  const _CartAppBar({
+    required this.onBack,
+    required this.totalItems,
+  });
+
+  final VoidCallback onBack;
+  final int totalItems;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 4),
+      child: Row(
+        children: [
+          _CircleButton(
+            icon: Icons.arrow_back,
+            onTap: onBack,
+          ),
+          const Spacer(),
+          Row(
+            children: [
+              const Text(
+                'Shopping Cart',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF111827),
                 ),
               ),
-            ),
-          ],
+              const SizedBox(width: 6),
+              if (totalItems > 0)
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEFF6FF),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    '$totalItems',
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF0F6BFF),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const Spacer(),
+          _CircleButton(
+            icon: Icons.more_horiz,
+            onTap: () {},
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CircleButton extends StatelessWidget {
+  const _CircleButton({
+    required this.icon,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkResponse(
+      radius: 22,
+      onTap: onTap,
+      child: Container(
+        height: 38,
+        width: 38,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFE6E9F0)),
         ),
+        child: Icon(icon, size: 20, color: const Color(0xFF111827)),
+      ),
+    );
+  }
+}
+
+class _CartItemCard extends StatelessWidget {
+  const _CartItemCard({
+    required this.item,
+    required this.onRemove,
+    required this.onQuantityChanged,
+  });
+
+  final CartItem item;
+  final VoidCallback onRemove;
+  final ValueChanged<int> onQuantityChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final product = item.product;
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFE6E9F0)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x0F000000),
+            blurRadius: 10,
+            offset: Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _ProductThumb(imageUrl: product.imageUrl),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  product.name,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  item.variant ?? 'Color: Black | Size: Standard',
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: Color(0xFF6B7280),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                _QtyStepper(
+                  value: item.quantity,
+                  onChanged: onQuantityChanged,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              IconButton(
+                onPressed: onRemove,
+                icon: const Icon(Icons.delete_outline, size: 20),
+                color: const Color(0xFF9CA3AF),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                '\$${item.subtotal.toStringAsFixed(2)}',
+                style: const TextStyle(
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF111827),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProductThumb extends StatelessWidget {
+  const _ProductThumb({required this.imageUrl});
+
+  final String? imageUrl;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 64,
+      width: 64,
+      decoration: BoxDecoration(
+        color: const Color(0xFFF3F4F6),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: imageUrl == null || imageUrl!.isEmpty
+            ? const Icon(Icons.image_not_supported, color: Color(0xFF9CA3AF))
+            : Image.network(
+                imageUrl!,
+                fit: BoxFit.cover,
+                headers: const {
+                  'User-Agent': 'Mozilla/5.0',
+                  'Accept':
+                      'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
+                },
+              ),
+      ),
+    );
+  }
+}
+
+class _QtyStepper extends StatelessWidget {
+  const _QtyStepper({
+    required this.value,
+    required this.onChanged,
+  });
+
+  final int value;
+  final ValueChanged<int> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFFF3F4F6),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        children: [
+          _StepButton(
+            icon: Icons.remove,
+            onTap: () => onChanged(value > 1 ? value - 1 : 1),
+          ),
+          SizedBox(
+            width: 32,
+            child: Center(
+              child: Text(
+                '$value',
+                style: const TextStyle(fontWeight: FontWeight.w700),
+              ),
+            ),
+          ),
+          _StepButton(
+            icon: Icons.add,
+            onTap: () => onChanged(value + 1),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StepButton extends StatelessWidget {
+  const _StepButton({required this.icon, required this.onTap});
+
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkResponse(
+      onTap: onTap,
+      radius: 18,
+      child: Container(
+        height: 32,
+        width: 32,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: const Color(0xFFE6E9F0)),
+        ),
+        child: Icon(icon, size: 16),
+      ),
+    );
+  }
+}
+
+class _PromoCodeCard extends StatelessWidget {
+  const _PromoCodeCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFE6E9F0)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Promo Code',
+            style: TextStyle(fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  decoration: InputDecoration(
+                    hintText: 'Enter coupon code',
+                    filled: true,
+                    fillColor: const Color(0xFFF9FAFB),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 12,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide:
+                          const BorderSide(color: Color(0xFFE6E9F0)),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide:
+                          const BorderSide(color: Color(0xFFE6E9F0)),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              ElevatedButton(
+                onPressed: () {},
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF0F6BFF),
+                  foregroundColor: Colors.white,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                child: const Text('Apply'),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _OrderSummary extends StatelessWidget {
+  const _OrderSummary({
+    required this.subtotal,
+    required this.shipping,
+    required this.tax,
+    required this.total,
+  });
+
+  final double subtotal;
+  final double shipping;
+  final double tax;
+  final double total;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFE6E9F0)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Order Summary',
+            style: TextStyle(fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 10),
+          _SummaryRow(label: 'Subtotal', value: subtotal),
+          _SummaryRow(label: 'Shipping', value: shipping),
+          _SummaryRow(label: 'Tax', value: tax),
+          const Divider(height: 20),
+          Row(
+            children: [
+              const Text(
+                'Total',
+                style: TextStyle(fontWeight: FontWeight.w700),
+              ),
+              const Spacer(),
+              Text(
+                '\$${total.toStringAsFixed(2)}',
+                style: const TextStyle(
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF111827),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SummaryRow extends StatelessWidget {
+  const _SummaryRow({required this.label, required this.value});
+
+  final String label;
+  final double value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          Text(
+            label,
+            style: const TextStyle(color: Color(0xFF6B7280)),
+          ),
+          const Spacer(),
+          Text(
+            '\$${value.toStringAsFixed(2)}',
+            style: const TextStyle(fontWeight: FontWeight.w600),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader({required this.title, required this.action});
+
+  final String title;
+  final String action;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            title,
+            style: const TextStyle(
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF111827),
+            ),
+          ),
+        ),
+        TextButton(onPressed: () {}, child: Text(action)),
+      ],
+    );
+  }
+}
+
+class _RecommendationsRow extends StatelessWidget {
+  const _RecommendationsRow();
+
+  List<Product> get _recommendations => const [
+        Product(
+          id: 901,
+          name: 'Portable Bluetooth Speaker',
+          price: 29.0,
+          imageUrl:
+              'https://images.unsplash.com/photo-1512446816042-444d641267bc?auto=format&fit=crop&w=900&q=80',
+        ),
+        Product(
+          id: 902,
+          name: 'Adjustable Phone Stand',
+          price: 19.0,
+          imageUrl:
+              'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=900&q=80',
+        ),
+        Product(
+          id: 903,
+          name: 'Premium USB-C Cable',
+          price: 9.0,
+          imageUrl:
+              'https://images.unsplash.com/photo-1518458028785-8fbcd101ebb9?auto=format&fit=crop&w=900&q=80',
+        ),
+      ];
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 150,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: _recommendations.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 12),
+        itemBuilder: (context, index) {
+          final item = _recommendations[index];
+          return Container(
+            width: 130,
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: const Color(0xFFE6E9F0)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Image.network(
+                      item.imageUrl ?? '',
+                      fit: BoxFit.cover,
+                      headers: const {
+                        'User-Agent': 'Mozilla/5.0',
+                        'Accept':
+                            'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
+                      },
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  item.name,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '\$${item.price.toStringAsFixed(2)}',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF0F6BFF),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _CheckoutBar extends StatelessWidget {
+  const _CheckoutBar({required this.total, required this.onCheckout});
+
+  final double total;
+  final VoidCallback onCheckout;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Color(0x14000000),
+            blurRadius: 16,
+            offset: Offset(0, -6),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              const Text(
+                'Total',
+                style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF111827),
+                ),
+              ),
+              const Spacer(),
+              Text(
+                '\$${total.toStringAsFixed(2)}',
+                style: const TextStyle(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 16,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: onCheckout,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF0F6BFF),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              ),
+              child: const Text(
+                'Proceed to Checkout',
+                style: TextStyle(fontWeight: FontWeight.w700),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _EmptyCart extends StatelessWidget {
+  const _EmptyCart();
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: const [
+          Icon(Icons.shopping_cart_outlined, size: 72, color: Color(0xFF9CA3AF)),
+          SizedBox(height: 12),
+          Text(
+            'Your cart is empty',
+            style: TextStyle(
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF6B7280),
+            ),
+          ),
+        ],
       ),
     );
   }

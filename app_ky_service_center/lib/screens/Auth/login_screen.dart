@@ -202,7 +202,6 @@ class _LoginScreenState extends State<LoginScreen> {
                         ).showSnackBar(SnackBar(content: Text(error)));
                       }
                     },
-
                     child: _loading
                         ? const CircularProgressIndicator(
                             color: Colors.white,

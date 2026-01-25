@@ -18,9 +18,14 @@ class OrderResource extends JsonResource
             'payment_method' => $this->payment_method,
             'delivery_address' => $this->delivery_address,
             'delivery_phone' => $this->delivery_phone,
+            'delivery_note' => $this->delivery_note,
+            'subtotal' => $this->subtotal,
+            'delivery_fee' => $this->delivery_fee,
             'total_amount' => $this->total_amount,
             'payment_status' => $this->payment_status,
             'status' => $this->status,
+            'order_status' => $this->status,
+            'inventory_deducted' => $this->inventory_deducted,
             'placed_at' => $this->placed_at?->toISOString(),
             'pickup_qr_generated_at' => $this->pickup_qr_generated_at?->toISOString(),
             'pickup_verified_at' => $this->pickup_verified_at?->toISOString(),
@@ -30,4 +35,3 @@ class OrderResource extends JsonResource
         ];
     }
 }
-

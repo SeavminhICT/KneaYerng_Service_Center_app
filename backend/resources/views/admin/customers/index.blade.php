@@ -5,9 +5,14 @@
 
 @section('content')
     <div class="space-y-6">
-        <div>
-            <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Customer List</h2>
-            <p class="text-sm text-slate-500">Track active users and customer segments.</p>
+        <div class="flex flex-wrap items-center justify-between gap-3">
+            <div>
+                <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Customer List</h2>
+                <p class="text-sm text-slate-500">Track active users and customer segments.</p>
+            </div>
+            <span class="inline-flex items-center rounded-full bg-primary-50 px-3 py-1 text-xs font-semibold text-primary-700 dark:bg-primary-500/10 dark:text-primary-100">
+                Total: {{ $customersCount ?? 0 }}
+            </span>
         </div>
 
         <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
@@ -41,9 +46,28 @@
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-200 text-slate-600 dark:divide-slate-800 dark:text-slate-300">
-                        <tr>
-                            <td class="px-4 py-6 text-center text-sm text-slate-500" colspan="6">No customer data yet.</td>
-                        </tr>
+                        @forelse ($customers ?? [] as $customer)
+                            @php
+                                $isVerified = (bool) ($customer->otp_verified_at ?? $customer->email_verified_at);
+                                $spentTotal = (float) ($customer->orders_sum_total_amount ?? 0);
+                            @endphp
+                            <tr>
+                                <td class="px-4 py-3 font-medium text-slate-900 dark:text-white">{{ $customer->name ?: 'Unnamed' }}</td>
+                                <td class="px-4 py-3">{{ $customer->email }}</td>
+                                <td class="px-4 py-3">{{ $customer->orders_count ?? 0 }}</td>
+                                <td class="px-4 py-3">${{ number_format($spentTotal, 2) }}</td>
+                                <td class="px-4 py-3">
+                                    <span class="inline-flex items-center rounded-full px-2 py-1 text-xs font-semibold {{ $isVerified ? 'bg-success-50 text-success-700 dark:bg-success-500/10 dark:text-success-100' : 'bg-warning-50 text-warning-700 dark:bg-warning-500/10 dark:text-warning-100' }}">
+                                        {{ $isVerified ? 'Verified' : 'Pending' }}
+                                    </span>
+                                </td>
+                                <td class="px-4 py-3 text-right">-</td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td class="px-4 py-6 text-center text-sm text-slate-500" colspan="6">No customer data yet.</td>
+                            </tr>
+                        @endforelse
                     </tbody>
                 </table>
             </div>

@@ -19,7 +19,7 @@
 
             <div>
                 <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="slug">Slug</label>
-                <input id="slug" name="slug" type="text" placeholder="fresh-beverages" class="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200" />
+                <input id="slug" name="slug" type="text" placeholder="Auto-generated" disabled class="mt-2 w-full cursor-not-allowed rounded-xl border border-slate-200 bg-slate-100 px-3 py-2 text-sm text-slate-500 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-400" />
             </div>
 
             <div>
@@ -63,6 +63,22 @@
     </div>
 
     <script>
+        var categoryImageInput = document.querySelector('input[name="image"][form="category-create-form"]');
+        if (categoryImageInput) {
+            categoryImageInput.addEventListener('change', function (event) {
+                var file = event.target.files[0];
+                if (file) {
+                    document.getElementById('category-form-error').textContent = '';
+                }
+                if (window.adminValidateFileSize && file && !window.adminValidateFileSize(file, 'Image')) {
+                    event.stopImmediatePropagation();
+                    event.preventDefault();
+                    event.target.value = '';
+                    document.getElementById('category-form-error').textContent = 'Image must be 5MB or smaller.';
+                }
+            }, true);
+        }
+
         document.getElementById('category-create-form').addEventListener('submit', async function (event) {
             event.preventDefault();
             document.getElementById('category-form-error').textContent = '';
@@ -78,6 +94,16 @@
                 });
 
                 if (response.ok) {
+                    if (window.adminSwalStore) {
+                        window.adminSwalStore({
+                            icon: 'success',
+                            title: 'Category created',
+                            text: 'Category created successfully.',
+                            confirmButtonColor: '#2563eb',
+                        });
+                    } else if (window.adminToastStore) {
+                        window.adminToastStore({ type: 'success', message: 'Category created successfully.' });
+                    }
                     window.location.href = '/admin/categories';
                     return;
                 }
@@ -88,8 +114,18 @@
                 } else {
                     document.getElementById('category-form-error').textContent = errorData.message || 'Unable to save category.';
                 }
+                if (window.adminSwalError) {
+                    window.adminSwalError('Create failed', errorData.message || 'Unable to save category.');
+                } else if (window.adminToast) {
+                    window.adminToast(errorData.message || 'Unable to save category.', { type: 'error' });
+                }
             } catch (error) {
                 document.getElementById('category-form-error').textContent = 'Unable to save category.';
+                if (window.adminSwalError) {
+                    window.adminSwalError('Create failed', 'Unable to save category.');
+                } else if (window.adminToast) {
+                    window.adminToast('Unable to save category.', { type: 'error' });
+                }
             }
         });
     </script>

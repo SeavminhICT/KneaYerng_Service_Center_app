@@ -43,24 +43,32 @@ class InfobipService
 
     public function sendEmail(string $to, string $subject, string $message): bool
     {
-        $from = config('infobip.email.from');
+        $sender = config('infobip.email.from');
 
-        if (! $from) {
-            throw new RuntimeException('Infobip email from address is not configured.');
+        if (! $sender) {
+            throw new RuntimeException('Infobip email sender is not configured.');
         }
 
         $fromName = config('infobip.email.from_name');
-        $fromValue = $fromName ? $fromName.' <'.$from.'>' : $from;
+        $senderValue = $fromName ? $fromName.' <'.$sender.'>' : $sender;
 
-        $response = $this->client()->post('/email/3/send', [
-            'from' => $fromValue,
-            'to' => [
+        $response = $this->client()->post('/email/4/messages', [
+            'messages' => [
                 [
-                    'email' => $to,
+                    'destinations' => [
+                        [
+                            'to' => [
+                                ['destination' => $to],
+                            ],
+                        ],
+                    ],
+                    'sender' => $senderValue,
+                    'content' => [
+                        'subject' => $subject,
+                        'text' => $message,
+                    ],
                 ],
             ],
-            'subject' => $subject,
-            'text' => $message,
         ]);
 
         if ($response->failed()) {

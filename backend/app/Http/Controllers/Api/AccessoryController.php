@@ -77,4 +77,5 @@ class AccessoryController extends Controller
 
         return response()->json(['message' => 'Accessory or repair part deleted successfully']);
     }
+
 }

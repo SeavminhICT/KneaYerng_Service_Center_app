@@ -31,7 +31,7 @@ class BannerController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'image' => ['required', 'image', 'max:4096'],
+            'image' => ['required', 'image', 'max:5120'],
         ]);
 
         $storedPath = $request->file('image')->store('banners', 'public');
@@ -51,7 +51,7 @@ class BannerController extends Controller
     public function update(Request $request, Banner $banner)
     {
         $request->validate([
-            'image' => ['required', 'image', 'max:4096'],
+            'image' => ['required', 'image', 'max:5120'],
         ]);
 
         if ($banner->image) {

@@ -24,7 +24,7 @@ class AuthController extends Controller
             'first_name' => ['required', 'string', 'max:255'],
             'last_name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:users,email'],
-            'phone' => ['required', 'string', 'max:20', 'unique:users,phone'],
+            'phone' => ['nullable', 'string', 'max:20', 'unique:users,phone'],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
             'avatar' => ['nullable', 'image', 'max:2048'],
         ]);
@@ -42,7 +42,7 @@ class AuthController extends Controller
             'first_name' => $validated['first_name'],
             'last_name' => $validated['last_name'],
             'email' => $validated['email'],
-            'phone' => $validated['phone'],
+            'phone' => $validated['phone'] ?? null,
             'password' => Hash::make($validated['password']),
             'avatar' => $avatarPath,
             'otp_code' => Hash::make($otp),
@@ -192,7 +192,8 @@ class AuthController extends Controller
             'last_name' => ['sometimes', 'required', 'string', 'max:255'],
             'email' => ['sometimes', 'required', 'string', 'lowercase', 'email', 'max:255', 'unique:users,email,'.$user->id],
             'phone' => ['sometimes', 'required', 'string', 'max:20', 'unique:users,phone,'.$user->id],
-            'password' => ['sometimes', 'required', 'string', 'min:8', 'confirmed'],
+            'current_password' => ['required_with:password', 'string'],
+            'password' => ['required_with:current_password', 'string', 'min:8', 'confirmed'],
             'avatar' => ['sometimes', 'nullable', 'image', 'max:2048'],
         ]);
 
@@ -213,13 +214,21 @@ class AuthController extends Controller
         }
 
         if (array_key_exists('password', $validated)) {
+            if (! Hash::check($validated['current_password'] ?? '', $user->password)) {
+                throw ValidationException::withMessages([
+                    'current_password' => ['The current password is incorrect.'],
+                ]);
+            }
             $user->password = Hash::make($validated['password']);
         }
 
         if ($request->hasFile('avatar')) {
             if ($user->avatar) {
-                $oldAvatarPath = str_replace('storage/', '', $user->avatar);
-                Storage::disk('public')->delete($oldAvatarPath);
+                $oldAvatarPath = $user->getRawOriginal('avatar');
+                if ($oldAvatarPath) {
+                    $oldAvatarPath = str_replace('storage/', '', $oldAvatarPath);
+                    Storage::disk('public')->delete($oldAvatarPath);
+                }
             }
 
             $storedPath = $request->file('avatar')->store('avatars', 'public');
@@ -238,7 +247,10 @@ class AuthController extends Controller
     {
         try {
             $message = 'Your verification code is '.$otp.'. It expires in '.$this->otpTtlMinutes.' minutes.';
-            $smsSent = $this->infobip->sendSms($user->phone, $message);
+            $smsSent = false;
+            if (! empty($user->phone)) {
+                $smsSent = $this->infobip->sendSms($user->phone, $message);
+            }
             $emailSent = $this->infobip->sendEmail($user->email, 'Your verification code', $message);
 
             return $smsSent || $emailSent;

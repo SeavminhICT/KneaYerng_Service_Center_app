@@ -9,6 +9,10 @@ class ProductResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
+        $primaryImage = $this->thumbnail ?? $this->image;
+        $gallery = $this->image_gallery;
+        $baseUrl = $this->resolveBaseUrl($request);
+
         return [
             'id' => $this->id,
             'name' => $this->name,
@@ -19,9 +23,12 @@ class ProductResource extends JsonResource
             'stock' => $this->stock,
             'status' => $this->status,
             'brand' => $this->brand,
-            'thumbnail' => $this->thumbnail ?? $this->image,
-            'image' => $this->thumbnail ?? $this->image,
-            'image_gallery' => $this->image_gallery,
+            'warranty' => $this->warranty,
+            'thumbnail' => $this->formatMediaUrl($primaryImage, $baseUrl),
+            'image' => $this->formatMediaUrl($primaryImage, $baseUrl),
+            'image_gallery' => $gallery === null
+                ? null
+                : array_map(fn ($image) => $this->formatMediaUrl($image, $baseUrl), $gallery),
             'storage_capacity' => $this->storage_capacity,
             'color' => $this->color,
             'condition' => $this->condition,
@@ -32,5 +39,28 @@ class ProductResource extends JsonResource
             'created_at' => $this->created_at?->toISOString(),
         ];
     }
-}
 
+    private function resolveBaseUrl(Request $request): string
+    {
+        $baseUrl = $request->getSchemeAndHttpHost();
+
+        if (! $baseUrl) {
+            $baseUrl = config('app.url', '');
+        }
+
+        return rtrim($baseUrl, '/');
+    }
+
+    private function formatMediaUrl(?string $path, string $baseUrl): ?string
+    {
+        if (! $path) {
+            return null;
+        }
+
+        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
+            return $path;
+        }
+
+        return $baseUrl.'/'.ltrim($path, '/');
+    }
+}

@@ -30,7 +30,6 @@ class RepairRequestResource extends JsonResource
             'intake' => new IntakeResource($this->whenLoaded('intake')),
             'diagnostic' => new DiagnosticResource($this->whenLoaded('diagnostic')),
             'quotation' => new QuotationResource($this->whenLoaded('quotation')),
-            'parts_usages' => PartsUsageResource::collection($this->whenLoaded('partsUsages')),
             'warranty' => new WarrantyResource($this->whenLoaded('warranty')),
             'invoice' => new InvoiceResource($this->whenLoaded('invoice')),
             'status_logs' => RepairStatusLogResource::collection($this->whenLoaded('statusLogs')),

@@ -136,7 +136,6 @@ class RepairRequestController extends Controller
             'intake',
             'diagnostic',
             'quotation',
-            'partsUsages.part',
             'warranty',
             'invoice.payments',
             'statusLogs',

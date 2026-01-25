@@ -11,14 +11,15 @@ class Part extends Model
 
     protected $fillable = [
         'name',
+        'type',
+        'brand',
         'sku',
         'stock',
         'unit_cost',
         'status',
     ];
 
-    public function usages()
-    {
-        return $this->hasMany(PartsUsage::class);
-    }
+    protected $casts = [
+        'unit_cost' => 'decimal:2',
+    ];
 }

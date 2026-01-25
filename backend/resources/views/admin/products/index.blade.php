@@ -49,6 +49,7 @@
                             </th>
                             <th class="px-4 py-3">Category</th>
                             <th class="px-4 py-3">Brand</th>
+                            <th class="px-4 py-3">Warranty</th>
                             <th class="px-4 py-3">
                                 <button class="inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-widest text-slate-400">
                                     Price
@@ -118,6 +119,25 @@
                 return '<span class="rounded-full px-2 py-1 text-xs font-semibold ' + klass + '">' + status + '</span>';
             }
 
+            function warrantyBadge(warranty) {
+                var map = {
+                    NO_WARRANTY: { label: 'NO_WARRANTY', color: '#9CA3AF', text: 'text-white', note: 'No coverage' },
+                    '7_DAYS': { label: '7_DAYS', color: '#F87171', text: 'text-white', note: 'Very short' },
+                    '14_DAYS': { label: '14_DAYS', color: '#FB923C', text: 'text-white', note: 'Short' },
+                    '1_MONTH': { label: '1_MONTH', color: '#FACC15', text: 'text-slate-900', note: 'Basic' },
+                    '3_MONTHS': { label: '3_MONTHS', color: '#4ADE80', text: 'text-slate-900', note: 'Standard' },
+                    '6_MONTHS': { label: '6_MONTHS', color: '#60A5FA', text: 'text-white', note: 'Good' },
+                    '1_YEAR': { label: '1_YEAR', color: '#A78BFA', text: 'text-white', note: 'Best' },
+                };
+                var info = map[warranty] || { label: warranty || '--', color: '#E5E7EB', text: 'text-slate-700', note: '' };
+                var title = info.note ? ' title="' + info.note + '"' : '';
+                return '<span class="rounded-full px-2 py-1 text-xs font-semibold ' + info.text + '" style="background-color: ' + info.color + ';"' + title + '>' + info.label + '</span>';
+            }
+
+            function formatCurrency(value) {
+                return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value || 0);
+            }
+
             async function loadProducts() {
                 await window.adminApi.ensureCsrfCookie();
                 var response = await window.adminApi.request('/api/products?q=' + encodeURIComponent(currentQuery) + '&page=' + currentPage);
@@ -146,12 +166,14 @@
                             </td>
                             <td class="px-4 py-3">${product.category?.name ?? '--'}</td>
                             <td class="px-4 py-3">${product.brand || '--'}</td>
-                            <td class="px-4 py-3">${new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(product.price || 0)}</td>
-                            <td class="px-4 py-3">${new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(product.discount || 0)}</td>
+                            <td class="px-4 py-3">${warrantyBadge(product.warranty)}</td>
+                            <td class="px-4 py-3">${formatCurrency(product.price)}</td>
+                            <td class="px-4 py-3">${formatCurrency(product.discount)}</td>
                             <td class="px-4 py-3">${product.stock}</td>
                             <td class="px-4 py-3">${statusBadge(product.status)}</td>
                             <td class="px-4 py-3 text-right">
-                                <a href="/admin/products/${product.id}/edit" class="text-xs font-semibold text-primary-600">Edit</a>
+                                <button data-id="${product.id}" class="text-xs font-semibold text-slate-500 js-view-product">View</button>
+                                <a href="/admin/products/${product.id}/edit" class="ml-3 text-xs font-semibold text-primary-600">Edit</a>
                                 <button data-id="${product.id}" class="ml-3 text-xs font-semibold text-slate-500 js-toggle-status">Toggle</button>
                                 <button data-id="${product.id}" class="ml-3 text-xs font-semibold text-danger-600 js-delete-product">Delete</button>
                             </td>
@@ -184,14 +206,117 @@
 
             rows.addEventListener('click', async function (event) {
                 var target = event.target;
+                if (target.classList.contains('js-view-product')) {
+                    await window.adminApi.ensureCsrfCookie();
+                    var response = await window.adminApi.request('/api/products/' + target.dataset.id);
+                    if (!response.ok) {
+                        if (window.adminSwalError) {
+                            await window.adminSwalError('View failed', 'Unable to load product details.');
+                        } else if (window.adminToast) {
+                            window.adminToast('Unable to load product details.', { type: 'error' });
+                        }
+                        return;
+                    }
+
+                    var payload = await response.json();
+                    var product = payload.data || payload;
+                    var imageUrl = resolveImage(product.thumbnail || product.image);
+                    var badge = statusBadge(product.status || 'archived');
+                    var html = `
+                        <div class="text-left">
+                            <div class="flex items-center gap-4">
+                                <div class="h-20 w-20 overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
+                                    ${imageUrl ? `<img src="${imageUrl}" alt="${product.name}" class="h-full w-full object-cover" />` : '<div class="flex h-full w-full items-center justify-center text-xs text-slate-400">No image</div>'}
+                                </div>
+                                <div>
+                                    <p class="text-xs uppercase tracking-widest text-slate-400">Product</p>
+                                    <p class="text-lg font-semibold text-slate-900">${product.name || '--'}</p>
+                                    <div class="mt-2">${badge}</div>
+                                </div>
+                            </div>
+                            <div class="mt-5 grid gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
+                                <div class="flex items-center justify-between gap-4">
+                                    <span class="font-semibold text-slate-500">SKU</span>
+                                    <span class="text-slate-900">${product.sku || '--'}</span>
+                                </div>
+                                <div class="flex items-center justify-between gap-4">
+                                    <span class="font-semibold text-slate-500">Brand</span>
+                                    <span class="text-slate-900">${product.brand || '--'}</span>
+                                </div>
+                                <div class="flex items-center justify-between gap-4">
+                                    <span class="font-semibold text-slate-500">Category</span>
+                                    <span class="text-slate-900">${product.category?.name ?? '--'}</span>
+                                </div>
+                                <div class="flex items-center justify-between gap-4">
+                                    <span class="font-semibold text-slate-500">Warranty</span>
+                                    <span>${warrantyBadge(product.warranty)}</span>
+                                </div>
+                                <div class="flex items-center justify-between gap-4">
+                                    <span class="font-semibold text-slate-500">Price</span>
+                                    <span class="text-slate-900">${formatCurrency(product.price)}</span>
+                                </div>
+                                <div class="flex items-center justify-between gap-4">
+                                    <span class="font-semibold text-slate-500">Discount</span>
+                                    <span class="text-slate-900">${formatCurrency(product.discount)}</span>
+                                </div>
+                                <div class="flex items-center justify-between gap-4">
+                                    <span class="font-semibold text-slate-500">Stock</span>
+                                    <span class="text-slate-900">${product.stock ?? 0}</span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+
+                    if (window.Swal) {
+                        await window.Swal.fire({
+                            title: 'Product Details',
+                            html: html,
+                            confirmButtonColor: '#2563eb',
+                            width: 600,
+                            padding: '1.5rem',
+                        });
+                    }
+                }
                 if (target.classList.contains('js-toggle-status')) {
                     await window.adminApi.ensureCsrfCookie();
-                    await window.adminApi.request('/api/products/' + target.dataset.id + '/status', { method: 'PATCH' });
+                    var response = await window.adminApi.request('/api/products/' + target.dataset.id + '/status', { method: 'PATCH' });
+                    if (window.adminSwalSuccess && response.ok) {
+                        await window.adminSwalSuccess('Updated', 'Product status updated.');
+                    } else if (window.adminSwalError && !response.ok) {
+                        await window.adminSwalError('Update failed', 'Unable to update product status.');
+                    } else if (window.adminToast) {
+                        if (response.ok) {
+                            window.adminToast('Product status updated.');
+                        } else {
+                            window.adminToast('Unable to update product status.', { type: 'error' });
+                        }
+                    }
                     loadProducts();
                 }
                 if (target.classList.contains('js-delete-product')) {
+                    var confirmed = true;
+                    if (window.adminSwalConfirm) {
+                        var result = await window.adminSwalConfirm('Delete product?', 'This will remove the product from the catalog.', 'Yes, delete it');
+                        confirmed = result.isConfirmed;
+                    } else {
+                        confirmed = window.confirm('Delete this product?');
+                    }
+                    if (!confirmed) {
+                        return;
+                    }
                     await window.adminApi.ensureCsrfCookie();
-                    await window.adminApi.request('/api/products/' + target.dataset.id, { method: 'DELETE' });
+                    var response = await window.adminApi.request('/api/products/' + target.dataset.id, { method: 'DELETE' });
+                    if (window.adminSwalSuccess && response.ok) {
+                        await window.adminSwalSuccess('Deleted', 'Product deleted successfully.');
+                    } else if (window.adminSwalError && !response.ok) {
+                        await window.adminSwalError('Delete failed', 'Unable to delete product.');
+                    } else if (window.adminToast) {
+                        if (response.ok) {
+                            window.adminToast('Product deleted.');
+                        } else {
+                            window.adminToast('Unable to delete product.', { type: 'error' });
+                        }
+                    }
                     loadProducts();
                 }
             });

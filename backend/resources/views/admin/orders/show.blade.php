@@ -55,10 +55,10 @@
                         <label class="block text-xs font-semibold uppercase tracking-widest text-slate-400">Manage payment status</label>
                         <div class="mt-2 flex flex-wrap items-center gap-3">
                             <select id="payment-status-select" class="h-10 min-w-[160px] flex-1 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700 shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200">
-                                <option value="pending">pending</option>
-                                <option value="processing">processing</option>
-                                <option value="success">success</option>
+                                <option value="unpaid">unpaid</option>
+                                <option value="paid">paid</option>
                                 <option value="failed">failed</option>
+                                <option value="refunded">refunded</option>
                             </select>
                             <button type="button" id="payment-status-save" class="inline-flex h-10 items-center rounded-xl bg-primary-600 px-4 text-xs font-semibold text-white shadow-sm hover:bg-primary-700 disabled:cursor-not-allowed disabled:bg-slate-300 dark:disabled:bg-slate-700">Save</button>
                         </div>
@@ -81,7 +81,20 @@
             var paymentStatusSave = document.getElementById('payment-status-save');
             var paymentStatusNote = document.getElementById('payment-status-note');
             var normalizePaymentStatus = function (status) {
-                return status || 'pending';
+                if (!status) {
+                    return 'unpaid';
+                }
+                var normalized = String(status).toLowerCase();
+                if (normalized === 'success') {
+                    return 'paid';
+                }
+                if (normalized === 'failed') {
+                    return 'failed';
+                }
+                if (normalized === 'processing' || normalized === 'pending') {
+                    return 'unpaid';
+                }
+                return normalized;
             };
             var currentPaymentStatus = 'pending';
             var currentOrder = null;
@@ -93,12 +106,12 @@
                 }
                 badge.textContent = status;
                 badge.className = 'rounded-full px-2 py-1 text-xs font-semibold ' + (
-                    status === 'success'
+                    status === 'paid'
                         ? 'bg-success-50 text-success-700 dark:bg-success-500/10 dark:text-success-100'
                         : status === 'failed'
                             ? 'bg-danger-50 text-danger-700 dark:bg-danger-500/10 dark:text-danger-100'
-                            : status === 'processing'
-                                ? 'bg-primary-50 text-primary-700 dark:bg-primary-500/10 dark:text-primary-100'
+                            : status === 'refunded'
+                                ? 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200'
                                 : 'bg-warning-50 text-warning-700 dark:bg-warning-500/10 dark:text-warning-100'
                 );
             }

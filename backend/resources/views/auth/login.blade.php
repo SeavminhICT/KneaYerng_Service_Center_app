@@ -7,7 +7,7 @@
 
         <x-auth-session-status class="mb-4" :status="session('status')" />
 
-        <form method="POST" action="{{ route('login') }}" class="space-y-5">
+        <form id="login-form" method="POST" action="{{ route('login') }}" class="space-y-5">
             @csrf
 
             <div>
@@ -37,8 +37,37 @@
             <button type="submit" class="inline-flex h-11 w-full items-center justify-center rounded-xl bg-primary-600 text-sm font-semibold text-white shadow-sm">Sign in</button>
         </form>
 
-        <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-500 dark:border-slate-800 dark:bg-slate-950">
+        <!-- <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-500 dark:border-slate-800 dark:bg-slate-950">
             Admin access is protected by `auth` + `admin` middleware. Use an authorized admin email.
+        </div> -->
+    </div>
+
+    <div id="login-loading" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/50 text-white backdrop-blur-sm">
+        <div class="flex flex-col items-center gap-3">
+            <div class="h-12 w-12 animate-spin rounded-full border-4 border-white/30 border-t-white"></div>
+            <p class="text-sm font-semibold tracking-wide">Signing you in...</p>
         </div>
     </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const form = document.getElementById('login-form');
+            const overlay = document.getElementById('login-loading');
+            const submitButton = form ? form.querySelector('button[type="submit"]') : null;
+
+            if (!form || !overlay) {
+                return;
+            }
+
+            form.addEventListener('submit', () => {
+                form.setAttribute('aria-busy', 'true');
+                overlay.classList.remove('hidden');
+                overlay.classList.add('flex');
+                if (submitButton) {
+                    submitButton.disabled = true;
+                    submitButton.classList.add('cursor-wait', 'opacity-80');
+                }
+            });
+        });
+    </script>
 </x-guest-layout>

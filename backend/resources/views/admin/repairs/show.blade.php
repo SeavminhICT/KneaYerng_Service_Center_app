@@ -52,7 +52,6 @@
                 <button class="repair-tab rounded-full bg-primary-50 px-4 py-2 text-primary-700 dark:bg-primary-500/10 dark:text-primary-100" data-tab="intake">Intake</button>
                 <button class="repair-tab rounded-full px-4 py-2" data-tab="diagnostic">Diagnostic</button>
                 <button class="repair-tab rounded-full px-4 py-2" data-tab="quotation">Quotation</button>
-                <button class="repair-tab rounded-full px-4 py-2" data-tab="parts">Parts</button>
                 <button class="repair-tab rounded-full px-4 py-2" data-tab="status">Status</button>
                 <button class="repair-tab rounded-full px-4 py-2" data-tab="chat">Chat</button>
             </div>
@@ -138,42 +137,6 @@
                                 <span id="invoice-status" class="text-xs text-slate-500"></span>
                             </div>
                         </div>
-                    </div>
-                </div>
-
-                <div class="repair-panel hidden" data-panel="parts">
-                    <div class="grid gap-6 lg:grid-cols-[2fr_1fr]">
-                        <div class="overflow-x-auto rounded-2xl border border-slate-200 bg-white p-4 text-sm dark:border-slate-800 dark:bg-slate-900">
-                            <table class="w-full text-left text-sm">
-                                <thead class="text-xs uppercase tracking-widest text-slate-400">
-                                    <tr>
-                                        <th class="px-3 py-2">Part</th>
-                                        <th class="px-3 py-2">Qty</th>
-                                        <th class="px-3 py-2">Cost</th>
-                                        <th class="px-3 py-2">Total</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="parts-rows" class="divide-y divide-slate-200 text-slate-600 dark:divide-slate-800 dark:text-slate-300"></tbody>
-                            </table>
-                        </div>
-                        <form id="parts-form" class="space-y-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300">
-                            <div>
-                                <label class="text-xs font-semibold uppercase tracking-widest text-slate-400">Add part usage</label>
-                            </div>
-                            <div>
-                                <select id="part-select" class="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-600 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300"></select>
-                            </div>
-                            <div>
-                                <input id="part-quantity" type="number" min="1" placeholder="Quantity" class="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-600 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300" />
-                            </div>
-                            <div>
-                                <input id="part-cost" type="number" step="0.01" placeholder="Unit cost" class="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-600 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300" />
-                            </div>
-                            <div>
-                                <button class="inline-flex h-10 w-full items-center justify-center rounded-xl bg-primary-600 px-4 text-sm font-semibold text-white" type="submit">Add usage</button>
-                                <span id="parts-status" class="mt-2 block text-xs text-slate-500"></span>
-                            </div>
-                        </form>
                     </div>
                 </div>
 
@@ -307,38 +270,6 @@
                 if (repairData && repairData.data && repairData.data.technician_id) {
                     select.value = repairData.data.technician_id;
                 }
-            }
-
-            async function loadParts() {
-                var response = await window.adminApi.request('/api/parts-per_page=100');
-                if (!response.ok) {
-                    return;
-                }
-                var data = await response.json();
-                var list = data.data || [];
-                var select = document.getElementById('part-select');
-                select.innerHTML = '<option value="">Select part</option>' + list.map(function (part) {
-                    return '<option value="' + part.id + '">' + part.name + ' (Stock: ' + part.stock + ')</option>';
-                }).join('');
-            }
-
-            async function loadPartsUsage() {
-                var response = await window.adminApi.request('/api/repairs/' + repairId + '/parts');
-                if (!response.ok) {
-                    return;
-                }
-                var data = await response.json();
-                var list = data.data || [];
-                var rows = document.getElementById('parts-rows');
-                rows.innerHTML = list.map(function (usage) {
-                    var total = (usage.quantity || 0) * (usage.cost || 0);
-                    return '<tr>' +
-                        '<td class="px-3 py-2">' + (usage.part - usage.part.name : '-') + '</td>' +
-                        '<td class="px-3 py-2">' + usage.quantity + '</td>' +
-                        '<td class="px-3 py-2">' + new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(usage.cost || 0) + '</td>' +
-                        '<td class="px-3 py-2">' + new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(total) + '</td>' +
-                        '</tr>';
-                }).join('') || '<tr><td class="px-3 py-4 text-center text-xs text-slate-500" colspan="4">No parts logged.</td></tr>';
             }
 
             async function loadStatusTimeline() {
@@ -484,23 +415,6 @@
                 loadRepair();
             });
 
-            document.getElementById('parts-form').addEventListener('submit', async function (event) {
-                event.preventDefault();
-                var payload = {
-                    part_id: document.getElementById('part-select').value,
-                    quantity: document.getElementById('part-quantity').value,
-                    cost: document.getElementById('part-cost').value
-                };
-                await window.adminApi.ensureCsrfCookie();
-                var response = await window.adminApi.request('/api/repairs/' + repairId + '/parts', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                document.getElementById('parts-status').textContent = response.ok - 'Added.' : 'Unable to add.';
-                loadPartsUsage();
-            });
-
             document.getElementById('chat-form').addEventListener('submit', async function (event) {
                 event.preventDefault();
                 var payload = { message: document.getElementById('chat-message').value.trim() };
@@ -521,8 +435,6 @@
             switchTab('intake');
             loadRepair();
             loadTechnicians();
-            loadParts();
-            loadPartsUsage();
             loadStatusTimeline();
             loadChat();
         });

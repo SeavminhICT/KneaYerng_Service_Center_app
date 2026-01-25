@@ -53,11 +53,6 @@ class RepairRequest extends Model
         return $this->hasMany(RepairStatusLog::class, 'repair_id')->orderByDesc('logged_at');
     }
 
-    public function partsUsages()
-    {
-        return $this->hasMany(PartsUsage::class, 'repair_id');
-    }
-
     public function warranty()
     {
         return $this->hasOne(Warranty::class, 'repair_id');

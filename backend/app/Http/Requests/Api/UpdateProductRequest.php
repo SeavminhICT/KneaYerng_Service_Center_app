@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Api;
 
 use Illuminate\Foundation\Http\FormRequest;
+use App\Models\Product;
 
 class UpdateProductRequest extends FormRequest
 {
@@ -25,17 +26,27 @@ class UpdateProductRequest extends FormRequest
             'stock' => ['sometimes', 'required', 'integer', 'min:0'],
             'status' => ['sometimes', 'required', 'in:active,draft,archived'],
             'brand' => ['sometimes', 'nullable', 'string', 'max:255'],
-            'thumbnail' => ['sometimes', 'nullable', 'image', 'max:2048'],
+            'warranty' => ['sometimes', 'nullable', 'in:'.implode(',', Product::WARRANTIES)],
+            'thumbnail' => ['sometimes', 'nullable', 'image', 'max:5120'],
             'image_gallery' => ['sometimes', 'nullable', 'array'],
-            'image_gallery.*' => ['image', 'max:2048'],
+            'image_gallery.*' => ['image', 'max:5120'],
             'storage_capacity' => ['sometimes', 'nullable', 'array'],
             'storage_capacity.*' => ['string', 'max:100'],
             'color' => ['sometimes', 'nullable', 'array'],
             'color.*' => ['string', 'max:100'],
             'condition' => ['sometimes', 'nullable', 'array'],
             'condition.*' => ['string', 'max:100'],
-            'image' => ['sometimes', 'nullable', 'image', 'max:2048'],
+            'image' => ['sometimes', 'nullable', 'image', 'max:5120'],
         ];
     }
-}
 
+    protected function prepareForValidation(): void
+    {
+        if ($this->has('discount')) {
+            $value = $this->input('discount');
+            if ($value === '' || $value === null) {
+                $this->merge(['discount' => 0]);
+            }
+        }
+    }
+}

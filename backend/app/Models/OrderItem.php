@@ -12,9 +12,17 @@ class OrderItem extends Model
     protected $fillable = [
         'order_id',
         'product_id',
+        'item_type',
+        'item_id',
         'product_name',
         'quantity',
         'price',
+        'line_total',
+    ];
+
+    protected $casts = [
+        'price' => 'decimal:2',
+        'line_total' => 'decimal:2',
     ];
 
     public function order()
@@ -27,4 +35,3 @@ class OrderItem extends Model
         return $this->belongsTo(Product::class);
     }
 }
-

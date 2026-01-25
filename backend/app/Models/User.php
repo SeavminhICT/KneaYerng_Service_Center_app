@@ -3,6 +3,7 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Models\Order;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -85,9 +86,31 @@ class User extends Authenticatable
         );
     }
 
+    protected function avatar(): Attribute
+    {
+        return Attribute::make(
+            get: function ($value) {
+                if (! $value) {
+                    return null;
+                }
+
+                if (str_starts_with($value, 'http://') || str_starts_with($value, 'https://')) {
+                    return $value;
+                }
+
+                return rtrim(config('app.url'), '/').'/'.ltrim($value, '/');
+            }
+        );
+    }
+
     public function repairRequests()
     {
         return $this->hasMany(RepairRequest::class, 'customer_id');
+    }
+
+    public function orders()
+    {
+        return $this->hasMany(Order::class);
     }
 
     public function repairNotifications()

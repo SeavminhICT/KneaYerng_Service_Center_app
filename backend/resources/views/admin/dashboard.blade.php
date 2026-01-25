@@ -40,6 +40,46 @@
                 </div>
             </div>
 
+            <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Recent Orders</h2>
+                        <p class="text-sm text-slate-500">Track latest transactions and order status.</p>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-3">
+                        <div class="relative">
+                            <input type="text" placeholder="Search orders" class="h-10 w-52 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700 placeholder:text-slate-400 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200" />
+                            <svg class="absolute right-3 top-3 h-4 w-4 text-slate-400" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35m1.6-5.15a7 7 0 11-14 0 7 7 0 0114 0z" />
+                            </svg>
+                        </div>
+                        <button class="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-600 shadow-sm hover:text-slate-900 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300">Export</button>
+                    </div>
+                </div>
+    
+                <div class="mt-5 overflow-x-auto">
+                    <table class="w-full text-left text-sm">
+                        <thead class="text-xs uppercase tracking-widest text-slate-400">
+                            <tr>
+                                <th class="px-4 py-3">Order ID</th>
+                                <th class="px-4 py-3">Customer</th>
+                                <th class="px-4 py-3">Date</th>
+                                <th class="px-4 py-3">Total</th>
+                                <th class="px-4 py-3">Payment Status</th>
+                                <th class="px-4 py-3 text-right">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="recent-orders-body" class="divide-y divide-slate-200 text-slate-600 dark:divide-slate-800 dark:text-slate-300"></tbody>
+                    </table>
+                </div>
+                <div class="mt-4 flex items-center justify-between text-xs text-slate-500">
+                    <p>Showing 1-3 of 128 orders</p>
+                    <div class="flex items-center gap-2">
+                        <button class="rounded-lg border border-slate-200 px-3 py-1 text-slate-600 dark:border-slate-800 dark:text-slate-300">Previous</button>
+                        <button class="rounded-lg border border-slate-200 bg-slate-100 px-3 py-1 text-slate-900 dark:border-slate-800 dark:bg-slate-900">Next</button>
+                    </div>
+                </div>
+            </div>
         <div class="grid gap-6 lg:grid-cols-[2fr_1fr]">
             <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
                 <div class="flex flex-wrap items-center justify-between gap-3">
@@ -68,46 +108,6 @@
             </div>
         </div>
 
-        <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-            <div class="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                    <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Recent Orders</h2>
-                    <p class="text-sm text-slate-500">Track latest transactions and order status.</p>
-                </div>
-                <div class="flex flex-wrap items-center gap-3">
-                    <div class="relative">
-                        <input type="text" placeholder="Search orders" class="h-10 w-52 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700 placeholder:text-slate-400 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200" />
-                        <svg class="absolute right-3 top-3 h-4 w-4 text-slate-400" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35m1.6-5.15a7 7 0 11-14 0 7 7 0 0114 0z" />
-                        </svg>
-                    </div>
-                    <button class="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-600 shadow-sm hover:text-slate-900 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300">Export</button>
-                </div>
-            </div>
-
-            <div class="mt-5 overflow-x-auto">
-                <table class="w-full text-left text-sm">
-                    <thead class="text-xs uppercase tracking-widest text-slate-400">
-                        <tr>
-                            <th class="px-4 py-3">Order ID</th>
-                            <th class="px-4 py-3">Customer</th>
-                            <th class="px-4 py-3">Date</th>
-                            <th class="px-4 py-3">Total</th>
-                            <th class="px-4 py-3">Payment Status</th>
-                            <th class="px-4 py-3 text-right">Action</th>
-                        </tr>
-                    </thead>
-                    <tbody id="recent-orders-body" class="divide-y divide-slate-200 text-slate-600 dark:divide-slate-800 dark:text-slate-300"></tbody>
-                </table>
-            </div>
-            <div class="mt-4 flex items-center justify-between text-xs text-slate-500">
-                <p>Showing 1-3 of 128 orders</p>
-                <div class="flex items-center gap-2">
-                    <button class="rounded-lg border border-slate-200 px-3 py-1 text-slate-600 dark:border-slate-800 dark:text-slate-300">Previous</button>
-                    <button class="rounded-lg border border-slate-200 bg-slate-100 px-3 py-1 text-slate-900 dark:border-slate-800 dark:bg-slate-900">Next</button>
-                </div>
-            </div>
-        </div>
     </section>
 
     <script>
@@ -159,17 +159,30 @@
                 if (ordersResponse.ok) {
                     const ordersData = await ordersResponse.json();
                     const normalizePaymentStatus = function (status) {
-                        return status || 'pending';
+                        if (!status) {
+                            return 'unpaid';
+                        }
+                        const normalized = String(status).toLowerCase();
+                        if (normalized === 'success') {
+                            return 'paid';
+                        }
+                        if (normalized === 'failed') {
+                            return 'failed';
+                        }
+                        if (normalized === 'processing' || normalized === 'pending') {
+                            return 'unpaid';
+                        }
+                        return normalized;
                     };
-                    const paymentOptions = ['pending', 'processing', 'success', 'failed'];
+                    const paymentOptions = ['unpaid', 'paid', 'failed', 'refunded'];
                     const rows = ordersData.data.map(function (order) {
                         const normalizedPaymentStatus = normalizePaymentStatus(order.payment_status);
-                        const paymentClass = normalizedPaymentStatus === 'success'
+                        const paymentClass = normalizedPaymentStatus === 'paid'
                             ? 'bg-success-50 text-success-700 dark:bg-success-500/10 dark:text-success-100'
                             : normalizedPaymentStatus === 'failed'
                                 ? 'bg-danger-50 text-danger-700 dark:bg-danger-500/10 dark:text-danger-100'
-                                : normalizedPaymentStatus === 'processing'
-                                    ? 'bg-primary-50 text-primary-700 dark:bg-primary-500/10 dark:text-primary-100'
+                                : normalizedPaymentStatus === 'refunded'
+                                    ? 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200'
                                     : 'bg-warning-50 text-warning-700 dark:bg-warning-500/10 dark:text-warning-100';
 
                         const paymentSelectOptions = paymentOptions.map(function (status) {
@@ -224,12 +237,12 @@
                                 if (badge) {
                                     badge.textContent = newStatus;
                                     badge.className = 'payment-badge rounded-full px-2 py-1 text-xs font-semibold ' + (
-                                        newStatus === 'success'
+                                        newStatus === 'paid'
                                             ? 'bg-success-50 text-success-700 dark:bg-success-500/10 dark:text-success-100'
                                             : newStatus === 'failed'
                                                 ? 'bg-danger-50 text-danger-700 dark:bg-danger-500/10 dark:text-danger-100'
-                                                : newStatus === 'processing'
-                                                    ? 'bg-primary-50 text-primary-700 dark:bg-primary-500/10 dark:text-primary-100'
+                                                : newStatus === 'refunded'
+                                                    ? 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200'
                                                     : 'bg-warning-50 text-warning-700 dark:bg-warning-500/10 dark:text-warning-100'
                                     );
                                 }

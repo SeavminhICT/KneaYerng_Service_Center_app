@@ -18,18 +18,21 @@ class UpdateOrderRequest extends FormRequest
             'customer_name' => ['sometimes', 'required', 'string', 'max:255'],
             'customer_email' => ['sometimes', 'nullable', 'email', 'max:255'],
             'order_type' => ['sometimes', 'nullable', 'in:pickup,delivery'],
-            'payment_method' => ['sometimes', 'nullable', 'in:bank,cash'],
+            'payment_method' => ['sometimes', 'nullable', 'in:cod,aba,card,wallet,bank,cash'],
             'delivery_address' => ['sometimes', 'nullable', 'string', 'max:255'],
             'delivery_phone' => ['sometimes', 'nullable', 'string', 'max:50'],
-            'payment_status' => ['sometimes', 'required', 'in:pending,processing,success,failed'],
-            'status' => ['sometimes', 'required', 'in:pending,processing,ready,completed,cancelled'],
+            'delivery_note' => ['sometimes', 'nullable', 'string', 'max:1000'],
+            'delivery_fee' => ['sometimes', 'nullable', 'numeric', 'min:0'],
+            'payment_status' => ['sometimes', 'required', 'in:unpaid,paid,failed,refunded,pending,processing,success'],
+            'status' => ['sometimes', 'required', 'in:pending,processing,ready,completed,cancelled,rejected'],
             'placed_at' => ['sometimes', 'nullable', 'date'],
             'items' => ['sometimes', 'array', 'min:1'],
-            'items.*.product_id' => ['nullable', 'exists:products,id'],
-            'items.*.product_name' => ['required_with:items', 'string', 'max:255'],
+            'items.*.product_id' => ['nullable', 'integer'],
+            'items.*.item_type' => ['nullable', 'in:product,accessory,part,repair_part'],
+            'items.*.item_id' => ['nullable', 'integer'],
+            'items.*.product_name' => ['nullable', 'string', 'max:255'],
             'items.*.quantity' => ['required_with:items', 'integer', 'min:1'],
-            'items.*.price' => ['required_with:items', 'numeric', 'min:0'],
+            'items.*.price' => ['nullable', 'numeric', 'min:0'],
         ];
     }
 }
-

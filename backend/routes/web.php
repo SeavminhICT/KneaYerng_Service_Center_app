@@ -1,14 +1,11 @@
 <?php
 
 use App\Http\Controllers\ProfileController;
+use App\Models\User;
 use Illuminate\Support\Facades\Route;
 
 Route::redirect('/', '/login');
 
-
-Route::get('/dashboard', function () {
-    return view('dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::prefix('admin')->name('admin.')->middleware(['admin'])->group(function () {
     Route::view('/dashboard', 'admin.dashboard')->name('dashboard');
@@ -45,14 +42,40 @@ Route::prefix('admin')->name('admin.')->middleware(['admin'])->group(function ()
 
     Route::view('/technicians', 'admin.technicians.index')->name('technicians.index');
 
-    Route::view('/inventory/parts', 'admin.inventory.parts')->name('inventory.parts');
     Route::view('/inventory/warranties', 'admin.inventory.warranties')->name('inventory.warranties');
 
     Route::view('/finance/invoices', 'admin.finance.invoices')->name('finance.invoices');
     Route::view('/finance/payments', 'admin.finance.payments')->name('finance.payments');
     Route::view('/finance/reports', 'admin.finance.reports')->name('finance.reports');
 
-    Route::view('/customers', 'admin.customers.index')->name('customers.index');
+    Route::get('/customers', function () {
+        $adminEmails = (array) config('auth.admin_emails', []);
+        $baseQuery = User::query()
+            ->where(function ($query) {
+                $query->whereNull('is_admin')
+                    ->orWhere('is_admin', false);
+            })
+            ->where(function ($query) {
+                $query->whereNull('role')
+                    ->orWhere('role', '!=', 'admin');
+            });
+
+        if (! empty($adminEmails)) {
+            $baseQuery->whereNotIn('email', $adminEmails);
+        }
+
+        $customersCount = (clone $baseQuery)->count();
+        $customers = $baseQuery
+            ->withCount('orders')
+            ->withSum('orders', 'total_amount')
+            ->orderByDesc('id')
+            ->get();
+
+        return view('admin.customers.index', [
+            'customers' => $customers,
+            'customersCount' => $customersCount,
+        ]);
+    })->name('customers.index');
     Route::view('/payments', 'admin.payments.index')->name('payments.index');
     Route::view('/reports', 'admin.reports.index')->name('reports.index');
     Route::view('/settings', 'admin.settings.index')->name('settings.index');

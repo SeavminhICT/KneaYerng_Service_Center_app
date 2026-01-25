@@ -40,4 +40,5 @@ class Accessory extends Model
         'price' => 'decimal:2',
         'discount' => 'decimal:2',
     ];
+
 }

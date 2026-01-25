@@ -43,6 +43,10 @@ class ProductController extends Controller
         $validated = $request->validated();
         unset($validated['image'], $validated['thumbnail'], $validated['image_gallery']);
 
+        if (empty($validated['sku'])) {
+            $validated['sku'] = $this->generateSku($validated['name'] ?? '', $validated['brand'] ?? null);
+        }
+
         $thumbnailFile = $request->file('thumbnail') ?? $request->file('image');
         if ($thumbnailFile) {
             $storedPath = $thumbnailFile->store('products/thumbnails', 'public');
@@ -135,5 +139,47 @@ class ProductController extends Controller
 
         return new ProductResource($product->load('category'));
     }
-}
 
+    private function generateSku(string $name, ?string $brand): string
+    {
+        $cleanName = strtoupper(preg_replace('/[^A-Za-z0-9]/', '', $name));
+        $namePart = substr($cleanName, 0, 2);
+        if (strlen($namePart) < 2) {
+            $namePart = str_pad($namePart, 2, 'X');
+        }
+
+        $cleanBrand = strtoupper(preg_replace('/[^A-Za-z0-9]/', '', (string) $brand));
+        if ($cleanBrand === '') {
+            $cleanBrand = 'NA';
+        }
+
+        $prefix = $namePart.$cleanBrand;
+        $sequence = $this->nextSkuSequence($prefix);
+
+        return $prefix.str_pad((string) $sequence, 3, '0', STR_PAD_LEFT);
+    }
+
+    private function nextSkuSequence(string $prefix): int
+    {
+        $skus = Product::query()
+            ->where('sku', 'like', $prefix.'%')
+            ->pluck('sku');
+
+        $max = 0;
+        $pattern = '/^'.preg_quote($prefix, '/').'(\d+)$/';
+
+        foreach ($skus as $sku) {
+            if (!is_string($sku)) {
+                continue;
+            }
+            if (preg_match($pattern, $sku, $matches)) {
+                $value = (int) $matches[1];
+                if ($value > $max) {
+                    $max = $value;
+                }
+            }
+        }
+
+        return $max + 1;
+    }
+}

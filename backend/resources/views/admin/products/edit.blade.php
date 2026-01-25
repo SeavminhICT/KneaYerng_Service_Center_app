@@ -39,7 +39,15 @@
                 </div>
                 <div>
                     <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="discount">Discount</label>
+                    <div class="mt-2 grid grid-cols-2 gap-2">
+                        <select id="discount_type" class="h-10 w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200">
+                            <option value="amount" selected>Amount</option>
+                            <option value="percent">Percent</option>
+                        </select>
+                        <input id="discount_percent" type="number" step="0.01" min="0" max="100" placeholder="10%" class="hidden h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200" />
+                    </div>
                     <input id="discount" name="discount" type="number" step="0.01" min="0" class="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200" />
+                    <p id="final-price" class="mt-1 text-xs text-slate-500"></p>
                 </div>
             </div>
 
@@ -54,6 +62,19 @@
                         <option value="active">Active</option>
                         <option value="draft">Draft</option>
                         <option value="archived">Archived</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="warranty">Warranty</label>
+                    <select id="warranty" name="warranty" class="mt-2 w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200">
+                        <option value="">Select warranty</option>
+                        <option value="NO_WARRANTY">NO_WARRANTY</option>
+                        <option value="7_DAYS">7_DAYS</option>
+                        <option value="14_DAYS">14_DAYS</option>
+                        <option value="1_MONTH">1_MONTH</option>
+                        <option value="3_MONTHS">3_MONTHS</option>
+                        <option value="6_MONTHS">6_MONTHS</option>
+                        <option value="1_YEAR">1_YEAR</option>
                     </select>
                 </div>
             </div>
@@ -116,6 +137,8 @@
         </div>
     </div>
 
+    <script src="https://cdn.ckeditor.com/4.25.1-lts/standard-all/ckeditor.js"></script>
+
     <script>
         async function loadCategories(selectedId) {
             await window.adminApi.ensureCsrfCookie();
@@ -129,6 +152,95 @@
                 var selected = selectedId && String(category.id) === String(selectedId) ? ' selected' : '';
                 return '<option value=\"' + category.id + '\"' + selected + '>' + category.name + '</option>';
             }).join('');
+        }
+
+        function initRichTextEditor(elementId) {
+            if (!window.CKEDITOR) {
+                return;
+            }
+            if (window.CKEDITOR.instances[elementId]) {
+                return;
+            }
+            window.CKEDITOR.replace(elementId, {
+                toolbar: [
+                    { name: 'styles', items: ['Format'] },
+                    { name: 'basicstyles', items: ['Bold', 'Italic'] },
+                    { name: 'links', items: ['Link', 'Unlink'] },
+                    { name: 'paragraph', items: ['NumberedList', 'BulletedList'] },
+                    { name: 'colors', items: ['TextColor', 'BGColor'] },
+                    { name: 'insert', items: ['Table'] },
+                    { name: 'clipboard', items: ['Undo', 'Redo'] }
+                ]
+            });
+        }
+
+        function setupDiscountTools() {
+            var priceInput = document.getElementById('price');
+            var discountInput = document.getElementById('discount');
+            var discountType = document.getElementById('discount_type');
+            var discountPercent = document.getElementById('discount_percent');
+            var finalPrice = document.getElementById('final-price');
+
+            if (!priceInput || !discountInput || !discountType || !discountPercent || !finalPrice) {
+                return;
+            }
+
+            function parseNumber(value) {
+                var number = parseFloat(value);
+                return Number.isFinite(number) ? number : 0;
+            }
+
+            function formatMoney(value) {
+                return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value || 0);
+            }
+
+            function updateFinalPrice() {
+                var price = parseNumber(priceInput.value);
+                var discount = parseNumber(discountInput.value);
+                var finalValue = Math.max(price - discount, 0);
+                finalPrice.textContent = 'Final price: ' + formatMoney(finalValue);
+            }
+
+            function updateDiscountFromPercent() {
+                var price = parseNumber(priceInput.value);
+                var percent = parseNumber(discountPercent.value);
+                if (percent < 0) {
+                    percent = 0;
+                }
+                if (percent > 100) {
+                    percent = 100;
+                }
+                var discountValue = price * (percent / 100);
+                discountInput.value = discountValue ? discountValue.toFixed(2) : '';
+                updateFinalPrice();
+            }
+
+            function applyDiscountType() {
+                var isPercent = discountType.value === 'percent';
+                discountPercent.classList.toggle('hidden', !isPercent);
+                discountInput.readOnly = isPercent;
+                discountInput.classList.toggle('bg-slate-100', isPercent);
+                discountInput.classList.toggle('cursor-not-allowed', isPercent);
+                if (isPercent) {
+                    updateDiscountFromPercent();
+                } else {
+                    updateFinalPrice();
+                }
+            }
+
+            priceInput.addEventListener('input', function () {
+                if (discountType.value === 'percent') {
+                    updateDiscountFromPercent();
+                } else {
+                    updateFinalPrice();
+                }
+            });
+
+            discountInput.addEventListener('input', updateFinalPrice);
+            discountPercent.addEventListener('input', updateDiscountFromPercent);
+            discountType.addEventListener('change', applyDiscountType);
+
+            applyDiscountType();
         }
 
         document.addEventListener('DOMContentLoaded', async function () {
@@ -149,6 +261,7 @@
                 document.getElementById('discount').value = data.data.discount ?? '';
                 document.getElementById('stock').value = data.data.stock ?? '';
                 document.getElementById('status').value = data.data.status || 'active';
+                document.getElementById('warranty').value = data.data.warranty || '';
                 document.getElementById('description').value = data.data.description || '';
                 document.getElementById('storage_capacity').value = (data.data.storage_capacity || []).join(', ');
                 document.getElementById('color').value = (data.data.color || []).join(', ');
@@ -168,7 +281,22 @@
             } else {
                 await loadCategories();
             }
+
+            setupDiscountTools();
+            initRichTextEditor('description');
         });
+
+        var productThumbnailInput = document.querySelector('input[name="thumbnail"][form="product-edit-form"]');
+        if (productThumbnailInput) {
+            productThumbnailInput.addEventListener('change', function (event) {
+                var file = event.target.files[0];
+                if (window.adminValidateFileSize && file && !window.adminValidateFileSize(file, 'Thumbnail')) {
+                    event.stopImmediatePropagation();
+                    event.preventDefault();
+                    event.target.value = '';
+                }
+            }, true);
+        }
 
         document.getElementById('product-edit-form').addEventListener('submit', async function (event) {
             event.preventDefault();
@@ -194,7 +322,21 @@
             });
 
             if (response.ok) {
+                if (window.adminSwalStore) {
+                    window.adminSwalStore({
+                        icon: 'success',
+                        title: 'Product updated',
+                        text: 'Product updated successfully.',
+                        confirmButtonColor: '#2563eb',
+                    });
+                } else if (window.adminToastStore) {
+                    window.adminToastStore({ type: 'success', message: 'Product updated successfully.' });
+                }
                 window.location.href = '/admin/products';
+            } else if (window.adminSwalError) {
+                window.adminSwalError('Update failed', 'Unable to update product.');
+            } else if (window.adminToast) {
+                window.adminToast('Unable to update product.', { type: 'error' });
             }
         });
 
@@ -223,6 +365,17 @@
         var galleryInput = document.querySelector('input[name="image_gallery[]"]');
         if (galleryInput) {
             galleryInput.addEventListener('change', function (event) {
+                var files = Array.from(event.target.files || []);
+                if (window.adminValidateFileSize) {
+                    var hasOversized = files.some(function (file) {
+                        return !window.adminValidateFileSize(file, 'Gallery image');
+                    });
+                    if (hasOversized) {
+                        event.target.value = '';
+                        renderGalleryPreview([], 'gallery-preview');
+                        return;
+                    }
+                }
                 renderGalleryPreview(event.target.files, 'gallery-preview');
             });
         }

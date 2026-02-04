@@ -34,7 +34,6 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
   Future<List<Product>> _fetch() {
     return ApiService.fetchProducts(
       categoryName: widget.categoryName,
-      status: 'active',
     );
   }
 

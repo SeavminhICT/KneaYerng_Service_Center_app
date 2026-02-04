@@ -27,6 +27,7 @@ class StoreOrderRequest extends FormRequest
             'payment_status' => ['nullable', 'in:unpaid,paid,failed,refunded,pending,processing,success'],
             'status' => ['nullable', 'in:pending,processing,ready,completed,cancelled,rejected'],
             'placed_at' => ['nullable', 'date'],
+            'voucher_code' => ['nullable', 'string', 'max:50'],
             'items' => ['required', 'array', 'min:1'],
             'items.*.product_id' => ['nullable', 'integer'],
             'items.*.item_type' => ['nullable', 'in:product,accessory,part,repair_part'],

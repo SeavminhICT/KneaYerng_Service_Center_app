@@ -40,6 +40,7 @@
                             <th class="px-4 py-3">Name</th>
                             <th class="px-4 py-3">Brand</th>
                             <th class="px-4 py-3">Price</th>
+                            <th class="px-4 py-3">Stock</th>
                             <th class="px-4 py-3">Discount</th>
                             <th class="px-4 py-3">Final Price</th>
                             <th class="px-4 py-3">Warranty</th>
@@ -94,7 +95,7 @@
                 await window.adminApi.ensureCsrfCookie();
                 var response = await window.adminApi.request('/api/accessories?q=' + encodeURIComponent(currentQuery) + '&page=' + currentPage);
                 if (!response.ok) {
-                    rows.innerHTML = '<tr><td class="px-4 py-6 text-center text-sm text-slate-500" colspan="8">Unable to load accessories.</td></tr>';
+                    rows.innerHTML = '<tr><td class="px-4 py-6 text-center text-sm text-slate-500" colspan="9">Unable to load accessories.</td></tr>';
                     return;
                 }
                 var data = await response.json();
@@ -112,6 +113,7 @@
                             </td>
                             <td class="px-4 py-3">${item.brand}</td>
                             <td class="px-4 py-3">${formatCurrency(item.price)}</td>
+                            <td class="px-4 py-3">${item.stock ?? 0}</td>
                             <td class="px-4 py-3">${formatCurrency(item.discount)}</td>
                             <td class="px-4 py-3">${formatCurrency(item.final_price)}</td>
                             <td class="px-4 py-3">${warrantyBadge(item.warranty)}</td>
@@ -122,7 +124,7 @@
                             </td>
                         </tr>
                     `;
-                }).join('') || '<tr><td class="px-4 py-6 text-center text-sm text-slate-500" colspan="8">No accessories found.</td></tr>';
+                }).join('') || '<tr><td class="px-4 py-6 text-center text-sm text-slate-500" colspan="9">No accessories found.</td></tr>';
 
                 info.textContent = 'Showing ' + list.length + ' of ' + (data.meta?.total ?? list.length) + ' accessories';
                 prevButton.disabled = !data.links?.prev;
@@ -177,6 +179,10 @@
                                 <div class="flex items-center justify-between gap-4">
                                     <span class="font-semibold text-slate-500">Price</span>
                                     <span class="text-slate-900">${formatCurrency(item.price)}</span>
+                                </div>
+                                <div class="flex items-center justify-between gap-4">
+                                    <span class="font-semibold text-slate-500">Stock</span>
+                                    <span class="text-slate-900">${item.stock ?? 0}</span>
                                 </div>
                                 <div class="flex items-center justify-between gap-4">
                                     <span class="font-semibold text-slate-500">Discount</span>

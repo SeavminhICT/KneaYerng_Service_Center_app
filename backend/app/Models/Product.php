@@ -20,6 +20,12 @@ class Product extends Model
         '1_YEAR',
     ];
 
+    public const TAGS = [
+        'HOT_SALE',
+        'TOP_SELLER',
+        'PROMOTION',
+    ];
+
     protected $fillable = [
         'name',
         'description',
@@ -29,6 +35,7 @@ class Product extends Model
         'discount',
         'stock',
         'status',
+        'tag',
         'brand',
         'warranty',
         'thumbnail',
@@ -36,6 +43,11 @@ class Product extends Model
         'storage_capacity',
         'color',
         'condition',
+        'ram',
+        'ssd',
+        'cpu',
+        'display',
+        'country',
         'image',
     ];
 
@@ -46,6 +58,11 @@ class Product extends Model
         'storage_capacity' => 'array',
         'color' => 'array',
         'condition' => 'array',
+        'ram' => 'array',
+        'ssd' => 'array',
+        'cpu' => 'array',
+        'display' => 'array',
+        'country' => 'array',
     ];
 
     public function category()

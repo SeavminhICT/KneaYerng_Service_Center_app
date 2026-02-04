@@ -20,6 +20,8 @@ class UpdateAccessoryRequest extends FormRequest
             'name' => ['sometimes', 'required', 'string', 'min:3'],
             'price' => ['sometimes', 'required', 'numeric', 'min:0.01'],
             'discount' => ['sometimes', 'nullable', 'numeric', 'min:0'],
+            'stock' => ['sometimes', 'required', 'integer', 'min:0'],
+            'tag' => ['sometimes', 'nullable', 'in:'.implode(',', Accessory::TAGS)],
             'description' => ['sometimes', 'nullable', 'string', 'max:500'],
             'warranty' => ['sometimes', 'required', 'in:'.implode(',', Accessory::WARRANTIES)],
         ];

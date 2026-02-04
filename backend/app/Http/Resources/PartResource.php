@@ -19,6 +19,7 @@ class PartResource extends JsonResource
             'unit_cost' => $this->unit_cost,
             'price' => $this->unit_cost,
             'status' => $this->status,
+            'tag' => $this->tag,
             'created_at' => $this->created_at?->toISOString(),
         ];
     }

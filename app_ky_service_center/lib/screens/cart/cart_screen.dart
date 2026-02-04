@@ -1,10 +1,128 @@
 import 'package:flutter/material.dart';
+import 'package:lottie/lottie.dart';
 import '../../models/product.dart';
 import '../../models/cart_item.dart';
 import '../../services/cart_service.dart';
+import '../../services/api_service.dart';
+import 'bakong_checkout_sheet.dart';
 
-class CartScreen extends StatelessWidget {
+class CartScreen extends StatefulWidget {
   const CartScreen({super.key});
+
+  @override
+  State<CartScreen> createState() => _CartScreenState();
+}
+
+class _CartScreenState extends State<CartScreen> {
+  final TextEditingController _promoController = TextEditingController();
+  VoucherValidation? _voucher;
+  bool _isApplying = false;
+
+  @override
+  void dispose() {
+    _promoController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _openBakongCheckout(BuildContext context, double total) async {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => BakongCheckoutSheet(total: total),
+    );
+  }
+
+  Future<void> _showVoucherAlert({
+    required bool success,
+    required String message,
+  }) async {
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              height: 120,
+              width: 120,
+              child: Lottie.asset(
+                'assets/lottie/discount.json',
+                repeat: success,
+              ),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                color: success
+                    ? const Color(0xFF15803D)
+                    : const Color(0xFFDC2626),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _applyVoucher(double subtotal) async {
+    if (subtotal <= 0) {
+      await _showVoucherAlert(
+        success: false,
+        message: 'Add items to the cart before applying a promo code.',
+      );
+      return;
+    }
+    final code = _promoController.text.trim();
+    if (code.isEmpty) {
+      await _showVoucherAlert(
+        success: false,
+        message: 'Please enter a promo code.',
+      );
+      return;
+    }
+    setState(() => _isApplying = true);
+    VoucherValidation result;
+    try {
+      result = await ApiService.validateVoucher(
+        code: code,
+        subtotal: subtotal,
+      );
+    } catch (_) {
+      result = VoucherValidation(
+        isValid: false,
+        message: 'Unable to validate the promo code.',
+      );
+    }
+    if (!mounted) return;
+    setState(() {
+      _isApplying = false;
+      _voucher = result.isValid ? result : null;
+      if (!result.isValid) {
+        _promoController.clear();
+      } else {
+        _promoController.text = result.code ?? code;
+      }
+    });
+    await _showVoucherAlert(
+      success: result.isValid,
+      message: result.message ??
+          (result.isValid
+              ? 'Promo code applied successfully.'
+              : 'Promo code is not valid.'),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -16,7 +134,8 @@ class CartScreen extends StatelessWidget {
         final totalItems = CartService.instance.totalItems;
         final shipping = items.isEmpty ? 0.0 : 9.99;
         final tax = subtotal * 0.08;
-        final total = subtotal + shipping + tax;
+        final discount = _voucher?.discountFor(subtotal) ?? 0.0;
+        final total = (subtotal + shipping + tax - discount).clamp(0, 9999999);
         return Scaffold(
           backgroundColor: const Color(0xFFF6F7FB),
           body: SafeArea(
@@ -65,13 +184,20 @@ class CartScreen extends StatelessWidget {
                               ),
                             ),
                             const SizedBox(height: 6),
-                            const _PromoCodeCard(),
+                            _PromoCodeCard(
+                              controller: _promoController,
+                              isApplying: _isApplying,
+                              appliedCode: _voucher?.code,
+                              discount: discount,
+                              onApply: () => _applyVoucher(subtotal),
+                            ),
                             const SizedBox(height: 14),
                             _OrderSummary(
                               subtotal: subtotal,
                               shipping: shipping,
                               tax: tax,
-                              total: total,
+                              discount: discount,
+                              total: total.toDouble(),
                             ),
                             const SizedBox(height: 16),
                             const _SectionHeader(
@@ -86,8 +212,8 @@ class CartScreen extends StatelessWidget {
                 ),
                 if (items.isNotEmpty)
                   _CheckoutBar(
-                    total: total,
-                    onCheckout: () {},
+                    total: total.toDouble(),
+                    onCheckout: () => _openBakongCheckout(context, total.toDouble()),
                   ),
               ],
             ),
@@ -300,6 +426,7 @@ class _ProductThumb extends StatelessWidget {
                   'Accept':
                       'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
                 },
+                errorBuilder: (_, __, ___) => const _ImageFallback(),
               ),
       ),
     );
@@ -373,7 +500,19 @@ class _StepButton extends StatelessWidget {
 }
 
 class _PromoCodeCard extends StatelessWidget {
-  const _PromoCodeCard();
+  const _PromoCodeCard({
+    required this.controller,
+    required this.isApplying,
+    required this.onApply,
+    required this.appliedCode,
+    required this.discount,
+  });
+
+  final TextEditingController controller;
+  final bool isApplying;
+  final VoidCallback onApply;
+  final String? appliedCode;
+  final double discount;
 
   @override
   Widget build(BuildContext context) {
@@ -391,11 +530,23 @@ class _PromoCodeCard extends StatelessWidget {
             'Promo Code',
             style: TextStyle(fontWeight: FontWeight.w700),
           ),
+          if (appliedCode != null && appliedCode!.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Text(
+              'Applied: ${appliedCode!} (-\$${discount.toStringAsFixed(2)})',
+              style: const TextStyle(
+                fontSize: 11,
+                color: Color(0xFF16A34A),
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
           const SizedBox(height: 10),
           Row(
             children: [
               Expanded(
                 child: TextField(
+                  controller: controller,
                   decoration: InputDecoration(
                     hintText: 'Enter coupon code',
                     filled: true,
@@ -419,7 +570,7 @@ class _PromoCodeCard extends StatelessWidget {
               ),
               const SizedBox(width: 10),
               ElevatedButton(
-                onPressed: () {},
+                onPressed: isApplying ? null : onApply,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF0F6BFF),
                   foregroundColor: Colors.white,
@@ -429,7 +580,17 @@ class _PromoCodeCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(10),
                   ),
                 ),
-                child: const Text('Apply'),
+                child: isApplying
+                    ? const SizedBox(
+                        height: 16,
+                        width: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor:
+                              AlwaysStoppedAnimation<Color>(Colors.white),
+                        ),
+                      )
+                    : const Text('Apply'),
               ),
             ],
           ),
@@ -444,12 +605,14 @@ class _OrderSummary extends StatelessWidget {
     required this.subtotal,
     required this.shipping,
     required this.tax,
+    required this.discount,
     required this.total,
   });
 
   final double subtotal;
   final double shipping;
   final double tax;
+  final double discount;
   final double total;
 
   @override
@@ -472,6 +635,12 @@ class _OrderSummary extends StatelessWidget {
           _SummaryRow(label: 'Subtotal', value: subtotal),
           _SummaryRow(label: 'Shipping', value: shipping),
           _SummaryRow(label: 'Tax', value: tax),
+          if (discount > 0)
+            _SummaryRow(
+              label: 'Discount',
+              value: -discount,
+              valueColor: const Color(0xFF16A34A),
+            ),
           const Divider(height: 20),
           Row(
             children: [
@@ -496,10 +665,15 @@ class _OrderSummary extends StatelessWidget {
 }
 
 class _SummaryRow extends StatelessWidget {
-  const _SummaryRow({required this.label, required this.value});
+  const _SummaryRow({
+    required this.label,
+    required this.value,
+    this.valueColor,
+  });
 
   final String label;
   final double value;
+  final Color? valueColor;
 
   @override
   Widget build(BuildContext context) {
@@ -513,8 +687,13 @@ class _SummaryRow extends StatelessWidget {
           ),
           const Spacer(),
           Text(
-            '\$${value.toStringAsFixed(2)}',
-            style: const TextStyle(fontWeight: FontWeight.w600),
+            value < 0
+                ? '-\$${value.abs().toStringAsFixed(2)}'
+                : '\$${value.toStringAsFixed(2)}',
+            style: TextStyle(
+              fontWeight: FontWeight.w600,
+              color: valueColor,
+            ),
           ),
         ],
       ),
@@ -556,7 +735,7 @@ class _RecommendationsRow extends StatelessWidget {
           name: 'Portable Bluetooth Speaker',
           price: 29.0,
           imageUrl:
-              'https://images.unsplash.com/photo-1512446816042-444d641267bc?auto=format&fit=crop&w=900&q=80',
+              'https://images.unsplash.com/photo-1496181133206-80ce9b88a853?auto=format&fit=crop&w=900&q=80',
         ),
         Product(
           id: 902,
@@ -606,6 +785,7 @@ class _RecommendationsRow extends StatelessWidget {
                         'Accept':
                             'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
                       },
+                      errorBuilder: (_, __, ___) => const _ImageFallback(),
                     ),
                   ),
                 ),
@@ -723,6 +903,20 @@ class _EmptyCart extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _ImageFallback extends StatelessWidget {
+  const _ImageFallback();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: const Color(0xFFF3F4F6),
+      child: const Center(
+        child: Icon(Icons.image_not_supported, color: Color(0xFF9CA3AF)),
       ),
     );
   }

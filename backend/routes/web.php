@@ -2,6 +2,9 @@
 
 use App\Http\Controllers\ProfileController;
 use App\Models\User;
+use App\Models\Voucher;
+use App\Models\Part;
+use App\Models\ProductAttributeOption;
 use Illuminate\Support\Facades\Route;
 
 Route::redirect('/', '/login');
@@ -23,6 +26,7 @@ Route::prefix('admin')->name('admin.')->middleware(['admin'])->group(function ()
     Route::get('/products/{product}/edit', function (\App\Models\Product $product) {
         return view('admin.products.edit', ['productId' => $product->id]);
     })->name('products.edit');
+    Route::view('/product-attributes', 'admin.product-attributes.index')->name('product-attributes.index');
 
     Route::view('/accessories', 'admin.accessories.index')->name('accessories.index');
     Route::view('/accessories/create', 'admin.accessories.create')->name('accessories.create');
@@ -41,6 +45,18 @@ Route::prefix('admin')->name('admin.')->middleware(['admin'])->group(function ()
     })->name('repairs.show');
 
     Route::view('/technicians', 'admin.technicians.index')->name('technicians.index');
+
+    Route::view('/vouchers', 'admin.vouchers.index')->name('vouchers.index');
+    Route::view('/vouchers/create', 'admin.vouchers.create')->name('vouchers.create');
+    Route::get('/vouchers/{voucher}/edit', function (Voucher $voucher) {
+        return view('admin.vouchers.edit', ['voucherId' => $voucher->id]);
+    })->name('vouchers.edit');
+
+    Route::view('/parts', 'admin.parts.index')->name('parts.index');
+    Route::view('/parts/create', 'admin.parts.create')->name('parts.create');
+    Route::get('/parts/{part}/edit', function (Part $part) {
+        return view('admin.parts.edit', ['partId' => $part->id]);
+    })->name('parts.edit');
 
     Route::view('/inventory/warranties', 'admin.inventory.warranties')->name('inventory.warranties');
 

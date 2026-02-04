@@ -22,7 +22,7 @@ class _AllProductsScreenState extends State<AllProductsScreen> {
   }
 
   Future<List<Product>> _fetch() {
-    return ApiService.fetchProducts(status: 'active');
+    return ApiService.fetchProducts();
   }
 
   Future<void> _refresh() async {

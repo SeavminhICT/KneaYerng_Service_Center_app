@@ -32,6 +32,10 @@
                     <input id="price" name="price" type="number" step="0.01" min="0" placeholder="25.00" class="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200" />
                 </div>
                 <div>
+                    <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="stock">Parts Stock</label>
+                    <input id="stock" name="stock" type="number" min="0" required placeholder="0" class="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200" />
+                </div>
+                <div>
                     <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="discount">Discount</label>
                     <div class="mt-2 grid grid-cols-2 gap-2">
                         <select id="discount_type" class="h-10 w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200">
@@ -57,6 +61,15 @@
                         <option value="3_MONTHS">3_MONTHS</option>
                         <option value="6_MONTHS">6_MONTHS</option>
                         <option value="1_YEAR">1_YEAR</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="tag">Tag</label>
+                    <select id="tag" name="tag" class="mt-2 w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200">
+                        <option value="">No tag</option>
+                        <option value="HOT_SALE">Hot Sale</option>
+                        <option value="TOP_SELLER">Top Seller</option>
+                        <option value="PROMOTION">Promotion</option>
                     </select>
                 </div>
             </div>

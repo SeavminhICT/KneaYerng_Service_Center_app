@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\StoreProductRequest;
 use App\Http\Requests\Api\UpdateProductRequest;
 use App\Http\Resources\ProductResource;
+use App\Models\Part;
 use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -63,6 +64,7 @@ class ProductController extends Controller
         }
 
         $product = Product::create($validated);
+        $this->ensurePartFromProduct($product);
 
         return new ProductResource($product->load('category'));
     }
@@ -181,5 +183,52 @@ class ProductController extends Controller
         }
 
         return $max + 1;
+    }
+
+    private function ensurePartFromProduct(Product $product): void
+    {
+        $sku = $product->sku;
+        if ($sku) {
+            $existing = Part::query()->where('sku', $sku)->exists();
+            if ($existing) {
+                return;
+            }
+        } else {
+            $query = Part::query()
+                ->where('type', 'product')
+                ->where('name', $product->name);
+
+            if ($product->brand) {
+                $query->where('brand', $product->brand);
+            }
+
+            if ($query->exists()) {
+                return;
+            }
+        }
+
+        Part::create([
+            'name' => $product->name,
+            'type' => 'product',
+            'brand' => $product->brand,
+            'sku' => $sku,
+            'stock' => (int) ($product->stock ?? 0),
+            'unit_cost' => (float) ($product->price ?? 0),
+            'status' => $this->mapProductStatusToPartStatus($product->status),
+            'tag' => $product->tag,
+        ]);
+    }
+
+    private function mapProductStatusToPartStatus(?string $status): string
+    {
+        if ($status === 'draft') {
+            return 'inactive';
+        }
+
+        if ($status === 'archived') {
+            return 'archived';
+        }
+
+        return 'active';
     }
 }

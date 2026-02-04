@@ -19,6 +19,9 @@ use App\Http\Controllers\Api\RepairQuotationController;
 use App\Http\Controllers\Api\RepairRequestController;
 use App\Http\Controllers\Api\RepairWarrantyController;
 use App\Http\Controllers\Api\TechnicianController;
+use App\Http\Controllers\Api\VoucherController;
+use App\Http\Controllers\Api\PartController;
+use App\Http\Controllers\Api\ProductAttributeOptionController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -93,8 +96,12 @@ Route::middleware('admin')->group(function () {
     Route::apiResource('categories', CategoryController::class)->except(['index', 'show']);
     Route::apiResource('products', ProductController::class)->except(['index', 'show']);
     Route::apiResource('accessories', AccessoryController::class)->except(['index', 'show']);
+    Route::apiResource('parts', PartController::class);
+    Route::get('product-attributes', [ProductAttributeOptionController::class, 'index']);
+    Route::post('product-attributes', [ProductAttributeOptionController::class, 'store']);
     Route::patch('products/{product}/status', [ProductController::class, 'toggleStatus']);
     Route::apiResource('orders', OrderController::class);
+    Route::apiResource('vouchers', VoucherController::class);
     Route::get('repairs', [RepairRequestController::class, 'index']);
     Route::post('repairs/{repair}/intake', [RepairIntakeController::class, 'store']);
     Route::get('repairs/{repair}/intake', [RepairIntakeController::class, 'show']);

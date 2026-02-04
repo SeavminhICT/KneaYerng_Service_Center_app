@@ -21,6 +21,11 @@ class Order extends Model
         'delivery_note',
         'subtotal',
         'delivery_fee',
+        'voucher_id',
+        'voucher_code',
+        'discount_type',
+        'discount_value',
+        'discount_amount',
         'pickup_qr_token',
         'pickup_qr_generated_at',
         'pickup_verified_at',
@@ -37,6 +42,8 @@ class Order extends Model
         'pickup_verified_at' => 'datetime',
         'subtotal' => 'decimal:2',
         'delivery_fee' => 'decimal:2',
+        'discount_value' => 'decimal:2',
+        'discount_amount' => 'decimal:2',
         'total_amount' => 'decimal:2',
         'inventory_deducted' => 'boolean',
     ];
@@ -54,5 +61,10 @@ class Order extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function voucher()
+    {
+        return $this->belongsTo(Voucher::class);
     }
 }

@@ -13,6 +13,8 @@ use App\Models\OrderItem;
 use App\Models\Part;
 use App\Models\Payment;
 use App\Models\Product;
+use App\Models\VoucherRedemption;
+use App\Services\VoucherService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -156,6 +158,7 @@ class CartController extends Controller
             'delivery_note' => ['nullable', 'string', 'max:1000'],
             'delivery_fee' => ['nullable', 'numeric', 'min:0'],
             'payment_status' => ['nullable', 'in:unpaid,paid,failed,refunded,pending,processing,success'],
+            'voucher_code' => ['nullable', 'string', 'max:50'],
         ]);
 
         $cart = $this->getOrCreateCart($user->id)->load('items');
@@ -166,12 +169,13 @@ class CartController extends Controller
         $orderType = $validated['order_type'] ?? 'pickup';
         $deliveryFee = $this->resolveDeliveryFee($orderType, $validated['delivery_fee'] ?? null);
         $subtotal = $cart->items->sum('line_total');
-        $totalAmount = $subtotal + $deliveryFee;
         $paymentMethod = $validated['payment_method'] ?? 'cod';
         [$orderPaymentStatus, $paymentStatus] = $this->normalizePaymentStatusInput(
             $validated['payment_status'] ?? null,
             $paymentMethod
         );
+        $voucherCode = $validated['voucher_code'] ?? null;
+        $voucherService = app(VoucherService::class);
 
         $deliveryAddress = $orderType === 'delivery' ? ($validated['delivery_address'] ?? null) : null;
         $deliveryPhone = $orderType === 'delivery' ? ($validated['delivery_phone'] ?? null) : null;
@@ -184,14 +188,21 @@ class CartController extends Controller
             $orderType,
             $deliveryFee,
             $subtotal,
-            $totalAmount,
             $paymentMethod,
             $orderPaymentStatus,
             $paymentStatus,
             $deliveryAddress,
             $deliveryPhone,
-            $deliveryNote
+            $deliveryNote,
+            $voucherCode,
+            $voucherService
         ) {
+            $voucherData = $voucherService->evaluate($voucherCode, $subtotal, $user->id, true);
+            $voucher = $voucherData['voucher'] ?? null;
+            $discountAmount = $voucherData['discount_amount'] ?? 0;
+            $discountAmount = min($discountAmount, $subtotal);
+            $totalAmount = max($subtotal - $discountAmount, 0) + $deliveryFee;
+
             $order = Order::create([
                 'order_number' => $this->generateOrderNumber(),
                 'user_id' => $user->id,
@@ -204,6 +215,11 @@ class CartController extends Controller
                 'delivery_note' => $deliveryNote,
                 'subtotal' => $subtotal,
                 'delivery_fee' => $deliveryFee,
+                'voucher_id' => $voucher?->id,
+                'voucher_code' => $voucher?->code,
+                'discount_type' => $voucher?->discount_type,
+                'discount_value' => $voucher?->discount_value ?? 0,
+                'discount_amount' => $discountAmount,
                 'total_amount' => $totalAmount,
                 'payment_status' => $orderPaymentStatus,
                 'status' => 'pending',
@@ -234,6 +250,15 @@ class CartController extends Controller
             if ($payment->status === 'success') {
                 $payment->paid_at = now();
                 $payment->save();
+            }
+
+            if ($voucher) {
+                VoucherRedemption::create([
+                    'voucher_id' => $voucher->id,
+                    'user_id' => $user->id,
+                    'order_id' => $order->id,
+                    'redeemed_at' => now(),
+                ]);
             }
 
             $cart->items()->delete();

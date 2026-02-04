@@ -12,6 +12,8 @@ use App\Models\OrderItem;
 use App\Models\Payment;
 use App\Models\Part;
 use App\Models\Product;
+use App\Models\VoucherRedemption;
+use App\Services\VoucherService;
 use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Crypt;
@@ -77,6 +79,10 @@ class OrderController extends Controller
                 'Payment Method',
                 'Subtotal',
                 'Delivery Fee',
+                'Voucher Code',
+                'Discount Type',
+                'Discount Value',
+                'Discount Amount',
                 'Total Amount',
                 'Payment Status',
                 'Status',
@@ -91,6 +97,10 @@ class OrderController extends Controller
                 'payment_method',
                 'subtotal',
                 'delivery_fee',
+                'voucher_code',
+                'discount_type',
+                'discount_value',
+                'discount_amount',
                 'total_amount',
                 'payment_status',
                 'status',
@@ -107,6 +117,10 @@ class OrderController extends Controller
                         $order->payment_method,
                         $order->subtotal,
                         $order->delivery_fee,
+                        $order->voucher_code,
+                        $order->discount_type,
+                        $order->discount_value,
+                        $order->discount_amount,
                         $order->total_amount,
                         $order->payment_status,
                         $order->status,
@@ -125,11 +139,33 @@ class OrderController extends Controller
         $items = $this->normalizeOrderItems($validated['items'] ?? []);
         $actor = $request->user() ?? $request->user('sanctum');
 
+        $resolvedUserId = $this->resolveUserId($actor, $validated);
+        $voucherCode = $validated['voucher_code'] ?? null;
+        if ($voucherCode && ! $resolvedUserId) {
+            throw ValidationException::withMessages([
+                'voucher_code' => ['Voucher requires an authenticated customer.'],
+            ]);
+        }
+        if ($voucherCode && $actor && method_exists($actor, 'isAdmin') && $actor->isAdmin() && empty($validated['user_id'])) {
+            throw ValidationException::withMessages([
+                'voucher_code' => ['Voucher requires a registered customer (user_id).'],
+            ]);
+        }
+
         $orderNumber = $validated['order_number'] ?? $this->generateOrderNumber();
         $orderType = $validated['order_type'] ?? 'pickup';
         $deliveryFee = $this->resolveDeliveryFee($orderType, $validated['delivery_fee'] ?? null);
         $subtotal = $this->calculateSubtotal($items);
-        $totalAmount = $subtotal + $deliveryFee;
+        $voucherService = app(VoucherService::class);
+        $voucherData = $voucherService->evaluate(
+            $voucherCode,
+            $subtotal,
+            $resolvedUserId ?: 0
+        );
+        $voucher = $voucherData['voucher'] ?? null;
+        $discountAmount = $voucherData['discount_amount'] ?? 0;
+        $discountAmount = min($discountAmount, $subtotal);
+        $totalAmount = max($subtotal - $discountAmount, 0) + $deliveryFee;
         $paymentMethod = $validated['payment_method'] ?? 'cod';
         [$orderPaymentStatus, $paymentStatus] = $this->normalizePaymentStatusInput(
             $validated['payment_status'] ?? null,
@@ -142,7 +178,7 @@ class OrderController extends Controller
 
         $order = Order::create([
             'order_number' => $orderNumber,
-            'user_id' => $this->resolveUserId($actor, $validated),
+            'user_id' => $resolvedUserId,
             'customer_name' => $validated['customer_name'],
             'customer_email' => $validated['customer_email'] ?? null,
             'order_type' => $orderType,
@@ -152,6 +188,11 @@ class OrderController extends Controller
             'delivery_note' => $deliveryNote,
             'subtotal' => $subtotal,
             'delivery_fee' => $deliveryFee,
+            'voucher_id' => $voucher?->id,
+            'voucher_code' => $voucher?->code,
+            'discount_type' => $voucher?->discount_type,
+            'discount_value' => $voucher?->discount_value ?? 0,
+            'discount_amount' => $discountAmount,
             'total_amount' => $totalAmount,
             'payment_status' => $orderPaymentStatus,
             'status' => $status,
@@ -169,6 +210,15 @@ class OrderController extends Controller
         if ($payment->status === 'success') {
             $payment->paid_at = now();
             $payment->save();
+        }
+
+        if ($voucher && $resolvedUserId) {
+            VoucherRedemption::create([
+                'voucher_id' => $voucher->id,
+                'user_id' => $resolvedUserId,
+                'order_id' => $order->id,
+                'redeemed_at' => now(),
+            ]);
         }
 
         Log::info('Payment created for order.', [
@@ -306,7 +356,9 @@ class OrderController extends Controller
                 $order->delivery_note = $deliveryNote;
                 $order->subtotal = $subtotal;
                 $order->delivery_fee = $deliveryFee;
-                $order->total_amount = $subtotal + $deliveryFee;
+                $discountAmount = min((float) ($order->discount_amount ?? 0), $subtotal);
+                $order->discount_amount = $discountAmount;
+                $order->total_amount = $subtotal + $deliveryFee - $discountAmount;
                 $order->payment_method = $paymentMethod;
                 $order->payment_status = $orderPaymentStatus;
 

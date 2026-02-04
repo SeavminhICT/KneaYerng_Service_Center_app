@@ -92,8 +92,14 @@
                         Weekly sales
                     </div>
                 </div>
-                <div class="mt-6 flex h-48 items-center justify-center rounded-xl bg-slate-50 text-sm text-slate-500 dark:bg-slate-950">
-                    No sales data available yet.
+                <div id="sales-overview-container" class="mt-6 rounded-xl bg-slate-50 p-4 dark:bg-slate-950">
+                    <div id="sales-overview-empty" class="flex h-40 items-center justify-center text-sm text-slate-500">
+                        No sales data available yet.
+                    </div>
+                    <div id="sales-overview-chart" class="hidden">
+                        <div id="sales-overview-bars" class="grid h-40 grid-cols-12 items-end gap-2"></div>
+                        <div id="sales-overview-labels" class="mt-3 grid grid-cols-12 gap-2 text-[10px] uppercase tracking-widest text-slate-400"></div>
+                    </div>
                 </div>
             </div>
 
@@ -112,6 +118,60 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', async function () {
+            function formatCurrency(value) {
+                return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value || 0);
+            }
+
+            function renderSalesOverview(weeklySales) {
+                const chart = document.getElementById('sales-overview-chart');
+                const emptyState = document.getElementById('sales-overview-empty');
+                const bars = document.getElementById('sales-overview-bars');
+                const labels = document.getElementById('sales-overview-labels');
+
+                if (!chart || !emptyState || !bars || !labels) {
+                    return;
+                }
+
+                if (!Array.isArray(weeklySales) || weeklySales.length === 0) {
+                    chart.classList.add('hidden');
+                    emptyState.classList.remove('hidden');
+                    return;
+                }
+
+                const maxValue = weeklySales.reduce(function (carry, entry) {
+                    const total = Number(entry.total || 0);
+                    return total > carry ? total : carry;
+                }, 0);
+
+                if (maxValue <= 0) {
+                    chart.classList.add('hidden');
+                    emptyState.classList.remove('hidden');
+                    return;
+                }
+
+                bars.innerHTML = '';
+                labels.innerHTML = '';
+                weeklySales.forEach(function (entry) {
+                    const total = Number(entry.total || 0);
+                    const count = Number(entry.order_count || 0);
+                    const height = total > 0 ? Math.max(6, Math.round((total / maxValue) * 100)) : 0;
+
+                    const bar = document.createElement('div');
+                    bar.className = 'self-end rounded-lg bg-primary-500/80 shadow-sm';
+                    bar.style.height = height + '%';
+                    bar.setAttribute('title', (entry.label || 'Week') + ' · ' + formatCurrency(total) + ' · ' + count + ' orders');
+                    bars.appendChild(bar);
+
+                    const label = document.createElement('div');
+                    label.className = 'truncate text-center';
+                    label.textContent = entry.label || '';
+                    labels.appendChild(label);
+                });
+
+                emptyState.classList.add('hidden');
+                chart.classList.remove('hidden');
+            }
+
             try {
                 await window.adminApi.ensureCsrfCookie();
                 const response = await window.adminApi.request('/api/admin/metrics');
@@ -119,10 +179,11 @@
                     return;
                 }
                 const data = await response.json();
-                document.getElementById('metric-sales').textContent = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(data.total_sales || 0);
+                document.getElementById('metric-sales').textContent = formatCurrency(data.total_sales || 0);
                 document.getElementById('metric-orders').textContent = data.total_orders ?? '--';
                 document.getElementById('metric-products').textContent = data.total_products ?? '--';
                 document.getElementById('metric-customers').textContent = data.total_customers ?? '--';
+                renderSalesOverview(data.weekly_sales || []);
             } catch (error) {
                 console.error(error);
             }

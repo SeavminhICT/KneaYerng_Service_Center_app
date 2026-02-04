@@ -9,13 +9,13 @@ import '../services/cart_service.dart';
 class MainNavigationScreen extends StatefulWidget {
   const MainNavigationScreen({super.key});
 
+  static final ValueNotifier<int> tabIndex = ValueNotifier<int>(0);
+
   @override
   State<MainNavigationScreen> createState() => _MainNavigationScreenState();
 }
 
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
-  int _currentIndex = 0;
-
   final List<Widget> _screens = const [
     HomeScreen(),
     CategoriesScreen(),
@@ -30,77 +30,80 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       animation: CartService.instance,
       builder: (context, _) {
         final cartCount = CartService.instance.totalItems;
-        return Scaffold(
-          body: _screens[_currentIndex],
-          bottomNavigationBar: SafeArea(
-            top: false,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(28),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Color(0x1A000000),
-                      blurRadius: 20,
-                      offset: Offset(0, 8),
-                    ),
-                  ],
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(28),
-                  child: BottomNavigationBar(
-                    currentIndex: _currentIndex,
-                    type: BottomNavigationBarType.fixed,
-                    backgroundColor: Colors.white,
-                    elevation: 0,
-                    selectedItemColor: const Color(0xFF00B2D8),
-                    unselectedItemColor: const Color(0xFF9CA3AF),
-                    selectedLabelStyle: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                    ),
-                    unselectedLabelStyle: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                    ),
-                    showUnselectedLabels: true,
-                    onTap: (index) {
-                      setState(() {
-                        _currentIndex = index;
-                      });
-                    },
-                    items: [
-                      const BottomNavigationBarItem(
-                        icon: Icon(Icons.home, size: 24),
-                        label: "Home",
-                      ),
-                      const BottomNavigationBarItem(
-                        icon: Icon(Icons.grid_view_rounded, size: 24),
-                        label: "Categories",
-                      ),
-                      const BottomNavigationBarItem(
-                        icon: Icon(Icons.build, size: 24),
-                        label: "Repair",
-                      ),
-                      BottomNavigationBarItem(
-                        icon: _CartBadge(
-                          count: cartCount,
-                          child: const Icon(Icons.shopping_cart, size: 24),
+        return ValueListenableBuilder<int>(
+          valueListenable: MainNavigationScreen.tabIndex,
+          builder: (context, currentIndex, _) {
+            return Scaffold(
+              body: _screens[currentIndex],
+              bottomNavigationBar: SafeArea(
+                top: false,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(28),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Color(0x1A000000),
+                          blurRadius: 20,
+                          offset: Offset(0, 8),
                         ),
-                        label: "Cart",
+                      ],
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(28),
+                      child: BottomNavigationBar(
+                        currentIndex: currentIndex,
+                        type: BottomNavigationBarType.fixed,
+                        backgroundColor: Colors.white,
+                        elevation: 0,
+                        selectedItemColor: const Color(0xFF00B2D8),
+                        unselectedItemColor: const Color(0xFF9CA3AF),
+                        selectedLabelStyle: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        unselectedLabelStyle: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
+                        showUnselectedLabels: true,
+                        onTap: (index) {
+                          MainNavigationScreen.tabIndex.value = index;
+                        },
+                        items: [
+                          const BottomNavigationBarItem(
+                            icon: Icon(Icons.home, size: 24),
+                            label: "Home",
+                          ),
+                          const BottomNavigationBarItem(
+                            icon: Icon(Icons.grid_view_rounded, size: 24),
+                            label: "Categories",
+                          ),
+                          const BottomNavigationBarItem(
+                            icon: Icon(Icons.build, size: 24),
+                            label: "Repair",
+                          ),
+                          BottomNavigationBarItem(
+                            icon: _CartBadge(
+                              count: cartCount,
+                              child: const Icon(Icons.shopping_cart, size: 24),
+                            ),
+                            label: "Cart",
+                          ),
+                          const BottomNavigationBarItem(
+                            icon: Icon(Icons.person, size: 24),
+                            label: "Profile",
+                          ),
+                        ],
                       ),
-                      const BottomNavigationBarItem(
-                        icon: Icon(Icons.person, size: 24),
-                        label: "Profile",
-                      ),
-                    ],
+                    ),
                   ),
                 ),
               ),
-            ),
-          ),
+            );
+          },
         );
       },
     );

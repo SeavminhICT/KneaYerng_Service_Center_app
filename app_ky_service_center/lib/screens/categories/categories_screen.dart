@@ -53,9 +53,9 @@ class CategoriesScreen extends StatelessWidget {
           );
         },
       ),
-    _CategoryItem(label: 'Audio', icon: Icons.headphones),
-    _CategoryItem(label: 'Parts & Accessories', icon: Icons.memory),
-    _CategoryItem(label: 'Repair', icon: Icons.build_circle_outlined),
+      _CategoryItem(label: 'Audio', icon: Icons.headphones),
+      _CategoryItem(label: 'Parts & Accessories', icon: Icons.memory),
+      _CategoryItem(label: 'Repair', icon: Icons.build_circle_outlined),
     ];
     final width = MediaQuery.of(context).size.width;
     final isDesktop = width >= 1024;
@@ -64,7 +64,7 @@ class CategoriesScreen extends StatelessWidget {
     final columns = isDesktop ? 6 : (isTablet ? 4 : 2);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FB),
+      backgroundColor: const Color(0xFFF6F7FB),
       appBar: AppBar(
         title: const Text(
           'Categories',
@@ -75,19 +75,19 @@ class CategoriesScreen extends StatelessWidget {
             color: Colors.black87,
           ),
         ),
-        backgroundColor: Colors.white,
+        backgroundColor: const Color(0xFFF6F7FB),
         foregroundColor: Colors.black87,
         elevation: 0,
       ),
       body: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
         child: GridView.builder(
           itemCount: categories.length,
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: columns,
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
-            childAspectRatio: 1.2,
+            crossAxisSpacing: 14,
+            mainAxisSpacing: 14,
+            childAspectRatio: 1.05,
           ),
           itemBuilder: (context, index) {
             return _CategoryCard(
@@ -132,17 +132,19 @@ class _CategoryCardState extends State<_CategoryCard> {
       onEnter: (_) => setState(() => _hovered = true),
       onExit: (_) => setState(() => _hovered = false),
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 220),
+        duration: const Duration(milliseconds: 200),
         transform: Matrix4.identity()..translate(0.0, _hovered ? -4.0 : 0.0),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(widget.radius),
+          borderRadius: BorderRadius.circular(widget.radius + 4),
+          border: Border.all(color: const Color(0xFFE6E9F0)),
           boxShadow: [
             BoxShadow(
-              color:
-                  _hovered ? const Color(0x221E88E5) : const Color(0x12000000),
-              blurRadius: _hovered ? 18 : 12,
-              offset: const Offset(0, 8),
+              color: _hovered
+                  ? const Color(0x140F6BFF)
+                  : const Color(0x0A000000),
+              blurRadius: _hovered ? 16 : 10,
+              offset: const Offset(0, 6),
             ),
           ],
         ),
@@ -153,17 +155,30 @@ class _CategoryCardState extends State<_CategoryCard> {
           },
           borderRadius: BorderRadius.circular(widget.radius),
           child: Padding(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(14),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(widget.item.icon, color: const Color(0xFF1E88E5)),
-                const SizedBox(height: 10),
+                Container(
+                  height: 46,
+                  width: 46,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEFF6FF),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Icon(
+                    widget.item.icon,
+                    color: const Color(0xFF0F6BFF),
+                    size: 22,
+                  ),
+                ),
+                const SizedBox(height: 12),
                 Text(
                   widget.item.label,
                   style: const TextStyle(
                     fontWeight: FontWeight.w600,
                     fontSize: 12,
+                    color: Color(0xFF111827),
                   ),
                 ),
               ],

@@ -1276,7 +1276,7 @@ class _QuickActionCard extends StatelessWidget {
       borderRadius: BorderRadius.circular(radius),
       onTap: () {},
       child: Container(
-        height: 110,
+        height: 104,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
         decoration: BoxDecoration(
           color: Colors.white,
@@ -1302,12 +1302,14 @@ class _QuickActionCard extends StatelessWidget {
               ),
               child: Icon(action.icon, color: action.color, size: 22),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 8),
             Text(
               action.label,
               textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: const TextStyle(
-                fontSize: 12,
+                fontSize: 11,
                 fontWeight: FontWeight.w600,
                 color: Color(0xFF111827),
               ),
@@ -1954,7 +1956,7 @@ class _FlashSaleCardApiState extends State<_FlashSaleCardApi> {
     if (!mounted) return;
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => const CartScreen(),
+        builder: (_) => const CartScreen(showAppBarActions: true),
       ),
     );
   }

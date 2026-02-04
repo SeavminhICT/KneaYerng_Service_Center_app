@@ -54,6 +54,14 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FB),
       appBar: AppBar(
+        toolbarHeight: 64,
+        leading: Padding(
+          padding: const EdgeInsets.only(left: 12, top: 12, bottom: 4),
+          child: _RoundedBackButton(
+            onTap: () => Navigator.of(context).pop(),
+          ),
+        ),
+        titleSpacing: 12,
         title: Text(
           widget.title ?? widget.categoryName,
           style: const TextStyle(
@@ -276,6 +284,37 @@ class _ImageFallback extends StatelessWidget {
       color: const Color(0xFFF3F4F6),
       child: const Center(
         child: Icon(Icons.devices, color: Color(0xFF9CA3AF)),
+      ),
+    );
+  }
+}
+
+class _RoundedBackButton extends StatelessWidget {
+  const _RoundedBackButton({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkResponse(
+      onTap: onTap,
+      radius: 22,
+      child: Container(
+        height: 40,
+        width: 40,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFE6E9F0)),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x0F000000),
+              blurRadius: 8,
+              offset: Offset(0, 4),
+            ),
+          ],
+        ),
+        child: const Icon(Icons.arrow_back, color: Color(0xFF111827), size: 20),
       ),
     );
   }

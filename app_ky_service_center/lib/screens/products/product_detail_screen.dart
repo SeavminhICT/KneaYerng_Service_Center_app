@@ -62,9 +62,19 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   onBack: () => Navigator.of(context).pop(),
                   onFavorite: () {
                     FavoriteService.instance.toggle(product);
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => const FavoriteScreen(),
+                    final isNowFavorite =
+                        FavoriteService.instance.contains(product);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        behavior: SnackBarBehavior.floating,
+                        backgroundColor: Colors.transparent,
+                        elevation: 0,
+                        duration: const Duration(seconds: 2),
+                        content: _FavoriteToast(
+                          message: isNowFavorite
+                              ? 'Added to favorites'
+                              : 'Removed from favorites',
+                        ),
                       ),
                     );
                   },
@@ -221,19 +231,14 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                       const SizedBox(height: 16),
                       const _PromoCard(),
                       const SizedBox(height: 16),
-                      const _SectionTitle(title: 'Quantity', action: ''),
-                      const SizedBox(height: 8),
-                      _QuantityRow(
-                        quantity: _quantity,
-                        onChanged: (value) => setState(() => _quantity = value),
-                      ),
+                      const SizedBox(height: 4),
                     ],
                   ),
                 ),
                 _BottomBar(
-                  isFavorite: isFavorite,
                   price: price,
                   quantity: _quantity,
+                  onQuantityChanged: (value) => setState(() => _quantity = value),
                   onAdd: () {
                     final variantParts = <String>[];
                     if (isPhone) {
@@ -259,19 +264,11 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                     ),
                   ),
                 );
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => const CartScreen(),
-                      ),
-                    );
-                  },
-                  onFavorite: () {
-                    FavoriteService.instance.toggle(product);
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => const FavoriteScreen(),
-                      ),
-                    );
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const CartScreen(showAppBarActions: true),
+                  ),
+                );
                   },
                 ),
               ],
@@ -1125,18 +1122,16 @@ class _QtyButton extends StatelessWidget {
 
 class _BottomBar extends StatelessWidget {
   const _BottomBar({
-    required this.isFavorite,
     required this.price,
     required this.quantity,
+    required this.onQuantityChanged,
     required this.onAdd,
-    required this.onFavorite,
   });
 
-  final bool isFavorite;
   final double price;
   final int quantity;
+  final ValueChanged<int> onQuantityChanged;
   final VoidCallback onAdd;
-  final VoidCallback onFavorite;
 
   @override
   Widget build(BuildContext context) {
@@ -1152,26 +1147,28 @@ class _BottomBar extends StatelessWidget {
           ),
         ],
       ),
-      child: Row(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          InkResponse(
-            onTap: onFavorite,
-            radius: 24,
-            child: Container(
-              height: 46,
-              width: 46,
-              decoration: BoxDecoration(
-                color: const Color(0xFFF3F4F6),
-                borderRadius: BorderRadius.circular(14),
+          Row(
+            children: [
+              const Text(
+                'Quantity',
+                style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF111827),
+                ),
               ),
-              child: Icon(
-                isFavorite ? Icons.favorite : Icons.favorite_border,
-                color: isFavorite ? const Color(0xFFE11D48) : null,
+              const Spacer(),
+              _QuantityRow(
+                quantity: quantity,
+                onChanged: onQuantityChanged,
               ),
-            ),
+            ],
           ),
-          const SizedBox(width: 12),
-          Expanded(
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
             child: ElevatedButton.icon(
               onPressed: onAdd,
               icon: const Icon(Icons.shopping_bag_outlined, size: 18),
@@ -1257,7 +1254,51 @@ class _AddToCartToast extends StatelessWidget {
   }
 }
 
+class _FavoriteToast extends StatelessWidget {
+  const _FavoriteToast({required this.message});
 
+  final String message;
 
-
-
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: const Color(0xFF111827),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x33000000),
+            blurRadius: 12,
+            offset: Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            height: 22,
+            width: 22,
+            decoration: const BoxDecoration(
+              color: Color(0xFFE11D48),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.favorite, size: 12, color: Colors.white),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              message,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

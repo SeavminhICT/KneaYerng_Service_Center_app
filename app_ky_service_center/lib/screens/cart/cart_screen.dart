@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
 import '../../models/product.dart';
 import '../../models/cart_item.dart';
+import '../main_navigation_screen.dart';
 import '../../services/cart_service.dart';
+import '../../services/api_service.dart';
+import '../products/all_products_screen.dart';
 
 class CartScreen extends StatelessWidget {
-  const CartScreen({super.key});
+  const CartScreen({super.key, this.showAppBarActions = false});
+
+  final bool showAppBarActions;
 
   @override
   Widget build(BuildContext context) {
@@ -24,6 +29,8 @@ class CartScreen extends StatelessWidget {
               children: [
                 _CartAppBar(
                   totalItems: totalItems,
+                  showBack: showAppBarActions,
+                  showMenu: showAppBarActions,
                   onBack: () => Navigator.of(context).maybePop(),
                 ),
                 Expanded(
@@ -74,12 +81,21 @@ class CartScreen extends StatelessWidget {
                               total: total,
                             ),
                             const SizedBox(height: 16),
-                            const _SectionHeader(
+                            _SectionHeader(
                               title: 'You might also like',
                               action: 'See All',
+                              onTap: () {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) => const AllProductsScreen(
+                                      title: 'Recommended',
+                                    ),
+                                  ),
+                                );
+                              },
                             ),
                             const SizedBox(height: 10),
-                            const _RecommendationsRow(),
+                            _RecommendationsRow(cartItems: items),
                             const SizedBox(height: 80),
                           ],
                         ),
@@ -102,10 +118,14 @@ class _CartAppBar extends StatelessWidget {
   const _CartAppBar({
     required this.onBack,
     required this.totalItems,
+    this.showBack = true,
+    this.showMenu = true,
   });
 
   final VoidCallback onBack;
   final int totalItems;
+  final bool showBack;
+  final bool showMenu;
 
   @override
   Widget build(BuildContext context) {
@@ -113,10 +133,13 @@ class _CartAppBar extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 10, 16, 4),
       child: Row(
         children: [
-          _CircleButton(
-            icon: Icons.arrow_back,
-            onTap: onBack,
-          ),
+          if (showBack)
+            _CircleButton(
+              icon: Icons.arrow_back,
+              onTap: onBack,
+            )
+          else
+            const SizedBox(width: 38),
           const Spacer(),
           Row(
             children: [
@@ -149,10 +172,13 @@ class _CartAppBar extends StatelessWidget {
             ],
           ),
           const Spacer(),
-          _CircleButton(
-            icon: Icons.more_horiz,
-            onTap: () {},
-          ),
+          if (showMenu)
+            _CircleButton(
+              icon: Icons.more_horiz,
+              onTap: () {},
+            )
+          else
+            const SizedBox(width: 38),
         ],
       ),
     );
@@ -523,10 +549,15 @@ class _SummaryRow extends StatelessWidget {
 }
 
 class _SectionHeader extends StatelessWidget {
-  const _SectionHeader({required this.title, required this.action});
+  const _SectionHeader({
+    required this.title,
+    required this.action,
+    required this.onTap,
+  });
 
   final String title;
   final String action;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -541,100 +572,137 @@ class _SectionHeader extends StatelessWidget {
             ),
           ),
         ),
-        TextButton(onPressed: () {}, child: Text(action)),
+        TextButton(onPressed: onTap, child: Text(action)),
       ],
     );
   }
 }
 
 class _RecommendationsRow extends StatelessWidget {
-  const _RecommendationsRow();
+  const _RecommendationsRow({required this.cartItems});
 
-  List<Product> get _recommendations => const [
-        Product(
-          id: 901,
-          name: 'Portable Bluetooth Speaker',
-          price: 29.0,
-          imageUrl:
-              'https://images.unsplash.com/photo-1512446816042-444d641267bc?auto=format&fit=crop&w=900&q=80',
-        ),
-        Product(
-          id: 902,
-          name: 'Adjustable Phone Stand',
-          price: 19.0,
-          imageUrl:
-              'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=900&q=80',
-        ),
-        Product(
-          id: 903,
-          name: 'Premium USB-C Cable',
-          price: 9.0,
-          imageUrl:
-              'https://images.unsplash.com/photo-1518458028785-8fbcd101ebb9?auto=format&fit=crop&w=900&q=80',
-        ),
-      ];
+  final List<CartItem> cartItems;
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 150,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        itemCount: _recommendations.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 12),
-        itemBuilder: (context, index) {
-          final item = _recommendations[index];
-          return Container(
-            width: 130,
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: const Color(0xFFE6E9F0)),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: Image.network(
-                      item.imageUrl ?? '',
-                      fit: BoxFit.cover,
-                      headers: const {
-                        'User-Agent': 'Mozilla/5.0',
-                        'Accept':
-                            'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
-                      },
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  item.name,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '\$${item.price.toStringAsFixed(2)}',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF0F6BFF),
-                  ),
-                ),
-              ],
+    return FutureBuilder<List<Product>>(
+      future: ApiService.fetchProducts(status: 'active'),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const SizedBox(
+            height: 150,
+            child: Center(child: CircularProgressIndicator()),
+          );
+        }
+        final products = snapshot.data ?? [];
+        final recommendations = _buildRecommendations(products, cartItems);
+        if (recommendations.isEmpty) {
+          return const SizedBox(
+            height: 120,
+            child: Center(
+              child: Text(
+                'No recommendations yet.',
+                style: TextStyle(color: Color(0xFF6B7280)),
+              ),
             ),
           );
-        },
-      ),
+        }
+        return SizedBox(
+          height: 150,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: recommendations.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 12),
+            itemBuilder: (context, index) {
+              final item = recommendations[index];
+              return Container(
+                width: 130,
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: const Color(0xFFE6E9F0)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: Image.network(
+                          item.imageUrl ?? '',
+                          fit: BoxFit.cover,
+                          headers: const {
+                            'User-Agent': 'Mozilla/5.0',
+                            'Accept':
+                                'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
+                          },
+                          errorBuilder: (_, __, ___) =>
+                              const _ImageFallback(),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      item.name,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '\$${item.price.toStringAsFixed(2)}',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF0F6BFF),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        );
+      },
     );
   }
+}
+
+List<Product> _buildRecommendations(
+  List<Product> products,
+  List<CartItem> cartItems,
+) {
+  if (products.isEmpty || cartItems.isEmpty) return [];
+  final cartIds = cartItems.map((e) => e.product.id).toSet();
+  final cartCategories = cartItems
+      .map((e) => e.product.categoryName ?? '')
+      .where((value) => value.isNotEmpty)
+      .map((value) => value.toLowerCase())
+      .toSet();
+
+  final scored = <_ScoredProduct>[];
+  for (final product in products) {
+    if (cartIds.contains(product.id)) continue;
+    final brand = (product.brand ?? '').toLowerCase();
+    final category = (product.categoryName ?? '').toLowerCase();
+    if (category.isEmpty || !cartCategories.contains(category)) continue;
+    var score = 2;
+    if (brand.isNotEmpty) score += 1;
+    scored.add(_ScoredProduct(product: product, score: score));
+  }
+  scored.sort((a, b) => b.score.compareTo(a.score));
+  return scored.take(6).map((e) => e.product).toList();
+}
+
+class _ScoredProduct {
+  const _ScoredProduct({required this.product, required this.score});
+
+  final Product product;
+  final int score;
 }
 
 class _CheckoutBar extends StatelessWidget {
@@ -709,20 +777,116 @@ class _EmptyCart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: const [
-          Icon(Icons.shopping_cart_outlined, size: 72, color: Color(0xFF9CA3AF)),
-          SizedBox(height: 12),
-          Text(
-            'Your cart is empty',
-            style: TextStyle(
-              fontWeight: FontWeight.w600,
-              color: Color(0xFF6B7280),
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(24, 48, 24, 24),
+      children: [
+        Container(
+          height: 180,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: const Color(0xFFE6E9F0)),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x0F000000),
+                blurRadius: 16,
+                offset: Offset(0, 8),
+              ),
+            ],
+          ),
+          child: Center(
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                Container(
+                  height: 96,
+                  width: 96,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF2F6FF),
+                    borderRadius: BorderRadius.circular(26),
+                  ),
+                ),
+                const Icon(
+                  Icons.shopping_bag_outlined,
+                  size: 52,
+                  color: Color(0xFF0F6BFF),
+                ),
+                Positioned(
+                  right: 28,
+                  top: 32,
+                  child: Container(
+                    height: 18,
+                    width: 18,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF0F6BFF),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Center(
+                      child: Icon(Icons.add, size: 12, color: Colors.white),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
-        ],
+        ),
+        const SizedBox(height: 24),
+        const Text(
+          'Your cart is empty',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.w700,
+            color: Color(0xFF111827),
+          ),
+        ),
+        const SizedBox(height: 8),
+        const Text(
+          'Browse premium devices and accessories to get started.',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 13,
+            height: 1.4,
+            color: Color(0xFF6B7280),
+          ),
+        ),
+        const SizedBox(height: 20),
+        SizedBox(
+          width: double.infinity,
+          child: ElevatedButton(
+            onPressed: () {
+              MainNavigationScreen.tabIndex.value = 0;
+              Navigator.of(context).popUntil((route) => route.isFirst);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF0F6BFF),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
+              elevation: 0,
+            ),
+            child: const Text(
+              'Start shopping',
+              style: TextStyle(fontWeight: FontWeight.w700),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ImageFallback extends StatelessWidget {
+  const _ImageFallback();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: const Color(0xFFF3F4F6),
+      child: const Center(
+        child: Icon(Icons.devices, color: Color(0xFF9CA3AF)),
       ),
     );
   }

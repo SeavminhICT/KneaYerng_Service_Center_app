@@ -3,7 +3,7 @@ import '../../models/product.dart';
 import '../../services/cart_service.dart';
 import '../../services/favorite_service.dart';
 import '../cart/cart_screen.dart';
-import '../favorites/favorite_screen.dart';
+
 
 class ProductDetailScreen extends StatefulWidget {
   const ProductDetailScreen({super.key, required this.product});
@@ -16,37 +16,206 @@ class ProductDetailScreen extends StatefulWidget {
 
 class _ProductDetailScreenState extends State<ProductDetailScreen> {
   int _selectedGallery = 0;
-  int _selectedCapacity = 1;
+  int _selectedCapacity = 0;
   int _selectedColor = 0;
   int _selectedCondition = 0;
   int _quantity = 1;
 
-  static const _capacities = ['128GB', '256GB', '512GB'];
-  static const _colorNames = ['Silver', 'Blue', 'Graphite', 'White'];
-  static const _colors = [
-    Color(0xFFE2E8F0),
-    Color(0xFF1E3A8A),
-    Color(0xFF111827),
-    Color(0xFFF9FAFB),
-  ];
-  static const _conditions = ['New', 'Used', 'Refurb'];
+  static const Map<String, Color> _namedColors = {
+    'black': Color(0xFF111827),
+    'graphite': Color(0xFF111827),
+    'white': Color(0xFFF9FAFB),
+    'silver': Color(0xFFE2E8F0),
+    'gray': Color(0xFFD1D5DB),
+    'grey': Color(0xFFD1D5DB),
+    'blue': Color(0xFF1E3A8A),
+    'red': Color(0xFFDC2626),
+    'green': Color(0xFF16A34A),
+    'yellow': Color(0xFFEAB308),
+    'gold': Color(0xFFFACC15),
+    'purple': Color(0xFF7C3AED),
+  };
 
-  List<String> get _gallery => List<String>.filled(
-        5,
-        widget.product.imageUrl ?? '',
-      );
+  List<String> _buildGallery(Product product) {
+    final images = <String>[];
+    if (product.imageUrl != null && product.imageUrl!.isNotEmpty) {
+      images.add(product.imageUrl!);
+    }
+    for (final url in product.imageGallery) {
+      if (url.isNotEmpty && !images.contains(url)) {
+        images.add(url);
+      }
+    }
+    if (images.isEmpty &&
+        product.thumbnailUrl != null &&
+        product.thumbnailUrl!.isNotEmpty) {
+      images.add(product.thumbnailUrl!);
+    }
+    return images;
+  }
+
+  List<String> _splitOptions(String? raw) {
+    if (raw == null) return [];
+    final cleaned = raw.trim();
+    if (cleaned.isEmpty || cleaned == '[]') return [];
+    var normalized = cleaned;
+    if (normalized.startsWith('[') && normalized.endsWith(']')) {
+      normalized = normalized.substring(1, normalized.length - 1).trim();
+    }
+    if (normalized.isEmpty) return [];
+    return normalized
+        .split(RegExp(r'[|,]'))
+        .map((value) {
+          String trimEdgeChars(String input) {
+            var result = input.trim();
+            var changed = true;
+            while (changed && result.isNotEmpty) {
+              changed = false;
+              if (result.startsWith('"') || result.startsWith("'")) {
+                result = result.substring(1).trimLeft();
+                changed = true;
+              }
+              if (result.endsWith('"') || result.endsWith("'")) {
+                result = result.substring(0, result.length - 1).trimRight();
+                changed = true;
+              }
+              if (result.startsWith('[') ||
+                  result.startsWith('(') ||
+                  result.startsWith('{')) {
+                result = result.substring(1).trimLeft();
+                changed = true;
+              }
+              if (result.endsWith(']') ||
+                  result.endsWith(')') ||
+                  result.endsWith('}')) {
+                result = result.substring(0, result.length - 1).trimRight();
+                changed = true;
+              }
+            }
+            return result;
+          }
+
+          return trimEdgeChars(value);
+        })
+        .where((value) => value.isNotEmpty)
+        .toList();
+  }
+
+  int _safeIndex(int index, int length) {
+    if (length <= 0) return 0;
+    if (index < 0) return 0;
+    if (index >= length) return length - 1;
+    return index;
+  }
+
+  Color _colorFromName(String name) {
+    final key = name.trim().toLowerCase();
+    return _namedColors[key] ?? const Color(0xFFCBD5F5);
+  }
+
+  String? _formatTag(String? value) {
+    final trimmed = value?.trim();
+    if (trimmed == null || trimmed.isEmpty) return null;
+    return trimmed.replaceAll('_', ' ');
+  }
+
+  String? _formatBadgeLabel(Product product) {
+    final tag = _formatTag(product.tag);
+    if (tag != null && tag.isNotEmpty) return tag;
+    final discount = product.discount;
+    if (discount == null || discount <= 0) return null;
+    if (discount < 1) {
+      return '-${(discount * 100).round()}%';
+    }
+    return '-\$${discount.toStringAsFixed(0)}';
+  }
+
+  String _formatDate(DateTime? value) {
+    if (value == null) return '';
+    final local = value.toLocal();
+    final month = local.month.toString().padLeft(2, '0');
+    final day = local.day.toString().padLeft(2, '0');
+    return '${local.year}-$month-$day';
+  }
+
+  List<MapEntry<String, String>> _buildSpecs(Product product) {
+    final specs = <MapEntry<String, String>>[];
+    void add(String label, String? value) {
+      final trimmed = value?.trim();
+      if (trimmed == null || trimmed.isEmpty) return;
+      specs.add(MapEntry(label, trimmed));
+    }
+
+    add('ID', product.id.toString());
+    add('Brand', product.brand);
+    add('SKU', product.sku);
+    add('Status', product.status);
+    add('Tag', _formatTag(product.tag));
+    add('Warranty', _formatTag(product.warranty));
+    add('Storage', product.storageCapacity);
+    add('Color', product.color);
+    add('Condition', product.condition);
+    if (product.ramOptions.isNotEmpty) {
+      add('RAM', product.ramOptions.join(', '));
+    }
+    add('SSD', product.ssd);
+    add('CPU', product.cpu);
+    add('Display', product.display);
+    add('Country', product.country);
+    add('Category', product.categoryName);
+    if (product.discount != null) {
+      add('Discount', product.discount!.toStringAsFixed(2));
+    }
+    if (product.stock != null) {
+      add('Stock', product.stock.toString());
+    }
+    if (product.createdAt != null) {
+      add('Created', _formatDate(product.createdAt));
+    }
+    return specs;
+  }
 
   @override
   Widget build(BuildContext context) {
     final product = widget.product;
     final price = product.price;
-    final comparePrice = (price * 1.18).roundToDouble();
-    final imageUrl = product.imageUrl;
-    final category = product.categoryName?.toLowerCase() ?? '';
-    final isPhone = category.contains('iphone') || category.contains('samsung');
-    final selectedCapacity = _capacities[_selectedCapacity];
-    final selectedColorName = _colorNames[_selectedColor];
-    final selectedCondition = _conditions[_selectedCondition];
+    final discount = product.discount ?? 0;
+    final comparePrice = discount > 0 ? price + discount : null;
+    final badgeLabel = _formatBadgeLabel(product);
+    final gallery = _buildGallery(product);
+    final galleryIndex = _safeIndex(_selectedGallery, gallery.length);
+    final heroImageUrl =
+        gallery.isNotEmpty ? gallery[galleryIndex] : product.imageUrl;
+    final capacityOptions = _splitOptions(product.storageCapacity);
+    final colorOptions = _splitOptions(product.color);
+    final conditionOptions = _splitOptions(product.condition);
+    final capacityIndex = _safeIndex(_selectedCapacity, capacityOptions.length);
+    final colorIndex = _safeIndex(_selectedColor, colorOptions.length);
+    final conditionIndex =
+        _safeIndex(_selectedCondition, conditionOptions.length);
+    final selectedCapacity =
+        capacityOptions.isNotEmpty ? capacityOptions[capacityIndex] : '';
+    final selectedColorName =
+        colorOptions.isNotEmpty ? colorOptions[colorIndex] : '';
+    final selectedCondition =
+        conditionOptions.isNotEmpty ? conditionOptions[conditionIndex] : '';
+    final colorSwatches = colorOptions.map(_colorFromName).toList();
+    final stock = product.stock;
+    final inStock = stock != null && stock > 0;
+    final stockText = stock == null
+        ? 'Stock N/A'
+        : inStock
+            ? 'In Stock ($stock units)'
+            : 'Out of Stock';
+    final warrantyLabel = _formatTag(product.warranty) ?? 'Standard';
+    final specs = _buildSpecs(product);
+    final description = product.description?.trim();
+    final skuText = product.sku != null && product.sku!.isNotEmpty
+        ? product.sku!
+        : 'KY-${product.id.toString().padLeft(4, '0')}';
+    final brandText = product.brand != null && product.brand!.isNotEmpty
+        ? product.brand!
+        : 'Official';
 
     return AnimatedBuilder(
       animation: FavoriteService.instance,
@@ -84,16 +253,17 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                     padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
                     children: [
                       _HeroImage(
-                        imageUrl: imageUrl,
-                        discount: '-15% OFF',
+                        imageUrl: heroImageUrl,
+                        badgeLabel: badgeLabel,
                       ),
                       const SizedBox(height: 14),
-                      _GalleryStrip(
-                        images: _gallery,
-                        selectedIndex: _selectedGallery,
-                        onSelect: (index) =>
-                            setState(() => _selectedGallery = index),
-                      ),
+                      if (gallery.length > 1)
+                        _GalleryStrip(
+                          images: gallery,
+                          selectedIndex: galleryIndex,
+                          onSelect: (index) =>
+                              setState(() => _selectedGallery = index),
+                        ),
                       const SizedBox(height: 16),
                       _TitleRow(
                         title: product.name,
@@ -101,7 +271,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        'Brand: ${product.brand ?? 'Official'}  |  SKU: KY-${product.id.toString().padLeft(4, '0')}',
+                        'Brand: $brandText  |  SKU: $skuText',
                         style: const TextStyle(
                           fontSize: 12,
                           color: Color(0xFF6B7280),
@@ -119,49 +289,53 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                             ),
                           ),
                           const SizedBox(width: 8),
-                          Text(
-                            '\$${comparePrice.toStringAsFixed(0)}',
-                            style: const TextStyle(
-                              fontSize: 14,
-                              color: Color(0xFF9CA3AF),
-                              decoration: TextDecoration.lineThrough,
+                          if (comparePrice != null)
+                            Text(
+                              '\$${comparePrice.toStringAsFixed(0)}',
+                              style: const TextStyle(
+                                fontSize: 14,
+                                color: Color(0xFF9CA3AF),
+                                decoration: TextDecoration.lineThrough,
+                              ),
                             ),
-                          ),
                           const Spacer(),
-                          const _StockPill(
-                            text: 'In Stock (24 units)',
+                          _StockPill(
+                            text: stockText,
+                            isAvailable: inStock,
                           ),
                         ],
                       ),
                       const SizedBox(height: 12),
                       const _InstallmentCard(),
                       const SizedBox(height: 16),
-                      if (isPhone) ...[
+                      if (capacityOptions.isNotEmpty) ...[
                         _SectionTitle(
                           title: 'Storage Capacity',
                           action: selectedCapacity,
                         ),
                         const SizedBox(height: 8),
                         _ChoiceRow(
-                          choices: _capacities,
-                          selectedIndex: _selectedCapacity,
+                          choices: capacityOptions,
+                          selectedIndex: capacityIndex,
                           onSelect: (index) =>
                               setState(() => _selectedCapacity = index),
                         ),
                         const SizedBox(height: 12),
                       ],
-                      _SectionTitle(
-                        title: 'Color',
-                        action: selectedColorName,
-                      ),
-                      const SizedBox(height: 8),
-                      _ColorRow(
-                        colors: _colors,
-                        selectedIndex: _selectedColor,
-                        onSelect: (index) =>
-                            setState(() => _selectedColor = index),
-                      ),
-                      if (isPhone) ...[
+                      if (colorOptions.isNotEmpty) ...[
+                        _SectionTitle(
+                          title: 'Color',
+                          action: selectedColorName,
+                        ),
+                        const SizedBox(height: 8),
+                        _ColorRow(
+                          colors: colorSwatches,
+                          selectedIndex: colorIndex,
+                          onSelect: (index) =>
+                              setState(() => _selectedColor = index),
+                        ),
+                      ],
+                      if (conditionOptions.isNotEmpty) ...[
                         const SizedBox(height: 12),
                         _SectionTitle(
                           title: 'Condition',
@@ -169,47 +343,53 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                         ),
                         const SizedBox(height: 8),
                         _ChoiceRow(
-                          choices: _conditions,
-                          selectedIndex: _selectedCondition,
+                          choices: conditionOptions,
+                          selectedIndex: conditionIndex,
                           onSelect: (index) =>
                               setState(() => _selectedCondition = index),
                         ),
                       ],
                       const SizedBox(height: 16),
-                      const _SectionTitle(
+                      _SectionTitle(
                         title: 'Warranty Plan',
-                        action: 'Standard',
+                        action: warrantyLabel,
                       ),
                       const SizedBox(height: 8),
-                      const _WarrantyCard(),
+                      _WarrantyCard(plan: warrantyLabel),
                       const SizedBox(height: 16),
-                      const _SectionHeader(
-                        title: 'Specifications',
-                        action: 'View All',
-                      ),
-                      const SizedBox(height: 10),
-                      const _SpecRow(
-                        label: 'Display',
-                        value: '6.7" Super Retina XDR',
-                      ),
-                      const _SpecRow(label: 'Processor', value: 'A17 Pro chip'),
-                      const _SpecRow(
-                        label: 'Camera',
-                        value: '48MP Main + 12MP Ultra',
-                      ),
-                      const _SpecRow(
-                        label: 'Battery',
-                        value: 'Up to 29 hours video',
-                      ),
-                      const _SpecRow(label: '5G', value: 'Yes'),
-                      const _SpecRow(label: 'Weight', value: '221 grams'),
-                      const SizedBox(height: 8),
-                      Center(
-                        child: TextButton(
-                          onPressed: () {},
-                          child: const Text('View All Specifications'),
+                      if (description != null && description.isNotEmpty) ...[
+                        const _SectionHeader(
+                          title: 'Description',
+                          action: '',
                         ),
-                      ),
+                        const SizedBox(height: 8),
+                        Text(
+                          description,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Color(0xFF4B5563),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                      ],
+                      if (specs.isNotEmpty) ...[
+                        const _SectionHeader(
+                          title: 'Specifications',
+                          action: 'View All',
+                        ),
+                        const SizedBox(height: 10),
+                        ...specs.map(
+                          (entry) =>
+                              _SpecRow(label: entry.key, value: entry.value),
+                        ),
+                        const SizedBox(height: 8),
+                        Center(
+                          child: TextButton(
+                            onPressed: () {},
+                            child: const Text('View All Specifications'),
+                          ),
+                        ),
+                      ],
                       const SizedBox(height: 8),
                       const _SectionHeader(title: 'Reviews', action: 'See All'),
                       const SizedBox(height: 12),
@@ -231,7 +411,15 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                       const SizedBox(height: 16),
                       const _PromoCard(),
                       const SizedBox(height: 16),
-                      const SizedBox(height: 4),
+                      const _SectionTitle(title: 'Quantity', action: ''),
+                      const SizedBox(height: 8),
+                      _QuantityRow(
+                        quantity: _quantity,
+                        availableText: stock == null
+                            ? 'Availability: N/A'
+                            : '${stock.toString()} available',
+                        onChanged: (value) => setState(() => _quantity = value),
+                      ),
                     ],
                   ),
                 ),
@@ -241,17 +429,32 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   onQuantityChanged: (value) => setState(() => _quantity = value),
                   onAdd: () {
                     final variantParts = <String>[];
-                    if (isPhone) {
+                    if (selectedCapacity.isNotEmpty) {
                       variantParts.add(selectedCapacity);
                     }
-                    variantParts.add(selectedColorName);
-                    if (isPhone) {
+                    if (selectedColorName.isNotEmpty) {
+                      variantParts.add(selectedColorName);
+                    }
+                    if (selectedCondition.isNotEmpty) {
                       variantParts.add(selectedCondition);
                     }
                     CartService.instance.add(
                       product,
                       quantity: _quantity,
-                      variant: variantParts.join(' | '),
+                      variant: variantParts.isEmpty
+                          ? null
+                          : variantParts.join(' | '),
+                    );
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        behavior: SnackBarBehavior.floating,
+                        backgroundColor: Colors.transparent,
+                        elevation: 0,
+                        duration: const Duration(seconds: 2),
+                        content: _AddToCartToast(
+                          message: '${product.name} added to cart',
+                        ),
+                      ),
                     );
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
@@ -382,10 +585,10 @@ class _IconButtonSurface extends StatelessWidget {
 }
 
 class _HeroImage extends StatelessWidget {
-  const _HeroImage({required this.imageUrl, required this.discount});
+  const _HeroImage({required this.imageUrl, this.badgeLabel});
 
   final String? imageUrl;
-  final String discount;
+  final String? badgeLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -413,25 +616,26 @@ class _HeroImage extends StatelessWidget {
                     },
                   ),
           ),
-          Positioned(
-            right: 12,
-            top: 12,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: const Color(0xFFE8590C),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Text(
-                discount,
-                style: const TextStyle(
-                  fontSize: 11,
-                  color: Colors.white,
-                  fontWeight: FontWeight.w700,
+          if (badgeLabel != null && badgeLabel!.isNotEmpty)
+            Positioned(
+              right: 12,
+              top: 12,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE8590C),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  badgeLabel!,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
             ),
-          ),
         ],
       ),
     );
@@ -533,16 +737,23 @@ class _TitleRow extends StatelessWidget {
 }
 
 class _StockPill extends StatelessWidget {
-  const _StockPill({required this.text});
+  const _StockPill({required this.text, required this.isAvailable});
 
   final String text;
+  final bool isAvailable;
 
   @override
   Widget build(BuildContext context) {
+    final backgroundColor =
+        isAvailable ? const Color(0xFFEAF7EE) : const Color(0xFFFEE2E2);
+    final dotColor =
+        isAvailable ? const Color(0xFF22C55E) : const Color(0xFFDC2626);
+    final textColor =
+        isAvailable ? const Color(0xFF16A34A) : const Color(0xFFDC2626);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: const Color(0xFFEAF7EE),
+        color: backgroundColor,
         borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
@@ -551,17 +762,17 @@ class _StockPill extends StatelessWidget {
           Container(
             height: 6,
             width: 6,
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: Color(0xFF22C55E),
+              color: dotColor,
             ),
           ),
           const SizedBox(width: 6),
           Text(
             text,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 11,
-              color: Color(0xFF16A34A),
+              color: textColor,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -657,10 +868,11 @@ class _SectionHeader extends StatelessWidget {
             ),
           ),
         ),
-        TextButton(
-          onPressed: () {},
-          child: Text(action),
-        ),
+        if (action.isNotEmpty)
+          TextButton(
+            onPressed: () {},
+            child: Text(action),
+          ),
       ],
     );
   }
@@ -763,7 +975,9 @@ class _ColorRow extends StatelessWidget {
 }
 
 class _WarrantyCard extends StatelessWidget {
-  const _WarrantyCard();
+  const _WarrantyCard({required this.plan});
+
+  final String plan;
 
   @override
   Widget build(BuildContext context) {
@@ -775,19 +989,19 @@ class _WarrantyCard extends StatelessWidget {
         border: Border.all(color: const Color(0xFFE6E9F0)),
       ),
       child: Row(
-        children: const [
-          Icon(Icons.verified_outlined, color: Color(0xFF0F6BFF)),
-          SizedBox(width: 8),
+        children: [
+          const Icon(Icons.verified_outlined, color: Color(0xFF0F6BFF)),
+          const SizedBox(width: 8),
           Expanded(
             child: Text(
-              'Standard 1 Year\nManufacturer warranty',
-              style: TextStyle(
+              '$plan\nManufacturer warranty',
+              style: const TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
               ),
             ),
           ),
-          Text(
+          const Text(
             'Free',
             style: TextStyle(
               color: Color(0xFF0F6BFF),
@@ -1054,10 +1268,12 @@ class _QuantityRow extends StatelessWidget {
   const _QuantityRow({
     required this.quantity,
     required this.onChanged,
+    required this.availableText,
   });
 
   final int quantity;
   final ValueChanged<int> onChanged;
+  final String availableText;
 
   @override
   Widget build(BuildContext context) {
@@ -1086,9 +1302,9 @@ class _QuantityRow extends StatelessWidget {
           onTap: () => onChanged(quantity + 1),
         ),
         const SizedBox(width: 10),
-        const Text(
-          '24 available',
-          style: TextStyle(fontSize: 12, color: Color(0xFF6B7280)),
+        Text(
+          availableText,
+          style: const TextStyle(fontSize: 12, color: Color(0xFF6B7280)),
         ),
       ],
     );

@@ -19,6 +19,8 @@ class AccessoryResource extends JsonResource
             'price' => $this->price,
             'discount' => $this->discount,
             'final_price' => max($price - $discount, 0),
+            'stock' => $this->stock,
+            'tag' => $this->tag,
             'description' => $this->description,
             'warranty' => $this->warranty,
             'created_at' => $this->created_at?->toISOString(),

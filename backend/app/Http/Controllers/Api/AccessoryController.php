@@ -7,6 +7,7 @@ use App\Http\Requests\Api\StoreAccessoryRequest;
 use App\Http\Requests\Api\UpdateAccessoryRequest;
 use App\Http\Resources\AccessoryResource;
 use App\Models\Accessory;
+use App\Models\Part;
 use Illuminate\Http\Request;
 
 class AccessoryController extends Controller
@@ -55,6 +56,7 @@ class AccessoryController extends Controller
     public function store(StoreAccessoryRequest $request)
     {
         $accessory = Accessory::create($request->validated());
+        $this->ensurePartFromAccessory($accessory);
 
         return new AccessoryResource($accessory);
     }
@@ -76,5 +78,31 @@ class AccessoryController extends Controller
         $accessory->delete();
 
         return response()->json(['message' => 'Accessory or repair part deleted successfully']);
+    }
+
+    private function ensurePartFromAccessory(Accessory $accessory): void
+    {
+        $query = Part::query()
+            ->where('type', 'accessory')
+            ->where('name', $accessory->name);
+
+        if ($accessory->brand) {
+            $query->where('brand', $accessory->brand);
+        }
+
+        if ($query->exists()) {
+            return;
+        }
+
+        Part::create([
+            'name' => $accessory->name,
+            'type' => 'accessory',
+            'brand' => $accessory->brand,
+            'sku' => null,
+            'stock' => (int) ($accessory->stock ?? 0),
+            'unit_cost' => (float) ($accessory->price ?? 0),
+            'status' => 'active',
+            'tag' => $accessory->tag,
+        ]);
     }
 }

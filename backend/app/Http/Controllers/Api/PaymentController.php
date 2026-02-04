@@ -15,7 +15,7 @@ class PaymentController extends Controller
     {
         $validated = $request->validate([
             'order_id' => ['required', 'exists:orders,id'],
-            'method' => ['required', 'in:bank,cash'],
+            'method' => ['required', 'in:cod,aba,card,wallet,bank,cash'],
             'provider' => ['nullable', 'string', 'max:50'],
             'transaction_id' => ['nullable', 'string', 'max:255'],
             'amount' => ['required', 'numeric', 'min:0'],
@@ -30,7 +30,7 @@ class PaymentController extends Controller
             }
         }
 
-        $status = $validated['method'] === 'bank' ? 'processing' : 'pending';
+        $status = $this->requiresProcessing($validated['method']) ? 'processing' : 'pending';
 
         $payment = Payment::create([
             'order_id' => $order->id,
@@ -42,7 +42,7 @@ class PaymentController extends Controller
         ]);
 
         $order->payment_method = $validated['method'];
-        $order->payment_status = $status;
+        $order->payment_status = $this->mapPaymentStatusToOrderStatus($status);
         $order->save();
 
         Log::info('Payment created via API.', [
@@ -117,7 +117,7 @@ class PaymentController extends Controller
         $order = Order::find($validated['order_id']);
 
         if ($order) {
-            $order->payment_status = $payment->status;
+            $order->payment_status = $this->mapPaymentStatusToOrderStatus($payment->status);
             $order->save();
         }
 
@@ -162,5 +162,23 @@ class PaymentController extends Controller
         }
 
         return null;
+    }
+
+    private function mapPaymentStatusToOrderStatus(string $paymentStatus): string
+    {
+        if ($paymentStatus === 'success') {
+            return 'paid';
+        }
+
+        if ($paymentStatus === 'failed') {
+            return 'failed';
+        }
+
+        return 'unpaid';
+    }
+
+    private function requiresProcessing(string $method): bool
+    {
+        return in_array($method, ['aba', 'card', 'wallet', 'bank'], true);
     }
 }

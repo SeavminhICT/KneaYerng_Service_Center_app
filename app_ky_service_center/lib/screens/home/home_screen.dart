@@ -45,6 +45,7 @@ class _HomeScreenState extends State<HomeScreen> {
   String? _bannerError;
   List<BannerItem> _banners = [];
   late Future<List<Product>> _newArrivalsFuture;
+  String? _selectedTag;
 
   final _heroItems = const [
     _HeroItem(
@@ -219,8 +220,8 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
     _searchFocus.addListener(_handleSearchFocus);
     _loadBanners();
-    _newArrivalsFuture = ApiService.fetchProducts(status: 'active');
-    _flashSaleFuture = ApiService.fetchProducts(status: 'active');
+    _newArrivalsFuture = ApiService.fetchProducts();
+    _flashSaleFuture = ApiService.fetchProducts();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       setState(() => _headerVisible = true);
@@ -291,8 +292,8 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _handleRefresh() async {
     await _loadBanners();
     setState(() {
-      _newArrivalsFuture = ApiService.fetchProducts(status: 'active');
-      _flashSaleFuture = ApiService.fetchProducts(status: 'active');
+      _newArrivalsFuture = ApiService.fetchProducts();
+      _flashSaleFuture = ApiService.fetchProducts();
     });
     await Future<void>.delayed(const Duration(milliseconds: 700));
     if (!mounted) return;
@@ -482,17 +483,44 @@ class _HomeScreenState extends State<HomeScreen> {
                         subtitle: 'Pull to refresh to try again.',
                       );
                     }
-                    final products = (snapshot.data ?? []).take(4).toList();
-                    if (products.isEmpty) {
+                    final allProducts = snapshot.data ?? [];
+                    if (allProducts.isEmpty) {
                       return _EmptyState(
                         title: 'No new arrivals yet',
                         subtitle: 'Check back soon for updates.',
                       );
                     }
-                    return _ProductGridApi(
-                      products: products,
-                      columns: _gridCountForWidth(width, 2, 3, 4),
-                      radius: radius,
+                    final tags = _extractTags(allProducts);
+                    final filtered = _selectedTag == null
+                        ? allProducts
+                        : allProducts
+                            .where((product) =>
+                                _matchesTag(product.tag, _selectedTag))
+                            .toList();
+                    final displayProducts = filtered.take(4).toList();
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (tags.isNotEmpty)
+                          _TagFilterBar(
+                            tags: tags,
+                            selectedTag: _selectedTag,
+                            onSelected: (value) =>
+                                setState(() => _selectedTag = value),
+                          ),
+                        if (tags.isNotEmpty) const SizedBox(height: 12),
+                        if (displayProducts.isEmpty)
+                          _EmptyState(
+                            title: 'No products for this tag',
+                            subtitle: 'Try another tag or clear the filter.',
+                          )
+                        else
+                          _ProductGridApi(
+                            products: displayProducts,
+                            columns: _gridCountForWidth(width, 2, 3, 4),
+                            radius: radius,
+                          ),
+                      ],
                     );
                   },
                 ),
@@ -580,6 +608,63 @@ class _HomeScreenState extends State<HomeScreen> {
     if (width >= 600) return tablet;
     return mobile;
   }
+
+  List<String> _extractTags(List<Product> products) {
+    final tags = <String>{};
+    for (final product in products) {
+      final tag = product.tag?.trim();
+      if (tag != null && tag.isNotEmpty) {
+        tags.add(tag);
+      }
+    }
+    final list = tags.toList();
+    list.sort((a, b) => _normalizeTag(a).compareTo(_normalizeTag(b)));
+    return list;
+  }
+
+  bool _matchesTag(String? tag, String? selectedTag) {
+    if (selectedTag == null) return true;
+    return _normalizeTag(tag) == _normalizeTag(selectedTag);
+  }
+}
+
+String _normalizeTag(String? tag) {
+  return (tag ?? '').trim().toLowerCase();
+}
+
+String? _formatTagLabel(String? tag) {
+  final trimmed = tag?.trim();
+  if (trimmed == null || trimmed.isEmpty) return null;
+  return trimmed.replaceAll('_', ' ');
+}
+
+Color _tagColor(String? tag) {
+  final value = _normalizeTag(tag);
+  if (value.contains('hot') || value.contains('sale')) {
+    return const Color(0xFFE8590C);
+  }
+  if (value.contains('new') || value.contains('arrival')) {
+    return const Color(0xFF0F6BFF);
+  }
+  if (value.contains('limited') || value.contains('exclusive')) {
+    return const Color(0xFF7C3AED);
+  }
+  if (value.contains('best') || value.contains('top')) {
+    return const Color(0xFF12B886);
+  }
+  return const Color(0xFF475569);
+}
+
+LinearGradient _tagGradient(String? tag) {
+  final base = _tagColor(tag);
+  return LinearGradient(
+    colors: [
+      base.withOpacity(0.08),
+      base.withOpacity(0.18),
+    ],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
 }
 
 class _HeaderTitle extends StatelessWidget {
@@ -1179,6 +1264,132 @@ class _HeroCarousel extends StatelessWidget {
   }
 }
 
+class _TagFilterBar extends StatelessWidget {
+  const _TagFilterBar({
+    required this.tags,
+    required this.selectedTag,
+    required this.onSelected,
+  });
+
+  final List<String> tags;
+  final String? selectedTag;
+  final ValueChanged<String?> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final options = <String>['All', ...tags];
+    return SizedBox(
+      height: 38,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: options.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        itemBuilder: (context, index) {
+          final option = options[index];
+          final isAll = option == 'All';
+          final label = isAll ? 'All' : (_formatTagLabel(option) ?? option);
+          final selected = isAll
+              ? selectedTag == null
+              : _normalizeTag(option) == _normalizeTag(selectedTag);
+          final color =
+              isAll ? const Color(0xFF64748B) : _tagColor(option);
+          return _TagChip(
+            label: label,
+            selected: selected,
+            color: color,
+            onTap: () => onSelected(isAll ? null : option),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _TagChip extends StatelessWidget {
+  const _TagChip({
+    required this.label,
+    required this.selected,
+    required this.color,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final Color color;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(18),
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: selected ? color.withOpacity(0.15) : Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+            color: selected ? color : const Color(0xFFE2E8F0),
+          ),
+          boxShadow: selected
+              ? const [
+                  BoxShadow(
+                    color: Color(0x12000000),
+                    blurRadius: 6,
+                    offset: Offset(0, 3),
+                  ),
+                ]
+              : null,
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: selected ? color : const Color(0xFF475569),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _TagBadge extends StatelessWidget {
+  const _TagBadge({
+    required this.label,
+    required this.color,
+  });
+
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.9),
+        borderRadius: BorderRadius.circular(10),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x22000000),
+            blurRadius: 6,
+            offset: Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Text(
+        label.toUpperCase(),
+        style: const TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.w700,
+          color: Colors.white,
+        ),
+      ),
+    );
+  }
+}
+
 class _SectionHeader extends StatelessWidget {
   const _SectionHeader({
     required this.title,
@@ -1677,6 +1888,8 @@ class _ProductApiCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tagLabel = _formatTagLabel(product.tag);
+    final tagColor = _tagColor(product.tag);
     return InkWell(
       borderRadius: BorderRadius.circular(radius),
       onTap: () {
@@ -1688,7 +1901,7 @@ class _ProductApiCard extends StatelessWidget {
       },
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
+          gradient: _tagGradient(product.tag),
           borderRadius: BorderRadius.circular(radius),
           border: Border.all(color: const Color(0xFFE6E9F0)),
           boxShadow: const [
@@ -1700,37 +1913,55 @@ class _ProductApiCard extends StatelessWidget {
           ],
         ),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Expanded(
-              child: ClipRRect(
-                borderRadius: BorderRadius.vertical(
-                  top: Radius.circular(radius),
-                ),
-                child: product.imageUrl == null || product.imageUrl!.isEmpty
-                    ? const _ImageFallback()
-                    : Image.network(
-                        product.imageUrl!,
-                        fit: BoxFit.cover,
-                        headers: const {
-                          'User-Agent': 'Mozilla/5.0',
-                          'Accept':
-                              'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
-                        },
-                        errorBuilder: (_, __, ___) =>
-                            const _ImageFallback(),
+              child: Stack(
+                children: [
+                  Positioned.fill(
+                    child: Padding(
+                      padding: const EdgeInsets.all(14),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(radius - 6),
+                        child: product.imageUrl == null ||
+                                product.imageUrl!.isEmpty
+                            ? const _ImageFallback()
+                            : Image.network(
+                                product.imageUrl!,
+                                fit: BoxFit.cover,
+                                headers: const {
+                                  'User-Agent': 'Mozilla/5.0',
+                                  'Accept':
+                                      'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
+                                },
+                                errorBuilder: (_, __, ___) =>
+                                    const _ImageFallback(),
+                              ),
                       ),
+                    ),
+                  ),
+                  if (tagLabel != null && tagLabel.isNotEmpty)
+                    Positioned(
+                      left: 12,
+                      top: 12,
+                      child: _TagBadge(
+                        label: tagLabel,
+                        color: tagColor,
+                      ),
+                    ),
+                ],
               ),
             ),
             Padding(
               padding: const EdgeInsets.all(12),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Text(
                     product.name,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
                     style: const TextStyle(
                       fontWeight: FontWeight.w600,
                       color: Color(0xFF111827),
@@ -1964,6 +2195,8 @@ class _FlashSaleCardApiState extends State<_FlashSaleCardApi> {
   @override
   Widget build(BuildContext context) {
     final imageUrl = widget.product.imageUrl;
+    final tagLabel = _formatTagLabel(widget.product.tag);
+    final tagColor = _tagColor(widget.product.tag);
     return InkWell(
       borderRadius: BorderRadius.circular(widget.radius),
       onTap: () {
@@ -2015,6 +2248,15 @@ class _FlashSaleCardApiState extends State<_FlashSaleCardApi> {
                     left: 12,
                     child: _SaleBadge(),
                   ),
+                  if (tagLabel != null && tagLabel.isNotEmpty)
+                    Positioned(
+                      top: 12,
+                      right: 12,
+                      child: _TagBadge(
+                        label: tagLabel,
+                        color: tagColor,
+                      ),
+                    ),
                 ],
               ),
             ),

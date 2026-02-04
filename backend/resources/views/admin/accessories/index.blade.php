@@ -40,6 +40,7 @@
                             <th class="px-4 py-3">Name</th>
                             <th class="px-4 py-3">Brand</th>
                             <th class="px-4 py-3">Price</th>
+                            <th class="px-4 py-3">Stock</th>
                             <th class="px-4 py-3">Discount</th>
                             <th class="px-4 py-3">Final Price</th>
                             <th class="px-4 py-3">Warranty</th>
@@ -94,7 +95,7 @@
                 await window.adminApi.ensureCsrfCookie();
                 var response = await window.adminApi.request('/api/accessories?q=' + encodeURIComponent(currentQuery) + '&page=' + currentPage);
                 if (!response.ok) {
-                    rows.innerHTML = '<tr><td class="px-4 py-6 text-center text-sm text-slate-500" colspan="8">Unable to load accessories.</td></tr>';
+                    rows.innerHTML = '<tr><td class="px-4 py-6 text-center text-sm text-slate-500" colspan="9">Unable to load accessories.</td></tr>';
                     return;
                 }
                 var data = await response.json();
@@ -112,16 +113,18 @@
                             </td>
                             <td class="px-4 py-3">${item.brand}</td>
                             <td class="px-4 py-3">${formatCurrency(item.price)}</td>
+                            <td class="px-4 py-3">${item.stock ?? 0}</td>
                             <td class="px-4 py-3">${formatCurrency(item.discount)}</td>
                             <td class="px-4 py-3">${formatCurrency(item.final_price)}</td>
                             <td class="px-4 py-3">${warrantyBadge(item.warranty)}</td>
                             <td class="px-4 py-3 text-right">
-                                <a href="/admin/accessories/${item.id}/edit" class="text-xs font-semibold text-primary-600">Edit</a>
+                                <button data-id="${item.id}" class="text-xs font-semibold text-slate-500 js-view-accessory">View</button>
+                                <a href="/admin/accessories/${item.id}/edit" class="ml-3 text-xs font-semibold text-primary-600">Edit</a>
                                 <button data-id="${item.id}" class="ml-3 text-xs font-semibold text-danger-600 js-delete-accessory">Delete</button>
                             </td>
                         </tr>
                     `;
-                }).join('') || '<tr><td class="px-4 py-6 text-center text-sm text-slate-500" colspan="8">No accessories found.</td></tr>';
+                }).join('') || '<tr><td class="px-4 py-6 text-center text-sm text-slate-500" colspan="9">No accessories found.</td></tr>';
 
                 info.textContent = 'Showing ' + list.length + ' of ' + (data.meta?.total ?? list.length) + ' accessories';
                 prevButton.disabled = !data.links?.prev;
@@ -148,9 +151,93 @@
 
             rows.addEventListener('click', async function (event) {
                 var target = event.target;
-                if (target.classList.contains('js-delete-accessory')) {
+                if (target.classList.contains('js-view-accessory')) {
                     await window.adminApi.ensureCsrfCookie();
-                    await window.adminApi.request('/api/accessories/' + target.dataset.id, { method: 'DELETE' });
+                    var response = await window.adminApi.request('/api/accessories/' + target.dataset.id);
+                    if (!response.ok) {
+                        if (window.adminSwalError) {
+                            await window.adminSwalError('View failed', 'Unable to load accessory details.');
+                        } else if (window.adminToast) {
+                            window.adminToast('Unable to load accessory details.', { type: 'error' });
+                        }
+                        return;
+                    }
+
+                    var payload = await response.json();
+                    var item = payload.data || payload;
+                    var html = `
+                        <div class="text-left">
+                            <div>
+                                <p class="text-xs uppercase tracking-widest text-slate-400">Accessory</p>
+                                <p class="text-lg font-semibold text-slate-900">${item.name || '--'}</p>
+                            </div>
+                            <div class="mt-5 grid gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
+                                <div class="flex items-center justify-between gap-4">
+                                    <span class="font-semibold text-slate-500">Brand</span>
+                                    <span class="text-slate-900">${item.brand || '--'}</span>
+                                </div>
+                                <div class="flex items-center justify-between gap-4">
+                                    <span class="font-semibold text-slate-500">Price</span>
+                                    <span class="text-slate-900">${formatCurrency(item.price)}</span>
+                                </div>
+                                <div class="flex items-center justify-between gap-4">
+                                    <span class="font-semibold text-slate-500">Stock</span>
+                                    <span class="text-slate-900">${item.stock ?? 0}</span>
+                                </div>
+                                <div class="flex items-center justify-between gap-4">
+                                    <span class="font-semibold text-slate-500">Discount</span>
+                                    <span class="text-slate-900">${formatCurrency(item.discount)}</span>
+                                </div>
+                                <div class="flex items-center justify-between gap-4">
+                                    <span class="font-semibold text-slate-500">Final price</span>
+                                    <span class="text-slate-900">${formatCurrency(item.final_price)}</span>
+                                </div>
+                                <div class="flex items-center justify-between gap-4">
+                                    <span class="font-semibold text-slate-500">Warranty</span>
+                                    <span>${warrantyBadge(item.warranty)}</span>
+                                </div>
+                                <div class="flex items-start justify-between gap-4">
+                                    <span class="font-semibold text-slate-500">Description</span>
+                                    <span class="text-slate-900 text-right">${item.description || '--'}</span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+
+                    if (window.Swal) {
+                        await window.Swal.fire({
+                            title: 'Accessory Details',
+                            html: html,
+                            confirmButtonColor: '#2563eb',
+                            width: 600,
+                            padding: '1.5rem',
+                        });
+                    }
+                }
+                if (target.classList.contains('js-delete-accessory')) {
+                    var confirmed = true;
+                    if (window.adminSwalConfirm) {
+                        var result = await window.adminSwalConfirm('Delete accessory?', 'This will remove the accessory from the catalog.', 'Yes, delete it');
+                        confirmed = result.isConfirmed;
+                    } else {
+                        confirmed = window.confirm('Delete this accessory?');
+                    }
+                    if (!confirmed) {
+                        return;
+                    }
+                    await window.adminApi.ensureCsrfCookie();
+                    var response = await window.adminApi.request('/api/accessories/' + target.dataset.id, { method: 'DELETE' });
+                    if (window.adminSwalSuccess && response.ok) {
+                        await window.adminSwalSuccess('Deleted', 'Accessory deleted successfully.');
+                    } else if (window.adminSwalError && !response.ok) {
+                        await window.adminSwalError('Delete failed', 'Unable to delete accessory.');
+                    } else if (window.adminToast) {
+                        if (response.ok) {
+                            window.adminToast('Accessory deleted.');
+                        } else {
+                            window.adminToast('Unable to delete accessory.', { type: 'error' });
+                        }
+                    }
                     loadAccessories();
                 }
             });

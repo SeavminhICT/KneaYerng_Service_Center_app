@@ -1,15 +1,13 @@
+import 'package:app_ky_service_center/screens/products/all_products_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:lottie/lottie.dart';
 import '../../models/product.dart';
 import '../../models/cart_item.dart';
 import '../main_navigation_screen.dart';
 import '../../services/cart_service.dart';
-import '../../services/api_service.dart';
-import '../products/all_products_screen.dart';
 
 class CartScreen extends StatelessWidget {
-  const CartScreen({super.key, this.showAppBarActions = false});
-
-  final bool showAppBarActions;
+  const CartScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -21,7 +19,8 @@ class CartScreen extends StatelessWidget {
         final totalItems = CartService.instance.totalItems;
         final shipping = items.isEmpty ? 0.0 : 9.99;
         final tax = subtotal * 0.08;
-        final total = subtotal + shipping + tax;
+        final discount = _voucher?.discountFor(subtotal) ?? 0.0;
+        final total = (subtotal + shipping + tax - discount).clamp(0, 9999999);
         return Scaffold(
           backgroundColor: const Color(0xFFF6F7FB),
           body: SafeArea(
@@ -72,13 +71,20 @@ class CartScreen extends StatelessWidget {
                               ),
                             ),
                             const SizedBox(height: 6),
-                            const _PromoCodeCard(),
+                            _PromoCodeCard(
+                              controller: _promoController,
+                              isApplying: _isApplying,
+                              appliedCode: _voucher?.code,
+                              discount: discount,
+                              onApply: () => _applyVoucher(subtotal),
+                            ),
                             const SizedBox(height: 14),
                             _OrderSummary(
                               subtotal: subtotal,
                               shipping: shipping,
                               tax: tax,
-                              total: total,
+                              discount: discount,
+                              total: total.toDouble(),
                             ),
                             const SizedBox(height: 16),
                             _SectionHeader(
@@ -102,8 +108,8 @@ class CartScreen extends StatelessWidget {
                 ),
                 if (items.isNotEmpty)
                   _CheckoutBar(
-                    total: total,
-                    onCheckout: () {},
+                    total: total.toDouble(),
+                    onCheckout: () => _openBakongCheckout(context, total.toDouble()),
                   ),
               ],
             ),
@@ -326,6 +332,7 @@ class _ProductThumb extends StatelessWidget {
                   'Accept':
                       'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
                 },
+                errorBuilder: (_, __, ___) => const _ImageFallback(),
               ),
       ),
     );
@@ -399,7 +406,19 @@ class _StepButton extends StatelessWidget {
 }
 
 class _PromoCodeCard extends StatelessWidget {
-  const _PromoCodeCard();
+  const _PromoCodeCard({
+    required this.controller,
+    required this.isApplying,
+    required this.onApply,
+    required this.appliedCode,
+    required this.discount,
+  });
+
+  final TextEditingController controller;
+  final bool isApplying;
+  final VoidCallback onApply;
+  final String? appliedCode;
+  final double discount;
 
   @override
   Widget build(BuildContext context) {
@@ -417,11 +436,23 @@ class _PromoCodeCard extends StatelessWidget {
             'Promo Code',
             style: TextStyle(fontWeight: FontWeight.w700),
           ),
+          if (appliedCode != null && appliedCode!.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Text(
+              'Applied: ${appliedCode!} (-\$${discount.toStringAsFixed(2)})',
+              style: const TextStyle(
+                fontSize: 11,
+                color: Color(0xFF16A34A),
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
           const SizedBox(height: 10),
           Row(
             children: [
               Expanded(
                 child: TextField(
+                  controller: controller,
                   decoration: InputDecoration(
                     hintText: 'Enter coupon code',
                     filled: true,
@@ -445,7 +476,7 @@ class _PromoCodeCard extends StatelessWidget {
               ),
               const SizedBox(width: 10),
               ElevatedButton(
-                onPressed: () {},
+                onPressed: isApplying ? null : onApply,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF0F6BFF),
                   foregroundColor: Colors.white,
@@ -455,7 +486,17 @@ class _PromoCodeCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(10),
                   ),
                 ),
-                child: const Text('Apply'),
+                child: isApplying
+                    ? const SizedBox(
+                        height: 16,
+                        width: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor:
+                              AlwaysStoppedAnimation<Color>(Colors.white),
+                        ),
+                      )
+                    : const Text('Apply'),
               ),
             ],
           ),
@@ -470,12 +511,14 @@ class _OrderSummary extends StatelessWidget {
     required this.subtotal,
     required this.shipping,
     required this.tax,
+    required this.discount,
     required this.total,
   });
 
   final double subtotal;
   final double shipping;
   final double tax;
+  final double discount;
   final double total;
 
   @override
@@ -498,6 +541,12 @@ class _OrderSummary extends StatelessWidget {
           _SummaryRow(label: 'Subtotal', value: subtotal),
           _SummaryRow(label: 'Shipping', value: shipping),
           _SummaryRow(label: 'Tax', value: tax),
+          if (discount > 0)
+            _SummaryRow(
+              label: 'Discount',
+              value: -discount,
+              valueColor: const Color(0xFF16A34A),
+            ),
           const Divider(height: 20),
           Row(
             children: [
@@ -522,10 +571,15 @@ class _OrderSummary extends StatelessWidget {
 }
 
 class _SummaryRow extends StatelessWidget {
-  const _SummaryRow({required this.label, required this.value});
+  const _SummaryRow({
+    required this.label,
+    required this.value,
+    this.valueColor,
+  });
 
   final String label;
   final double value;
+  final Color? valueColor;
 
   @override
   Widget build(BuildContext context) {
@@ -539,8 +593,13 @@ class _SummaryRow extends StatelessWidget {
           ),
           const Spacer(),
           Text(
-            '\$${value.toStringAsFixed(2)}',
-            style: const TextStyle(fontWeight: FontWeight.w600),
+            value < 0
+                ? '-\$${value.abs().toStringAsFixed(2)}'
+                : '\$${value.toStringAsFixed(2)}',
+            style: TextStyle(
+              fontWeight: FontWeight.w600,
+              color: valueColor,
+            ),
           ),
         ],
       ),
@@ -579,130 +638,93 @@ class _SectionHeader extends StatelessWidget {
 }
 
 class _RecommendationsRow extends StatelessWidget {
-  const _RecommendationsRow({required this.cartItems});
+  const _RecommendationsRow();
 
-  final List<CartItem> cartItems;
+  List<Product> get _recommendations => const [
+        Product(
+          id: 901,
+          name: 'Portable Bluetooth Speaker',
+          price: 29.0,
+          imageUrl:
+              'https://images.unsplash.com/photo-1512446816042-444d641267bc?auto=format&fit=crop&w=900&q=80',
+        ),
+        Product(
+          id: 902,
+          name: 'Adjustable Phone Stand',
+          price: 19.0,
+          imageUrl:
+              'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=900&q=80',
+        ),
+        Product(
+          id: 903,
+          name: 'Premium USB-C Cable',
+          price: 9.0,
+          imageUrl:
+              'https://images.unsplash.com/photo-1518458028785-8fbcd101ebb9?auto=format&fit=crop&w=900&q=80',
+        ),
+      ];
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<List<Product>>(
-      future: ApiService.fetchProducts(status: 'active'),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState != ConnectionState.done) {
-          return const SizedBox(
-            height: 150,
-            child: Center(child: CircularProgressIndicator()),
-          );
-        }
-        final products = snapshot.data ?? [];
-        final recommendations = _buildRecommendations(products, cartItems);
-        if (recommendations.isEmpty) {
-          return const SizedBox(
-            height: 120,
-            child: Center(
-              child: Text(
-                'No recommendations yet.',
-                style: TextStyle(color: Color(0xFF6B7280)),
-              ),
+    return SizedBox(
+      height: 150,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: _recommendations.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 12),
+        itemBuilder: (context, index) {
+          final item = _recommendations[index];
+          return Container(
+            width: 130,
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: const Color(0xFFE6E9F0)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Image.network(
+                      item.imageUrl ?? '',
+                      fit: BoxFit.cover,
+                      headers: const {
+                        'User-Agent': 'Mozilla/5.0',
+                        'Accept':
+                            'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
+                      },
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  item.name,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '\$${item.price.toStringAsFixed(2)}',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF0F6BFF),
+                  ),
+                ),
+              ],
             ),
           );
-        }
-        return SizedBox(
-          height: 150,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            itemCount: recommendations.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 12),
-            itemBuilder: (context, index) {
-              final item = recommendations[index];
-              return Container(
-                width: 130,
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: const Color(0xFFE6E9F0)),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: Image.network(
-                          item.imageUrl ?? '',
-                          fit: BoxFit.cover,
-                          headers: const {
-                            'User-Agent': 'Mozilla/5.0',
-                            'Accept':
-                                'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
-                          },
-                          errorBuilder: (_, __, ___) =>
-                              const _ImageFallback(),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      item.name,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '\$${item.price.toStringAsFixed(2)}',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        color: Color(0xFF0F6BFF),
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
-        );
-      },
+        },
+      ),
     );
   }
-}
-
-List<Product> _buildRecommendations(
-  List<Product> products,
-  List<CartItem> cartItems,
-) {
-  if (products.isEmpty || cartItems.isEmpty) return [];
-  final cartIds = cartItems.map((e) => e.product.id).toSet();
-  final cartCategories = cartItems
-      .map((e) => e.product.categoryName ?? '')
-      .where((value) => value.isNotEmpty)
-      .map((value) => value.toLowerCase())
-      .toSet();
-
-  final scored = <_ScoredProduct>[];
-  for (final product in products) {
-    if (cartIds.contains(product.id)) continue;
-    final brand = (product.brand ?? '').toLowerCase();
-    final category = (product.categoryName ?? '').toLowerCase();
-    if (category.isEmpty || !cartCategories.contains(category)) continue;
-    var score = 2;
-    if (brand.isNotEmpty) score += 1;
-    scored.add(_ScoredProduct(product: product, score: score));
-  }
-  scored.sort((a, b) => b.score.compareTo(a.score));
-  return scored.take(6).map((e) => e.product).toList();
-}
-
-class _ScoredProduct {
-  const _ScoredProduct({required this.product, required this.score});
-
-  final Product product;
-  final int score;
 }
 
 class _CheckoutBar extends StatelessWidget {
@@ -887,6 +909,20 @@ class _ImageFallback extends StatelessWidget {
       color: const Color(0xFFF3F4F6),
       child: const Center(
         child: Icon(Icons.devices, color: Color(0xFF9CA3AF)),
+      ),
+    );
+  }
+}
+
+class _ImageFallback extends StatelessWidget {
+  const _ImageFallback();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: const Color(0xFFF3F4F6),
+      child: const Center(
+        child: Icon(Icons.image_not_supported, color: Color(0xFF9CA3AF)),
       ),
     );
   }

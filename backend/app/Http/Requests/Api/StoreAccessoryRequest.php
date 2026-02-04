@@ -20,6 +20,8 @@ class StoreAccessoryRequest extends FormRequest
             'name' => ['required', 'string', 'min:3'],
             'price' => ['required', 'numeric', 'min:0.01'],
             'discount' => ['nullable', 'numeric', 'min:0'],
+            'stock' => ['required', 'integer', 'min:0'],
+            'tag' => ['nullable', 'in:'.implode(',', Accessory::TAGS)],
             'description' => ['nullable', 'string', 'max:500'],
             'warranty' => ['required', 'in:'.implode(',', Accessory::WARRANTIES)],
         ];

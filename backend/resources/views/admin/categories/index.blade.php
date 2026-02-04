@@ -39,7 +39,6 @@
                     <thead class="text-xs uppercase tracking-widest text-slate-400">
                         <tr>
                             <th class="px-4 py-3"><input type="checkbox" class="rounded border-slate-300 text-primary-600 focus:ring-primary-500" /></th>
-                            <th class="px-4 py-3"><input type="checkbox" class="rounded border-slate-300 text-primary-600 focus:ring-primary-500" /></th>
                             <th class="px-4 py-3">Image</th>
                             <th class="px-4 py-3">
                                 <button class="inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-widest text-slate-400">
@@ -87,6 +86,28 @@
             var info = document.getElementById('category-pagination-info');
             var rows = document.getElementById('category-rows');
 
+            function resolveImage(path) {
+                if (!path) {
+                    return '/images/category-placeholder.svg';
+                }
+                if (path.startsWith('http')) {
+                    return path;
+                }
+                if (path.startsWith('/')) {
+                    return path;
+                }
+                return '/' + path;
+            }
+
+            function statusBadge(status) {
+                var map = {
+                    active: 'bg-success-50 text-success-700 dark:bg-success-500/10 dark:text-success-100',
+                    inactive: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300',
+                };
+                var klass = map[status] || map.inactive;
+                return '<span class="rounded-full px-2 py-1 text-xs font-semibold ' + klass + '">' + status + '</span>';
+            }
+
             async function loadCategories() {
                 await window.adminApi.ensureCsrfCookie();
                 var response = await window.adminApi.request('/api/categories?q=' + encodeURIComponent(currentQuery) + '&page=' + currentPage);
@@ -97,30 +118,9 @@
                 var data = await response.json();
                 var list = data.data || [];
 
-                function statusBadge(status) {
-                    var map = {
-                        active: 'bg-success-50 text-success-700 dark:bg-success-500/10 dark:text-success-100',
-                        inactive: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300',
-                    };
-                    var klass = map[status] || map.inactive;
-                    return '<span class="rounded-full px-2 py-1 text-xs font-semibold ' + klass + '">' + status + '</span>';
-                }
-
-                function resolveImage(path) {
-                    if (!path) {
-                        return '/images/category-placeholder.svg';
-                    }
-                    if (path.startsWith('http')) {
-                        return path;
-                    }
-                    if (path.startsWith('/')) {
-                        return path;
-                    }
-                    return '/' + path;
-                }
-
                 rows.innerHTML = list.map(function (category) {
                     var imageUrl = resolveImage(category.image);
+                    var toggleLabel = category.status === 'active' ? 'Deactivate' : 'Activate';
                     return `
                         <tr>
                             <td class="px-4 py-3"><input type="checkbox" class="rounded border-slate-300 text-primary-600 focus:ring-primary-500" /></td>
@@ -140,7 +140,12 @@
                             <td class="px-4 py-3">${category.products_count ?? 0}</td>
                             <td class="px-4 py-3">${statusBadge(category.status || 'inactive')}</td>
                             <td class="px-4 py-3 text-right">
-                                <a href="/admin/categories/${category.id}/edit" class="text-xs font-semibold text-primary-600">Edit</a>
+                                <div class="inline-flex items-center justify-end gap-3">
+                                    <button data-id="${category.id}" class="text-xs font-semibold text-slate-500 js-view-category">View</button>
+                                    <a href="/admin/categories/${category.id}/edit" class="text-xs font-semibold text-primary-600">Edit</a>
+                                    <button data-id="${category.id}" data-status="${category.status || 'inactive'}" class="text-xs font-semibold text-slate-500 js-toggle-category">${toggleLabel}</button>
+                                    <button data-id="${category.id}" class="text-xs font-semibold text-danger-600 js-delete-category">Delete</button>
+                                </div>
                             </td>
                         </tr>
                     `;
@@ -167,6 +172,114 @@
             nextButton.addEventListener('click', function () {
                 currentPage += 1;
                 loadCategories();
+            });
+
+            rows.addEventListener('click', async function (event) {
+                var target = event.target;
+                if (target.classList.contains('js-view-category')) {
+                    await window.adminApi.ensureCsrfCookie();
+                    var response = await window.adminApi.request('/api/categories/' + target.dataset.id);
+                    if (!response.ok) {
+                        if (window.adminSwalError) {
+                            await window.adminSwalError('View failed', 'Unable to load category details.');
+                        } else if (window.adminToast) {
+                            window.adminToast('Unable to load category details.', { type: 'error' });
+                        }
+                        return;
+                    }
+
+                    var payload = await response.json();
+                    var category = payload.data || payload;
+                    var imageUrl = resolveImage(category.image);
+                    var badge = statusBadge(category.status || 'inactive');
+                    var html = `
+                        <div class="text-left">
+                            <div class="flex items-center gap-4">
+                                <div class="h-20 w-20 overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
+                                    ${imageUrl ? `<img src="${imageUrl}" alt="${category.name}" class="h-full w-full object-cover" />` : '<div class="flex h-full w-full items-center justify-center text-xs text-slate-400">No image</div>'}
+                                </div>
+                                <div>
+                                    <p class="text-xs uppercase tracking-widest text-slate-400">Category</p>
+                                    <p class="text-lg font-semibold text-slate-900">${category.name || '--'}</p>
+                                    <div class="mt-2">${badge}</div>
+                                </div>
+                            </div>
+                            <div class="mt-5 grid gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
+                                <div class="flex items-center justify-between gap-4">
+                                    <span class="font-semibold text-slate-500">Slug</span>
+                                    <span class="text-slate-900">${category.slug || '--'}</span>
+                                </div>
+                                <div class="flex items-center justify-between gap-4">
+                                    <span class="font-semibold text-slate-500">Products</span>
+                                    <span class="text-slate-900">${category.products_count ?? 0}</span>
+                                </div>
+                                <div class="flex items-center justify-between gap-4">
+                                    <span class="font-semibold text-slate-500">Created</span>
+                                    <span class="text-slate-900">${category.created_at ? new Date(category.created_at).toLocaleDateString() : '--'}</span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+
+                    if (window.Swal) {
+                        await window.Swal.fire({
+                            title: 'Category Details',
+                            html: html,
+                            confirmButtonColor: '#2563eb',
+                            width: 560,
+                            padding: '1.5rem',
+                        });
+                    }
+                }
+                if (target.classList.contains('js-toggle-category')) {
+                    var nextStatus = target.dataset.status === 'active' ? 'inactive' : 'active';
+                    await window.adminApi.ensureCsrfCookie();
+                    var response = await window.adminApi.request('/api/categories/' + target.dataset.id, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ status: nextStatus }),
+                    });
+                    if (window.adminSwalSuccess && response.ok) {
+                        await window.adminSwalSuccess('Updated', 'Category status updated.');
+                    } else if (window.adminSwalError && !response.ok) {
+                        await window.adminSwalError('Update failed', 'Unable to update category status.');
+                    } else if (window.adminToast) {
+                        if (response.ok) {
+                            window.adminToast('Category status updated.');
+                        } else {
+                            window.adminToast('Unable to update category status.', { type: 'error' });
+                        }
+                    }
+                    loadCategories();
+                }
+
+                if (target.classList.contains('js-delete-category')) {
+                    var confirmed = true;
+                    if (window.adminSwalConfirm) {
+                        var result = await window.adminSwalConfirm('Delete category?', 'This will remove the category from the catalog.', 'Yes, delete it');
+                        confirmed = result.isConfirmed;
+                    } else {
+                        confirmed = window.confirm('Delete this category?');
+                    }
+                    if (!confirmed) {
+                        return;
+                    }
+
+                    await window.adminApi.ensureCsrfCookie();
+                    var response = await window.adminApi.request('/api/categories/' + target.dataset.id, { method: 'DELETE' });
+                    if (window.adminSwalSuccess && response.ok) {
+                        await window.adminSwalSuccess('Deleted', 'Category deleted successfully.');
+                    } else if (window.adminSwalError && !response.ok) {
+                        await window.adminSwalError('Delete failed', 'Unable to delete category.');
+                    } else if (window.adminToast) {
+                        if (response.ok) {
+                            window.adminToast('Category deleted.');
+                        } else {
+                            window.adminToast('Unable to delete category.', { type: 'error' });
+                        }
+                    }
+                    loadCategories();
+                }
             });
 
             loadCategories();

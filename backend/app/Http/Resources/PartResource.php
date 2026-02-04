@@ -12,10 +12,14 @@ class PartResource extends JsonResource
         return [
             'id' => $this->id,
             'name' => $this->name,
+            'type' => $this->type,
+            'brand' => $this->brand,
             'sku' => $this->sku,
             'stock' => $this->stock,
             'unit_cost' => $this->unit_cost,
+            'price' => $this->unit_cost,
             'status' => $this->status,
+            'tag' => $this->tag,
             'created_at' => $this->created_at?->toISOString(),
         ];
     }

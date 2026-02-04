@@ -27,11 +27,19 @@ class Accessory extends Model
         '1_YEAR',
     ];
 
+    public const TAGS = [
+        'HOT_SALE',
+        'TOP_SELLER',
+        'PROMOTION',
+    ];
+
     protected $fillable = [
         'brand',
         'name',
         'price',
         'discount',
+        'stock',
+        'tag',
         'description',
         'warranty',
     ];
@@ -39,5 +47,7 @@ class Accessory extends Model
     protected $casts = [
         'price' => 'decimal:2',
         'discount' => 'decimal:2',
+        'stock' => 'integer',
     ];
+
 }

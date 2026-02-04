@@ -36,17 +36,10 @@ class RepairInvoiceController extends Controller
             'payment_status' => ['nullable', 'string'],
         ]);
 
-        $repair->load(['partsUsages', 'diagnostic', 'quotation']);
+        $repair->load(['diagnostic', 'quotation']);
 
-        $partsTotal = $repair->partsUsages->sum(function ($usage) {
-            return $usage->quantity * $usage->cost;
-        });
-
+        $partsTotal = $repair->quotation?->parts_cost ?? 0;
         $laborCost = $repair->diagnostic?->labor_cost ?? 0;
-
-        if ($partsTotal <= 0 && $repair->quotation) {
-            $partsTotal = $repair->quotation->parts_cost;
-        }
 
         if ($laborCost <= 0 && $repair->quotation) {
             $laborCost = $repair->quotation->labor_cost;

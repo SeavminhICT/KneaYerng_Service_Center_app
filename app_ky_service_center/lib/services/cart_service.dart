@@ -48,4 +48,9 @@ class CartService extends ChangeNotifier {
 
   int get totalItems =>
       _items.fold(0, (sum, item) => sum + item.quantity);
+
+  void clear() {
+    _items.clear();
+    notifyListeners();
+  }
 }

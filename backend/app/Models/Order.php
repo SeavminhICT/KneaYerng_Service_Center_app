@@ -18,12 +18,21 @@ class Order extends Model
         'payment_method',
         'delivery_address',
         'delivery_phone',
+        'delivery_note',
+        'subtotal',
+        'delivery_fee',
+        'voucher_id',
+        'voucher_code',
+        'discount_type',
+        'discount_value',
+        'discount_amount',
         'pickup_qr_token',
         'pickup_qr_generated_at',
         'pickup_verified_at',
         'total_amount',
         'payment_status',
         'status',
+        'inventory_deducted',
         'placed_at',
     ];
 
@@ -31,6 +40,12 @@ class Order extends Model
         'placed_at' => 'datetime',
         'pickup_qr_generated_at' => 'datetime',
         'pickup_verified_at' => 'datetime',
+        'subtotal' => 'decimal:2',
+        'delivery_fee' => 'decimal:2',
+        'discount_value' => 'decimal:2',
+        'discount_amount' => 'decimal:2',
+        'total_amount' => 'decimal:2',
+        'inventory_deducted' => 'boolean',
     ];
 
     public function items()
@@ -47,5 +62,9 @@ class Order extends Model
     {
         return $this->belongsTo(User::class);
     }
-}
 
+    public function voucher()
+    {
+        return $this->belongsTo(Voucher::class);
+    }
+}

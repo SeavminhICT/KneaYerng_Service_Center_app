@@ -205,7 +205,7 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
                 height: 56,
                 width: 56,
                 decoration: BoxDecoration(
-                  color: accent.withOpacity(0.12),
+                  color: accent.withAlpha((0.12 * 255).round()),
                   shape: BoxShape.circle,
                 ),
                 child: CircleAvatar(
@@ -267,7 +267,7 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '${firstName.isEmpty ? 'User' : firstName} ${lastName}'.trim(),
+                  '${firstName.isEmpty ? 'User' : firstName} $lastName'.trim(),
                   style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 4),
@@ -373,22 +373,11 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
     );
   }
 
-  Widget _readOnly(String label, String? value, IconData icon) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: TextFormField(
-        initialValue: value ?? '',
-        enabled: false,
-        decoration: _inputDecoration(label, icon),
-      ),
-    );
-  }
-
   Widget _genderDropdown() {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: DropdownButtonFormField<String>(
-        value: _gender,
+        initialValue: _gender,
         decoration: _inputDecoration('Gender', Icons.wc_outlined),
         items: const [
           DropdownMenuItem(value: 'male', child: Text('Male')),

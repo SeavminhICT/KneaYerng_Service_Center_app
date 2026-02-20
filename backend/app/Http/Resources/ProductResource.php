@@ -9,7 +9,7 @@ class ProductResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
-        $primaryImage = $this->thumbnail ?? $this->image;
+        $primaryImage = $this->firstNonEmptyPath($this->thumbnail, $this->image);
         $gallery = $this->image_gallery;
         $baseUrl = $this->resolveBaseUrl($request);
 
@@ -46,6 +46,17 @@ class ProductResource extends JsonResource
         ];
     }
 
+    private function firstNonEmptyPath(?string ...$paths): ?string
+    {
+        foreach ($paths as $path) {
+            if (is_string($path) && trim($path) !== '') {
+                return $path;
+            }
+        }
+
+        return null;
+    }
+
     private function resolveBaseUrl(Request $request): string
     {
         $baseUrl = $request->getSchemeAndHttpHost();
@@ -63,10 +74,29 @@ class ProductResource extends JsonResource
             return null;
         }
 
-        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
-            return $path;
+        $path = trim($path);
+        $path = str_replace('\\', '/', $path);
+        $path = rtrim($path, '/');
+
+        if ($path === '') {
+            return null;
         }
 
-        return $baseUrl.'/'.ltrim($path, '/');
+        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
+            $parsedPath = parse_url($path, PHP_URL_PATH);
+            if (is_string($parsedPath)) {
+                $path = $parsedPath;
+            }
+        }
+
+        $path = ltrim($path, '/');
+        if (str_starts_with($path, 'public/storage/')) {
+            $path = substr($path, strlen('public/'));
+        }
+        if (! str_starts_with($path, 'storage/')) {
+            $path = 'storage/'.$path;
+        }
+
+        return '/'.$path;
     }
 }

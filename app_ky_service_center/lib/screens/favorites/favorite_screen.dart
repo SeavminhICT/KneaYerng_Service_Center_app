@@ -3,6 +3,8 @@ import '../../models/product.dart';
 import '../../services/favorite_service.dart';
 import '../products/product_detail_screen.dart';
 
+Map<String, String>? get _imageHeaders => null;
+
 class FavoriteScreen extends StatelessWidget {
   const FavoriteScreen({super.key});
 
@@ -28,7 +30,7 @@ class FavoriteScreen extends StatelessWidget {
               : ListView.separated(
                   padding: const EdgeInsets.all(16),
                   itemCount: items.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 12),
+                  separatorBuilder: (_, _) => const SizedBox(height: 12),
                   itemBuilder: (context, index) {
                     final product = items[index];
                     return _FavoriteCard(product: product);
@@ -88,10 +90,12 @@ class _FavoriteCard extends StatelessWidget {
                     : Image.network(
                         imageUrl,
                         fit: BoxFit.cover,
-                        headers: const {
-                          'User-Agent': 'Mozilla/5.0',
-                          'Accept':
-                              'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
+                        headers: _imageHeaders,
+                        errorBuilder: (context, error, stackTrace) {
+                          return const Icon(
+                            Icons.image_not_supported,
+                            color: Color(0xFF9CA3AF),
+                          );
                         },
                       ),
               ),
@@ -155,3 +159,5 @@ class _EmptyState extends StatelessWidget {
     );
   }
 }
+
+

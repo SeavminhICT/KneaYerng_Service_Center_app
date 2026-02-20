@@ -6,8 +6,12 @@ use App\Http\Controllers\Api\AccessoryController;
 use App\Http\Controllers\Api\BannerController;
 use App\Http\Controllers\Api\CartController;
 use App\Http\Controllers\Api\CategoryController;
+use App\Http\Controllers\Api\CheckoutOptionsController;
+use App\Http\Controllers\Api\AdminReportsController;
 use App\Http\Controllers\Api\OrderController;
+use App\Http\Controllers\Api\OtpController;
 use App\Http\Controllers\Api\PaymentController;
+use App\Http\Controllers\Api\KhqrPaymentController;
 use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\RepairChatController;
 use App\Http\Controllers\Api\RepairDiagnosticController;
@@ -20,6 +24,7 @@ use App\Http\Controllers\Api\RepairRequestController;
 use App\Http\Controllers\Api\RepairWarrantyController;
 use App\Http\Controllers\Api\TechnicianController;
 use App\Http\Controllers\Api\VoucherController;
+use App\Http\Controllers\Api\VoucherValidationController;
 use App\Http\Controllers\Api\PartController;
 use App\Http\Controllers\Api\ProductAttributeOptionController;
 use Illuminate\Http\Request;
@@ -38,6 +43,10 @@ Route::prefix('auth')->group(function () {
     Route::put('user/update', [AuthController::class, 'update'])->middleware('auth:sanctum');
 });
 
+Route::post('otp/request', [OtpController::class, 'request']);
+Route::post('otp/verify', [OtpController::class, 'verify']);
+Route::post('password/reset-with-otp', [OtpController::class, 'resetPassword']);
+
 Route::prefix('public')->group(function () {
     Route::get('categories', [CategoryController::class, 'index']);
     Route::get('categories/{category}', [CategoryController::class, 'show']);
@@ -48,12 +57,17 @@ Route::prefix('public')->group(function () {
 Route::get('banners', [BannerController::class, 'publicIndex']);
 Route::get('banners/{banner}', [BannerController::class, 'show']);
 
+// Keep validation routes above voucher resource routes to avoid shadowing.
+Route::get('vouchers/validate', VoucherValidationController::class);
+Route::post('vouchers/validate', VoucherValidationController::class);
+
 Route::get('categories', [CategoryController::class, 'index']);
 Route::get('categories/{category}', [CategoryController::class, 'show']);
 Route::get('products', [ProductController::class, 'index']);
 Route::get('products/{product}', [ProductController::class, 'show']);
 Route::get('accessories', [AccessoryController::class, 'index']);
 Route::get('accessories/{accessory}', [AccessoryController::class, 'show']);
+Route::get('checkout/options', CheckoutOptionsController::class);
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('cart', [CartController::class, 'show']);
@@ -64,6 +78,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('user/orders', [OrderController::class, 'store']);
     Route::get('user/orders/{order}', [OrderController::class, 'show']);
     Route::post('payments', [PaymentController::class, 'store']);
+    Route::post('generate-qr', [KhqrPaymentController::class, 'generateQr']);
+    Route::post('check-transaction', [KhqrPaymentController::class, 'checkTransaction']);
     Route::post('repairs', [RepairRequestController::class, 'store']);
     Route::get('repairs/my', [RepairRequestController::class, 'my']);
     Route::get('repairs/{repair}', [RepairRequestController::class, 'show']);
@@ -85,6 +101,12 @@ Route::post('payments/callback', [PaymentController::class, 'callback']);
 
 Route::middleware('admin')->group(function () {
     Route::get('admin/metrics', AdminMetricsController::class);
+    Route::get('admin/reports/sales', [AdminReportsController::class, 'sales']);
+    Route::get('admin/reports/inventory', [AdminReportsController::class, 'inventory']);
+    Route::get('admin/reports/customers', [AdminReportsController::class, 'customers']);
+    Route::post('admin/reports/export', [AdminReportsController::class, 'export']);
+    Route::get('admin/reports/exports', [AdminReportsController::class, 'exports']);
+    Route::get('admin/reports/exports/{exportId}', [AdminReportsController::class, 'download']);
     Route::get('admin/orders/summary', [OrderController::class, 'summary']);
     Route::get('admin/orders/export', [OrderController::class, 'export']);
     Route::get('orders', [OrderController::class, 'index']);

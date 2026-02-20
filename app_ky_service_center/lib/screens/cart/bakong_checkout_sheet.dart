@@ -14,9 +14,11 @@ class BakongCheckoutSheet extends StatefulWidget {
   const BakongCheckoutSheet({
     super.key,
     required this.total,
+    this.voucherCode,
   });
 
   final double total;
+  final String? voucherCode;
 
   @override
   State<BakongCheckoutSheet> createState() => _BakongCheckoutSheetState();
@@ -185,6 +187,9 @@ class _BakongCheckoutSheetState extends State<BakongCheckoutSheet> {
   }
 
   double _resolveAmount() {
+    if (widget.total > 0) {
+      return widget.total;
+    }
     final cartSubtotal = CartService.instance.subtotal;
     if (cartSubtotal > 0) {
       return cartSubtotal;
@@ -229,6 +234,7 @@ class _BakongCheckoutSheetState extends State<BakongCheckoutSheet> {
       deliveryAddress: deliveryAddress,
       deliveryPhone: deliveryPhone,
       deliveryNote: _appendCoordinates(deliveryNote, deliveryLatLng),
+      voucherCode: widget.voucherCode,
     );
   }
 

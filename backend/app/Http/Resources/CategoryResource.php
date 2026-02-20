@@ -40,10 +40,29 @@ class CategoryResource extends JsonResource
             return null;
         }
 
-        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
-            return $path;
+        $path = trim($path);
+        $path = str_replace('\\', '/', $path);
+        $path = rtrim($path, '/');
+
+        if ($path === '') {
+            return null;
         }
 
-        return $baseUrl.'/'.ltrim($path, '/');
+        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
+            $parsedPath = parse_url($path, PHP_URL_PATH);
+            if (is_string($parsedPath)) {
+                $path = $parsedPath;
+            }
+        }
+
+        $path = ltrim($path, '/');
+        if (str_starts_with($path, 'public/storage/')) {
+            $path = substr($path, strlen('public/'));
+        }
+        if (! str_starts_with($path, 'storage/')) {
+            $path = 'storage/'.$path;
+        }
+
+        return '/'.$path;
     }
 }

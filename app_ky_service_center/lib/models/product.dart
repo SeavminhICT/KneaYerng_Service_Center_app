@@ -57,33 +57,52 @@ class Product {
 
   factory Product.fromJson(Map<String, dynamic> json) {
     final category = json['category'];
-    final thumbnail = ApiService.normalizeMediaUrl(json['thumbnail']);
-    final image = ApiService.normalizeMediaUrl(json['image']);
+    final thumbnailRaw = _pickImageValue(json, const [
+      'thumbnail',
+      'thumbnail_url',
+      'thumbnailUrl',
+      'thumb',
+    ]);
+    final imageRaw = _pickImageValue(json, const [
+      'image',
+      'image_url',
+      'imageUrl',
+      'image_path',
+      'imagePath',
+      'photo',
+      'photo_url',
+      'picture',
+      'picture_url',
+    ]);
+    final thumbnail = ApiService.normalizeMediaUrl(thumbnailRaw);
+    final image = ApiService.normalizeMediaUrl(imageRaw);
     return Product(
       id: _toInt(json['id']),
       name: (json['name'] ?? '').toString(),
       price: _toDouble(json['price']),
       imageUrl: image ?? thumbnail,
       thumbnailUrl: thumbnail,
-      imageGallery: _toStringList(json['image_gallery']),
+      imageGallery: _normalizeGallery(_toStringList(
+        json['image_gallery'] ?? json['gallery'] ?? json['images'],
+      )),
       categoryName: category is Map ? category['name']?.toString() : null,
       categoryId: category is Map ? _toIntOrNull(category['id']) : null,
       brand: json['brand']?.toString(),
-      description: json['description']?.toString(),
+      description: _toTextValue(json['description']),
       sku: json['sku']?.toString(),
       discount: _toDoubleOrNull(json['discount']),
       stock: _toIntOrNull(json['stock']),
       status: json['status']?.toString(),
       tag: json['tag']?.toString(),
       warranty: json['warranty']?.toString(),
-      storageCapacity: json['storage_capacity']?.toString(),
-      color: json['color']?.toString(),
-      condition: json['condition']?.toString(),
+      storageCapacity: _toTextValue(json['storage_capacity']),
+      color: _toTextValue(json['color']),
+      condition: _toTextValue(json['condition']),
       ramOptions: _toStringList(json['ram']),
-      ssd: json['ssd']?.toString(),
-      cpu: json['cpu']?.toString(),
-      display: json['display']?.toString(),
-      country: json['country']?.toString(),
+      ssd: _toTextValue(json['ssd']),
+      cpu: _toTextValue(json['cpu']),
+      display: _toTextValue(json['display']),
+      country: _toTextValue(json['country']),
       createdAt: _toDateTime(json['created_at']),
     );
   }
@@ -129,11 +148,48 @@ class Product {
     return [];
   }
 
+  static List<String> _normalizeGallery(List<String> raw) {
+    return raw
+        .map(ApiService.normalizeMediaUrl)
+        .whereType<String>()
+        .where((item) => item.isNotEmpty)
+        .toList();
+  }
+
+  static String? _pickImageValue(
+    Map<String, dynamic> json,
+    List<String> keys,
+  ) {
+    for (final key in keys) {
+      final value = json[key];
+      if (value is String && value.trim().isNotEmpty) {
+        return value.trim();
+      }
+    }
+    return null;
+  }
+
   static DateTime? _toDateTime(dynamic value) {
     if (value is DateTime) return value;
     if (value is String && value.isNotEmpty) {
       return DateTime.tryParse(value);
     }
     return null;
+  }
+
+  static String? _toTextValue(dynamic value) {
+    if (value == null) return null;
+    if (value is List) {
+      final values = value
+          .map((item) => item?.toString().trim())
+          .whereType<String>()
+          .where((item) => item.isNotEmpty)
+          .toList();
+      if (values.isEmpty) return null;
+      return values.join(', ');
+    }
+    final text = value.toString().trim();
+    if (text.isEmpty || text == 'null') return null;
+    return text;
   }
 }

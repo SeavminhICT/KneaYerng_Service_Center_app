@@ -28,9 +28,9 @@ class UpdateProductRequest extends FormRequest
             'tag' => ['sometimes', 'nullable', 'in:'.implode(',', Product::TAGS)],
             'brand' => ['sometimes', 'nullable', 'string', 'max:255'],
             'warranty' => ['sometimes', 'nullable', 'in:'.implode(',', Product::WARRANTIES)],
-            'thumbnail' => ['sometimes', 'nullable', 'image', 'max:5120'],
+            'thumbnail' => ['sometimes', 'nullable', 'image', 'max:2048'],
             'image_gallery' => ['sometimes', 'nullable', 'array'],
-            'image_gallery.*' => ['image', 'max:5120'],
+            'image_gallery.*' => ['image', 'max:2048'],
             'storage_capacity' => ['sometimes', 'nullable', 'array'],
             'storage_capacity.*' => ['string', 'max:100'],
             'color' => ['sometimes', 'nullable', 'array'],
@@ -47,7 +47,7 @@ class UpdateProductRequest extends FormRequest
             'display.*' => ['string', 'max:150'],
             'country' => ['sometimes', 'nullable', 'array'],
             'country.*' => ['string', 'max:100'],
-            'image' => ['sometimes', 'nullable', 'image', 'max:5120'],
+            'image' => ['sometimes', 'nullable', 'image', 'max:2048'],
         ];
     }
 

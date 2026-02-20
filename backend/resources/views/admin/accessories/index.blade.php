@@ -37,6 +37,7 @@
                     <thead class="text-xs uppercase tracking-widest text-slate-400">
                         <tr>
                             <th class="px-4 py-3"><input type="checkbox" class="rounded border-slate-300 text-primary-600 focus:ring-primary-500" /></th>
+                            <th class="px-4 py-3">Image</th>
                             <th class="px-4 py-3">Name</th>
                             <th class="px-4 py-3">Brand</th>
                             <th class="px-4 py-3">Price</th>
@@ -95,7 +96,7 @@
                 await window.adminApi.ensureCsrfCookie();
                 var response = await window.adminApi.request('/api/accessories?q=' + encodeURIComponent(currentQuery) + '&page=' + currentPage);
                 if (!response.ok) {
-                    rows.innerHTML = '<tr><td class="px-4 py-6 text-center text-sm text-slate-500" colspan="9">Unable to load accessories.</td></tr>';
+                    rows.innerHTML = '<tr><td class="px-4 py-6 text-center text-sm text-slate-500" colspan="10">Unable to load accessories.</td></tr>';
                     return;
                 }
                 var data = await response.json();
@@ -105,6 +106,9 @@
                     return `
                         <tr>
                             <td class="px-4 py-3"><input type="checkbox" class="rounded border-slate-300 text-primary-600 focus:ring-primary-500" /></td>
+                            <td class="px-4 py-3">
+                                ${item.image ? `<img src="${item.image}" alt="${item.name}" class="h-10 w-10 rounded-lg object-cover" />` : '<div class="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-100 text-[10px] text-slate-400">No image</div>'}
+                            </td>
                             <td class="px-4 py-3">
                                 <div>
                                     <p class="font-semibold text-slate-900 dark:text-white">${item.name}</p>
@@ -124,7 +128,7 @@
                             </td>
                         </tr>
                     `;
-                }).join('') || '<tr><td class="px-4 py-6 text-center text-sm text-slate-500" colspan="9">No accessories found.</td></tr>';
+                }).join('') || '<tr><td class="px-4 py-6 text-center text-sm text-slate-500" colspan="10">No accessories found.</td></tr>';
 
                 info.textContent = 'Showing ' + list.length + ' of ' + (data.meta?.total ?? list.length) + ' accessories';
                 prevButton.disabled = !data.links?.prev;

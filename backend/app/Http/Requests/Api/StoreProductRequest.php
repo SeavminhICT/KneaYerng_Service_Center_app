@@ -26,9 +26,9 @@ class StoreProductRequest extends FormRequest
             'tag' => ['nullable', 'in:'.implode(',', Product::TAGS)],
             'brand' => ['nullable', 'string', 'max:255'],
             'warranty' => ['nullable', 'in:'.implode(',', Product::WARRANTIES)],
-            'thumbnail' => ['nullable', 'image', 'max:5120'],
+            'thumbnail' => ['nullable', 'image', 'max:2048'],
             'image_gallery' => ['nullable', 'array'],
-            'image_gallery.*' => ['image', 'max:5120'],
+            'image_gallery.*' => ['image', 'max:2048'],
             'storage_capacity' => ['nullable', 'array'],
             'storage_capacity.*' => ['string', 'max:100'],
             'color' => ['nullable', 'array'],
@@ -45,7 +45,7 @@ class StoreProductRequest extends FormRequest
             'display.*' => ['string', 'max:150'],
             'country' => ['nullable', 'array'],
             'country.*' => ['string', 'max:100'],
-            'image' => ['nullable', 'image', 'max:5120'],
+            'image' => ['nullable', 'image', 'max:2048'],
         ];
     }
 

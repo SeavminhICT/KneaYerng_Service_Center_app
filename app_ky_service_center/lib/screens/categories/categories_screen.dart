@@ -133,7 +133,8 @@ class _CategoryCardState extends State<_CategoryCard> {
       onExit: (_) => setState(() => _hovered = false),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 220),
-        transform: Matrix4.identity()..translate(0.0, _hovered ? -4.0 : 0.0),
+        transform: Matrix4.identity()
+          ..translateByDouble(0.0, _hovered ? -4.0 : 0.0, 0.0, 1.0),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(widget.radius),

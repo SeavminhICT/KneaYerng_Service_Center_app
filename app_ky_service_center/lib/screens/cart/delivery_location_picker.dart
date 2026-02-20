@@ -130,11 +130,12 @@ class _DeliveryLocationPickerState extends State<DeliveryLocationPicker> {
         _errorMessage = 'Unable to get current location.';
       });
     } finally {
-      if (!mounted) return;
-      setState(() {
-        _isLocating = false;
-        _hasLocationPermission = true;
-      });
+      if (mounted) {
+        setState(() {
+          _isLocating = false;
+          _hasLocationPermission = true;
+        });
+      }
     }
   }
 
@@ -448,7 +449,7 @@ class _DeliveryLocationPickerState extends State<DeliveryLocationPicker> {
                       child: ListView.separated(
                         shrinkWrap: true,
                         itemCount: _predictions.length,
-                        separatorBuilder: (_, __) =>
+                        separatorBuilder: (_, _) =>
                             const Divider(height: 1),
                         itemBuilder: (context, index) {
                           final item = _predictions[index];

@@ -24,6 +24,7 @@ class UpdateAccessoryRequest extends FormRequest
             'tag' => ['sometimes', 'nullable', 'in:'.implode(',', Accessory::TAGS)],
             'description' => ['sometimes', 'nullable', 'string', 'max:500'],
             'warranty' => ['sometimes', 'required', 'in:'.implode(',', Accessory::WARRANTIES)],
+            'image' => ['sometimes', 'nullable', 'image', 'max:5120'],
         ];
     }
 

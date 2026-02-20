@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
-use App\Services\InfobipService;
+use App\Services\OtpService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -12,9 +12,7 @@ use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
-    private int $otpTtlMinutes = 10;
-
-    public function __construct(private InfobipService $infobip)
+    public function __construct(private OtpService $otpService)
     {
     }
 
@@ -35,9 +33,6 @@ class AuthController extends Controller
             $avatarPath = 'storage/'.$storedPath;
         }
 
-        $otp = $this->generateOtp();
-        $otpExpiresAt = now()->addMinutes($this->otpTtlMinutes);
-
         $user = User::create([
             'first_name' => $validated['first_name'],
             'last_name' => $validated['last_name'],
@@ -45,21 +40,24 @@ class AuthController extends Controller
             'phone' => $validated['phone'] ?? null,
             'password' => Hash::make($validated['password']),
             'avatar' => $avatarPath,
-            'otp_code' => Hash::make($otp),
-            'otp_expires_at' => $otpExpiresAt,
             'otp_verified_at' => null,
         ]);
 
-        $token = $user->createToken('api')->plainTextToken;
-        $otpSent = $this->attemptSendOtp($user, $otp);
+        $otpResult = $this->otpService->requestOtp(
+            destinationType: 'email',
+            destination: $user->email,
+            purpose: 'signup',
+            userId: $user->id,
+            requestIp: $request->ip(),
+            deviceId: $request->header('X-Device-Id')
+        );
 
         return response()->json([
-            'message' => $otpSent
-                ? 'User registered successfully'
-                : 'User registered successfully, but OTP could not be sent.',
-            'token' => $token,
+            'message' => 'User registered. OTP sent for verification.',
             'user' => $user,
-            'otp_sent' => $otpSent,
+            'otp_sent' => $otpResult['ok'] ?? false,
+            'expires_in_sec' => $otpResult['expires_in_sec'] ?? (int) config('otp.ttl_seconds', 300),
+            'resend_in_sec' => $otpResult['resend_in_sec'] ?? (int) config('otp.resend_cooldown_seconds', 60),
         ], 201);
     }
 
@@ -84,18 +82,23 @@ class AuthController extends Controller
             ], 404);
         }
 
-        $otp = $this->generateOtp();
-        $user->otp_code = Hash::make($otp);
-        $user->otp_expires_at = now()->addMinutes($this->otpTtlMinutes);
-        $user->otp_verified_at = null;
-        $user->save();
-
-        $otpSent = $this->attemptSendOtp($user, $otp);
+        $destinationType = ! empty($validated['phone']) ? 'phone' : 'email';
+        $destination = $destinationType === 'phone' ? (string) $user->phone : (string) $user->email;
+        $otp = $this->otpService->requestOtp(
+            destinationType: $destinationType,
+            destination: $destination,
+            purpose: 'signup',
+            userId: $user->id,
+            requestIp: $request->ip(),
+            deviceId: $request->header('X-Device-Id')
+        );
 
         return response()->json([
-            'message' => $otpSent ? 'OTP sent successfully.' : 'OTP could not be sent.',
-            'otp_sent' => $otpSent,
-        ]);
+            'message' => $otp['message'] ?? 'OTP processed.',
+            'otp_sent' => $otp['ok'] ?? false,
+            'expires_in_sec' => $otp['expires_in_sec'] ?? (int) config('otp.ttl_seconds', 300),
+            'resend_in_sec' => $otp['resend_in_sec'] ?? (int) config('otp.resend_cooldown_seconds', 60),
+        ], $otp['status'] ?? 200);
     }
 
     public function verifyOtp(Request $request): JsonResponse
@@ -120,32 +123,32 @@ class AuthController extends Controller
             ], 404);
         }
 
-        if (! $user->otp_code || ! $user->otp_expires_at) {
+        $destinationType = ! empty($validated['phone']) ? 'phone' : 'email';
+        $destination = $destinationType === 'phone'
+            ? $this->otpService->normalizeDestination('phone', (string) ($validated['phone'] ?? $user->phone))
+            : $this->otpService->normalizeDestination('email', (string) ($validated['email'] ?? $user->email));
+        $verify = $this->otpService->verifyOtp(
+            destinationType: $destinationType,
+            destination: $destination,
+            purpose: 'signup',
+            otp: (string) $validated['code']
+        );
+        if (! ($verify['ok'] ?? false)) {
             return response()->json([
-                'message' => 'No OTP is pending for this user.',
-            ], 422);
-        }
-
-        if (now()->greaterThan($user->otp_expires_at)) {
-            return response()->json([
-                'message' => 'OTP has expired.',
-            ], 422);
-        }
-
-        if (! Hash::check($validated['code'], $user->otp_code)) {
-            return response()->json([
-                'message' => 'Invalid OTP code.',
-            ], 422);
+                'message' => $verify['message'] ?? 'Invalid OTP code.',
+            ], $verify['status'] ?? 422);
         }
 
         $user->otp_verified_at = now();
-        $user->otp_code = null;
-        $user->otp_expires_at = null;
         $user->email_verified_at = $user->email_verified_at ?? now();
         $user->save();
 
+        $token = $user->createToken('api')->plainTextToken;
+
         return response()->json([
             'message' => 'OTP verified successfully.',
+            'token' => $token,
+            'user' => $user,
         ]);
     }
 
@@ -242,25 +245,6 @@ class AuthController extends Controller
             'user' => $user,
         ]);
     }
-
-    private function attemptSendOtp(User $user, string $otp): bool
-    {
-        try {
-            $message = 'Your verification code is '.$otp.'. It expires in '.$this->otpTtlMinutes.' minutes.';
-            $smsSent = false;
-            if (! empty($user->phone)) {
-                $smsSent = $this->infobip->sendSms($user->phone, $message);
-            }
-            $emailSent = $this->infobip->sendEmail($user->email, 'Your verification code', $message);
-
-            return $smsSent || $emailSent;
-        } catch (\Throwable $exception) {
-            report($exception);
-
-            return false;
-        }
-    }
-
     private function findUserForOtp(?string $email, ?string $phone): ?User
     {
         if ($email && $phone) {
@@ -276,10 +260,5 @@ class AuthController extends Controller
         }
 
         return null;
-    }
-
-    private function generateOtp(): string
-    {
-        return (string) random_int(100000, 999999);
     }
 }

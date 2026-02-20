@@ -102,7 +102,7 @@ class EditProfileScreen extends StatelessWidget {
               height: 64,
               width: 64,
               decoration: BoxDecoration(
-                color: accent.withOpacity(0.12),
+                color: accent.withAlpha((0.12 * 255).round()),
                 shape: BoxShape.circle,
               ),
               child: CircleAvatar(
@@ -167,7 +167,7 @@ class EditProfileScreen extends StatelessWidget {
       ),
       child: ListTile(
         leading: CircleAvatar(
-          backgroundColor: color.withOpacity(0.12),
+          backgroundColor: color.withAlpha((0.12 * 255).round()),
           child: Icon(icon, color: color),
         ),
         title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),

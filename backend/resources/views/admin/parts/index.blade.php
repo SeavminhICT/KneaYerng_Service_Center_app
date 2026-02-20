@@ -97,8 +97,14 @@
                     TOP_SELLER: 'bg-primary-50 text-primary-700 dark:bg-primary-500/10 dark:text-primary-100',
                     PROMOTION: 'bg-warning-50 text-warning-700 dark:bg-warning-500/10 dark:text-warning-100',
                 };
+                var labelMap = {
+                    HOT_SALE: 'Hot Sale',
+                    TOP_SELLER: 'Top Seller',
+                    PROMOTION: 'Promotion',
+                };
                 var klass = map[tag] || 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300';
-                return '<span class="rounded-full px-2 py-1 text-xs font-semibold ' + klass + '">' + tag + '</span>';
+                var label = labelMap[tag] || tag.toString().replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, function (m) { return m.toUpperCase(); });
+                return '<span class="rounded-full px-2 py-1 text-xs font-semibold ' + klass + '">' + label + '</span>';
             }
 
             async function loadParts() {

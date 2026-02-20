@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\PaymentResource;
+use App\Models\KhqrTransaction;
 use App\Models\Order;
 use App\Models\Payment;
 use Illuminate\Http\Request;
@@ -63,16 +64,20 @@ class PaymentController extends Controller
         $secret = config('services.payment.callback_secret');
         $signature = $request->header('X-Signature') ?? $request->input('signature');
 
-        if ($secret && ! $signature) {
+        if (! $secret) {
+            return response()->json([
+                'message' => 'Payment callback secret is not configured.',
+            ], 503);
+        }
+
+        if (! $signature) {
             return response()->json(['message' => 'Missing signature.'], 403);
         }
 
-        if ($secret && $signature) {
-            $expected = hash_hmac('sha256', $request->getContent(), $secret);
+        $expected = hash_hmac('sha256', $request->getContent(), $secret);
 
-            if (! hash_equals($expected, $signature)) {
-                return response()->json(['message' => 'Invalid signature.'], 403);
-            }
+        if (! hash_equals($expected, $signature)) {
+            return response()->json(['message' => 'Invalid signature.'], 403);
         }
 
         $validated = $request->validate([
@@ -113,6 +118,19 @@ class PaymentController extends Controller
         $payment->provider = $validated['provider'] ?? $payment->provider;
         $payment->callback_payload = $request->all();
         $payment->save();
+
+        if ($payment->transaction_id) {
+            $khqr = KhqrTransaction::where('transaction_id', $payment->transaction_id)->first();
+            if ($khqr) {
+                $khqr->status = $payment->status === 'success'
+                    ? 'SUCCESS'
+                    : ($payment->status === 'failed' ? 'FAILED' : 'PENDING');
+                $khqr->checked_at = now();
+                $khqr->paid_at = $payment->status === 'success' ? ($payment->paid_at ?? now()) : null;
+                $khqr->provider_payload = $request->all();
+                $khqr->save();
+            }
+        }
 
         $order = Order::find($validated['order_id']);
 

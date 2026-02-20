@@ -5,7 +5,7 @@
 
 @section('content')
     <div class="grid gap-6 lg:grid-cols-[2fr_1fr]">
-        <form id="accessory-create-form" class="space-y-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+        <form id="accessory-create-form" enctype="multipart/form-data" class="space-y-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
             <div>
                 <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Accessory Details</h2>
                 <p class="text-sm text-slate-500">Add a new accessory or repair part for the catalog.</p>
@@ -20,7 +20,7 @@
                     <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="brand">Brand</label>
                     <select id="brand" name="brand" class="mt-2 w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200">
                         <option value="">Select brand</option>
-                        <option value="IPHONE">IPHONE</option>
+                        <option value="IPHONE">APPLE</option>
                         <option value="SAMSUNG">SAMSUNG</option>
                     </select>
                 </div>
@@ -67,9 +67,11 @@
                     <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="tag">Tag</label>
                     <select id="tag" name="tag" class="mt-2 w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200">
                         <option value="">No tag</option>
-                        <option value="HOT_SALE">Hot Sale</option>
-                        <option value="TOP_SELLER">Top Seller</option>
-                        <option value="PROMOTION">Promotion</option>
+                        @foreach (\App\Models\Accessory::TAGS as $tag)
+                            <option value="{{ $tag }}">
+                                {{ \Illuminate\Support\Str::title(str_replace('_', ' ', strtolower($tag))) }}
+                            </option>
+                        @endforeach
                     </select>
                 </div>
             </div>
@@ -87,6 +89,23 @@
         </form>
 
         <div class="space-y-6">
+            <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900" x-data="{ preview: null }">
+                <h3 class="text-sm font-semibold text-slate-900 dark:text-white">Accessory Image</h3>
+                <p class="mt-1 text-xs text-slate-500">Upload a photo to show in the app.</p>
+                <div class="mt-4 flex h-40 items-center justify-center rounded-xl border border-dashed border-slate-300 bg-slate-50 text-xs text-slate-500 dark:border-slate-700 dark:bg-slate-900/60">
+                    <template x-if="preview">
+                        <img :src="preview" alt="Preview" class="h-32 w-32 rounded-xl object-cover" />
+                    </template>
+                    <template x-if="!preview">
+                        <div class="text-center">
+                            <p class="font-semibold">Drop image here</p>
+                            <p>PNG, JPG up to 5MB</p>
+                        </div>
+                    </template>
+                </div>
+                <input type="file" name="image" form="accessory-create-form" accept="image/*" class="mt-4 w-full text-sm text-slate-500" @change="const file = $event.target.files[0]; if (file) { const reader = new FileReader(); reader.onload = e => preview = e.target.result; reader.readAsDataURL(file); }" />
+            </div>
+
             <div class="rounded-2xl border border-slate-200 bg-slate-50 p-5 text-xs text-slate-500 dark:border-slate-800 dark:bg-slate-950">
                 <p class="font-semibold text-slate-700 dark:text-slate-200">Validation rules</p>
                 <p class="mt-2">Only IPHONE and SAMSUNG brands are allowed. Warranty must match dropdown values.</p>
@@ -190,6 +209,22 @@
             setupDiscountTools();
             initRichTextEditor('description');
         });
+
+        var accessoryImageInput = document.querySelector('input[name="image"][form="accessory-create-form"]');
+        if (accessoryImageInput) {
+            accessoryImageInput.addEventListener('change', function (event) {
+                var file = event.target.files[0];
+                if (file) {
+                    document.getElementById('accessory-form-error').textContent = '';
+                }
+                if (window.adminValidateFileSize && file && !window.adminValidateFileSize(file, 'Image')) {
+                    event.stopImmediatePropagation();
+                    event.preventDefault();
+                    event.target.value = '';
+                    document.getElementById('accessory-form-error').textContent = 'Image must be 5MB or smaller.';
+                }
+            }, true);
+        }
 
         document.getElementById('accessory-create-form').addEventListener('submit', async function (event) {
             event.preventDefault();

@@ -14,6 +14,7 @@ class AllProductsScreen extends StatefulWidget {
 
 class _AllProductsScreenState extends State<AllProductsScreen> {
   late Future<List<Product>> _future;
+  bool _isGrid = true;
 
   @override
   void initState() {
@@ -39,13 +40,14 @@ class _AllProductsScreenState extends State<AllProductsScreen> {
     final radius = isDesktop ? 10.0 : 14.0;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF6F7FB),
+      backgroundColor: const Color(0xFFF7F8FB),
       appBar: AppBar(
         title: Text(
           widget.title ?? 'All Products',
           style: const TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.w700,
+            fontFamily: 'SF Pro Text',
           ),
         ),
         backgroundColor: Colors.white,
@@ -68,22 +70,123 @@ class _AllProductsScreenState extends State<AllProductsScreen> {
             if (products.isEmpty) {
               return const _EmptyState();
             }
-            return GridView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: products.length,
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: columns,
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 12,
-                childAspectRatio: isDesktop ? 0.85 : 0.78,
-              ),
-              itemBuilder: (context, index) {
-                final product = products[index];
-                return _ProductCard(
-                  product: product,
-                  radius: radius,
-                );
-              },
+            return Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 10),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Container(
+                          height: 44,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(14),
+                            boxShadow: const [
+                              BoxShadow(
+                                color: Color(0x0F000000),
+                                blurRadius: 10,
+                                offset: Offset(0, 6),
+                              ),
+                            ],
+                          ),
+                          child: const TextField(
+                            decoration: InputDecoration(
+                              hintText: 'Search products',
+                              prefixIcon: Icon(Icons.search, size: 20),
+                              border: InputBorder.none,
+                              contentPadding: EdgeInsets.symmetric(vertical: 12),
+                            ),
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontFamily: 'SF Pro Text',
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      InkWell(
+                        borderRadius: BorderRadius.circular(14),
+                        onTap: () {
+                          setState(() => _isGrid = !_isGrid);
+                        },
+                        child: Container(
+                          height: 44,
+                          padding: const EdgeInsets.symmetric(horizontal: 14),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: const Color(0xFFE5E7EB)),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                _isGrid
+                                    ? Icons.view_list_rounded
+                                    : Icons.grid_view_rounded,
+                                size: 18,
+                                color: const Color(0xFF111827),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                _isGrid ? 'List' : 'Grid',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  fontFamily: 'SF Pro Text',
+                                  color: Color(0xFF111827),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 280),
+                    switchInCurve: Curves.easeOut,
+                    switchOutCurve: Curves.easeIn,
+                    child: _isGrid
+                        ? GridView.builder(
+                            key: const ValueKey('grid'),
+                            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                            itemCount: products.length,
+                            gridDelegate:
+                                SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: columns,
+                              crossAxisSpacing: 12,
+                              mainAxisSpacing: 12,
+                              childAspectRatio: isDesktop ? 0.85 : 0.78,
+                            ),
+                            itemBuilder: (context, index) {
+                              final product = products[index];
+                              return _ProductCard(
+                                product: product,
+                                radius: radius,
+                                isGrid: true,
+                              );
+                            },
+                          )
+                        : ListView.separated(
+                            key: const ValueKey('list'),
+                            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                            itemCount: products.length,
+                            separatorBuilder: (context, index) =>
+                                const SizedBox(height: 12),
+                            itemBuilder: (context, index) {
+                              final product = products[index];
+                              return _ProductCard(
+                                product: product,
+                                radius: radius,
+                                isGrid: false,
+                              );
+                            },
+                          ),
+                  ),
+                ),
+              ],
             );
           },
         ),
@@ -93,14 +196,21 @@ class _AllProductsScreenState extends State<AllProductsScreen> {
 }
 
 class _ProductCard extends StatelessWidget {
-  const _ProductCard({required this.product, required this.radius});
+  const _ProductCard({
+    required this.product,
+    required this.radius,
+    required this.isGrid,
+  });
 
   final Product product;
   final double radius;
+  final bool isGrid;
 
   @override
   Widget build(BuildContext context) {
     final imageUrl = product.imageUrl;
+    final rating = _ratingFor(product.id);
+    final tag = _tagFor(product.tag);
     return InkWell(
       borderRadius: BorderRadius.circular(radius),
       onTap: () {
@@ -122,7 +232,46 @@ class _ProductCard extends StatelessWidget {
             ),
           ],
         ),
-        child: Column(
+        child: isGrid
+            ? _GridLayout(
+                product: product,
+                radius: radius,
+                imageUrl: imageUrl,
+                rating: rating,
+                tag: tag,
+              )
+            : _ListLayout(
+                product: product,
+                radius: radius,
+                imageUrl: imageUrl,
+                rating: rating,
+                tag: tag,
+              ),
+      ),
+    );
+  }
+}
+
+class _GridLayout extends StatelessWidget {
+  const _GridLayout({
+    required this.product,
+    required this.radius,
+    required this.imageUrl,
+    required this.rating,
+    required this.tag,
+  });
+
+  final Product product;
+  final double radius;
+  final String? imageUrl;
+  final double rating;
+  final String? tag;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(
@@ -130,18 +279,26 @@ class _ProductCard extends StatelessWidget {
                 borderRadius: BorderRadius.vertical(
                   top: Radius.circular(radius),
                 ),
-                child: imageUrl == null || imageUrl.isEmpty
-                    ? const _ImageFallback()
-                    : Image.network(
-                        imageUrl,
-                        fit: BoxFit.cover,
-                        headers: _imageHeaders,
-                        errorBuilder: (_, __, ___) => const _ImageFallback(),
-                      ),
+                child: Container(
+                  color: const Color(0xFFF9F9F9),
+                  child: imageUrl == null || imageUrl!.isEmpty
+                      ? const _ImageFallback()
+                      : Image.network(
+                          imageUrl!,
+                          fit: BoxFit.contain,
+                          cacheWidth: 700,
+                          headers: _imageHeaders,
+                          errorBuilder: (_, _, _) => const _ImageFallback(),
+                          loadingBuilder: (context, child, progress) {
+                            if (progress == null) return child;
+                            return const _ImageSkeleton();
+                          },
+                        ),
+                ),
               ),
             ),
             Padding(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.fromLTRB(12, 12, 12, 14),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -152,40 +309,262 @@ class _ProductCard extends StatelessWidget {
                     style: const TextStyle(
                       fontWeight: FontWeight.w600,
                       color: Color(0xFF111827),
+                      fontFamily: 'SF Pro Text',
                     ),
                   ),
                   const SizedBox(height: 6),
-                  Text(
-                    '\$${product.price.toStringAsFixed(0)}',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFF0F6BFF),
-                    ),
+                  Row(
+                    children: [
+                      _PriceTag(value: product.price),
+                      if (tag != null) ...[
+                        const SizedBox(width: 8),
+                        _Badge(
+                          label: tag!,
+                          background: const Color(0xFFEFF6FF),
+                          foreground: const Color(0xFF2563EB),
+                        ),
+                      ],
+                    ],
                   ),
-                  if (product.brand != null && product.brand!.isNotEmpty) ...[
-                    const SizedBox(height: 6),
-                    Text(
-                      product.brand!,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: Color(0xFF6B7280),
-                      ),
-                    ),
-                  ],
+                  const SizedBox(height: 8),
+                  _RatingRow(value: rating),
                 ],
               ),
             ),
           ],
+        ),
+        Positioned(
+          right: 12,
+          bottom: 12,
+          child: Container(
+            height: 38,
+            width: 38,
+            decoration: const BoxDecoration(
+              color: Color(0xFF0F6BFF),
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: Color(0x330F6BFF),
+                  blurRadius: 10,
+                  offset: Offset(0, 6),
+                ),
+              ],
+            ),
+            child: const Icon(Icons.add, color: Colors.white),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ListLayout extends StatelessWidget {
+  const _ListLayout({
+    required this.product,
+    required this.radius,
+    required this.imageUrl,
+    required this.rating,
+    required this.tag,
+  });
+
+  final Product product;
+  final double radius;
+  final String? imageUrl;
+  final double rating;
+  final String? tag;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(12),
+      child: Row(
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(radius),
+            child: Container(
+              width: 96,
+              height: 112,
+              color: const Color(0xFFF9F9F9),
+              child: imageUrl == null || imageUrl!.isEmpty
+                  ? const _ImageFallback()
+                  : Image.network(
+                      imageUrl!,
+                      fit: BoxFit.contain,
+                      cacheWidth: 500,
+                      headers: _imageHeaders,
+                      errorBuilder: (_, _, _) => const _ImageFallback(),
+                      loadingBuilder: (context, child, progress) {
+                        if (progress == null) return child;
+                        return const _ImageSkeleton();
+                      },
+                    ),
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  product.name,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 15,
+                    color: Color(0xFF111827),
+                    fontFamily: 'SF Pro Text',
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    _PriceTag(value: product.price),
+                    if (tag != null) ...[
+                      const SizedBox(width: 8),
+                      _Badge(
+                        label: tag!,
+                        background: const Color(0xFFF1F5F9),
+                        foreground: const Color(0xFF0F172A),
+                      ),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 8),
+                _RatingRow(value: rating),
+                const SizedBox(height: 10),
+                SizedBox(
+                  height: 36,
+                  child: ElevatedButton.icon(
+                    onPressed: () {},
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF0F6BFF),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 14),
+                      textStyle: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontFamily: 'SF Pro Text',
+                      ),
+                    ),
+                    icon: const Icon(Icons.add, size: 18),
+                    label: const Text('Add to Cart'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PriceTag extends StatelessWidget {
+  const _PriceTag({required this.value});
+
+  final double value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: const Color(0xFFEEF2FF),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Text(
+        '\$${value.toStringAsFixed(0)}',
+        style: const TextStyle(
+          fontWeight: FontWeight.w700,
+          color: Color(0xFF0F6BFF),
+          fontFamily: 'SF Pro Text',
         ),
       ),
     );
   }
 }
 
-const Map<String, String> _imageHeaders = {
-  'User-Agent': 'Mozilla/5.0',
-  'Accept': 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
-};
+class _Badge extends StatelessWidget {
+  const _Badge({
+    required this.label,
+    required this.background,
+    required this.foreground,
+  });
+
+  final String label;
+  final Color background;
+  final Color foreground;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+          color: foreground,
+          fontFamily: 'SF Pro Text',
+        ),
+      ),
+    );
+  }
+}
+
+class _RatingRow extends StatelessWidget {
+  const _RatingRow({required this.value});
+
+  final double value;
+
+  @override
+  Widget build(BuildContext context) {
+    final fullStars = value.floor();
+    final hasHalf = (value - fullStars) >= 0.5;
+    return Row(
+      children: [
+        for (var i = 0; i < 5; i++)
+          Icon(
+            i < fullStars
+                ? Icons.star_rounded
+                : hasHalf && i == fullStars
+                    ? Icons.star_half_rounded
+                    : Icons.star_border_rounded,
+            size: 16,
+            color: const Color(0xFFF59E0B),
+          ),
+        const SizedBox(width: 6),
+        Text(
+          value.toStringAsFixed(1),
+          style: const TextStyle(
+            fontSize: 12,
+            color: Color(0xFF6B7280),
+            fontFamily: 'SF Pro Text',
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+double _ratingFor(int id) {
+  final seed = (id % 8) + 2;
+  return 3.6 + (seed / 10);
+}
+
+String? _tagFor(String? raw) {
+  if (raw == null || raw.isEmpty) return null;
+  return raw.replaceAll('_', ' ').toUpperCase();
+}
+
+Map<String, String>? get _imageHeaders => null;
 
 class _EmptyState extends StatelessWidget {
   const _EmptyState();
@@ -235,10 +614,30 @@ class _ImageFallback extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: const Color(0xFFF3F4F6),
+      color: const Color(0xFFF9F9F9),
       child: const Center(
         child: Icon(Icons.devices, color: Color(0xFF9CA3AF)),
       ),
     );
   }
 }
+
+class _ImageSkeleton extends StatelessWidget {
+  const _ImageSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: const Color(0xFFF1F5F9),
+      child: const Center(
+        child: SizedBox(
+          height: 22,
+          width: 22,
+          child: CircularProgressIndicator(strokeWidth: 2),
+        ),
+      ),
+    );
+  }
+}
+
+

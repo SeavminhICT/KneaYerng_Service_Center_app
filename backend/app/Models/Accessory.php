@@ -42,6 +42,7 @@ class Accessory extends Model
         'tag',
         'description',
         'warranty',
+        'image',
     ];
 
     protected $casts = [

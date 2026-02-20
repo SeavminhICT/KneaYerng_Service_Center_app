@@ -35,4 +35,28 @@ return [
         ],
     ],
 
+    'bakong' => [
+        'merchant_id' => env('BAKONG_MERCHANT_ID', 'DEMO_MERCHANT'),
+        'merchant_name' => env('BAKONG_MERCHANT_NAME', 'KneaYerng Service Center'),
+    ],
+
+    'bakong_open' => [
+        'base_url' => env('BAKONG_OPEN_BASE_URL', env('BAKONG_BASE_URL', '')),
+        'token' => env('BAKONG_OPEN_TOKEN', env('BAKONG_TOKEN', '')),
+        'timeout' => (int) env('BAKONG_OPEN_TIMEOUT', 12),
+        'verify' => env('BAKONG_OPEN_VERIFY', true),
+        'ca_bundle' => env('BAKONG_OPEN_CA_BUNDLE', ''),
+    ],
+
+    'payment' => [
+        'callback_secret' => env('PAYMENT_CALLBACK_SECRET', ''),
+    ],
+
+    'easysendsms' => [
+        'base_url' => env('EASYSENDSMS_BASE_URL', 'https://api.easysendsms.app/bulksms'),
+        'username' => env('EASYSENDSMS_USERNAME', ''),
+        'password' => env('EASYSENDSMS_PASSWORD', ''),
+        'from' => env('EASYSENDSMS_FROM', 'OTP'),
+    ],
+
 ];

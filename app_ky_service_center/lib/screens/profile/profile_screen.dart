@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import '../../services/api_service.dart' hide UserProfile;
+import '../../services/api_service.dart';
 import '../Auth/login_screen.dart';
 import '../../models/user_profile.dart';
 import 'edit_profile_screen.dart';
@@ -217,7 +217,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 height: 56,
                 width: 56,
                 decoration: BoxDecoration(
-                  color: accent.withOpacity(0.12),
+                  color: accent.withAlpha((0.12 * 255).round()),
                   shape: BoxShape.circle,
                 ),
                 child: CircleAvatar(
@@ -328,7 +328,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
       child: ListTile(
         leading: CircleAvatar(
-          backgroundColor: color.withOpacity(0.12),
+          backgroundColor: color.withAlpha((0.12 * 255).round()),
           child: Icon(icon, color: color),
         ),
         title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
@@ -352,7 +352,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               height: 72,
               width: 72,
               decoration: BoxDecoration(
-                color: brandBlue.withOpacity(0.12),
+                color: brandBlue.withAlpha((0.12 * 255).round()),
                 shape: BoxShape.circle,
               ),
               child: Icon(Icons.person_outline, size: 34, color: brandBlue),
@@ -509,6 +509,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         );
       } else {
         await _refreshProfile();
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Photo updated')),
         );

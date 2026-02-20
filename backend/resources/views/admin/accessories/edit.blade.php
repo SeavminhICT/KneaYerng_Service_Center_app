@@ -65,9 +65,11 @@
                     <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="tag">Tag</label>
                     <select id="tag" name="tag" class="mt-2 w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200">
                         <option value="">No tag</option>
-                        <option value="HOT_SALE">Hot Sale</option>
-                        <option value="TOP_SELLER">Top Seller</option>
-                        <option value="PROMOTION">Promotion</option>
+                        @foreach (\App\Models\Accessory::TAGS as $tag)
+                            <option value="{{ $tag }}">
+                                {{ \Illuminate\Support\Str::title(str_replace('_', ' ', strtolower($tag))) }}
+                            </option>
+                        @endforeach
                     </select>
                 </div>
             </div>
@@ -85,6 +87,18 @@
         </form>
 
         <div class="space-y-6">
+            <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                <h3 class="text-sm font-semibold text-slate-900 dark:text-white">Accessory Image</h3>
+                <p class="mt-1 text-xs text-slate-500">Upload a photo to show in the app.</p>
+                <div id="accessory-image-preview" class="mt-4 flex h-40 items-center justify-center rounded-xl border border-dashed border-slate-300 bg-slate-50 text-xs text-slate-500 dark:border-slate-700 dark:bg-slate-900/60">
+                    <div class="text-center">
+                        <p class="font-semibold">No image uploaded</p>
+                        <p>PNG, JPG up to 5MB</p>
+                    </div>
+                </div>
+                <input type="file" name="image" form="accessory-edit-form" accept="image/*" class="mt-4 w-full text-sm text-slate-500" />
+            </div>
+
             <div class="rounded-2xl border border-danger-100 bg-danger-50 p-5 text-xs text-danger-700 dark:border-danger-500/30 dark:bg-danger-500/10 dark:text-danger-100">
                 <p class="font-semibold">Delete accessory</p>
                 <p class="mt-2">Deleting will remove the item from the catalog and mobile app.</p>
@@ -184,6 +198,30 @@
             applyDiscountType();
         }
 
+        var accessoryImageInput = document.querySelector('input[name="image"][form="accessory-edit-form"]');
+        if (accessoryImageInput) {
+            accessoryImageInput.addEventListener('change', function (event) {
+                var file = event.target.files[0];
+                if (file) {
+                    document.getElementById('accessory-form-error').textContent = '';
+                }
+                if (window.adminValidateFileSize && file && !window.adminValidateFileSize(file, 'Image')) {
+                    event.stopImmediatePropagation();
+                    event.preventDefault();
+                    event.target.value = '';
+                    document.getElementById('accessory-form-error').textContent = 'Image must be 5MB or smaller.';
+                    return;
+                }
+                if (file) {
+                    var reader = new FileReader();
+                    reader.onload = function (e) {
+                        document.getElementById('accessory-image-preview').innerHTML = '<img src="' + e.target.result + '" alt="Preview" class="h-32 w-32 rounded-xl object-cover" />';
+                    };
+                    reader.readAsDataURL(file);
+                }
+            }, true);
+        }
+
         document.addEventListener('DOMContentLoaded', async function () {
             var form = document.getElementById('accessory-edit-form');
             var accessoryId = form.dataset.accessoryId;
@@ -203,6 +241,9 @@
                 document.getElementById('warranty').value = data.data.warranty || 'NO_WARRANTY';
                 document.getElementById('tag').value = data.data.tag || '';
                 document.getElementById('description').value = data.data.description || '';
+                if (data.data.image) {
+                    document.getElementById('accessory-image-preview').innerHTML = '<img src="' + data.data.image + '" alt="' + (data.data.name || 'Accessory image') + '" class="h-32 w-32 rounded-xl object-cover" />';
+                }
             }
 
             setupDiscountTools();

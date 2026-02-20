@@ -81,9 +81,11 @@
                     <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="tag">Tag</label>
                     <select id="tag" name="tag" class="mt-2 w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200">
                         <option value="">No tag</option>
-                        <option value="HOT_SALE">Hot Sale</option>
-                        <option value="TOP_SELLER">Top Seller</option>
-                        <option value="PROMOTION">Promotion</option>
+                        @foreach (\App\Models\Product::TAGS as $tag)
+                            <option value="{{ $tag }}">
+                                {{ \Illuminate\Support\Str::title(str_replace('_', ' ', strtolower($tag))) }}
+                            </option>
+                        @endforeach
                     </select>
                 </div>
             </div>

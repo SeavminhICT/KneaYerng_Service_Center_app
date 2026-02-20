@@ -17,10 +17,7 @@ class CategoryProductsScreen extends StatefulWidget {
   State<CategoryProductsScreen> createState() => _CategoryProductsScreenState();
 }
 
-const Map<String, String> _imageHeaders = {
-  'User-Agent': 'Mozilla/5.0',
-  'Accept': 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
-};
+Map<String, String>? get _imageHeaders => null;
 
 class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
   late Future<List<Product>> _future;
@@ -120,6 +117,7 @@ class _ProductCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final imageUrl = product.imageUrl;
+    final tag = _formatTag(product.tag);
     return InkWell(
       borderRadius: BorderRadius.circular(radius),
       onTap: () {
@@ -151,15 +149,20 @@ class _ProductCard extends StatelessWidget {
                 ),
                 child: imageUrl == null || imageUrl.isEmpty
                     ? const _ImageFallback()
-                    : Image.network(
-                        imageUrl,
-                        fit: BoxFit.cover,
-                        headers: _imageHeaders,
-                        errorBuilder: (_, __, ___) {
-                          debugPrint(
-                              '[CategoryProducts] image load failed: $imageUrl');
-                          return const _ImageFallback();
-                        },
+                    : Padding(
+                        padding: const EdgeInsets.all(8),
+                        child: Image.network(
+                          imageUrl,
+                          fit: BoxFit.contain,
+                          alignment: Alignment.center,
+                          cacheWidth: 700,
+                          headers: _imageHeaders,
+                          errorBuilder: (_, _, _) {
+                            debugPrint(
+                                '[CategoryProducts] image load failed: $imageUrl');
+                            return const _ImageFallback();
+                          },
+                        ),
                       ),
               ),
             ),
@@ -168,6 +171,25 @@ class _ProductCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  if (tag != null) ...[
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 7, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFEFF6FF),
+                        borderRadius: BorderRadius.circular(7),
+                      ),
+                      child: Text(
+                        tag,
+                        style: const TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF2563EB),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                  ],
                   Text(
                     product.name,
                     maxLines: 1,
@@ -279,3 +301,16 @@ class _ImageFallback extends StatelessWidget {
     );
   }
 }
+
+String? _formatTag(String? raw) {
+  if (raw == null || raw.trim().isEmpty) return null;
+  return raw
+      .trim()
+      .replaceAll(RegExp(r'[_-]+'), ' ')
+      .split(' ')
+      .where((word) => word.isNotEmpty)
+      .map((word) => '${word[0].toUpperCase()}${word.substring(1).toLowerCase()}')
+      .join(' ');
+}
+
+

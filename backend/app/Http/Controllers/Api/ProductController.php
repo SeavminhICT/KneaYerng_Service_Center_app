@@ -9,6 +9,7 @@ use App\Http\Resources\ProductResource;
 use App\Models\Part;
 use App\Models\Product;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 
 class ProductController extends Controller
@@ -50,15 +51,13 @@ class ProductController extends Controller
 
         $thumbnailFile = $request->file('thumbnail') ?? $request->file('image');
         if ($thumbnailFile) {
-            $storedPath = $thumbnailFile->store('products/thumbnails', 'public');
-            $validated['thumbnail'] = 'storage/'.$storedPath;
+            $validated['thumbnail'] = $this->storeOptimizedImage($thumbnailFile, 'products/thumbnails');
         }
 
         if ($request->hasFile('image_gallery')) {
             $galleryPaths = [];
             foreach ((array) $request->file('image_gallery') as $file) {
-                $storedPath = $file->store('products/gallery', 'public');
-                $galleryPaths[] = 'storage/'.$storedPath;
+                $galleryPaths[] = $this->storeOptimizedImage($file, 'products/gallery');
             }
             $validated['image_gallery'] = $galleryPaths;
         }
@@ -81,14 +80,13 @@ class ProductController extends Controller
 
         $thumbnailFile = $request->file('thumbnail') ?? $request->file('image');
         if ($thumbnailFile) {
-            $existingThumb = $product->thumbnail ?? $product->image;
+            $existingThumb = $this->firstNonEmptyPath($product->thumbnail, $product->image);
             if ($existingThumb) {
-                $oldPath = str_replace('storage/', '', $existingThumb);
+                $oldPath = $this->toStorageRelativePath($existingThumb);
                 Storage::disk('public')->delete($oldPath);
             }
 
-            $storedPath = $thumbnailFile->store('products/thumbnails', 'public');
-            $validated['thumbnail'] = 'storage/'.$storedPath;
+            $validated['thumbnail'] = $this->storeOptimizedImage($thumbnailFile, 'products/thumbnails');
         }
 
         if ($request->hasFile('image_gallery')) {
@@ -96,14 +94,13 @@ class ProductController extends Controller
                 if (! $oldGalleryPath) {
                     continue;
                 }
-                $oldPath = str_replace('storage/', '', $oldGalleryPath);
+                $oldPath = $this->toStorageRelativePath($oldGalleryPath);
                 Storage::disk('public')->delete($oldPath);
             }
 
             $galleryPaths = [];
             foreach ((array) $request->file('image_gallery') as $file) {
-                $storedPath = $file->store('products/gallery', 'public');
-                $galleryPaths[] = 'storage/'.$storedPath;
+                $galleryPaths[] = $this->storeOptimizedImage($file, 'products/gallery');
             }
             $validated['image_gallery'] = $galleryPaths;
         }
@@ -115,9 +112,9 @@ class ProductController extends Controller
 
     public function destroy(Product $product)
     {
-        $existingThumb = $product->thumbnail ?? $product->image;
+        $existingThumb = $this->firstNonEmptyPath($product->thumbnail, $product->image);
         if ($existingThumb) {
-            $oldPath = str_replace('storage/', '', $existingThumb);
+            $oldPath = $this->toStorageRelativePath($existingThumb);
             Storage::disk('public')->delete($oldPath);
         }
 
@@ -125,7 +122,7 @@ class ProductController extends Controller
             if (! $oldGalleryPath) {
                 continue;
             }
-            $oldPath = str_replace('storage/', '', $oldGalleryPath);
+            $oldPath = $this->toStorageRelativePath($oldGalleryPath);
             Storage::disk('public')->delete($oldPath);
         }
 
@@ -230,5 +227,88 @@ class ProductController extends Controller
         }
 
         return 'active';
+    }
+
+    private function firstNonEmptyPath(?string ...$paths): ?string
+    {
+        foreach ($paths as $path) {
+            if (is_string($path) && trim($path) !== '') {
+                return $path;
+            }
+        }
+
+        return null;
+    }
+
+    private function toStorageRelativePath(string $path): string
+    {
+        $clean = trim(str_replace('\\', '/', $path));
+
+        if (str_starts_with($clean, 'http://') || str_starts_with($clean, 'https://')) {
+            $parsed = parse_url($clean, PHP_URL_PATH);
+            if (is_string($parsed)) {
+                $clean = $parsed;
+            }
+        }
+
+        $clean = ltrim($clean, '/');
+        if (str_starts_with($clean, 'storage/')) {
+            $clean = substr($clean, strlen('storage/'));
+        }
+
+        return $clean;
+    }
+
+    private function storeOptimizedImage(UploadedFile $file, string $directory): string
+    {
+        $disk = 'public';
+        $extension = strtolower($file->getClientOriginalExtension() ?: $file->extension() ?: 'jpg');
+        $isPng = $extension === 'png';
+        $targetExt = $isPng ? 'png' : 'jpg';
+        $targetPath = trim($directory, '/').'/'.uniqid('img_', true).'.'.$targetExt;
+
+        $raw = @file_get_contents($file->getRealPath());
+        $source = $raw !== false ? @imagecreatefromstring($raw) : false;
+        if (! $source) {
+            $storedPath = $file->store($directory, $disk);
+            return 'storage/'.$storedPath;
+        }
+
+        $width = imagesx($source);
+        $height = imagesy($source);
+        $maxSide = 1600;
+        $ratio = min($maxSide / max($width, 1), $maxSide / max($height, 1), 1);
+        $newWidth = max(1, (int) round($width * $ratio));
+        $newHeight = max(1, (int) round($height * $ratio));
+
+        $canvas = imagecreatetruecolor($newWidth, $newHeight);
+        if ($isPng) {
+            imagealphablending($canvas, false);
+            imagesavealpha($canvas, true);
+            $transparent = imagecolorallocatealpha($canvas, 0, 0, 0, 127);
+            imagefilledrectangle($canvas, 0, 0, $newWidth, $newHeight, $transparent);
+        }
+
+        imagecopyresampled($canvas, $source, 0, 0, 0, 0, $newWidth, $newHeight, $width, $height);
+
+        ob_start();
+        if ($isPng) {
+            imagepng($canvas, null, 8);
+        } else {
+            imagejpeg($canvas, null, 78);
+        }
+        $encoded = ob_get_clean();
+
+        imagedestroy($canvas);
+        imagedestroy($source);
+
+        if (! is_string($encoded) || $encoded === '') {
+            $storedPath = $file->store($directory, $disk);
+            return 'storage/'.$storedPath;
+        }
+
+        Storage::disk($disk)->put($targetPath, $encoded);
+
+        return 'storage/'.$targetPath;
     }
 }

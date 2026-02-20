@@ -81,9 +81,11 @@
                     <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="tag">Tag</label>
                     <select id="tag" name="tag" class="mt-2 w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200">
                         <option value="">No tag</option>
-                        <option value="HOT_SALE">Hot Sale</option>
-                        <option value="TOP_SELLER">Top Seller</option>
-                        <option value="PROMOTION">Promotion</option>
+                        @foreach (\App\Models\Product::TAGS as $tag)
+                            <option value="{{ $tag }}">
+                                {{ \Illuminate\Support\Str::title(str_replace('_', ' ', strtolower($tag))) }}
+                            </option>
+                        @endforeach
                     </select>
                 </div>
             </div>
@@ -231,9 +233,14 @@
                         <img :src="preview" alt="Preview" class="h-32 w-32 rounded-xl object-cover" />
                     </template>
                     <template x-if="!preview">
-                        <div class="text-center">
-                            <p class="font-semibold">Current image</p>
-                            <p id="current-thumbnail">No image</p>
+                        <div class="text-center space-y-2">
+                            <div id="current-thumbnail-wrapper" class="mx-auto hidden h-24 w-24 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                                <img id="current-thumbnail-image" alt="Current image" class="h-full w-full object-cover" />
+                            </div>
+                            <div>
+                                <p class="font-semibold">Current image</p>
+                                <p id="current-thumbnail">No image</p>
+                            </div>
                         </div>
                     </template>
                 </div>
@@ -475,14 +482,39 @@
                 await loadAttributeOptions('display', 'display', data.data.display || []);
                 await loadAttributeOptions('country', 'country', data.data.country || []);
                 var thumbLabel = document.getElementById('current-thumbnail');
+                var thumbImage = document.getElementById('current-thumbnail-image');
+                var thumbWrapper = document.getElementById('current-thumbnail-wrapper');
+                var thumbUrl = data.data.thumbnail || '';
                 if (thumbLabel) {
-                    thumbLabel.textContent = data.data.thumbnail ? data.data.thumbnail.split('/').pop() : 'No image';
+                    thumbLabel.textContent = thumbUrl ? thumbUrl.split('/').pop() : 'No image';
+                }
+                if (thumbImage) {
+                    if (thumbUrl) {
+                        thumbImage.src = thumbUrl;
+                        if (thumbWrapper) {
+                            thumbWrapper.classList.remove('hidden');
+                        }
+                    } else {
+                        thumbImage.removeAttribute('src');
+                        if (thumbWrapper) {
+                            thumbWrapper.classList.add('hidden');
+                        }
+                    }
                 }
                 var gallery = document.getElementById('current-gallery');
                 if (gallery) {
                     gallery.innerHTML = (data.data.image_gallery || []).map(function (item) {
-                        var name = String(item || '').split('/').pop();
-                        return '<div class="rounded-lg border border-slate-200 bg-white px-2 py-1 dark:border-slate-800 dark:bg-slate-900">' + name + '</div>';
+                        var url = String(item || '');
+                        if (!url) {
+                            return '';
+                        }
+                        var name = url.split('/').pop();
+                        return '<div class="overflow-hidden rounded-lg border border-slate-200 bg-white text-[10px] text-slate-500 shadow-sm dark:border-slate-800 dark:bg-slate-900">' +
+                            '<div class="h-20 w-full overflow-hidden">' +
+                            '<img src="' + url + '" alt="' + name + '" class="h-full w-full object-cover" />' +
+                            '</div>' +
+                            '<div class="truncate px-2 py-1">' + name + '</div>' +
+                            '</div>';
                     }).join('') || '<p class="col-span-3 text-xs text-slate-400">No gallery images</p>';
                 }
                 await loadCategories(data.data.category?.id);

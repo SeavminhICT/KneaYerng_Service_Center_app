@@ -9,6 +9,7 @@ use App\Http\Resources\AccessoryResource;
 use App\Models\Accessory;
 use App\Models\Part;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class AccessoryController extends Controller
 {
@@ -55,7 +56,14 @@ class AccessoryController extends Controller
 
     public function store(StoreAccessoryRequest $request)
     {
-        $accessory = Accessory::create($request->validated());
+        $validated = $request->validated();
+
+        if ($request->hasFile('image')) {
+            $storedPath = $request->file('image')->store('accessories', 'public');
+            $validated['image'] = 'storage/'.$storedPath;
+        }
+
+        $accessory = Accessory::create($validated);
         $this->ensurePartFromAccessory($accessory);
 
         return new AccessoryResource($accessory);
@@ -68,13 +76,29 @@ class AccessoryController extends Controller
 
     public function update(UpdateAccessoryRequest $request, Accessory $accessory)
     {
-        $accessory->update($request->validated());
+        $validated = $request->validated();
+
+        if ($request->hasFile('image')) {
+            if ($accessory->image) {
+                $oldImagePath = str_replace('storage/', '', $accessory->image);
+                Storage::disk('public')->delete($oldImagePath);
+            }
+            $storedPath = $request->file('image')->store('accessories', 'public');
+            $validated['image'] = 'storage/'.$storedPath;
+        }
+
+        $accessory->update($validated);
 
         return new AccessoryResource($accessory);
     }
 
     public function destroy(Accessory $accessory)
     {
+        if ($accessory->image) {
+            $oldImagePath = str_replace('storage/', '', $accessory->image);
+            Storage::disk('public')->delete($oldImagePath);
+        }
+
         $accessory->delete();
 
         return response()->json(['message' => 'Accessory or repair part deleted successfully']);

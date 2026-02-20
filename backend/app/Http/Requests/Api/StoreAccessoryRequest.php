@@ -24,6 +24,7 @@ class StoreAccessoryRequest extends FormRequest
             'tag' => ['nullable', 'in:'.implode(',', Accessory::TAGS)],
             'description' => ['nullable', 'string', 'max:500'],
             'warranty' => ['required', 'in:'.implode(',', Accessory::WARRANTIES)],
+            'image' => ['nullable', 'image', 'max:5120'],
         ];
     }
 

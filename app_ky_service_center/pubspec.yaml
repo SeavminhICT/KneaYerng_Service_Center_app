@@ -46,12 +46,11 @@ dependencies:
   google_maps_flutter: ^2.5.0
   geocoding: ^2.2.0
   geolocator: ^10.1.0
-  qr_flutter: ^4.1.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_launcher_icons: ^0.13.1
+  flutter_launcher_icons: ^0.14.4
 
 
   # The "flutter_lints" package below contains a set of recommended lints to

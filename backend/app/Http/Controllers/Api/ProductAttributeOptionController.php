@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\StoreProductAttributeOptionRequest;
+use App\Http\Requests\Api\UpdateProductAttributeOptionRequest;
 use App\Http\Resources\ProductAttributeOptionResource;
 use App\Models\ProductAttributeOption;
 use Illuminate\Http\Request;
@@ -33,5 +34,23 @@ class ProductAttributeOptionController extends Controller
         ]);
 
         return new ProductAttributeOptionResource($option);
+    }
+
+    public function update(
+        UpdateProductAttributeOptionRequest $request,
+        ProductAttributeOption $productAttributeOption
+    ) {
+        $validated = $request->validated();
+
+        $productAttributeOption->update($validated);
+
+        return new ProductAttributeOptionResource($productAttributeOption->fresh());
+    }
+
+    public function destroy(ProductAttributeOption $productAttributeOption)
+    {
+        $productAttributeOption->delete();
+
+        return response()->json(['message' => 'Option deleted.']);
     }
 }

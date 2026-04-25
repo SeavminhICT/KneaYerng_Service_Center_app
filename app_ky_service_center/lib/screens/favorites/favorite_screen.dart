@@ -50,6 +50,9 @@ class _FavoriteCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final imageUrl = product.imageUrl;
+    final priceColor = product.hasDiscount
+        ? const Color(0xFFDC2626)
+        : const Color(0xFF0F6BFF);
     return InkWell(
       borderRadius: BorderRadius.circular(14),
       onTap: () {
@@ -116,10 +119,10 @@ class _FavoriteCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    '\$${product.price.toStringAsFixed(0)}',
-                    style: const TextStyle(
+                    '\$${product.salePrice.toStringAsFixed(0)}',
+                    style: TextStyle(
                       fontWeight: FontWeight.w700,
-                      color: Color(0xFF0F6BFF),
+                      color: priceColor,
                     ),
                   ),
                 ],

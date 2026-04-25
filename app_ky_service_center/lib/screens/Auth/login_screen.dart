@@ -36,415 +36,537 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final mediaQuery = MediaQuery.of(context);
+    final bottomInset = mediaQuery.viewInsets.bottom;
+
     return Scaffold(
-      backgroundColor: AppPalette.background,
-      body: SafeArea(
-        child: Stack(
-          children: [
-            Positioned.fill(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      AppPalette.primarySoft,
-                      AppPalette.background,
-                      AppPalette.background,
-                    ],
-                    stops: const [0, 0.45, 1],
-                  ),
+      backgroundColor: Colors.transparent,
+      body: Stack(
+        children: [
+          Positioned.fill(
+            child: Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Color(0xFF2F6BFF), Color(0xFF18C7CC)],
                 ),
               ),
             ),
-            Positioned(
-              top: -90,
-              right: -70,
-              child: Container(
-                width: 220,
-                height: 220,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: AppPalette.primary.withAlpha((0.08 * 255).round()),
-                ),
-              ),
-            ),
-            Positioned(
-              bottom: -120,
-              left: -80,
-              child: Container(
-                width: 260,
-                height: 260,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: AppPalette.primary.withAlpha((0.06 * 255).round()),
-                ),
-              ),
-            ),
-            GestureDetector(
+          ),
+          SafeArea(
+            child: GestureDetector(
               onTap: () => FocusScope.of(context).unfocus(),
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
-                child: Center(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 560),
-                    child: Form(
-                      key: _formKey,
-                      child: Container(
-                        padding: const EdgeInsets.fromLTRB(18, 20, 18, 22),
-                        decoration: BoxDecoration(
-                          color: AppPalette.surface,
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: AppPalette.border),
-                          boxShadow: [
-                            BoxShadow(
-                              color:
-                                  Colors.black.withAlpha((0.05 * 255).round()),
-                              blurRadius: 18,
-                              offset: const Offset(0, 10),
-                            ),
-                          ],
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Container(
-                              decoration: BoxDecoration(
-                                color: AppPalette.surface,
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: AppPalette.border),
-                              ),
-                              child: IconButton(
-                                icon: const Icon(Icons.arrow_back),
-                                tooltip: 'Back',
-                                onPressed: () => Navigator.pop(context),
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            Center(
-                              child: Column(
-                                children: [
-                                  Container(
-                                    height: 64,
-                                    width: 64,
-                                    padding: const EdgeInsets.all(10),
-                                    decoration: BoxDecoration(
-                                      color: AppPalette.surface,
-                                      borderRadius: BorderRadius.circular(18),
-                                      border: Border.all(
-                                        color: AppPalette.border,
-                                      ),
-                                    ),
-                                    child: Image.asset(
-                                      'assets/images/Logo_KYSC.png',
-                                      fit: BoxFit.contain,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 12),
-                                  const Text(
-                                    'KNEAYERNG MOBILE APP',
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w700,
-                                      color: AppPalette.textPrimary,
-                                      letterSpacing: 0.6,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 6),
-                                  const Text(
-                                    'Welcome back. Sign in to continue.',
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                      color: AppPalette.textMuted,
-                                      height: 1.4,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(height: 24),
-                            _buildTextField(
-                              controller: _emailCtrl,
-                              label: 'Email address',
-                              hint: 'name@email.com',
-                              icon: Icons.email_outlined,
-                              keyboard: TextInputType.emailAddress,
-                              validator: (v) {
-                                if (v == null || v.trim().isEmpty) {
-                                  return 'Email required';
-                                }
-                                return null;
-                              },
-                            ),
-                            const SizedBox(height: _fieldSpacing),
-                            _buildTextField(
-                              controller: _passwordCtrl,
-                              label: 'Password',
-                              hint: 'Your password',
-                              icon: Icons.lock_outline,
-                              obscure: obscurePassword,
-                              validator: (v) {
-                                if (v == null || v.isEmpty) {
-                                  return 'Password required';
-                                }
-                                if (v.length < 6) {
-                                  return 'Password must be at least 6 characters';
-                                }
-                                return null;
-                              },
-                              suffixIcon: IconButton(
-                                icon: Icon(
-                                  obscurePassword
-                                      ? Icons.visibility_off
-                                      : Icons.visibility,
-                                ),
-                                onPressed: () {
-                                  setState(() {
-                                    obscurePassword = !obscurePassword;
-                                  });
-                                },
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            Row(
-                              children: [
-                                Checkbox(
-                                  value: rememberMe,
-                                  activeColor: AppPalette.primary,
-                                  onChanged: (value) {
-                                    setState(
-                                      () => rememberMe = value ?? false,
-                                    );
-                                  },
-                                ),
-                                const Text(
-                                  'Remember me',
-                                  style: TextStyle(
-                                    color: AppPalette.textMuted,
-                                  ),
-                                ),
-                                const Spacer(),
-                                TextButton(
-                                  onPressed: () {
-                                    _startOtpFlow(purpose: 'reset_password');
-                                  },
-                                  style: TextButton.styleFrom(
-                                    foregroundColor: AppPalette.primary,
-                                  ),
-                                  child: const Text('Forgot password?'),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 12),
-                            SizedBox(
-                              width: double.infinity,
-                              height: 54,
-                              child: ElevatedButton(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppPalette.primary,
-                                  foregroundColor: Colors.white,
-                                  elevation: 2,
-                                  shadowColor: AppPalette.primary.withAlpha(
-                                    (0.25 * 255).round(),
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius:
-                                        BorderRadius.circular(_radius),
-                                  ),
-                                ),
-                                onPressed: () async {
-                                  if (!_formKey.currentState!.validate()) {
-                                    return;
-                                  }
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final compactHeight = constraints.maxHeight < 760;
+                  final minContentHeight =
+                      (constraints.maxHeight -
+                              bottomInset -
+                              (compactHeight ? 48 : 72))
+                          .clamp(0.0, double.infinity)
+                          .toDouble();
 
-                                  setState(() => _loading = true);
-
-                                  final error = await ApiService.login(
-                                    email: _emailCtrl.text.trim(),
-                                    password: _passwordCtrl.text,
-                                  );
-
-                                  if (!context.mounted) return;
-                                  setState(() => _loading = false);
-
-                                  if (error == null) {
-                                    Navigator.pushReplacement(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) =>
-                                            const MainNavigationScreen(),
-                                      ),
-                                    );
-                                  } else {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(content: Text(error)),
-                                    );
-                                  }
-                                },
-                                child: _loading
-                                    ? const SizedBox(
-                                        width: 22,
-                                        height: 22,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2.4,
-                                          color: Colors.white,
-                                        ),
-                                      )
-                                    : const Text(
-                                        'Login',
-                                        style: TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                              ),
-                            ),
-                            const SizedBox(height: 10),
-                            SizedBox(
-                              width: double.infinity,
-                              height: 48,
-                              child: OutlinedButton(
-                                onPressed: _loading
-                                    ? null
-                                    : () => _startOtpFlow(purpose: 'login'),
-                                style: OutlinedButton.styleFrom(
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius:
-                                        BorderRadius.circular(_radius),
-                                  ),
-                                  side:
-                                      const BorderSide(color: AppPalette.border),
-                                ),
-                                child: const Text('Login with OTP'),
-                              ),
-                            ),
-                            const SizedBox(height: 20),
-                            Row(
-                              children: [
-                                const Expanded(
-                                  child: Divider(color: AppPalette.border),
-                                ),
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 12,
-                                  ),
-                                  child: Text(
-                                    'Or continue with',
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .bodySmall
-                                        ?.copyWith(
-                                          color: AppPalette.textMuted,
-                                        ),
-                                  ),
-                                ),
-                                const Expanded(
-                                  child: Divider(color: AppPalette.border),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: _fieldSpacing),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: OutlinedButton.icon(
-                                    onPressed: () {},
-                                    style: OutlinedButton.styleFrom(
-                                      padding: const EdgeInsets.symmetric(
-                                        vertical: 12,
-                                      ),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius:
-                                            BorderRadius.circular(_radius),
-                                      ),
-                                      side: const BorderSide(
-                                        color: AppPalette.border,
-                                      ),
-                                    ),
-                                    icon: const Icon(
-                                      Icons.g_mobiledata,
-                                      color: AppPalette.textMuted,
-                                    ),
-                                    label: const Text(
-                                      'Google',
-                                      style: TextStyle(
-                                        color: AppPalette.textPrimary,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: OutlinedButton.icon(
-                                    onPressed: () {},
-                                    style: OutlinedButton.styleFrom(
-                                      padding: const EdgeInsets.symmetric(
-                                        vertical: 12,
-                                      ),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius:
-                                            BorderRadius.circular(_radius),
-                                      ),
-                                      side: const BorderSide(
-                                        color: AppPalette.border,
-                                      ),
-                                    ),
-                                    icon: const Icon(
-                                      Icons.facebook,
-                                      color: AppPalette.textMuted,
-                                    ),
-                                    label: const Text(
-                                      'Facebook',
-                                      style: TextStyle(
-                                        color: AppPalette.textPrimary,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 18),
-                            Row(
+                  return SingleChildScrollView(
+                    keyboardDismissBehavior:
+                        ScrollViewKeyboardDismissBehavior.onDrag,
+                    padding: EdgeInsets.fromLTRB(
+                      20,
+                      compactHeight ? 24 : 48,
+                      20,
+                      bottomInset + 24,
+                    ),
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        minHeight: minContentHeight,
+                      ),
+                      child: Center(
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 560),
+                          child: Form(
+                            key: _formKey,
+                            child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                const Text(
-                                  'Don\'t have an account? ',
-                                  style: TextStyle(
-                                    color: AppPalette.textMuted,
-                                  ),
-                                ),
-                                TextButton(
-                                  onPressed: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) => const RegisterScreen(),
+                                Wrap(
+                                  alignment: WrapAlignment.center,
+                                  crossAxisAlignment: WrapCrossAlignment.center,
+                                  spacing: 10,
+                                  runSpacing: 10,
+                                  children: [
+                                    Container(
+                                      width: 38,
+                                      height: 38,
+                                      decoration: BoxDecoration(
+                                        color: Colors.white.withAlpha(
+                                          (0.2 * 255).round(),
+                                        ),
+                                        borderRadius: BorderRadius.circular(12),
                                       ),
-                                    );
-                                  },
-                                  style: TextButton.styleFrom(
-                                    foregroundColor: AppPalette.primary,
-                                  ),
-                                  child: const Text(
-                                    'Register',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.w600,
+                                      child: const Icon(
+                                        Icons.shield_outlined,
+                                        color: Colors.white,
+                                      ),
                                     ),
+                                    const Text(
+                                      'KneaYerng Seervice Center',
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 18,
+                                        letterSpacing: 0.2,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 26),
+                                Container(
+                                  padding: const EdgeInsets.fromLTRB(
+                                    20,
+                                    22,
+                                    20,
+                                    22,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: AppPalette.surface,
+                                    borderRadius: BorderRadius.circular(22),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withAlpha(
+                                          (0.08 * 255).round(),
+                                        ),
+                                        blurRadius: 22,
+                                        offset: const Offset(0, 12),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      const Center(
+                                        child: Text(
+                                          'Login',
+                                          style: TextStyle(
+                                            fontSize: 26,
+                                            fontWeight: FontWeight.w700,
+                                            color: AppPalette.textPrimary,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 6),
+                                      Center(
+                                        child: Wrap(
+                                          alignment: WrapAlignment.center,
+                                          crossAxisAlignment:
+                                              WrapCrossAlignment.center,
+                                          children: [
+                                            const Text(
+                                              "Don't have an account? ",
+                                              style: TextStyle(
+                                                color: AppPalette.textMuted,
+                                              ),
+                                            ),
+                                            TextButton(
+                                              onPressed: () {
+                                                Navigator.push(
+                                                  context,
+                                                  MaterialPageRoute(
+                                                    builder: (_) =>
+                                                        const RegisterScreen(),
+                                                  ),
+                                                );
+                                              },
+                                              style: TextButton.styleFrom(
+                                                foregroundColor: const Color(
+                                                  0xFF2F6BFF,
+                                                ),
+                                                padding: EdgeInsets.zero,
+                                                minimumSize: const Size(0, 0),
+                                                tapTargetSize:
+                                                    MaterialTapTargetSize
+                                                        .shrinkWrap,
+                                              ),
+                                              child: const Text(
+                                                'Sign Up',
+                                                style: TextStyle(
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      const SizedBox(height: 10),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 12,
+                                          vertical: 10,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFFF8FAFC),
+                                          borderRadius:
+                                              BorderRadius.circular(14),
+                                          border: Border.all(
+                                            color: AppPalette.border,
+                                          ),
+                                        ),
+                                        child: Row(
+                                          children: [
+                                            const Icon(
+                                              Icons.dns_outlined,
+                                              size: 18,
+                                              color: AppPalette.textMuted,
+                                            ),
+                                            const SizedBox(width: 10),
+                                            Expanded(
+                                              child: Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                  Text(
+                                                    ApiService
+                                                            .hasConfiguredBaseUrl
+                                                        ? 'Custom server'
+                                                        : 'Default server',
+                                                    style: const TextStyle(
+                                                      fontSize: 12,
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                      color:
+                                                          AppPalette.textMuted,
+                                                    ),
+                                                  ),
+                                                  const SizedBox(height: 2),
+                                                  Text(
+                                                    ApiService.serverOrigin,
+                                                    maxLines: 1,
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                    style: const TextStyle(
+                                                      fontSize: 13,
+                                                      color: AppPalette
+                                                          .textPrimary,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                            TextButton(
+                                              onPressed:
+                                                  _showServerSettingsDialog,
+                                              style: TextButton.styleFrom(
+                                                foregroundColor: const Color(
+                                                  0xFF2F6BFF,
+                                                ),
+                                              ),
+                                              child: const Text('Change'),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      const SizedBox(height: 18),
+                                      _buildTextField(
+                                        controller: _emailCtrl,
+                                        label: 'Email or Phone',
+                                        hint: 'phone number or email',
+                                        keyboard: TextInputType.text,
+                                        validator: (v) {
+                                          if (v == null || v.trim().isEmpty) {
+                                            return 'Email or phone required';
+                                          }
+                                          return null;
+                                        },
+                                      ),
+                                      const SizedBox(height: _fieldSpacing),
+                                      _buildTextField(
+                                        controller: _passwordCtrl,
+                                        label: 'Password',
+                                        hint: '********',
+                                        obscure: obscurePassword,
+                                        validator: (v) {
+                                          if (v == null || v.isEmpty) {
+                                            return 'Password required';
+                                          }
+                                          if (v.length < 6) {
+                                            return 'Password must be at least 6 characters';
+                                          }
+                                          return null;
+                                        },
+                                        suffixIcon: IconButton(
+                                          icon: Icon(
+                                            obscurePassword
+                                                ? Icons.visibility_off
+                                                : Icons.visibility,
+                                            color: AppPalette.textMuted,
+                                          ),
+                                          onPressed: () {
+                                            setState(() {
+                                              obscurePassword =
+                                                  !obscurePassword;
+                                            });
+                                          },
+                                        ),
+                                      ),
+                                      const SizedBox(height: 12),
+                                      LayoutBuilder(
+                                        builder: (context, rowConstraints) {
+                                          final compactRow =
+                                              rowConstraints.maxWidth < 360;
+
+                                          if (compactRow) {
+                                            return Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Row(
+                                                  mainAxisSize:
+                                                      MainAxisSize.min,
+                                                  children: [
+                                                    Checkbox(
+                                                      value: rememberMe,
+                                                      activeColor: const Color(
+                                                        0xFF2F6BFF,
+                                                      ),
+                                                      materialTapTargetSize:
+                                                          MaterialTapTargetSize
+                                                              .shrinkWrap,
+                                                      onChanged: (value) {
+                                                        setState(
+                                                          () => rememberMe =
+                                                              value ?? false,
+                                                        );
+                                                      },
+                                                    ),
+                                                    const Text(
+                                                      'Remember me',
+                                                      style: TextStyle(
+                                                        color: AppPalette
+                                                            .textMuted,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                                Align(
+                                                  alignment:
+                                                      Alignment.centerRight,
+                                                  child: TextButton(
+                                                    onPressed: () {
+                                                      _startOtpFlow(
+                                                        purpose:
+                                                            'reset_password',
+                                                      );
+                                                    },
+                                                    style:
+                                                        TextButton.styleFrom(
+                                                      foregroundColor:
+                                                          const Color(
+                                                        0xFF2F6BFF,
+                                                      ),
+                                                    ),
+                                                    child: const Text(
+                                                      'Forgot Password ?',
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            );
+                                          }
+
+                                          return Row(
+                                            children: [
+                                              Checkbox(
+                                                value: rememberMe,
+                                                activeColor: const Color(
+                                                  0xFF2F6BFF,
+                                                ),
+                                                materialTapTargetSize:
+                                                    MaterialTapTargetSize
+                                                        .shrinkWrap,
+                                                onChanged: (value) {
+                                                  setState(
+                                                    () => rememberMe =
+                                                        value ?? false,
+                                                  );
+                                                },
+                                              ),
+                                              const Text(
+                                                'Remember me',
+                                                style: TextStyle(
+                                                  color: AppPalette.textMuted,
+                                                ),
+                                              ),
+                                              const Spacer(),
+                                              TextButton(
+                                                onPressed: () {
+                                                  _startOtpFlow(
+                                                    purpose: 'reset_password',
+                                                  );
+                                                },
+                                                style: TextButton.styleFrom(
+                                                  foregroundColor: const Color(
+                                                    0xFF2F6BFF,
+                                                  ),
+                                                ),
+                                                child: const Text(
+                                                  'Forgot Password ?',
+                                                ),
+                                              ),
+                                            ],
+                                          );
+                                        },
+                                      ),
+                                      const SizedBox(height: 8),
+                                      SizedBox(
+                                        width: double.infinity,
+                                        height: 52,
+                                        child: ElevatedButton(
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: const Color(
+                                              0xFF2F6BFF,
+                                            ),
+                                            foregroundColor: Colors.white,
+                                            elevation: 3,
+                                            shadowColor: const Color(
+                                              0xFF2F6BFF,
+                                            ).withAlpha((0.3 * 255).round()),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(
+                                                _radius,
+                                              ),
+                                            ),
+                                          ),
+                                          onPressed: () async {
+                                            if (!_formKey.currentState!
+                                                .validate()) {
+                                              return;
+                                            }
+
+                                            setState(() => _loading = true);
+
+                                            final error =
+                                                await ApiService.login(
+                                              identifier:
+                                                  _emailCtrl.text.trim(),
+                                              password: _passwordCtrl.text,
+                                            );
+
+                                            if (!context.mounted) return;
+                                            setState(() => _loading = false);
+
+                                            if (error == null) {
+                                              Navigator.pushReplacement(
+                                                context,
+                                                MaterialPageRoute(
+                                                  builder: (_) =>
+                                                      const MainNavigationScreen(),
+                                                ),
+                                              );
+                                            } else {
+                                              ScaffoldMessenger.of(
+                                                context,
+                                              ).showSnackBar(
+                                                SnackBar(
+                                                  content: Text(error),
+                                                ),
+                                              );
+                                            }
+                                          },
+                                          child: _loading
+                                              ? const SizedBox(
+                                                  width: 22,
+                                                  height: 22,
+                                                  child:
+                                                      CircularProgressIndicator(
+                                                    strokeWidth: 2.4,
+                                                    color: Colors.white,
+                                                  ),
+                                                )
+                                              : const Text(
+                                                  'Log In',
+                                                  style: TextStyle(
+                                                    fontSize: 16,
+                                                    fontWeight: FontWeight.w600,
+                                                  ),
+                                                ),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 18),
+                                      Row(
+                                        children: [
+                                          const Expanded(
+                                            child: Divider(
+                                              color: AppPalette.border,
+                                            ),
+                                          ),
+                                          Padding(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 12,
+                                            ),
+                                            child: Text(
+                                              'Or',
+                                              style: Theme.of(context)
+                                                  .textTheme
+                                                  .bodySmall
+                                                  ?.copyWith(
+                                                    color:
+                                                        AppPalette.textMuted,
+                                                  ),
+                                            ),
+                                          ),
+                                          const Expanded(
+                                            child: Divider(
+                                              color: AppPalette.border,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 16),
+                                      SizedBox(
+                                        width: double.infinity,
+                                        height: 48,
+                                        child: OutlinedButton.icon(
+                                          onPressed: () {},
+                                          style: OutlinedButton.styleFrom(
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(
+                                                _radius,
+                                              ),
+                                            ),
+                                            side: const BorderSide(
+                                              color: AppPalette.border,
+                                            ),
+                                          ),
+                                          icon: const Icon(
+                                            Icons.facebook,
+                                            color: Color(0xFF1877F2),
+                                          ),
+                                          label: const Text(
+                                            'Continue with Facebook',
+                                            style: TextStyle(
+                                              color: AppPalette.textPrimary,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
                               ],
                             ),
-                          ],
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                ),
+                  );
+                },
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -453,56 +575,212 @@ class _LoginScreenState extends State<LoginScreen> {
     required TextEditingController controller,
     required String label,
     required String hint,
-    required IconData icon,
     TextInputType keyboard = TextInputType.text,
     bool obscure = false,
     String? Function(String?)? validator,
     Widget? suffixIcon,
   }) {
-    return TextFormField(
-      controller: controller,
-      keyboardType: keyboard,
-      obscureText: obscure,
-      validator: validator,
-      style: const TextStyle(color: AppPalette.textPrimary),
-      decoration: InputDecoration(
-        labelText: label,
-        hintText: hint,
-        labelStyle: const TextStyle(color: AppPalette.textMuted),
-        floatingLabelStyle: const TextStyle(
-          color: AppPalette.primary,
-          fontWeight: FontWeight.w600,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            color: AppPalette.textMuted,
+            fontWeight: FontWeight.w500,
+          ),
         ),
-        hintStyle: TextStyle(
-          color: AppPalette.textMuted.withAlpha((0.75 * 255).round()),
+        const SizedBox(height: 8),
+        TextFormField(
+          controller: controller,
+          keyboardType: keyboard,
+          obscureText: obscure,
+          validator: validator,
+          style: const TextStyle(color: AppPalette.textPrimary),
+          decoration: InputDecoration(
+            hintText: hint,
+            hintStyle: TextStyle(
+              color: AppPalette.textMuted.withAlpha((0.75 * 255).round()),
+            ),
+            errorStyle: const TextStyle(color: AppPalette.error, fontSize: 12),
+            suffixIcon: suffixIcon,
+            filled: true,
+            fillColor: const Color(0xFFF9FAFB),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 16,
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(_radius),
+              borderSide: const BorderSide(color: AppPalette.border),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(_radius),
+              borderSide: const BorderSide(
+                color: Color(0xFF2F6BFF),
+                width: 1.5,
+              ),
+            ),
+            errorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(_radius),
+              borderSide: const BorderSide(color: AppPalette.error),
+            ),
+            focusedErrorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(_radius),
+              borderSide: const BorderSide(color: AppPalette.error, width: 1.5),
+            ),
+          ),
         ),
-        errorStyle: const TextStyle(color: AppPalette.error, fontSize: 12),
-        prefixIcon: Icon(icon, color: AppPalette.textMuted),
-        suffixIcon: suffixIcon,
-        filled: true,
-        fillColor: AppPalette.surface,
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 16,
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(_radius),
-          borderSide: const BorderSide(color: AppPalette.border),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(_radius),
-          borderSide: const BorderSide(color: AppPalette.primary, width: 1.5),
-        ),
-        errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(_radius),
-          borderSide: const BorderSide(color: AppPalette.error),
-        ),
-        focusedErrorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(_radius),
-          borderSide: const BorderSide(color: AppPalette.error, width: 1.5),
-        ),
-      ),
+      ],
     );
+  }
+
+  Future<void> _showServerSettingsDialog() async {
+    final controller = TextEditingController(text: ApiService.serverOrigin);
+    String? feedback;
+    bool feedbackIsError = false;
+    bool loading = false;
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (dialogContext, setDialogState) {
+            Future<void> testConnection() async {
+              setDialogState(() {
+                loading = true;
+                feedback = null;
+              });
+
+              final error = await ApiService.testBaseUrl(controller.text);
+              if (!dialogContext.mounted) return;
+
+              setDialogState(() {
+                loading = false;
+                feedbackIsError = error != null;
+                feedback = error ?? 'Connection successful.';
+              });
+            }
+
+            Future<void> saveServer() async {
+              setDialogState(() {
+                loading = true;
+                feedback = null;
+              });
+
+              final error = await ApiService.configureBaseUrl(controller.text);
+              if (!mounted || !dialogContext.mounted) return;
+
+              setDialogState(() {
+                loading = false;
+                feedbackIsError = error != null;
+                feedback = error;
+              });
+
+              if (error != null) {
+                return;
+              }
+
+              setState(() {});
+              Navigator.of(dialogContext).pop();
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Server updated to ${ApiService.serverOrigin}'),
+                ),
+              );
+            }
+
+            Future<void> useDefaultServer() async {
+              setDialogState(() {
+                loading = true;
+                feedback = null;
+              });
+
+              await ApiService.clearConfiguredBaseUrl();
+              if (!mounted || !dialogContext.mounted) return;
+
+              setState(() {});
+              Navigator.of(dialogContext).pop();
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Server reset to ${ApiService.serverOrigin}'),
+                ),
+              );
+            }
+
+            return AlertDialog(
+              title: const Text('Server Settings'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Enter your backend host or domain. The app adds /api automatically. On desktop, the default server now uses your local LAN IP when available.',
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: controller,
+                    keyboardType: TextInputType.url,
+                    decoration: const InputDecoration(
+                      labelText: 'Server URL',
+                      hintText: '192.168.1.10:8000 or api.yourdomain.com',
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Current API: ${ApiService.baseUrl}',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AppPalette.textMuted,
+                    ),
+                  ),
+                  if (feedback != null) ...[
+                    const SizedBox(height: 12),
+                    Text(
+                      feedback!,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: feedbackIsError
+                            ? AppPalette.error
+                            : Colors.green,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: loading
+                      ? null
+                      : () => Navigator.of(dialogContext).pop(),
+                  child: const Text('Close'),
+                ),
+                TextButton(
+                  onPressed: loading ? null : useDefaultServer,
+                  child: const Text('Use Default'),
+                ),
+                TextButton(
+                  onPressed: loading ? null : testConnection,
+                  child: const Text('Test'),
+                ),
+                ElevatedButton(
+                  onPressed: loading ? null : saveServer,
+                  child: loading
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text('Save'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    controller.dispose();
   }
 
   Future<void> _startOtpFlow({required String purpose}) async {
@@ -521,28 +799,12 @@ class _LoginScreenState extends State<LoginScreen> {
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  DropdownButtonFormField<String>(
-                    initialValue: _otpType,
-                    items: const [
-                      DropdownMenuItem(value: 'email', child: Text('Email')),
-                      DropdownMenuItem(value: 'phone', child: Text('Phone')),
-                    ],
-                    onChanged: (value) {
-                      if (value == null) return;
-                      setDialogState(() => _otpType = value);
-                    },
-                    decoration: const InputDecoration(labelText: 'Type'),
-                  ),
-                  const SizedBox(height: 12),
                   TextField(
                     controller: _otpDestinationCtrl,
-                    keyboardType: _otpType == 'phone'
-                        ? TextInputType.phone
-                        : TextInputType.emailAddress,
-                    decoration: InputDecoration(
-                      labelText: _otpType == 'phone'
-                          ? 'Phone number'
-                          : 'Email address',
+                    keyboardType: TextInputType.text,
+                    decoration: const InputDecoration(
+                      labelText: 'Email or phone number',
+                      hintText: 'name@email.com or +85512345678',
                     ),
                   ),
                 ],
@@ -566,6 +828,7 @@ class _LoginScreenState extends State<LoginScreen> {
     if (proceed != true) return;
 
     final destination = _otpDestinationCtrl.text.trim();
+    _otpType = _inferOtpType(destination);
     if (destination.isEmpty) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -581,8 +844,9 @@ class _LoginScreenState extends State<LoginScreen> {
     );
 
     if (!mounted) return;
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(request.message)));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(request.message)));
     if (!request.ok) return;
 
     final resetToken = await Navigator.push<String?>(
@@ -598,6 +862,11 @@ class _LoginScreenState extends State<LoginScreen> {
 
     if (!mounted || purpose != 'reset_password' || resetToken == null) return;
     await _showResetPasswordDialog(resetToken);
+  }
+
+  String _inferOtpType(String destination) {
+    final value = destination.trim();
+    return value.contains('@') ? 'email' : 'phone';
   }
 
   Future<void> _showResetPasswordDialog(String resetToken) async {
@@ -636,8 +905,9 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               actions: [
                 TextButton(
-                  onPressed:
-                      submitting ? null : () => Navigator.of(context).pop(),
+                  onPressed: submitting
+                      ? null
+                      : () => Navigator.of(context).pop(),
                   child: const Text('Cancel'),
                 ),
                 ElevatedButton(
@@ -646,11 +916,16 @@ class _LoginScreenState extends State<LoginScreen> {
                       : () async {
                           final password = passwordCtrl.text;
                           final confirm = confirmCtrl.text;
-                          if (password.length < 8 || password != confirm) {
+                          final hasUpper = RegExp(r'[A-Z]').hasMatch(password);
+                          final hasNumber = RegExp(r'[0-9]').hasMatch(password);
+                          if (password.length < 8 ||
+                              !hasUpper ||
+                              !hasNumber ||
+                              password != confirm) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
                                 content: Text(
-                                  'Password must be 8+ chars and match confirmation.',
+                                  'Password must be at least 8 characters, include 1 uppercase letter and 1 number, and match confirmation.',
                                 ),
                               ),
                             );

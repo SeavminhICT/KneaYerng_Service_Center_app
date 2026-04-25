@@ -7,10 +7,12 @@ class CategoryProductsScreen extends StatefulWidget {
   const CategoryProductsScreen({
     super.key,
     required this.categoryName,
+    this.categoryId,
     this.title,
   });
 
   final String categoryName;
+  final int? categoryId;
   final String? title;
 
   @override
@@ -30,7 +32,9 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
 
   Future<List<Product>> _fetch() {
     return ApiService.fetchProducts(
+      categoryId: widget.categoryId,
       categoryName: widget.categoryName,
+      perPage: 100,
     );
   }
 
@@ -92,10 +96,7 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
                 childAspectRatio: isDesktop ? 0.85 : 0.78,
               ),
               itemBuilder: (context, index) {
-                return _ProductCard(
-                  product: products[index],
-                  radius: radius,
-                );
+                return _ProductCard(product: products[index], radius: radius);
               },
             );
           },
@@ -106,10 +107,7 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
 }
 
 class _ProductCard extends StatelessWidget {
-  const _ProductCard({
-    required this.product,
-    required this.radius,
-  });
+  const _ProductCard({required this.product, required this.radius});
 
   final Product product;
   final double radius;
@@ -118,6 +116,9 @@ class _ProductCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final imageUrl = product.imageUrl;
     final tag = _formatTag(product.tag);
+    final priceColor = product.hasDiscount
+        ? const Color(0xFFDC2626)
+        : const Color(0xFF1E88E5);
     return InkWell(
       borderRadius: BorderRadius.circular(radius),
       onTap: () {
@@ -159,7 +160,8 @@ class _ProductCard extends StatelessWidget {
                           headers: _imageHeaders,
                           errorBuilder: (_, _, _) {
                             debugPrint(
-                                '[CategoryProducts] image load failed: $imageUrl');
+                              '[CategoryProducts] image load failed: $imageUrl',
+                            );
                             return const _ImageFallback();
                           },
                         ),
@@ -174,7 +176,9 @@ class _ProductCard extends StatelessWidget {
                   if (tag != null) ...[
                     Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 7, vertical: 3),
+                        horizontal: 7,
+                        vertical: 3,
+                      ),
                       decoration: BoxDecoration(
                         color: const Color(0xFFEFF6FF),
                         borderRadius: BorderRadius.circular(7),
@@ -201,10 +205,10 @@ class _ProductCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    '\$${product.price.toStringAsFixed(0)}',
-                    style: const TextStyle(
+                    '\$${product.salePrice.toStringAsFixed(0)}',
+                    style: TextStyle(
                       fontWeight: FontWeight.w700,
-                      color: Color(0xFF1E88E5),
+                      color: priceColor,
                     ),
                   ),
                   if (product.brand != null && product.brand!.isNotEmpty) ...[
@@ -246,10 +250,7 @@ class _EmptyState extends StatelessWidget {
               style: TextStyle(fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 8),
-            TextButton(
-              onPressed: onRefresh,
-              child: const Text('Refresh'),
-            ),
+            TextButton(onPressed: onRefresh, child: const Text('Refresh')),
           ],
         ),
       ],
@@ -272,15 +273,9 @@ class _ErrorState extends StatelessWidget {
           children: [
             const Icon(Icons.wifi_off_outlined, size: 44),
             const SizedBox(height: 12),
-            Text(
-              message,
-              style: const TextStyle(fontWeight: FontWeight.w600),
-            ),
+            Text(message, style: const TextStyle(fontWeight: FontWeight.w600)),
             const SizedBox(height: 8),
-            TextButton(
-              onPressed: onRetry,
-              child: const Text('Try again'),
-            ),
+            TextButton(onPressed: onRetry, child: const Text('Try again')),
           ],
         ),
       ],
@@ -295,9 +290,7 @@ class _ImageFallback extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       color: const Color(0xFFF3F4F6),
-      child: const Center(
-        child: Icon(Icons.devices, color: Color(0xFF9CA3AF)),
-      ),
+      child: const Center(child: Icon(Icons.devices, color: Color(0xFF9CA3AF))),
     );
   }
 }
@@ -309,8 +302,8 @@ String? _formatTag(String? raw) {
       .replaceAll(RegExp(r'[_-]+'), ' ')
       .split(' ')
       .where((word) => word.isNotEmpty)
-      .map((word) => '${word[0].toUpperCase()}${word.substring(1).toLowerCase()}')
+      .map(
+        (word) => '${word[0].toUpperCase()}${word.substring(1).toLowerCase()}',
+      )
       .join(' ');
 }
-
-

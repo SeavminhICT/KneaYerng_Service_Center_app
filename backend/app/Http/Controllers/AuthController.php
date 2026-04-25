@@ -21,11 +21,29 @@ class AuthController extends Controller
         $validated = $request->validate([
             'first_name' => ['required', 'string', 'max:255'],
             'last_name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:users,email'],
-            'phone' => ['nullable', 'string', 'max:20', 'unique:users,phone'],
-            'password' => ['required', 'string', 'min:8', 'confirmed'],
+            'email' => ['nullable', 'string', 'lowercase', 'email', 'max:255', 'unique:users,email', 'required_without:phone'],
+            'phone' => ['nullable', 'string', 'max:20', 'required_without:email'],
+            'password' => [
+                'required',
+                'string',
+                'min:8',
+                'regex:/[A-Z]/',
+                'regex:/[0-9]/',
+                'confirmed',
+            ],
             'avatar' => ['nullable', 'image', 'max:2048'],
+            'otp_destination_type' => ['nullable', 'in:email,phone'],
         ]);
+
+        $normalizedPhone = null;
+        if (! empty($validated['phone'])) {
+            $normalizedPhone = $this->otpService->normalizeDestination('phone', $validated['phone']);
+            if ($normalizedPhone !== '' && User::where('phone', $normalizedPhone)->exists()) {
+                throw ValidationException::withMessages([
+                    'phone' => ['The phone number has already been taken.'],
+                ]);
+            }
+        }
 
         $avatarPath = null;
         if ($request->hasFile('avatar')) {
@@ -36,45 +54,28 @@ class AuthController extends Controller
         $user = User::create([
             'first_name' => $validated['first_name'],
             'last_name' => $validated['last_name'],
-            'email' => $validated['email'],
-            'phone' => $validated['phone'] ?? null,
+            'email' => $validated['email'] ?? null,
+            'phone' => $normalizedPhone,
             'password' => Hash::make($validated['password']),
             'avatar' => $avatarPath,
             'otp_verified_at' => null,
         ]);
 
-        $otpResult = $this->otpService->requestOtp(
-            destinationType: 'email',
-            destination: $user->email,
-            purpose: 'signup',
-            userId: $user->id,
-            requestIp: $request->ip(),
-            deviceId: $request->header('X-Device-Id')
-        );
-
         return response()->json([
-            'message' => 'User registered. OTP sent for verification.',
+            'message' => 'User registered. Verify your account via OTP.',
             'user' => $user,
-            'otp_sent' => $otpResult['ok'] ?? false,
-            'expires_in_sec' => $otpResult['expires_in_sec'] ?? (int) config('otp.ttl_seconds', 300),
-            'resend_in_sec' => $otpResult['resend_in_sec'] ?? (int) config('otp.resend_cooldown_seconds', 60),
+            'otp_sent' => false,
+            'otp_destination_type' => $normalizedPhone ? 'phone' : 'email',
+            'otp_destination' => $normalizedPhone ? '+'.$normalizedPhone : (string) ($user->email ?? ''),
         ], 201);
     }
 
     public function resendOtp(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'email' => ['nullable', 'string', 'lowercase', 'email', 'max:255'],
-            'phone' => ['nullable', 'string', 'max:20'],
+            'email' => ['required', 'string', 'lowercase', 'email', 'max:255'],
         ]);
-
-        if (empty($validated['email']) && empty($validated['phone'])) {
-            throw ValidationException::withMessages([
-                'email' => ['Email or phone is required.'],
-            ]);
-        }
-
-        $user = $this->findUserForOtp($validated['email'] ?? null, $validated['phone'] ?? null);
+        $user = $this->findUserForOtp($validated['email'] ?? null, null);
 
         if (! $user) {
             return response()->json([
@@ -82,8 +83,8 @@ class AuthController extends Controller
             ], 404);
         }
 
-        $destinationType = ! empty($validated['phone']) ? 'phone' : 'email';
-        $destination = $destinationType === 'phone' ? (string) $user->phone : (string) $user->email;
+        $destinationType = 'email';
+        $destination = (string) $user->email;
         $otp = $this->otpService->requestOtp(
             destinationType: $destinationType,
             destination: $destination,
@@ -104,18 +105,10 @@ class AuthController extends Controller
     public function verifyOtp(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'email' => ['nullable', 'string', 'lowercase', 'email', 'max:255'],
-            'phone' => ['nullable', 'string', 'max:20'],
+            'email' => ['required', 'string', 'lowercase', 'email', 'max:255'],
             'code' => ['required', 'string'],
         ]);
-
-        if (empty($validated['email']) && empty($validated['phone'])) {
-            throw ValidationException::withMessages([
-                'email' => ['Email or phone is required.'],
-            ]);
-        }
-
-        $user = $this->findUserForOtp($validated['email'] ?? null, $validated['phone'] ?? null);
+        $user = $this->findUserForOtp($validated['email'] ?? null, null);
 
         if (! $user) {
             return response()->json([
@@ -123,10 +116,11 @@ class AuthController extends Controller
             ], 404);
         }
 
-        $destinationType = ! empty($validated['phone']) ? 'phone' : 'email';
-        $destination = $destinationType === 'phone'
-            ? $this->otpService->normalizeDestination('phone', (string) ($validated['phone'] ?? $user->phone))
-            : $this->otpService->normalizeDestination('email', (string) ($validated['email'] ?? $user->email));
+        $destinationType = 'email';
+        $destination = $this->otpService->normalizeDestination(
+            'email',
+            (string) ($validated['email'] ?? $user->email)
+        );
         $verify = $this->otpService->verifyOtp(
             destinationType: $destinationType,
             destination: $destination,
@@ -155,11 +149,25 @@ class AuthController extends Controller
     public function login(Request $request): JsonResponse
     {
         $credentials = $request->validate([
-            'email' => ['required', 'string', 'email'],
+            'email' => ['required', 'string', 'max:255'],
             'password' => ['required', 'string'],
         ]);
 
-        $user = User::where('email', $credentials['email'])->first();
+        $identifier = trim((string) $credentials['email']);
+        if (str_contains($identifier, '@')) {
+            $user = User::where('email', strtolower($identifier))->first();
+        } else {
+            $normalizedPhone = $this->otpService->normalizeDestination('phone', $identifier);
+            $phoneCandidates = array_values(array_unique(array_filter([
+                $identifier,
+                ltrim($identifier, '+'),
+                $normalizedPhone,
+            ])));
+
+            $user = User::query()
+                ->whereIn('phone', $phoneCandidates)
+                ->first();
+        }
 
         if (! $user || ! Hash::check($credentials['password'], $user->password)) {
             throw ValidationException::withMessages([
@@ -194,11 +202,28 @@ class AuthController extends Controller
             'first_name' => ['sometimes', 'required', 'string', 'max:255'],
             'last_name' => ['sometimes', 'required', 'string', 'max:255'],
             'email' => ['sometimes', 'required', 'string', 'lowercase', 'email', 'max:255', 'unique:users,email,'.$user->id],
-            'phone' => ['sometimes', 'required', 'string', 'max:20', 'unique:users,phone,'.$user->id],
+            'phone' => ['sometimes', 'required', 'string', 'max:20'],
             'current_password' => ['required_with:password', 'string'],
-            'password' => ['required_with:current_password', 'string', 'min:8', 'confirmed'],
+            'password' => [
+                'required_with:current_password',
+                'string',
+                'min:8',
+                'regex:/[A-Z]/',
+                'regex:/[0-9]/',
+                'confirmed',
+            ],
             'avatar' => ['sometimes', 'nullable', 'image', 'max:2048'],
         ]);
+
+        $normalizedPhone = null;
+        if (array_key_exists('phone', $validated)) {
+            $normalizedPhone = $this->otpService->normalizeDestination('phone', $validated['phone']);
+            if ($normalizedPhone !== '' && User::where('phone', $normalizedPhone)->where('id', '!=', $user->id)->exists()) {
+                throw ValidationException::withMessages([
+                    'phone' => ['The phone number has already been taken.'],
+                ]);
+            }
+        }
 
         if (array_key_exists('first_name', $validated)) {
             $user->first_name = $validated['first_name'];
@@ -213,7 +238,7 @@ class AuthController extends Controller
         }
 
         if (array_key_exists('phone', $validated)) {
-            $user->phone = $validated['phone'];
+            $user->phone = $normalizedPhone;
         }
 
         if (array_key_exists('password', $validated)) {
@@ -247,16 +272,30 @@ class AuthController extends Controller
     }
     private function findUserForOtp(?string $email, ?string $phone): ?User
     {
-        if ($email && $phone) {
-            return User::where('email', $email)->orWhere('phone', $phone)->first();
+        $emailValue = $email ? strtolower(trim($email)) : null;
+        $phoneRaw = $phone ? trim($phone) : null;
+        $phoneNormalized = $phoneRaw
+            ? $this->otpService->normalizeDestination('phone', $phoneRaw)
+            : null;
+
+        if ($emailValue && $phoneRaw) {
+            $query = User::where('email', $emailValue)->orWhere('phone', $phoneRaw);
+            if ($phoneNormalized && $phoneNormalized !== $phoneRaw) {
+                $query->orWhere('phone', $phoneNormalized);
+            }
+            return $query->first();
         }
 
-        if ($email) {
-            return User::where('email', $email)->first();
+        if ($emailValue) {
+            return User::where('email', $emailValue)->first();
         }
 
-        if ($phone) {
-            return User::where('phone', $phone)->first();
+        if ($phoneRaw) {
+            $query = User::where('phone', $phoneRaw);
+            if ($phoneNormalized && $phoneNormalized !== $phoneRaw) {
+                $query->orWhere('phone', $phoneNormalized);
+            }
+            return $query->first();
         }
 
         return null;

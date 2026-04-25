@@ -32,12 +32,20 @@ class BannerController extends Controller
     {
         $request->validate([
             'image' => ['required', 'image', 'max:5120'],
+            'badge_label' => ['nullable', 'string', 'max:100'],
+            'title' => ['nullable', 'string', 'max:255'],
+            'subtitle' => ['nullable', 'string', 'max:1000'],
+            'cta_label' => ['nullable', 'string', 'max:100'],
         ]);
 
         $storedPath = $request->file('image')->store('banners', 'public');
 
         $banner = Banner::create([
             'image' => 'storage/'.$storedPath,
+            'badge_label' => $request->string('badge_label')->trim()->toString() ?: null,
+            'title' => $request->string('title')->trim()->toString() ?: null,
+            'subtitle' => $request->string('subtitle')->trim()->toString() ?: null,
+            'cta_label' => $request->string('cta_label')->trim()->toString() ?: null,
         ]);
 
         return new BannerResource($banner);
@@ -51,16 +59,27 @@ class BannerController extends Controller
     public function update(Request $request, Banner $banner)
     {
         $request->validate([
-            'image' => ['required', 'image', 'max:5120'],
+            'image' => ['nullable', 'image', 'max:5120'],
+            'badge_label' => ['nullable', 'string', 'max:100'],
+            'title' => ['nullable', 'string', 'max:255'],
+            'subtitle' => ['nullable', 'string', 'max:1000'],
+            'cta_label' => ['nullable', 'string', 'max:100'],
         ]);
 
-        if ($banner->image) {
+        if ($request->hasFile('image') && $banner->image) {
             $oldImagePath = str_replace('storage/', '', $banner->image);
             Storage::disk('public')->delete($oldImagePath);
         }
 
-        $storedPath = $request->file('image')->store('banners', 'public');
-        $banner->image = 'storage/'.$storedPath;
+        if ($request->hasFile('image')) {
+            $storedPath = $request->file('image')->store('banners', 'public');
+            $banner->image = 'storage/'.$storedPath;
+        }
+
+        $banner->badge_label = $request->string('badge_label')->trim()->toString() ?: null;
+        $banner->title = $request->string('title')->trim()->toString() ?: null;
+        $banner->subtitle = $request->string('subtitle')->trim()->toString() ?: null;
+        $banner->cta_label = $request->string('cta_label')->trim()->toString() ?: null;
         $banner->save();
 
         return new BannerResource($banner);

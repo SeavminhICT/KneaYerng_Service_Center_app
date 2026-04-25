@@ -1,22 +1,50 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart'
     show kIsWeb, defaultTargetPlatform, TargetPlatform, debugPrint;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'local_host_resolver_stub.dart'
+    if (dart.library.io) 'local_host_resolver_io.dart'
+    as local_host_resolver;
 import '../models/product.dart';
+import '../models/search_results.dart';
+import '../models/search_suggestion.dart';
 import '../models/category.dart';
 import '../models/banner_item.dart';
+import '../models/order_tracking_notification.dart';
+import '../models/support_chat.dart';
 import '../models/user_profile.dart';
+import '../models/pickup_ticket.dart';
 
 class ApiService {
   static const String _baseUrlOverride = String.fromEnvironment(
     'API_BASE_URL',
     defaultValue: '',
   );
-  static const String _localApi = 'http://127.0.0.1:8000/api';
+  static const String _baseUrlPreferenceKey = 'api_base_url';
+  static const String _loopbackApi = 'http://127.0.0.1:8000/api';
   static const String _androidEmulatorApi = 'http://10.0.2.2:8000/api';
+  static String? _runtimeBaseUrl;
+  static String? _autoDetectedBaseUrl;
+
+  static Future<void> initialize() async {
+    final prefs = await SharedPreferences.getInstance();
+    final stored = prefs.getString(_baseUrlPreferenceKey);
+    if (stored == null || stored.trim().isEmpty) {
+      _runtimeBaseUrl = null;
+    } else {
+      _runtimeBaseUrl = _normalizeBaseUrl(stored);
+    }
+
+    _autoDetectedBaseUrl = await _resolveAutoDetectedBaseUrl();
+  }
 
   static String get baseUrl {
+    if (_runtimeBaseUrl != null && _runtimeBaseUrl!.isNotEmpty) {
+      return _runtimeBaseUrl!;
+    }
+
     if (_baseUrlOverride.isNotEmpty) {
       return _normalizeBaseUrl(_baseUrlOverride);
     }
@@ -33,52 +61,146 @@ class ApiService {
         );
         return inferred.toString();
       }
-      return _localApi;
+      return _loopbackApi;
     }
 
     if (defaultTargetPlatform == TargetPlatform.android) {
       return _androidEmulatorApi;
     }
 
-    return _localApi;
+    if (_autoDetectedBaseUrl != null && _autoDetectedBaseUrl!.isNotEmpty) {
+      return _autoDetectedBaseUrl!;
+    }
+
+    return _loopbackApi;
   }
+
+  static bool get hasConfiguredBaseUrl =>
+      _runtimeBaseUrl != null && _runtimeBaseUrl!.isNotEmpty;
+
+  static String get serverOrigin {
+    final uri = Uri.tryParse(baseUrl);
+    if (uri == null || uri.scheme.isEmpty || uri.host.isEmpty) {
+      return baseUrl;
+    }
+
+    final port = uri.hasPort ? ':${uri.port}' : '';
+    return '${uri.scheme}://${uri.host}$port';
+  }
+
+  static String get mediaBaseUrl => '$baseUrl/media';
 
   static const String _tokenKey = 'token';
   static const String _userProfileKey = 'user_profile';
+
+  static Future<String?> configureBaseUrl(
+    String raw, {
+    bool verifyConnection = true,
+  }) async {
+    final normalized = _normalizeBaseUrl(raw);
+    if (normalized.isEmpty) {
+      return 'Server URL is required.';
+    }
+
+    if (verifyConnection) {
+      final error = await testBaseUrl(normalized);
+      if (error != null) {
+        return error;
+      }
+    }
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_baseUrlPreferenceKey, normalized);
+    _runtimeBaseUrl = normalized;
+    return null;
+  }
+
+  static Future<void> clearConfiguredBaseUrl() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_baseUrlPreferenceKey);
+    _runtimeBaseUrl = null;
+  }
+
+  static Future<String?> testBaseUrl(String raw) async {
+    final normalized = _normalizeBaseUrl(raw);
+    if (normalized.isEmpty) {
+      return 'Server URL is required.';
+    }
+
+    final probeUri = Uri.parse('$normalized/categories');
+
+    try {
+      final response = await http
+          .get(probeUri, headers: const {'Accept': 'application/json'})
+          .timeout(const Duration(seconds: 8));
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return null;
+      }
+
+      return 'Server responded with status ${response.statusCode}. '
+          'Check that the URL points to your Laravel backend.';
+    } on TimeoutException {
+      return 'Timed out while connecting to $normalized.';
+    } catch (error) {
+      return 'Cannot connect to $normalized.';
+    }
+  }
 
   // ================= REGISTER =================
   static Future<String?> register({
     required String firstName,
     required String lastName,
-    required String email,
+    String? email,
+    String? phone,
     required String password,
     required String confirmPassword,
   }) async {
-    final res = await http.post(
-      Uri.parse('$baseUrl/auth/register'),
-      headers: const {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-      },
-      body: jsonEncode({
-        'first_name': firstName,
-        'last_name': lastName,
-        'email': email,
-        'password': password,
-        'password_confirmation': confirmPassword,
-      }),
-    );
+    http.Response res;
+    try {
+      res = await http
+          .post(
+            Uri.parse('$baseUrl/auth/register'),
+            headers: const {
+              'Accept': 'application/json',
+              'Content-Type': 'application/json',
+            },
+            body: jsonEncode({
+              'first_name': firstName,
+              'last_name': lastName,
+              if (email != null && email.trim().isNotEmpty)
+                'email': email.trim(),
+              if (phone != null && phone.trim().isNotEmpty)
+                'phone': phone.trim(),
+              'password': password,
+              'password_confirmation': confirmPassword,
+            }),
+          )
+          .timeout(const Duration(seconds: 15));
+    } on TimeoutException {
+      return _buildNetworkErrorMessage();
+    } catch (error) {
+      debugPrint('Register failed: $error');
+      return _buildNetworkErrorMessage();
+    }
 
-    final data = jsonDecode(res.body);
+    dynamic data;
+    try {
+      data = jsonDecode(res.body);
+    } catch (_) {}
 
     if (res.statusCode == 200 || res.statusCode == 201) {
-      final token = data['token'] ?? data['access_token'];
+      final token = data is Map
+          ? (data['token'] ?? data['access_token'])
+          : null;
       if (token != null) {
         await _saveToken(token);
       }
 
       final profile = _extractUserProfile(
-        data,
+        data is Map
+            ? Map<String, dynamic>.from(data)
+            : const <String, dynamic>{},
         fallbackFirstName: firstName,
         fallbackLastName: lastName,
         fallbackEmail: email,
@@ -90,7 +212,10 @@ class ApiService {
       return null;
     }
 
-    return data['message'] ?? 'Register failed';
+    if (data is Map && data['message'] is String) {
+      return data['message'] as String;
+    }
+    return 'Register failed';
   }
 
   // ================= OTP =================
@@ -207,6 +332,66 @@ class ApiService {
     );
   }
 
+  static Future<OtpVerifyResult> verifyFirebasePhone({
+    required String idToken,
+    required String purpose,
+    String? destination,
+  }) async {
+    http.Response res;
+    try {
+      res = await http
+          .post(
+            Uri.parse('$baseUrl/otp/firebase/verify'),
+            headers: const {
+              'Accept': 'application/json',
+              'Content-Type': 'application/json',
+            },
+            body: jsonEncode({
+              'id_token': idToken,
+              'purpose': purpose,
+              if (destination != null && destination.trim().isNotEmpty)
+                'destination': destination.trim(),
+            }),
+          )
+          .timeout(const Duration(seconds: 15));
+    } catch (_) {
+      return const OtpVerifyResult(
+        ok: false,
+        message: 'Unable to verify OTP right now.',
+      );
+    }
+
+    dynamic decoded;
+    try {
+      decoded = jsonDecode(res.body);
+    } catch (_) {}
+
+    if (decoded is! Map) {
+      return const OtpVerifyResult(
+        ok: false,
+        message: 'Invalid OTP verification response.',
+      );
+    }
+
+    final map = Map<String, dynamic>.from(decoded);
+    final token = map['token']?.toString();
+    if (token != null && token.isNotEmpty) {
+      await _saveToken(token);
+    }
+
+    final profile = _extractUserProfile(map, fallbackEmail: destination);
+    if (profile != null) {
+      await _saveUserProfile(profile);
+    }
+
+    return OtpVerifyResult(
+      ok: res.statusCode >= 200 && res.statusCode < 300,
+      message: map['message']?.toString() ?? 'OTP verification completed.',
+      token: token,
+      resetToken: map['reset_token']?.toString(),
+    );
+  }
+
   static Future<String?> resetPasswordWithOtp({
     required String resetToken,
     required String password,
@@ -248,27 +433,47 @@ class ApiService {
 
   // ================= LOGIN =================
   static Future<String?> login({
-    required String email,
+    required String identifier,
     required String password,
   }) async {
-    final res = await http.post(
-      Uri.parse('$baseUrl/auth/login'),
-      headers: const {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-      },
-      body: jsonEncode({'email': email, 'password': password}),
-    );
+    http.Response res;
+    try {
+      res = await http
+          .post(
+            Uri.parse('$baseUrl/auth/login'),
+            headers: const {
+              'Accept': 'application/json',
+              'Content-Type': 'application/json',
+            },
+            body: jsonEncode({'email': identifier, 'password': password}),
+          )
+          .timeout(const Duration(seconds: 15));
+    } on TimeoutException {
+      return _buildNetworkErrorMessage();
+    } catch (error) {
+      debugPrint('Login failed: $error');
+      return _buildNetworkErrorMessage();
+    }
 
-    final data = jsonDecode(res.body);
+    dynamic data;
+    try {
+      data = jsonDecode(res.body);
+    } catch (_) {}
 
     if (res.statusCode == 200) {
-      final token = data['token'] ?? data['access_token'];
+      final token = data is Map
+          ? (data['token'] ?? data['access_token'])
+          : null;
       if (token != null) {
         await _saveToken(token);
       }
 
-      final profile = _extractUserProfile(data, fallbackEmail: email);
+      final profile = _extractUserProfile(
+        data is Map
+            ? Map<String, dynamic>.from(data)
+            : const <String, dynamic>{},
+        fallbackEmail: identifier.contains('@') ? identifier : null,
+      );
 
       if (profile != null) {
         await _saveUserProfile(profile);
@@ -276,7 +481,10 @@ class ApiService {
       return null;
     }
 
-    return data['message'] ?? 'Login failed';
+    if (data is Map && data['message'] is String) {
+      return data['message'] as String;
+    }
+    return 'Login failed';
   }
 
   // ================= TOKEN =================
@@ -374,13 +582,84 @@ class ApiService {
   }
 
   static String? normalizeMediaUrl(dynamic value) {
-    if (value is! String || value.trim().isEmpty) return null;
-    final normalized = _trimTrailingSlashFromFilePath(value.trim());
+    if (value == null) return null;
+
+    if (value is List) {
+      for (final entry in value) {
+        final normalized = normalizeMediaUrl(entry);
+        if (normalized != null && normalized.isNotEmpty) return normalized;
+      }
+      return null;
+    }
+
+    if (value is Map) {
+      final map = Map<String, dynamic>.from(value);
+      final candidate =
+          map['image'] ??
+          map['image_url'] ??
+          map['image_path'] ??
+          map['imagePath'] ??
+          map['url'] ??
+          map['path'] ??
+          map['file_path'] ??
+          map['filePath'] ??
+          map['src'];
+      return normalizeMediaUrl(candidate);
+    }
+
+    if (value is! String) return null;
+
+    var normalized = value.trim();
+    if (normalized.isEmpty) return null;
+
+    final lowered = normalized.toLowerCase();
+    if (lowered == 'null' || lowered == 'undefined') return null;
+
+    if (normalized.startsWith('[') && normalized.endsWith(']')) {
+      try {
+        final decoded = jsonDecode(normalized);
+        if (decoded is List) {
+          return normalizeMediaUrl(decoded);
+        }
+      } catch (_) {
+        final fallback = normalized.substring(1, normalized.length - 1);
+        final list = fallback
+            .split(RegExp(r'[|,;]'))
+            .map((item) => item.trim().replaceAll("'", '').replaceAll('"', ''))
+            .where((item) => item.isNotEmpty)
+            .toList();
+        if (list.isNotEmpty) {
+          return normalizeMediaUrl(list.first);
+        }
+      }
+    }
+
+    if ((normalized.startsWith('"') && normalized.endsWith('"')) ||
+        (normalized.startsWith("'") && normalized.endsWith("'"))) {
+      normalized = normalized.substring(1, normalized.length - 1).trim();
+    }
+
+    if (normalized.isEmpty) return null;
+
+    normalized = normalized.replaceAll(r'\/', '/').replaceAll('\\', '/');
+    normalized = _trimTrailingSlashFromFilePath(normalized);
+
     if (normalized.startsWith('http://') || normalized.startsWith('https://')) {
       try {
         final uri = Uri.parse(normalized);
         final host = uri.host.toLowerCase();
         if (host == 'localhost' || host == '127.0.0.1' || host == '10.0.2.2') {
+          final normalizedPath = uri.path.replaceAll('\\', '/');
+          if (normalizedPath.startsWith('/storage/') ||
+              normalizedPath.startsWith('/public/storage/')) {
+            final mediaPath = normalizedPath
+                .replaceFirst('/public/storage/', '')
+                .replaceFirst('/storage/', '');
+            return _trimTrailingSlashFromFilePath(
+              Uri.encodeFull('$mediaBaseUrl/$mediaPath'),
+            );
+          }
+
           final baseRoot = baseUrl.replaceFirst('/api', '');
           final baseUri = Uri.parse(baseRoot);
           final rebased = uri.replace(
@@ -388,24 +667,32 @@ class ApiService {
             host: baseUri.host,
             port: baseUri.hasPort ? baseUri.port : null,
           );
-          return _trimTrailingSlashFromFilePath(rebased.toString());
+          return _trimTrailingSlashFromFilePath(
+            Uri.encodeFull(rebased.toString()),
+          );
         }
       } catch (_) {}
-      return _trimTrailingSlashFromFilePath(normalized);
+      return _trimTrailingSlashFromFilePath(Uri.encodeFull(normalized));
     }
+
     final baseRoot = baseUrl.replaceFirst('/api', '');
     var clean = normalized.replaceAll('\\', '/');
     if (clean.startsWith('/')) {
       clean = clean.substring(1);
     }
     if (clean.startsWith('storage/')) {
-      return _trimTrailingSlashFromFilePath('$baseRoot/$clean');
+      final mediaPath = clean.substring('storage/'.length);
+      return _trimTrailingSlashFromFilePath(
+        Uri.encodeFull('$mediaBaseUrl/$mediaPath'),
+      );
     }
     if (clean.startsWith('public/storage/')) {
-      clean = clean.replaceFirst('public/', '');
-      return _trimTrailingSlashFromFilePath('$baseRoot/$clean');
+      final mediaPath = clean.substring('public/storage/'.length);
+      return _trimTrailingSlashFromFilePath(
+        Uri.encodeFull('$mediaBaseUrl/$mediaPath'),
+      );
     }
-    return _trimTrailingSlashFromFilePath('$baseRoot/$clean');
+    return _trimTrailingSlashFromFilePath(Uri.encodeFull('$baseRoot/$clean'));
   }
 
   static String _trimTrailingSlashFromFilePath(String input) {
@@ -417,9 +704,28 @@ class ApiService {
     return value;
   }
 
+  static Future<String?> _resolveAutoDetectedBaseUrl() async {
+    if (kIsWeb) {
+      return null;
+    }
+
+    if (defaultTargetPlatform == TargetPlatform.android ||
+        defaultTargetPlatform == TargetPlatform.iOS) {
+      return null;
+    }
+
+    return local_host_resolver.detectLocalServerBaseUrl();
+  }
+
   static String _normalizeBaseUrl(String raw) {
-    final trimmed = raw.trim();
+    var trimmed = raw.trim();
     if (trimmed.isEmpty) return trimmed;
+
+    if (!trimmed.contains('://')) {
+      final scheme = _shouldDefaultToHttp(trimmed) ? 'http' : 'https';
+      trimmed = '$scheme://$trimmed';
+    }
+
     final uri = Uri.parse(trimmed);
     final segments = uri.pathSegments
         .where((segment) => segment.isNotEmpty)
@@ -427,7 +733,72 @@ class ApiService {
     if (!segments.contains('api')) {
       segments.add('api');
     }
-    return uri.replace(path: '/${segments.join('/')}').toString();
+    return uri
+        .replace(path: '/${segments.join('/')}', query: null, fragment: null)
+        .toString()
+        .replaceFirst(RegExp(r'/$'), '');
+  }
+
+  static bool _shouldDefaultToHttp(String raw) {
+    final host = _extractHost(raw);
+    if (host.isEmpty) {
+      return true;
+    }
+
+    if (host == 'localhost' ||
+        host == '127.0.0.1' ||
+        host == '10.0.2.2' ||
+        host.endsWith('.local')) {
+      return true;
+    }
+
+    final parts = host.split('.');
+    if (parts.length == 4) {
+      final octets = parts.map(int.tryParse).toList();
+      if (octets.every((octet) => octet != null)) {
+        final first = octets[0]!;
+        final second = octets[1]!;
+        if (first == 10 || first == 127 || first == 192 && second == 168) {
+          return true;
+        }
+        if (first == 172 && second >= 16 && second <= 31) {
+          return true;
+        }
+      }
+    }
+
+    return false;
+  }
+
+  static String _extractHost(String raw) {
+    var value = raw.trim();
+    if (value.isEmpty) {
+      return '';
+    }
+
+    if (value.contains('://')) {
+      final uri = Uri.tryParse(value);
+      return uri?.host.toLowerCase() ?? '';
+    }
+
+    final slashIndex = value.indexOf('/');
+    if (slashIndex >= 0) {
+      value = value.substring(0, slashIndex);
+    }
+
+    if (value.startsWith('[')) {
+      final closing = value.indexOf(']');
+      if (closing > 0) {
+        return value.substring(1, closing).toLowerCase();
+      }
+    }
+
+    final lastColon = value.lastIndexOf(':');
+    if (lastColon > 0 && value.indexOf(':') == lastColon) {
+      value = value.substring(0, lastColon);
+    }
+
+    return value.toLowerCase();
   }
 
   static int? _parseInt(dynamic value) {
@@ -440,6 +811,18 @@ class ApiService {
     if (value is double) return value;
     if (value is num) return value.toDouble();
     return double.tryParse(value?.toString() ?? '');
+  }
+
+  static DateTime? _parseDateTime(dynamic value) {
+    if (value == null) return null;
+    if (value is DateTime) return value;
+    final raw = value.toString().trim();
+    if (raw.isEmpty) return null;
+    try {
+      return DateTime.parse(raw).toLocal();
+    } catch (_) {
+      return null;
+    }
   }
 
   // ================= UPDATE PROFILE =================
@@ -457,6 +840,8 @@ class ApiService {
       return 'Not authenticated';
     }
 
+    final sanitizedEmail = email.trim();
+
     http.Response res;
     if (avatarPath != null && avatarPath.isNotEmpty) {
       final request = http.MultipartRequest(
@@ -469,8 +854,10 @@ class ApiService {
         '_method': 'PUT',
         'first_name': firstName,
         'last_name': lastName,
-        'email': email,
       });
+      if (sanitizedEmail.isNotEmpty) {
+        request.fields['email'] = sanitizedEmail;
+      }
       if (birth != null && birth.isNotEmpty) {
         request.fields['birth'] = birth;
       }
@@ -486,8 +873,10 @@ class ApiService {
       final body = <String, dynamic>{
         'first_name': firstName,
         'last_name': lastName,
-        'email': email,
       };
+      if (sanitizedEmail.isNotEmpty) {
+        body['email'] = sanitizedEmail;
+      }
       if (birth != null && birth.isNotEmpty) {
         body['birth'] = birth;
       }
@@ -512,7 +901,7 @@ class ApiService {
           data,
           fallbackFirstName: firstName,
           fallbackLastName: lastName,
-          fallbackEmail: email,
+          fallbackEmail: sanitizedEmail.isNotEmpty ? sanitizedEmail : null,
         );
         if (profile != null) {
           await _saveUserProfile(profile);
@@ -529,14 +918,246 @@ class ApiService {
   }
 
   // ================= PRODUCTS =================
+  static Future<List<SearchSuggestion>> fetchSearchSuggestions(
+    String query, {
+    int limit = 8,
+  }) async {
+    final trimmed = query.trim();
+    if (trimmed.isEmpty) return [];
+
+    final uri = Uri.parse('$baseUrl/search/suggestions').replace(
+      queryParameters: {
+        'q': trimmed,
+        'limit': limit.clamp(1, 12).toString(),
+      },
+    );
+
+    http.Response res;
+    try {
+      res = await http
+          .get(uri, headers: const {'Accept': 'application/json'})
+          .timeout(const Duration(seconds: 12));
+    } catch (_) {
+      return [];
+    }
+
+    if (res.statusCode != 200) {
+      return [];
+    }
+
+    try {
+      final decoded = jsonDecode(res.body);
+      final rawList = decoded is Map ? decoded['data'] : null;
+      if (rawList is! List) return [];
+      return rawList
+          .whereType<Map>()
+          .map(
+            (item) =>
+                SearchSuggestion.fromJson(Map<String, dynamic>.from(item)),
+          )
+          .toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  static Future<SearchResults> searchCatalog(String query) async {
+    final trimmed = query.trim();
+    if (trimmed.isEmpty) {
+      return const SearchResults(query: '');
+    }
+
+    final uri = Uri.parse('$baseUrl/search/results').replace(
+      queryParameters: {'q': trimmed},
+    );
+
+    final res = await http
+        .get(uri, headers: const {'Accept': 'application/json'})
+        .timeout(const Duration(seconds: 18));
+
+    if (res.statusCode != 200) {
+      throw Exception('Failed to load search results');
+    }
+
+    final decoded = jsonDecode(res.body);
+    if (decoded is! Map<String, dynamic>) {
+      return SearchResults(query: trimmed);
+    }
+
+    return SearchResults.fromJson(decoded);
+  }
+
+  static Future<SupportConversation> fetchSupportConversation({
+    String? contextType,
+    int? contextId,
+    String? subject,
+    bool includeMessages = true,
+  }) async {
+    final token = await getToken();
+    if (token == null || token.isEmpty) {
+      throw Exception('Authentication required');
+    }
+
+    final uri = Uri.parse('$baseUrl/support/conversation').replace(
+      queryParameters: {
+        if (contextType != null && contextType.trim().isNotEmpty)
+          'context_type': contextType.trim(),
+        if (contextId != null) 'context_id': contextId.toString(),
+        if (subject != null && subject.trim().isNotEmpty) 'subject': subject.trim(),
+        'include_messages': includeMessages ? '1' : '0',
+      },
+    );
+
+    final res = await http
+        .get(
+          uri,
+          headers: {
+            'Accept': 'application/json',
+            'Authorization': 'Bearer $token',
+          },
+        )
+        .timeout(const Duration(seconds: 18));
+
+    if (res.statusCode != 200) {
+      throw Exception('Failed to load support conversation');
+    }
+
+    final decoded = jsonDecode(res.body);
+    if (decoded is! Map) {
+      throw Exception('Invalid support conversation response');
+    }
+
+    final normalized = Map<String, dynamic>.from(decoded);
+    final data = normalized['data'] is Map
+        ? Map<String, dynamic>.from(decoded['data'])
+        : normalized;
+    return SupportConversation.fromJson(data);
+  }
+
+  static Future<SupportChatMessage> sendSupportMessage({
+    required int conversationId,
+    required String body,
+    String messageType = 'text',
+  }) async {
+    final token = await getToken();
+    if (token == null || token.isEmpty) {
+      throw Exception('Authentication required');
+    }
+
+    final res = await http
+        .post(
+          Uri.parse('$baseUrl/support/messages'),
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $token',
+          },
+          body: jsonEncode({
+            'conversation_id': conversationId,
+            'message_type': messageType,
+            'body': body.trim(),
+          }),
+        )
+        .timeout(const Duration(seconds: 18));
+
+    dynamic decoded;
+    try {
+      decoded = jsonDecode(res.body);
+    } catch (_) {}
+
+    if (res.statusCode != 201) {
+      if (decoded is Map && decoded['message'] is String) {
+        throw Exception(decoded['message']);
+      }
+      throw Exception('Failed to send support message');
+    }
+
+    final payload = decoded is Map &&
+            decoded['data'] is Map &&
+            decoded['data']['message'] is Map
+        ? Map<String, dynamic>.from(decoded['data']['message'])
+        : null;
+    if (payload == null) {
+      throw Exception('Invalid support message response');
+    }
+
+    return SupportChatMessage.fromJson(payload);
+  }
+
+  static Future<void> markSupportConversationRead(int conversationId) async {
+    final token = await getToken();
+    if (token == null || token.isEmpty) {
+      return;
+    }
+
+    try {
+      await http
+          .post(
+            Uri.parse('$baseUrl/support/read'),
+            headers: {
+              'Accept': 'application/json',
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $token',
+            },
+            body: jsonEncode({'conversation_id': conversationId}),
+          )
+          .timeout(const Duration(seconds: 12));
+    } catch (_) {}
+  }
+
+  static Future<int> fetchSupportUnreadCount() async {
+    final token = await getToken();
+    if (token == null || token.isEmpty) {
+      return 0;
+    }
+
+    try {
+      final res = await http
+          .get(
+            Uri.parse('$baseUrl/support/unread-count'),
+            headers: {
+              'Accept': 'application/json',
+              'Authorization': 'Bearer $token',
+            },
+          )
+          .timeout(const Duration(seconds: 12));
+
+      if (res.statusCode != 200) {
+        return 0;
+      }
+
+      final decoded = jsonDecode(res.body);
+      if (decoded is Map) {
+        final raw = decoded['count'];
+        if (raw is int) return raw;
+        if (raw is num) return raw.toInt();
+        return int.tryParse(raw?.toString() ?? '') ?? 0;
+      }
+    } catch (_) {}
+
+    return 0;
+  }
+
   static Future<List<Product>> fetchProducts({
+    int? categoryId,
     String? categoryName,
     String? status,
+    int perPage = 20,
+    String? queryText,
   }) async {
     final query = <String, String>{};
     if (status != null && status.isNotEmpty) {
       query['status'] = status;
     }
+    if (queryText != null && queryText.trim().isNotEmpty) {
+      query['q'] = queryText.trim();
+    }
+    if (categoryId != null && categoryId > 0) {
+      query['category_id'] = categoryId.toString();
+    } else if (categoryName != null && categoryName.trim().isNotEmpty) {
+      query['category'] = categoryName.trim();
+    }
+    query['per_page'] = perPage.clamp(1, 100).toString();
     final uri = Uri.parse(
       '$baseUrl/products',
     ).replace(queryParameters: query.isEmpty ? null : query);
@@ -549,8 +1170,16 @@ class ApiService {
       throw Exception('Failed to load products');
     }
 
-    final decoded = jsonDecode(res.body);
-    final rawList = decoded['data'];
+    dynamic decoded;
+    try {
+      decoded = jsonDecode(res.body);
+    } catch (_) {
+      return [];
+    }
+
+    final rawList = decoded is Map
+        ? decoded['data'] ?? decoded['products'] ?? decoded['items']
+        : decoded;
     if (rawList is! List) return [];
 
     final products = rawList
@@ -558,20 +1187,37 @@ class ApiService {
         .map((item) => Product.fromJson(Map<String, dynamic>.from(item)))
         .toList();
 
-    if (categoryName == null || categoryName.isEmpty) return products;
+    if (categoryId == null &&
+        (categoryName == null || categoryName.trim().isEmpty)) {
+      return products;
+    }
 
-    final target = categoryName.toLowerCase();
-    return products
-        .where(
-          (product) => (product.categoryName ?? '').toLowerCase() == target,
-        )
-        .toList();
+    if (categoryId != null && categoryId > 0) {
+      return products
+          .where((product) => product.categoryId == categoryId)
+          .toList();
+    }
+
+    final target = categoryName!.trim().toLowerCase();
+    return products.where((product) {
+      final name = (product.categoryName ?? '').trim().toLowerCase();
+      return name == target;
+    }).toList();
   }
 
   // ================= CATEGORIES =================
-  static Future<List<Category>> fetchCategories() async {
+  static Future<List<Category>> fetchCategories({
+    String? status = 'active',
+    int perPage = 100,
+    String? query,
+  }) async {
+    final params = <String, String>{
+      'per_page': perPage.clamp(1, 100).toString(),
+      if (status != null && status.trim().isNotEmpty) 'status': status.trim(),
+      if (query != null && query.trim().isNotEmpty) 'q': query.trim(),
+    };
     final res = await http.get(
-      Uri.parse('$baseUrl/categories'),
+      Uri.parse('$baseUrl/categories').replace(queryParameters: params),
       headers: const {'Accept': 'application/json'},
     );
 
@@ -807,6 +1453,8 @@ class ApiService {
     String? deliveryAddress,
     String? deliveryPhone,
     String? deliveryNote,
+    double? deliveryLat,
+    double? deliveryLng,
     String? voucherCode,
   }) async {
     final token = await getToken();
@@ -838,6 +1486,12 @@ class ApiService {
     }
     if (deliveryNote != null && deliveryNote.isNotEmpty) {
       body['delivery_note'] = deliveryNote;
+    }
+    if (deliveryLat != null) {
+      body['delivery_lat'] = deliveryLat;
+    }
+    if (deliveryLng != null) {
+      body['delivery_lng'] = deliveryLng;
     }
 
     if (voucherCode != null && voucherCode.isNotEmpty) {
@@ -875,6 +1529,10 @@ class ApiService {
           orderId: _parseInt(raw['id']),
           orderNumber: raw['order_number']?.toString(),
           totalAmount: _parseDouble(raw['total_amount']),
+          orderStatus:
+              raw['status']?.toString() ?? raw['order_status']?.toString(),
+          deliveryAddress: raw['delivery_address']?.toString(),
+          placedAt: _parseDateTime(raw['placed_at'] ?? raw['created_at']),
         );
       } catch (_) {
         return const OrderCreateResult(
@@ -911,8 +1569,6 @@ class ApiService {
     required int orderId,
     required double amount,
     String currency = 'USD',
-    String? requestTransactionId,
-    String? requestQrString,
   }) async {
     final token = await getToken();
     if (token == null || token.isEmpty) {
@@ -935,11 +1591,6 @@ class ApiService {
               'order_id': orderId,
               'amount': amount.toStringAsFixed(2),
               'currency': currency,
-              if (requestTransactionId != null &&
-                  requestTransactionId.trim().isNotEmpty)
-                'transaction_id': requestTransactionId.trim(),
-              if (requestQrString != null && requestQrString.trim().isNotEmpty)
-                'qr_string': requestQrString.trim(),
             }),
           )
           .timeout(const Duration(seconds: 18));
@@ -968,7 +1619,8 @@ class ApiService {
     }
 
     final map = Map<String, dynamic>.from(decoded);
-    final transactionId = map['transaction_id']?.toString();
+    final transactionId =
+        map['transaction_id']?.toString() ?? map['md5']?.toString();
     final qrString = map['qr_string']?.toString();
     final status = map['status']?.toString();
 
@@ -1055,6 +1707,13 @@ class ApiService {
       status = 'PENDING';
     }
 
+    final normalized = status.toUpperCase();
+    if (normalized == 'TIMEOUT') {
+      status = 'EXPIRED';
+    } else if (normalized == 'NOT_FOUND') {
+      status = 'PENDING';
+    }
+
     double? amount;
     String? currency;
     String? fromAccountId;
@@ -1073,7 +1732,8 @@ class ApiService {
       fromAccountId = dataMap['fromAccountId']?.toString();
       toAccountId = dataMap['toAccountId']?.toString();
       paidAtIso = dataMap['paid_at']?.toString();
-      bakongHash = dataMap['bakongHash']?.toString() ??
+      bakongHash =
+          dataMap['bakongHash']?.toString() ??
           dataMap['transaction_id']?.toString();
     }
 
@@ -1088,6 +1748,268 @@ class ApiService {
       bakongHash: bakongHash,
     );
   }
+
+  static String _buildNetworkErrorMessage() {
+    final currentBase = baseUrl;
+    if (defaultTargetPlatform == TargetPlatform.android &&
+        currentBase.contains('10.0.2.2')) {
+      return 'Cannot reach the server. If you are on a real device, set '
+          'API_BASE_URL to your computer IP (example: http://192.168.1.10:8000/api) '
+          'or use adb reverse to expose your local server.';
+    }
+    return 'Cannot reach the server at $currentBase. Please check your '
+        'connection, server URL, or switch the app server in login settings.';
+  }
+
+  static Future<List<PickupTicket>> fetchPickupTickets() async {
+    final token = await getToken();
+    if (token == null || token.isEmpty) {
+      return [];
+    }
+
+    http.Response res;
+    try {
+      res = await http
+          .get(
+            Uri.parse('$baseUrl/user/tickets'),
+            headers: {
+              'Accept': 'application/json',
+              'Authorization': 'Bearer $token',
+            },
+          )
+          .timeout(const Duration(seconds: 18));
+    } catch (_) {
+      return [];
+    }
+
+    if (res.statusCode != 200) {
+      return [];
+    }
+
+    dynamic decoded;
+    try {
+      decoded = jsonDecode(res.body);
+    } catch (_) {
+      return [];
+    }
+
+    final rawList = decoded is Map ? decoded['data'] : decoded;
+    if (rawList is! List) return [];
+
+    return rawList
+        .whereType<Map>()
+        .map((item) => PickupTicket.fromJson(Map<String, dynamic>.from(item)))
+        .toList();
+  }
+
+  static Future<List<PickupTicket>> fetchUserOrders({String? orderType}) async {
+    final token = await getToken();
+    if (token == null || token.isEmpty) {
+      return [];
+    }
+
+    final uri = Uri.parse('$baseUrl/user/orders').replace(
+      queryParameters: {
+        if (orderType != null && orderType.trim().isNotEmpty)
+          'order_type': orderType.trim(),
+      },
+    );
+
+    http.Response res;
+    try {
+      res = await http
+          .get(
+            uri,
+            headers: {
+              'Accept': 'application/json',
+              'Authorization': 'Bearer $token',
+            },
+          )
+          .timeout(const Duration(seconds: 18));
+    } catch (_) {
+      return [];
+    }
+
+    if (res.statusCode != 200) {
+      return [];
+    }
+
+    dynamic decoded;
+    try {
+      decoded = jsonDecode(res.body);
+    } catch (_) {
+      return [];
+    }
+
+    final rawList = decoded is Map ? decoded['data'] : decoded;
+    if (rawList is! List) return [];
+
+    return rawList
+        .whereType<Map>()
+        .map((item) => PickupTicket.fromJson(Map<String, dynamic>.from(item)))
+        .toList();
+  }
+
+  static Future<PickupTicket?> fetchUserOrder({
+    int? orderId,
+    String? orderNumber,
+  }) async {
+    final token = await getToken();
+    if (token == null || token.isEmpty || orderId == null) {
+      return null;
+    }
+
+    http.Response res;
+    try {
+      res = await http
+          .get(
+            Uri.parse('$baseUrl/user/orders/$orderId'),
+            headers: {
+              'Accept': 'application/json',
+              'Authorization': 'Bearer $token',
+            },
+          )
+          .timeout(const Duration(seconds: 18));
+    } catch (_) {
+      return null;
+    }
+
+    if (res.statusCode != 200) {
+      return null;
+    }
+
+    try {
+      final decoded = jsonDecode(res.body);
+      final raw = decoded is Map ? decoded['data'] : decoded;
+      if (raw is Map<String, dynamic>) {
+        final order = PickupTicket.fromJson(raw);
+        if (orderNumber != null &&
+            orderNumber.trim().isNotEmpty &&
+            order.orderNumber != orderNumber.trim()) {
+          return null;
+        }
+        return order;
+      }
+    } catch (_) {}
+
+    return null;
+  }
+
+  static Future<List<OrderTrackingNotificationItem>>
+  fetchOrderTrackingNotifications() async {
+    final token = await getToken();
+    if (token == null || token.isEmpty) {
+      return [];
+    }
+
+    http.Response res;
+    try {
+      res = await http
+          .get(
+            Uri.parse('$baseUrl/order-notifications'),
+            headers: {
+              'Accept': 'application/json',
+              'Authorization': 'Bearer $token',
+            },
+          )
+          .timeout(const Duration(seconds: 18));
+    } catch (_) {
+      return [];
+    }
+
+    if (res.statusCode != 200) {
+      return [];
+    }
+
+    try {
+      final decoded = jsonDecode(res.body);
+      final rawList = decoded is Map ? decoded['data'] : decoded;
+      if (rawList is! List) return [];
+      return rawList
+          .whereType<Map>()
+          .map(
+            (item) => OrderTrackingNotificationItem.fromJson(
+              Map<String, dynamic>.from(item),
+            ),
+          )
+          .toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  static Future<void> markOrderTrackingNotificationRead(
+    int notificationId,
+  ) async {
+    final token = await getToken();
+    if (token == null || token.isEmpty) {
+      return;
+    }
+
+    try {
+      await http
+          .post(
+            Uri.parse('$baseUrl/order-notifications/$notificationId/read'),
+            headers: {
+              'Accept': 'application/json',
+              'Authorization': 'Bearer $token',
+            },
+          )
+          .timeout(const Duration(seconds: 12));
+    } catch (_) {}
+  }
+
+  static Future<void> registerMobileDeviceToken({
+    required String token,
+    required String platform,
+  }) async {
+    final authToken = await getToken();
+    if (authToken == null || authToken.isEmpty || token.trim().isEmpty) {
+      return;
+    }
+
+    try {
+      await http
+          .post(
+            Uri.parse('$baseUrl/mobile-devices/token'),
+            headers: {
+              'Accept': 'application/json',
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $authToken',
+            },
+            body: jsonEncode({
+              'token': token.trim(),
+              'platform': platform.trim(),
+            }),
+          )
+          .timeout(const Duration(seconds: 12));
+    } catch (error) {
+      debugPrint('Register mobile device token failed: $error');
+    }
+  }
+
+  static Future<void> unregisterMobileDeviceToken(String token) async {
+    final authToken = await getToken();
+    if (authToken == null || authToken.isEmpty || token.trim().isEmpty) {
+      return;
+    }
+
+    try {
+      await http
+          .post(
+            Uri.parse('$baseUrl/mobile-devices/token/remove'),
+            headers: {
+              'Accept': 'application/json',
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $authToken',
+            },
+            body: jsonEncode({'token': token.trim()}),
+          )
+          .timeout(const Duration(seconds: 12));
+    } catch (error) {
+      debugPrint('Unregister mobile device token failed: $error');
+    }
+  }
 }
 
 class OrderCreateResult {
@@ -1095,12 +2017,18 @@ class OrderCreateResult {
     this.orderId,
     this.orderNumber,
     this.totalAmount,
+    this.orderStatus,
+    this.deliveryAddress,
+    this.placedAt,
     this.errorMessage,
   });
 
   final int? orderId;
   final String? orderNumber;
   final double? totalAmount;
+  final String? orderStatus;
+  final String? deliveryAddress;
+  final DateTime? placedAt;
   final String? errorMessage;
 
   bool get isSuccess => errorMessage == null;

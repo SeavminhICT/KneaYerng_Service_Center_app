@@ -43,7 +43,7 @@ class BakongPaymentService {
     merchantName: 'Yuddho Seavminh Co., Ltd.',
     merchantCity: 'Phnom Penh',
     currency: KhqrCurrency.usd,
-    qrExpiry: Duration(minutes: 1),
+    qrExpiry: Duration(minutes: 10),
   );
 
   static String generateBillNumber() {

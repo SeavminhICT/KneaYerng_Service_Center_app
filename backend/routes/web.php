@@ -1,6 +1,9 @@
 <?php
 
+use App\Http\Controllers\AdminNotificationController;
 use App\Http\Controllers\ProfileController;
+use App\Models\KhqrTransaction;
+use App\Models\Payment;
 use App\Models\User;
 use App\Models\Voucher;
 use App\Models\Part;
@@ -9,9 +12,51 @@ use Illuminate\Support\Facades\Route;
 
 Route::redirect('/', '/login');
 
+Route::get('/dashboard', function () {
+    $user = request()->user();
+
+    if ($user instanceof User && $user->isAdmin()) {
+        return redirect()->route('admin.dashboard');
+    }
+
+    return redirect()->route('profile.edit');
+})->middleware('auth')->name('dashboard');
+
+Route::get('language/{locale}', function ($locale) {
+    if (in_array($locale, ['en', 'km'])) {
+        session()->put('locale', $locale);
+    }
+    return redirect()->back();
+})->name('locale.set');
+
 
 Route::prefix('admin')->name('admin.')->middleware(['admin'])->group(function () {
     Route::view('/dashboard', 'admin.dashboard')->name('dashboard');
+    Route::get('/notifications', function () {
+        $adminEmails = (array) config('auth.admin_emails', []);
+        $users = User::query()
+            ->select(['id', 'first_name', 'last_name', 'email', 'phone'])
+            ->where(function ($query) {
+                $query->whereNull('is_admin')
+                    ->orWhere('is_admin', false);
+            })
+            ->where(function ($query) {
+                $query->whereNull('role')
+                    ->orWhere('role', '!=', 'admin');
+            });
+
+        if (! empty($adminEmails)) {
+            $users->whereNotIn('email', $adminEmails);
+        }
+
+        return view('admin.notifications.index', [
+            'users' => $users
+                ->orderBy('first_name')
+                ->orderBy('last_name')
+                ->get(),
+        ]);
+    })->name('notifications.index');
+    Route::post('/notifications/send', [AdminNotificationController::class, 'store'])->name('notifications.store');
 
     Route::view('/categories', 'admin.categories.index')->name('categories.index');
     Route::view('/categories/create', 'admin.categories.create')->name('categories.create');
@@ -35,6 +80,8 @@ Route::prefix('admin')->name('admin.')->middleware(['admin'])->group(function ()
     })->name('accessories.edit');
 
     Route::view('/orders', 'admin.orders.index')->name('orders.index');
+    Route::view('/orders/pickup', 'admin.orders.pickup')->name('orders.pickup');
+    Route::view('/orders/tracking', 'admin.orders.tracking')->name('orders.tracking');
     Route::get('/orders/{order}', function (\App\Models\Order $order) {
         return view('admin.orders.show', ['orderId' => $order->id]);
     })->name('orders.show');
@@ -43,6 +90,7 @@ Route::prefix('admin')->name('admin.')->middleware(['admin'])->group(function ()
     Route::get('/repairs/{repair}', function (\App\Models\RepairRequest $repair) {
         return view('admin.repairs.show', ['repairId' => $repair->id]);
     })->name('repairs.show');
+    Route::view('/support', 'admin.support.index')->name('support.index');
 
     Route::view('/technicians', 'admin.technicians.index')->name('technicians.index');
 
@@ -92,7 +140,53 @@ Route::prefix('admin')->name('admin.')->middleware(['admin'])->group(function ()
             'customersCount' => $customersCount,
         ]);
     })->name('customers.index');
-    Route::view('/payments', 'admin.payments.index')->name('payments.index');
+    Route::get('/payments', function () {
+        $payments = Payment::query()
+            ->with([
+                'order:id,order_number,customer_name,payment_status',
+                'khqrTransaction:id,transaction_id,status,checked_at,paid_at',
+            ])
+            ->latest('id')
+            ->paginate(20);
+
+        $todayAmount = (float) Payment::query()
+            ->where('status', 'success')
+            ->whereDate('paid_at', today())
+            ->sum('amount');
+
+        $pendingCount = Payment::query()
+            ->whereIn('status', ['pending', 'processing'])
+            ->count();
+
+        $reconciliationCount = Payment::query()
+            ->with('khqrTransaction:id,transaction_id,status')
+            ->whereNotNull('transaction_id')
+            ->get()
+            ->filter(function (Payment $payment) {
+                $khqr = $payment->khqrTransaction;
+                if (! $khqr) {
+                    return false;
+                }
+
+                $paymentSuccessful = $payment->status === 'success';
+                $khqrSuccessful = $khqr->status === 'SUCCESS';
+
+                return $paymentSuccessful !== $khqrSuccessful;
+            })
+            ->count();
+
+        $khqrPendingCount = KhqrTransaction::query()
+            ->whereIn('status', ['PENDING', 'NOT_FOUND'])
+            ->count();
+
+        return view('admin.payments.index', [
+            'todayAmount' => $todayAmount,
+            'pendingCount' => $pendingCount,
+            'reconciliationCount' => $reconciliationCount,
+            'khqrPendingCount' => $khqrPendingCount,
+            'payments' => $payments,
+        ]);
+    })->name('payments.index');
     Route::view('/reports', 'admin.reports.index')->name('reports.index');
     Route::view('/settings', 'admin.settings.index')->name('settings.index');
     Route::view('/users', 'admin.users.index')->name('users.index');

@@ -12,5 +12,9 @@ class Banner extends Model
 
     protected $fillable = [
         'image',
+        'badge_label',
+        'title',
+        'subtitle',
+        'cta_label',
     ];
 }

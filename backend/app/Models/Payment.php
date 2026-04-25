@@ -29,4 +29,9 @@ class Payment extends Model
     {
         return $this->belongsTo(Order::class);
     }
+
+    public function khqrTransaction()
+    {
+        return $this->hasOne(KhqrTransaction::class, 'transaction_id', 'transaction_id');
+    }
 }

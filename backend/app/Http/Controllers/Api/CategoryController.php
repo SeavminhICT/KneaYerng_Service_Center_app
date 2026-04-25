@@ -21,7 +21,12 @@ class CategoryController extends Controller
             $query->where('name', 'like', "%{$q}%");
         }
 
-        $categories = $query->paginate(10)->withQueryString();
+        if ($request->filled('status')) {
+            $query->where('status', $request->string('status'));
+        }
+
+        $perPage = max(1, min((int) $request->integer('per_page', 10), 100));
+        $categories = $query->paginate($perPage)->withQueryString();
 
         return CategoryResource::collection($categories);
     }

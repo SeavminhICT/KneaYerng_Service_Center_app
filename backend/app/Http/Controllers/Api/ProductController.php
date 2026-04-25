@@ -30,12 +30,25 @@ class ProductController extends Controller
             $query->where('status', $request->string('status'));
         }
 
+        if ($request->filled('category_id')) {
+            $query->where('category_id', $request->integer('category_id'));
+        }
+
+        if ($request->filled('category')) {
+            $category = trim((string) $request->string('category'));
+            $query->whereHas('category', function ($builder) use ($category) {
+                $builder->where('name', 'like', $category)
+                    ->orWhere('slug', 'like', $category);
+            });
+        }
+
         if ($request->boolean('low_stock')) {
             $threshold = (int) ($request->input('threshold', 10));
             $query->where('stock', '<=', $threshold);
         }
 
-        $products = $query->paginate(10)->withQueryString();
+        $perPage = max(1, min((int) $request->integer('per_page', 10), 100));
+        $products = $query->paginate($perPage)->withQueryString();
 
         return ProductResource::collection($products);
     }

@@ -2,13 +2,31 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:khqr_sdk/khqr_sdk.dart';
+import 'package:latlong2/latlong.dart';
 
 import '../../models/cart_item.dart';
+import '../../models/pickup_ticket.dart';
+import '../../models/saved_address.dart';
 import '../../services/api_service.dart';
-import '../../services/bakong_payment_service.dart';
+import '../../services/address_book_service.dart';
 import '../../services/cart_service.dart';
 import '../Auth/login_screen.dart';
+import 'delivery_location_picker.dart';
+import '../main_navigation_screen.dart';
+import '../profile/address_form_screen.dart';
+
+const _checkoutPrimary = Color(0xFF4A88F7);
+const _checkoutAccent = Color(0xFF111827);
+const _checkoutBg = Color(0xFFF8FAFC);
+const _checkoutSurface = Color(0xFFFFFFFF);
+const _checkoutSurfaceAlt = Color(0xFFF3F4F6);
+const _checkoutBorder = Color(0xFFE5E7EB);
+const _checkoutInk = Color(0xFF111827);
+const _checkoutMuted = Color(0xFF6B7280);
+const _checkoutShadow = Color(0x0F111827);
+const _checkoutSuccess = Color(0xFF15803D);
 
 class CheckoutFlowScreen extends StatefulWidget {
   const CheckoutFlowScreen({
@@ -29,44 +47,61 @@ class CheckoutFlowScreen extends StatefulWidget {
 }
 
 class _CheckoutFlowScreenState extends State<CheckoutFlowScreen> {
-  static const Color _primary = Color(0xFF6366F1);
-  static const Color _bg = Color(0xFFF3F4F6);
-
-  final List<_CheckoutAddress> _addresses = [
-    const _CheckoutAddress(
-      tag: 'Home',
-      name: 'John Anderson',
-      phone: '+855 12 345 678',
-      line: '1234 Oak Street, Apartment 5B, New York, NY 10001',
-      note: 'Near Central Park Entrance',
+  static const Color _primary = _checkoutPrimary;
+  static const Color _accent = _checkoutAccent;
+  static const Color _bg = _checkoutBg;
+  static const List<_StepMeta> _stepMetas = [
+    _StepMeta(
+      label: 'Delivery',
+      title: 'Delivery Method',
+      subtitle: 'Choose pickup from store or home delivery.',
+      icon: Icons.local_shipping_outlined,
     ),
-    const _CheckoutAddress(
-      tag: 'Office',
-      name: 'Sarah Johnson',
-      phone: '+855 93 123 456',
-      line: '456 Business Ave, Suite 200, Phnom Penh',
-      note: 'Next to Coffee Shop',
+    _StepMeta(
+      label: 'Address',
+      title: 'Delivery Address',
+      subtitle: 'Pick the delivery location on the map.',
+      icon: Icons.place_rounded,
+    ),
+    _StepMeta(
+      label: 'Payment',
+      title: 'Review costs and payment',
+      subtitle: 'Check your items, totals, and select the payment option.',
+      icon: Icons.account_balance_wallet_rounded,
+    ),
+    _StepMeta(
+      label: 'Confirm',
+      title: 'One last review',
+      subtitle: 'Everything is ready. Verify the details before placing it.',
+      icon: Icons.verified_rounded,
     ),
   ];
 
-  final List<_DeliveryMethod> _deliveryMethods = const [
+  static const List<_DeliveryMethod> _deliveryMethods = [
+    _DeliveryMethod(
+      code: 'pickup',
+      title: 'Pickup from Store',
+      description: 'Collect your order at the shop',
+      icon: Icons.storefront_outlined,
+    ),
     _DeliveryMethod(
       code: 'delivery',
       title: 'Home Delivery',
-      subtitle: 'Deliver to selected address',
-    ),
-    _DeliveryMethod(
-      code: 'pickup',
-      title: 'Store Pickup',
-      subtitle: 'Pick up from nearest store',
+      description: 'We deliver to your address',
+      icon: Icons.local_shipping_outlined,
     ),
   ];
 
   late final List<CartItem> _items;
+  final TextEditingController _noteController = TextEditingController();
+  LatLng? _selectedDeliveryLatLng;
+  String _selectedDeliveryAddress = '';
+  List<SavedAddress> _savedAddresses = [];
+  bool _loadingSavedAddresses = true;
+  String? _selectedSavedAddressId;
 
   int _step = 0;
-  int _selectedAddress = 0;
-  int _selectedDeliveryMethod = 0;
+  int _selectedDeliveryMethod = 1;
   int _selectedSlot = 0;
   int _selectedPayment = 0;
 
@@ -90,6 +125,7 @@ class _CheckoutFlowScreenState extends State<CheckoutFlowScreen> {
         .toList();
     _voucherDiscount = widget.initialDiscount;
     _loadCheckoutOptions();
+    _loadSavedAddresses();
   }
 
   Future<void> _loadCheckoutOptions() async {
@@ -99,7 +135,7 @@ class _CheckoutFlowScreenState extends State<CheckoutFlowScreen> {
     setState(() {
       _options = loaded;
       _loadingOptions = false;
-      if (_selectedPayment >= _options.paymentMethods.length) {
+      if (_selectedPayment >= _checkoutPaymentMethods.length) {
         _selectedPayment = 0;
       }
       if (_selectedSlot >= _options.deliverySlots.length) {
@@ -108,23 +144,41 @@ class _CheckoutFlowScreenState extends State<CheckoutFlowScreen> {
     });
   }
 
+  @override
+  void dispose() {
+    _noteController.dispose();
+    super.dispose();
+  }
+
   bool get _isPickup =>
       _deliveryMethods[_selectedDeliveryMethod].code == 'pickup';
 
+  bool get _hasValidDeliveryAddress =>
+      _selectedDeliveryLatLng != null &&
+      _selectedDeliveryAddress.trim().isNotEmpty;
+
+  String get _deliveryAddressLine => _selectedDeliveryAddress.trim();
+
+  String? get _deliveryNoteValue {
+    final note = _noteController.text.trim();
+    return note.isEmpty ? null : note;
+  }
+
   List<CheckoutPaymentMethod> get _checkoutPaymentMethods {
-    final methods = List<CheckoutPaymentMethod>.from(_options.paymentMethods);
-    final hasQr = methods.any((method) => method.code == 'aba_qr');
-    if (!hasQr) {
-      methods.insert(
-        0,
-        const CheckoutPaymentMethod(
-          code: 'aba_qr',
-          label: 'Bakong QR',
-          description: 'Scan KHQR to pay for pickup order',
-        ),
-      );
+    const bakong = CheckoutPaymentMethod(
+      code: 'aba_qr',
+      label: 'Bakong QR Payment',
+      description: 'Scan to pay with Bakong KHQR',
+    );
+    const cod = CheckoutPaymentMethod(
+      code: 'cod',
+      label: 'Cash on Delivery',
+      description: 'Pay with cash when your order arrives',
+    );
+    if (_isPickup) {
+      return const [bakong];
     }
-    return methods;
+    return const [bakong, cod];
   }
 
   double get _subtotal =>
@@ -144,6 +198,254 @@ class _CheckoutFlowScreenState extends State<CheckoutFlowScreen> {
   double get _grandTotal =>
       (_subtotal + _shipping + _tax - _discount).clamp(0, 9999999);
 
+  _StepMeta get _currentStepMeta => _stepMetas[_step];
+
+  String get _stepButtonText {
+    if (_step == 3) {
+      return _placingOrder ? 'Placing Order...' : 'Place Order';
+    }
+    if (_step == 0) {
+      return 'Continue';
+    }
+    if (_step == 1) {
+      return 'Continue to Payment';
+    }
+    return 'Continue to Confirm';
+  }
+
+  IconData _paymentMethodIcon(String code) {
+    switch (code) {
+      case 'aba_qr':
+        return Icons.qr_code_2_rounded;
+      case 'cash':
+      case 'cod':
+        return Icons.payments_rounded;
+      case 'card':
+        return Icons.credit_card_rounded;
+      case 'bank_transfer':
+        return Icons.account_balance_rounded;
+      default:
+        return Icons.wallet_rounded;
+    }
+  }
+
+  String? _composeDeliveryNote(String? note, String? slot) {
+    final parts = <String>[];
+    if (note != null && note.trim().isNotEmpty) {
+      parts.add(note.trim());
+    }
+    if (slot != null && slot.trim().isNotEmpty) {
+      parts.add('Delivery slot: ${slot.trim()}');
+    }
+    if (parts.isEmpty) return null;
+    return parts.join(' | ');
+  }
+
+  Future<void> _pickDeliveryLocation() async {
+    final result = await Navigator.of(context).push<DeliveryLocationResult>(
+      MaterialPageRoute(
+        builder: (_) => DeliveryLocationPicker(
+          initialLocation: _selectedDeliveryLatLng,
+          initialAddress: _selectedDeliveryAddress.trim().isEmpty
+              ? null
+              : _selectedDeliveryAddress,
+        ),
+      ),
+    );
+
+    if (!mounted || result == null) return;
+
+    setState(() {
+      _selectedSavedAddressId = null;
+      _selectedDeliveryLatLng = result.latLng;
+      _selectedDeliveryAddress = result.address.trim();
+    });
+  }
+
+  void _applySavedAddress(SavedAddress address) {
+    setState(() {
+      _selectedSavedAddressId = address.id;
+      _selectedDeliveryLatLng = LatLng(address.lat, address.lng);
+      _selectedDeliveryAddress = address.addressLine;
+      _noteController.text = address.note;
+    });
+  }
+
+  Future<void> _addSavedAddress() async {
+    final draftAddress =
+        _selectedDeliveryLatLng != null ||
+            _selectedDeliveryAddress.trim().isNotEmpty ||
+            _noteController.text.trim().isNotEmpty
+        ? SavedAddress(
+            id: 'draft_${DateTime.now().millisecondsSinceEpoch}',
+            name: 'Saved Location',
+            phone: '',
+            addressLine: _selectedDeliveryAddress.trim(),
+            note: _noteController.text.trim(),
+            lat: _selectedDeliveryLatLng?.latitude ?? 0,
+            lng: _selectedDeliveryLatLng?.longitude ?? 0,
+            createdAt: DateTime.now(),
+          )
+        : null;
+
+    final result = await Navigator.of(context).push<SavedAddress>(
+      MaterialPageRoute(
+        builder: (_) => draftAddress == null
+            ? const AddressFormScreen()
+            : AddressFormScreen(initial: draftAddress),
+      ),
+    );
+
+    if (result == null) return;
+    await _loadSavedAddresses(
+      selectedId: result.id,
+      syncSelectedLocation: true,
+    );
+  }
+
+  Future<void> _editSavedAddress(SavedAddress address) async {
+    final result = await Navigator.of(context).push<SavedAddress>(
+      MaterialPageRoute(builder: (_) => AddressFormScreen(initial: address)),
+    );
+
+    if (result == null) return;
+    await _loadSavedAddresses(
+      selectedId: result.id,
+      syncSelectedLocation: true,
+    );
+  }
+
+  Future<void> _deleteSavedAddress(SavedAddress address) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete location'),
+        content: const Text('Remove this saved location?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    final wasSelected = _selectedSavedAddressId == address.id;
+    await AddressBookService.remove(address.id);
+    if (!mounted) return;
+
+    if (wasSelected) {
+      _noteController.clear();
+      setState(() {
+        _selectedSavedAddressId = null;
+        _selectedDeliveryLatLng = null;
+        _selectedDeliveryAddress = '';
+      });
+    }
+
+    await _loadSavedAddresses();
+  }
+
+  Future<void> _loadSavedAddresses({
+    String? selectedId,
+    bool syncSelectedLocation = false,
+  }) async {
+    final loaded = (await AddressBookService.load()).reversed.toList();
+    if (!mounted) return;
+
+    SavedAddress? selectedAddress;
+    final targetId = selectedId ?? _selectedSavedAddressId;
+    if (targetId != null) {
+      for (final address in loaded) {
+        if (address.id == targetId) {
+          selectedAddress = address;
+          break;
+        }
+      }
+    }
+
+    if (syncSelectedLocation && selectedAddress != null) {
+      _noteController.text = selectedAddress.note;
+    }
+
+    setState(() {
+      _savedAddresses = loaded;
+      _loadingSavedAddresses = false;
+      if (selectedAddress != null) {
+        _selectedSavedAddressId = selectedAddress.id;
+        _selectedDeliveryLatLng = LatLng(
+          selectedAddress.lat,
+          selectedAddress.lng,
+        );
+        _selectedDeliveryAddress = selectedAddress.addressLine;
+      } else if (targetId != null &&
+          loaded.every((address) => address.id != targetId)) {
+        _selectedSavedAddressId = null;
+      }
+    });
+  }
+
+  void _jumpToStep(int targetStep) {
+    if (targetStep == _step || targetStep < 0 || targetStep > 3) return;
+
+    if (targetStep == 0) {
+      setState(() => _step = 0);
+      return;
+    }
+
+    if (_isPickup) {
+      if (targetStep == 1) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Address step is not needed for pickup orders.'),
+          ),
+        );
+        return;
+      }
+      setState(() {
+        _selectedPayment = 0;
+        _step = targetStep;
+      });
+      return;
+    }
+
+    if (targetStep >= 2 && !_hasValidDeliveryAddress) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please complete your delivery address first.'),
+        ),
+      );
+      setState(() => _step = 1);
+      return;
+    }
+
+    setState(() => _step = targetStep);
+  }
+
+  int _previousStep() {
+    if (_step <= 0) return 0;
+    if (_isPickup) {
+      if (_step == 3) return 2;
+      if (_step == 2) return 0;
+      return 0;
+    }
+    return (_step - 1).clamp(0, 3);
+  }
+
+  Future<bool> _handleBackNavigation() async {
+    if (_step == 0) {
+      return true;
+    }
+    setState(() => _step = _previousStep());
+    return false;
+  }
+
   Future<void> _continueStep() async {
     if (_step == 0) {
       setState(() {
@@ -158,6 +460,14 @@ class _CheckoutFlowScreenState extends State<CheckoutFlowScreen> {
     }
 
     if (_step == 1) {
+      if (!_hasValidDeliveryAddress) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please complete your delivery address.'),
+          ),
+        );
+        return;
+      }
       setState(() => _step = 2);
       return;
     }
@@ -240,7 +550,7 @@ class _CheckoutFlowScreenState extends State<CheckoutFlowScreen> {
             'item_id': item.product.id,
             'product_name': item.product.name,
             'quantity': item.quantity,
-            'price': item.product.price,
+            'price': item.product.salePrice,
           },
         )
         .toList();
@@ -250,13 +560,25 @@ class _CheckoutFlowScreenState extends State<CheckoutFlowScreen> {
     final orderPaymentMethod = selectedPaymentMethod == 'aba_qr'
         ? 'aba'
         : selectedPaymentMethod;
-    final selectedAddress = _addresses[_selectedAddress];
+    if (!mounted) return;
+    if (!_isPickup && !_hasValidDeliveryAddress) {
+      setState(() => _placingOrder = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please complete your delivery address.')),
+      );
+      return;
+    }
     final slot = _options.deliverySlots.isEmpty
         ? null
         : _options.deliverySlots[_selectedSlot].label;
+    final deliveryNote = _isPickup
+        ? null
+        : _composeDeliveryNote(_deliveryNoteValue, slot);
+    final customerDisplayName = customerName;
+    final deliveryPhone = profile?.phone?.trim();
 
     final result = await ApiService.createOrder(
-      customerName: customerName,
+      customerName: customerDisplayName,
       customerEmail: profile?.email,
       items: payload,
       orderType: _isPickup ? 'pickup' : 'delivery',
@@ -265,9 +587,13 @@ class _CheckoutFlowScreenState extends State<CheckoutFlowScreen> {
           (orderPaymentMethod == 'cash' || orderPaymentMethod == 'cod')
           ? 'unpaid'
           : 'processing',
-      deliveryAddress: _isPickup ? null : selectedAddress.line,
-      deliveryPhone: _isPickup ? null : selectedAddress.phone,
-      deliveryNote: _isPickup ? null : slot,
+      deliveryAddress: _isPickup ? null : _deliveryAddressLine,
+      deliveryPhone: _isPickup || deliveryPhone == null || deliveryPhone.isEmpty
+          ? null
+          : deliveryPhone,
+      deliveryNote: deliveryNote,
+      deliveryLat: _isPickup ? null : _selectedDeliveryLatLng?.latitude,
+      deliveryLng: _isPickup ? null : _selectedDeliveryLatLng?.longitude,
       voucherCode: voucherCode,
     );
 
@@ -293,30 +619,10 @@ class _CheckoutFlowScreenState extends State<CheckoutFlowScreen> {
       }
       final totalAmount = result.totalAmount ?? _grandTotal;
 
-      final sdkKhqr = BakongPaymentService.generateQr(
-        amount: totalAmount,
-        billNumber:
-            '${result.orderId!}-${DateTime.now().millisecondsSinceEpoch}',
-      );
-      final sdkQr = sdkKhqr.data?.qr;
-      final sdkMd5 = sdkKhqr.data?.md5Hash;
-      if (sdkQr == null || sdkQr.isEmpty || sdkMd5 == null || sdkMd5.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              sdkKhqr.errorMessage ?? 'Unable to generate valid KHQR.',
-            ),
-          ),
-        );
-        return;
-      }
-
       final generated = await ApiService.generateKhqr(
         orderId: result.orderId!,
         amount: totalAmount,
         currency: 'USD',
-        requestTransactionId: sdkMd5,
-        requestQrString: sdkQr,
       );
 
       if (!mounted) return;
@@ -337,6 +643,9 @@ class _CheckoutFlowScreenState extends State<CheckoutFlowScreen> {
         backgroundColor: Colors.transparent,
         builder: (_) => _KhqrPaymentSheet(
           amount: totalAmount,
+          orderId: result.orderId!,
+          orderNumber: result.orderNumber,
+          orderType: _isPickup ? 'pickup' : 'delivery',
           transactionId: generated.transactionId!,
           qrString: displayQrString,
           expiresAtIso: generated.expiresAt,
@@ -348,13 +657,22 @@ class _CheckoutFlowScreenState extends State<CheckoutFlowScreen> {
       }
       if (!mounted) return;
       if (paid == true) {
-        Navigator.of(context).pop(true);
+        if (_isPickup) {
+          Navigator.of(context).pop(true);
+        } else {
+          await _openDeliveryTrackingAfterSuccess(result);
+        }
       }
       return;
     }
 
     if (widget.fromCart) {
       CartService.instance.clear();
+    }
+
+    if (!_isPickup) {
+      await _openDeliveryTrackingAfterSuccess(result);
+      return;
     }
 
     await showDialog<void>(
@@ -379,67 +697,135 @@ class _CheckoutFlowScreenState extends State<CheckoutFlowScreen> {
     Navigator.of(context).pop(true);
   }
 
+  Future<void> _openDeliveryTrackingAfterSuccess(
+    OrderCreateResult result,
+  ) async {
+    final orderId = result.orderId;
+    final orderNumber = result.orderNumber?.trim();
+    if (orderId == null && (orderNumber == null || orderNumber.isEmpty)) {
+      if (!mounted) return;
+      Navigator.of(context).pop(true);
+      return;
+    }
+
+    await Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
+      MaterialPageRoute(
+        builder: (_) => MainNavigationScreen(
+          initialIndex: 3,
+          initialDeliveryOrderId: orderId,
+          initialDeliveryOrderNumber: orderNumber,
+          initialDeliveryStatus: result.orderStatus ?? 'pending',
+          initialDeliveryAddress:
+              result.deliveryAddress?.trim().isNotEmpty == true
+              ? result.deliveryAddress!.trim()
+              : _deliveryAddressLine,
+          initialDeliveryAmount: result.totalAmount ?? _grandTotal,
+          initialDeliveryPlacedAt: result.placedAt ?? DateTime.now(),
+        ),
+      ),
+      (_) => false,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final steps = const ['Delivery', 'Address', 'Payment', 'Confirm'];
-
-    return Scaffold(
-      backgroundColor: _bg,
-      appBar: AppBar(
-        title: const Text('Checkout'),
-        centerTitle: true,
-        backgroundColor: Colors.white,
-        foregroundColor: const Color(0xFF111827),
-      ),
-      body: _loadingOptions
-          ? const Center(child: CircularProgressIndicator())
-          : Column(
-              children: [
-                _StepHeader(
-                  labels: steps,
-                  currentStep: _step,
-                  primary: _primary,
-                ),
-                Expanded(
-                  child: AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 280),
-                    transitionBuilder: (child, animation) {
-                      return FadeTransition(
-                        opacity: animation,
-                        child: SlideTransition(
-                          position: Tween<Offset>(
-                            begin: const Offset(0.05, 0),
-                            end: Offset.zero,
-                          ).animate(animation),
-                          child: child,
-                        ),
-                      );
-                    },
-                    child: _buildStepBody(),
-                  ),
-                ),
-                _BottomTotalBar(
-                  total: _grandTotal,
-                  buttonText: _step == 3
-                      ? (_placingOrder ? 'Placing Order...' : 'Place Order')
-                      : _step == 0
-                      ? (_isPickup
-                            ? 'Continue to Payment'
-                            : 'Continue to Address')
-                      : _step == 1
-                      ? 'Continue to Payment'
-                      : 'Continue to Confirm',
-                  onPressed: _placingOrder ? null : _continueStep,
-                ),
-              ],
+    return PopScope(
+      canPop: _step == 0,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        await _handleBackNavigation();
+      },
+      child: Scaffold(
+        backgroundColor: _bg,
+        appBar: AppBar(
+          automaticallyImplyLeading: false,
+          toolbarHeight: 64,
+          leadingWidth: 56,
+          leading: Padding(
+            padding: const EdgeInsets.fromLTRB(12, 10, 0, 10),
+            child: _IconBtn(
+              icon: Icons.arrow_back_ios_new_rounded,
+              onTap: () async {
+                final shouldPop = await _handleBackNavigation();
+                if (shouldPop && context.mounted) {
+                  Navigator.of(context).maybePop();
+                }
+              },
+              circular: true,
+              iconSize: 18,
             ),
+          ),
+          title: Text(
+            'Checkout',
+            style: GoogleFonts.sora(
+              fontSize: 22,
+              fontWeight: FontWeight.w700,
+              color: _checkoutInk,
+            ),
+          ),
+          actions: const [SizedBox(width: 56)],
+          centerTitle: true,
+          elevation: 0,
+          scrolledUnderElevation: 0,
+          backgroundColor: _checkoutSurface,
+          surfaceTintColor: Colors.transparent,
+          foregroundColor: _checkoutInk,
+          bottom: PreferredSize(
+            preferredSize: const Size.fromHeight(88),
+            child: _StepHeader(
+              steps: _stepMetas,
+              currentStep: _step,
+              primary: _primary,
+              accent: _accent,
+              onStepTap: _jumpToStep,
+            ),
+          ),
+        ),
+        body: _loadingOptions
+            ? Center(child: CircularProgressIndicator(color: _primary))
+            : Column(
+                children: [
+                  Expanded(
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 280),
+                      transitionBuilder: (child, animation) {
+                        return FadeTransition(
+                          opacity: animation,
+                          child: SlideTransition(
+                            position: Tween<Offset>(
+                              begin: const Offset(0.05, 0),
+                              end: Offset.zero,
+                            ).animate(animation),
+                            child: child,
+                          ),
+                        );
+                      },
+                      child: _buildStepBody(),
+                    ),
+                  ),
+                  _BottomTotalBar(
+                    total: _grandTotal,
+                    buttonText: _stepButtonText,
+                    onPressed: _placingOrder ? null : _continueStep,
+                    primary: _primary,
+                    stepLabel: _currentStepMeta.label,
+                    compact: _step == 2,
+                    stepHint: _step == 3
+                        ? 'Review is complete. Submit when you are ready.'
+                        : _step == 2
+                        ? 'Select a payment method to continue.'
+                        : _currentStepMeta.subtitle,
+                  ),
+                ],
+              ),
+      ),
     );
   }
 
   Widget _buildStepBody() {
     switch (_step) {
       case 0:
-        return _buildDeliveryStep();
+        return _buildMethodStep();
       case 1:
         return _buildAddressStep();
       case 2:
@@ -449,30 +835,49 @@ class _CheckoutFlowScreenState extends State<CheckoutFlowScreen> {
     }
   }
 
-  Widget _buildAddressStep() {
+  Widget _buildMethodStep() {
     return ListView(
       key: const ValueKey(0),
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+      padding: const EdgeInsets.fromLTRB(20, 18, 20, 28),
       children: [
-        const Text(
-          'Delivery Address',
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.w800,
-            color: Color(0xFF111827),
+        Text(
+          'Delivery Method',
+          style: GoogleFonts.sora(
+            fontSize: 18,
+            fontWeight: FontWeight.w700,
+            color: _checkoutInk,
           ),
         ),
-        const SizedBox(height: 10),
-        ...List.generate(_addresses.length, (index) {
-          final address = _addresses[index];
-          final selected = _selectedAddress == index;
+        const SizedBox(height: 6),
+        const Text(
+          'Select how you want to receive this order.',
+          style: TextStyle(color: _checkoutMuted, height: 1.45),
+        ),
+        const SizedBox(height: 16),
+        ...List.generate(_deliveryMethods.length, (index) {
+          final method = _deliveryMethods[index];
+          final selected = _selectedDeliveryMethod == index;
           return Padding(
             padding: const EdgeInsets.only(bottom: 12),
-            child: _AddressCard(
-              address: address,
+            child: _SelectCard(
               selected: selected,
-              onTap: () => setState(() => _selectedAddress = index),
+              title: method.title,
+              subtitle: method.description,
+              trailing: method.code == 'delivery'
+                  ? '+\$${_options.deliveryFee.toStringAsFixed(2)}'
+                  : 'Free',
+              onTap: () {
+                setState(() {
+                  _selectedDeliveryMethod = index;
+                  _selectedPayment = 0;
+                });
+              },
               primary: _primary,
+              icon: method.icon,
+              assetPath: null,
+              badge: method.code == 'pickup'
+                  ? 'Bakong only'
+                  : 'Address required',
             ),
           );
         }),
@@ -480,81 +885,100 @@ class _CheckoutFlowScreenState extends State<CheckoutFlowScreen> {
     );
   }
 
-  Widget _buildDeliveryStep() {
+  Widget _buildAddressStep() {
+    final coordinatesText = _selectedDeliveryLatLng == null
+        ? null
+        : 'Pinned: '
+              '${_selectedDeliveryLatLng!.latitude.toStringAsFixed(6)}, '
+              '${_selectedDeliveryLatLng!.longitude.toStringAsFixed(6)}';
+
     return ListView(
       key: const ValueKey(1),
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+      padding: const EdgeInsets.fromLTRB(20, 18, 20, 28),
       children: [
-        const Text(
-          'Delivery Method',
-          style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
-        ),
-        const SizedBox(height: 10),
-        ...List.generate(_deliveryMethods.length, (index) {
-          final method = _deliveryMethods[index];
-          final selected = _selectedDeliveryMethod == index;
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 10),
-            child: _SelectCard(
-              selected: selected,
-              title: method.title,
-              subtitle: method.subtitle,
-              trailing: method.code == 'delivery'
-                  ? '\$${_options.deliveryFee.toStringAsFixed(2)}'
-                  : 'Free',
-              onTap: () => setState(() => _selectedDeliveryMethod = index),
-              primary: _primary,
-            ),
-          );
-        }),
-        if (!_isPickup) ...[
-          const SizedBox(height: 10),
-          const Text(
-            'Preferred Delivery Time',
-            style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+        Text(
+          'Delivery Address',
+          style: GoogleFonts.sora(
+            fontSize: 18,
+            fontWeight: FontWeight.w700,
+            color: _checkoutInk,
           ),
-          const SizedBox(height: 10),
-          ...List.generate(_options.deliverySlots.length, (index) {
-            final slot = _options.deliverySlots[index];
-            final selected = _selectedSlot == index;
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: _SelectCard(
-                selected: selected,
-                title: slot.label,
-                subtitle: slot.description,
-                trailing: '',
-                onTap: () => setState(() => _selectedSlot = index),
-                primary: _primary,
-              ),
-            );
-          }),
-        ] else ...[
-          const SizedBox(height: 10),
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: const Color(0xFFEFF6FF),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFFBFDBFE)),
-            ),
-            child: const Row(
-              children: [
-                Icon(Icons.qr_code_2_rounded, color: Color(0xFF2563EB)),
-                SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'Pickup orders continue to payment with QR option.',
-                    style: TextStyle(
-                      color: Color(0xFF1E3A8A),
-                      fontWeight: FontWeight.w600,
+        ),
+        const SizedBox(height: 6),
+        const Text(
+          'Pin the exact map location to continue.',
+          style: TextStyle(color: _checkoutMuted, height: 1.45),
+        ),
+        const SizedBox(height: 18),
+        _AddressPreviewCard(
+          addressLine: _deliveryAddressLine,
+          coordinates: coordinatesText,
+          onPick: _pickDeliveryLocation,
+        ),
+        const SizedBox(height: 14),
+        _SurfaceCard(
+          padding: const EdgeInsets.all(18),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Text(
+                    'Saved Maps',
+                    style: GoogleFonts.sora(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: _checkoutInk,
                     ),
                   ),
-                ),
-              ],
-            ),
+                  const Spacer(),
+                  TextButton.icon(
+                    onPressed: _addSavedAddress,
+                    icon: const Icon(Icons.add_location_alt_outlined, size: 16),
+                    label: const Text('Add'),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                'Reuse a saved pin or manage locations without leaving checkout.',
+                style: TextStyle(color: _checkoutMuted, height: 1.45),
+              ),
+              const SizedBox(height: 14),
+              if (_loadingSavedAddresses)
+                const Center(child: CircularProgressIndicator())
+              else if (_savedAddresses.isEmpty)
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: _checkoutSurfaceAlt,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: const Text(
+                    'No saved maps yet. Pick a location on the map, then tap Add to save it for later.',
+                    style: TextStyle(color: _checkoutMuted, height: 1.45),
+                  ),
+                )
+              else
+                ...List.generate(_savedAddresses.length, (index) {
+                  final address = _savedAddresses[index];
+                  return Padding(
+                    padding: EdgeInsets.only(
+                      bottom: index == _savedAddresses.length - 1 ? 0 : 12,
+                    ),
+                    child: _SavedMapCard(
+                      address: address,
+                      selected: address.id == _selectedSavedAddressId,
+                      onSelect: () => _applySavedAddress(address),
+                      onEdit: () => _editSavedAddress(address),
+                      onDelete: () => _deleteSavedAddress(address),
+                    ),
+                  );
+                }),
+            ],
           ),
-        ],
+        ),
       ],
     );
   }
@@ -562,82 +986,132 @@ class _CheckoutFlowScreenState extends State<CheckoutFlowScreen> {
   Widget _buildPaymentStep() {
     return ListView(
       key: const ValueKey(2),
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+      padding: const EdgeInsets.fromLTRB(20, 14, 20, 28),
       children: [
+        _buildPaymentMethodCard(),
+        const SizedBox(height: 14),
         _OrderItemsCard(items: _items),
-        const SizedBox(height: 12),
+        const SizedBox(height: 14),
         _SummaryCard(
           subtotal: _subtotal,
           shipping: _shipping,
           tax: _tax,
           discount: _discount,
           total: _grandTotal,
+          primary: _primary,
         ),
-        const SizedBox(height: 12),
-        const Text(
-          'Payment Method',
-          style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
-        ),
-        const SizedBox(height: 10),
-        ...List.generate(_checkoutPaymentMethods.length, (index) {
-          final method = _checkoutPaymentMethods[index];
-          final selected = _selectedPayment == index;
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 10),
-            child: _SelectCard(
-              selected: selected,
-              title: method.label,
-              subtitle: method.description,
-              trailing: '',
-              onTap: () => setState(() => _selectedPayment = index),
-              primary: _primary,
-            ),
-          );
-        }),
       ],
     );
   }
 
+  Widget _buildPaymentMethodCard() {
+    return _SurfaceCard(
+      padding: const EdgeInsets.all(18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Payment method',
+            style: GoogleFonts.sora(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: _checkoutInk,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            _isPickup
+                ? 'Bakong QR is the only available payment method for pickup.'
+                : 'Delivery orders support KHQR/Bakong QR or Cash on Delivery.',
+            style: const TextStyle(color: _checkoutMuted, height: 1.45),
+          ),
+          const SizedBox(height: 16),
+          ...List.generate(_checkoutPaymentMethods.length, (index) {
+            final method = _checkoutPaymentMethods[index];
+            final selected = _selectedPayment == index;
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: index == _checkoutPaymentMethods.length - 1 ? 0 : 12,
+              ),
+              child: _SelectCard(
+                selected: selected,
+                title: method.label,
+                subtitle: method.description,
+                trailing: '',
+                onTap: () => setState(() => _selectedPayment = index),
+                primary: _primary,
+                icon: _paymentMethodIcon(method.code),
+                assetPath: method.code == 'aba_qr'
+                    ? 'assets/images/BakongLogo.png'
+                    : null,
+                badge: method.code == 'aba_qr' ? 'QR Payment' : 'Pay Later',
+              ),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
   Widget _buildConfirmStep() {
-    final address = _addresses[_selectedAddress];
-    final deliveryMethod = _deliveryMethods[_selectedDeliveryMethod];
     final paymentMethod = _checkoutPaymentMethods[_selectedPayment];
-    final slot = _options.deliverySlots[_selectedSlot];
+    final slot = _options.deliverySlots.isEmpty
+        ? null
+        : _options.deliverySlots[_selectedSlot];
+    final deliveryLines = _isPickup
+        ? const ['Pickup from Store', 'Collect your order at the shop']
+        : [
+            _deliveryAddressLine,
+            if (_selectedDeliveryLatLng != null)
+              'Pinned: '
+                  '${_selectedDeliveryLatLng!.latitude.toStringAsFixed(6)}, '
+                  '${_selectedDeliveryLatLng!.longitude.toStringAsFixed(6)}',
+            if (slot != null && slot.label.trim().isNotEmpty) slot.label,
+            if (_deliveryNoteValue != null) _deliveryNoteValue!,
+          ];
 
     return ListView(
       key: const ValueKey(3),
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+      padding: const EdgeInsets.fromLTRB(20, 18, 20, 28),
       children: [
-        _ConfirmCard(
-          title: 'Shipping Address',
-          lines: _isPickup
-              ? ['Store Pickup (No address required)']
-              : [
-                  address.tag,
-                  address.name,
-                  address.phone,
-                  address.line,
-                  address.note,
-                ],
+        Text(
+          'Confirm Order',
+          style: GoogleFonts.sora(
+            fontSize: 20,
+            fontWeight: FontWeight.w700,
+            color: _checkoutInk,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          _isPickup
+              ? 'Review pickup, payment, and pricing before placing the order.'
+              : 'Review the address, payment, and pricing before placing the order.',
+          style: const TextStyle(color: _checkoutMuted, height: 1.45),
+        ),
+        const SizedBox(height: 14),
+        _ReviewMetaCard(
+          orderType: _isPickup ? 'Pickup' : 'Delivery',
+          paymentLabel: paymentMethod.label,
+          total: _grandTotal,
+          primary: _primary,
         ),
         const SizedBox(height: 12),
         _ConfirmCard(
-          title: 'Delivery',
-          lines: [deliveryMethod.title, slot.label],
+          title: _isPickup ? 'Pickup' : 'Delivery Address',
+          icon: _isPickup ? Icons.storefront_outlined : Icons.place_rounded,
+          lines: deliveryLines,
         ),
         const SizedBox(height: 12),
-        _ConfirmCard(
-          title: 'Payment',
-          lines: [paymentMethod.label, paymentMethod.description],
-        ),
-        const SizedBox(height: 12),
-        _SummaryCard(
+        _ReviewTotalsCard(
           subtotal: _subtotal,
           shipping: _shipping,
           tax: _tax,
           discount: _discount,
           total: _grandTotal,
+          primary: _primary,
         ),
+        const SizedBox(height: 12),
       ],
     );
   }
@@ -645,125 +1119,532 @@ class _CheckoutFlowScreenState extends State<CheckoutFlowScreen> {
 
 class _StepHeader extends StatelessWidget {
   const _StepHeader({
-    required this.labels,
+    required this.steps,
     required this.currentStep,
     required this.primary,
+    required this.accent,
+    required this.onStepTap,
   });
 
-  final List<String> labels;
+  final List<_StepMeta> steps;
   final int currentStep;
   final Color primary;
+  final Color accent;
+  final ValueChanged<int> onStepTap;
 
   @override
   Widget build(BuildContext context) {
+    final current = steps[currentStep];
     return Container(
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
-      color: Colors.white,
-      child: Row(
-        children: List.generate(labels.length, (index) {
-          final active = index <= currentStep;
-          return Expanded(
-            child: Row(
-              children: [
-                Container(
-                  width: 28,
-                  height: 28,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: active ? primary : const Color(0xFFE5E7EB),
-                  ),
-                  child: Center(
-                    child: Text(
-                      '${index + 1}',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w700,
-                        color: active ? Colors.white : const Color(0xFF6B7280),
-                      ),
-                    ),
+      padding: const EdgeInsets.fromLTRB(16, 6, 16, 10),
+      decoration: BoxDecoration(
+        color: _checkoutSurface,
+        border: Border(
+          top: BorderSide(color: _checkoutBorder.withValues(alpha: 0.65)),
+          bottom: BorderSide(color: _checkoutBorder.withValues(alpha: 0.85)),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  current.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.sora(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: accent,
                   ),
                 ),
-                if (index != labels.length - 1)
-                  Expanded(
-                    child: Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 6),
-                      height: 2,
-                      color: index < currentStep
-                          ? primary
-                          : const Color(0xFFE5E7EB),
-                    ),
+              ),
+              const SizedBox(width: 10),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  'Step ${currentStep + 1}/${steps.length}',
+                  style: TextStyle(
+                    color: primary,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 10,
                   ),
-              ],
-            ),
-          );
-        }),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: List.generate(steps.length, (index) {
+              final isCurrent = index == currentStep;
+              final isDone = index < currentStep;
+              final active = index <= currentStep;
+              return Expanded(
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: InkWell(
+                        onTap: () => onStepTap(index),
+                        borderRadius: BorderRadius.circular(16),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 2),
+                          child: Column(
+                            children: [
+                              AnimatedContainer(
+                                duration: const Duration(milliseconds: 220),
+                                width: 26,
+                                height: 26,
+                                decoration: BoxDecoration(
+                                  color: active
+                                      ? primary.withValues(
+                                          alpha: isCurrent ? 1 : 0.14,
+                                        )
+                                      : _checkoutSurfaceAlt,
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: active ? primary : _checkoutBorder,
+                                  ),
+                                ),
+                                child: Center(
+                                  child: isDone
+                                      ? Icon(
+                                          Icons.check_rounded,
+                                          size: 14,
+                                          color: primary,
+                                        )
+                                      : Text(
+                                          '${index + 1}',
+                                          style: TextStyle(
+                                            color: isCurrent
+                                                ? Colors.white
+                                                : active
+                                                ? primary
+                                                : _checkoutMuted,
+                                            fontWeight: FontWeight.w700,
+                                            fontSize: 11,
+                                          ),
+                                        ),
+                                ),
+                              ),
+                              const SizedBox(height: 5),
+                              Text(
+                                steps[index].label,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: active ? _checkoutInk : _checkoutMuted,
+                                  fontWeight: active
+                                      ? FontWeight.w700
+                                      : FontWeight.w600,
+                                  fontSize: 10,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    if (index != steps.length - 1)
+                      Expanded(
+                        child: Container(
+                          margin: const EdgeInsets.only(bottom: 16),
+                          height: 2,
+                          color: active
+                              ? primary.withValues(alpha: 0.26)
+                              : _checkoutBorder,
+                        ),
+                      ),
+                  ],
+                ),
+              );
+            }),
+          ),
+        ],
       ),
     );
   }
 }
 
-class _AddressCard extends StatelessWidget {
-  const _AddressCard({
-    required this.address,
-    required this.selected,
+class _IconBtn extends StatelessWidget {
+  const _IconBtn({
+    required this.icon,
     required this.onTap,
-    required this.primary,
+    this.circular = false,
+    this.iconSize = 20,
   });
 
-  final _CheckoutAddress address;
-  final bool selected;
+  final IconData icon;
   final VoidCallback onTap;
-  final Color primary;
+  final bool circular;
+  final double iconSize;
 
   @override
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(14),
+      borderRadius: BorderRadius.circular(circular ? 999 : 16),
       child: Container(
-        padding: const EdgeInsets.all(12),
+        width: circular ? 42 : 44,
+        height: circular ? 42 : 44,
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: selected ? primary : const Color(0xFFE5E7EB),
-            width: selected ? 1.6 : 1,
+          color: _checkoutSurface,
+          shape: circular ? BoxShape.circle : BoxShape.rectangle,
+          borderRadius: circular ? null : BorderRadius.circular(16),
+          border: Border.all(color: _checkoutBorder),
+        ),
+        child: Icon(icon, size: iconSize, color: _checkoutInk),
+      ),
+    );
+  }
+}
+
+class _AddressPreviewCard extends StatelessWidget {
+  const _AddressPreviewCard({
+    required this.addressLine,
+    this.coordinates,
+    required this.onPick,
+  });
+
+  final String addressLine;
+  final String? coordinates;
+  final VoidCallback onPick;
+
+  @override
+  Widget build(BuildContext context) {
+    final hasContent = addressLine.isNotEmpty;
+
+    return _SurfaceCard(
+      padding: const EdgeInsets.all(18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text(
+                'Map Location',
+                style: GoogleFonts.sora(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: _checkoutInk,
+                ),
+              ),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 5,
+                ),
+                decoration: BoxDecoration(
+                  color: hasContent
+                      ? _checkoutPrimary.withValues(alpha: 0.1)
+                      : _checkoutSurfaceAlt,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  hasContent ? 'Pinned' : 'Required',
+                  style: TextStyle(
+                    color: hasContent ? _checkoutPrimary : _checkoutMuted,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 11,
+                  ),
+                ),
+              ),
+            ],
           ),
+          const SizedBox(height: 14),
+          InkWell(
+            onTap: onPick,
+            borderRadius: BorderRadius.circular(18),
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: hasContent
+                    ? _checkoutPrimary.withValues(alpha: 0.06)
+                    : _checkoutSurfaceAlt,
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(
+                  color: hasContent
+                      ? _checkoutPrimary.withValues(alpha: 0.22)
+                      : _checkoutBorder,
+                ),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: hasContent
+                          ? _checkoutPrimary.withValues(alpha: 0.14)
+                          : Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Icon(
+                      hasContent
+                          ? Icons.location_on_rounded
+                          : Icons.map_outlined,
+                      color: hasContent ? _checkoutPrimary : _checkoutInk,
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          hasContent
+                              ? 'Selected delivery point'
+                              : 'Choose delivery point on map',
+                          style: const TextStyle(
+                            color: _checkoutInk,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          hasContent
+                              ? addressLine
+                              : 'Tap here to open the map and pin the customer location.',
+                          style: TextStyle(
+                            color: hasContent
+                                ? _checkoutInk
+                                : const Color(0xFF6B7280),
+                            height: 1.45,
+                          ),
+                        ),
+                        if (coordinates != null &&
+                            coordinates!.trim().isNotEmpty) ...[
+                          const SizedBox(height: 10),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                            child: Text(
+                              coordinates!,
+                              style: const TextStyle(
+                                color: _checkoutMuted,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: onPick,
+                  icon: Icon(
+                    hasContent
+                        ? Icons.edit_location_alt_outlined
+                        : Icons.map_outlined,
+                    size: 18,
+                  ),
+                  label: Text(hasContent ? 'Update Pin' : 'Open Map'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _checkoutPrimary,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 13),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SavedMapCard extends StatelessWidget {
+  const _SavedMapCard({
+    required this.address,
+    required this.selected,
+    required this.onSelect,
+    required this.onEdit,
+    required this.onDelete,
+  });
+
+  final SavedAddress address;
+  final bool selected;
+  final VoidCallback onSelect;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onSelect,
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: selected
+              ? _checkoutPrimary.withValues(alpha: 0.06)
+              : _checkoutSurface,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: selected ? _checkoutPrimary : _checkoutBorder,
+            width: selected ? 1.4 : 1,
+          ),
+          boxShadow: selected
+              ? [
+                  BoxShadow(
+                    color: _checkoutPrimary.withValues(alpha: 0.08),
+                    blurRadius: 16,
+                    offset: const Offset(0, 8),
+                  ),
+                ]
+              : const [],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-              decoration: BoxDecoration(
-                color: selected
-                    ? primary.withValues(alpha: 0.16)
-                    : const Color(0xFFF3F4F6),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                address.tag,
-                style: TextStyle(
-                  fontWeight: FontWeight.w700,
-                  color: selected ? primary : const Color(0xFF6B7280),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(
+                    color: selected
+                        ? _checkoutPrimary.withValues(alpha: 0.14)
+                        : Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    selected
+                        ? Icons.location_on_rounded
+                        : Icons.location_on_outlined,
+                    color: selected ? _checkoutPrimary : _checkoutInk,
+                    size: 20,
+                  ),
                 ),
-              ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              address.name.trim().isEmpty
+                                  ? 'Saved Location'
+                                  : address.name,
+                              style: const TextStyle(
+                                color: _checkoutInk,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                          if (selected)
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: _checkoutPrimary.withValues(alpha: 0.14),
+                                borderRadius: BorderRadius.circular(999),
+                              ),
+                              child: const Text(
+                                'Selected',
+                                style: TextStyle(
+                                  color: _checkoutPrimary,
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 11,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        address.addressLine,
+                        style: const TextStyle(
+                          color: _checkoutInk,
+                          fontWeight: FontWeight.w600,
+                          height: 1.45,
+                        ),
+                      ),
+                      if (address.note.trim().isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: _checkoutSurfaceAlt,
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Text(
+                            address.note,
+                            style: const TextStyle(
+                              color: _checkoutMuted,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 8),
-            Text(
-              address.name,
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              address.phone,
-              style: const TextStyle(color: Color(0xFF6B7280)),
-            ),
-            const SizedBox(height: 2),
-            Text(address.line),
-            const SizedBox(height: 2),
-            Text(
-              address.note,
-              style: const TextStyle(color: Color(0xFF6B7280)),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: onSelect,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: selected
+                          ? _checkoutInk
+                          : _checkoutPrimary,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                    child: Text(selected ? 'Using This Map' : 'Use This Map'),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                IconButton(
+                  onPressed: onEdit,
+                  icon: const Icon(Icons.edit_outlined, size: 20),
+                  tooltip: 'Edit',
+                ),
+                IconButton(
+                  onPressed: onDelete,
+                  icon: const Icon(Icons.delete_outline, size: 20),
+                  tooltip: 'Delete',
+                ),
+              ],
             ),
           ],
         ),
@@ -780,6 +1661,9 @@ class _SelectCard extends StatelessWidget {
     required this.trailing,
     required this.onTap,
     required this.primary,
+    required this.icon,
+    this.assetPath,
+    this.badge,
   });
 
   final bool selected;
@@ -788,61 +1672,165 @@ class _SelectCard extends StatelessWidget {
   final String trailing;
   final VoidCallback onTap;
   final Color primary;
+  final IconData icon;
+  final String? assetPath;
+  final String? badge;
 
   @override
   Widget build(BuildContext context) {
+    final hasAsset = assetPath != null && assetPath!.trim().isNotEmpty;
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(22),
       child: Container(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
+          color: selected ? primary.withValues(alpha: 0.06) : _checkoutSurface,
+          borderRadius: BorderRadius.circular(22),
           border: Border.all(
-            color: selected ? primary : const Color(0xFFE5E7EB),
-            width: selected ? 1.4 : 1,
+            color: selected ? primary : _checkoutBorder,
+            width: selected ? 1.6 : 1,
           ),
+          boxShadow: selected
+              ? [
+                  BoxShadow(
+                    color: primary.withValues(alpha: 0.1),
+                    blurRadius: 20,
+                    offset: const Offset(0, 12),
+                  ),
+                ]
+              : const [
+                  BoxShadow(
+                    color: _checkoutShadow,
+                    blurRadius: 12,
+                    offset: Offset(0, 6),
+                  ),
+                ],
         ),
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            Container(
+              width: hasAsset ? 78 : 48,
+              height: hasAsset ? 42 : 48,
+              decoration: BoxDecoration(
+                color: hasAsset
+                    ? Colors.white
+                    : selected
+                    ? primary.withValues(alpha: 0.14)
+                    : _checkoutSurfaceAlt,
+                borderRadius: BorderRadius.circular(hasAsset ? 14 : 18),
+                border: hasAsset
+                    ? Border.all(
+                        color: selected
+                            ? primary.withValues(alpha: 0.24)
+                            : _checkoutBorder,
+                      )
+                    : null,
+              ),
+              child: hasAsset
+                  ? ClipRRect(
+                      borderRadius: BorderRadius.circular(13),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 6,
+                        ),
+                        child: Image.asset(
+                          assetPath!,
+                          fit: BoxFit.contain,
+                          alignment: Alignment.center,
+                        ),
+                      ),
+                    )
+                  : Icon(icon, color: selected ? primary : _checkoutInk),
+            ),
+            const SizedBox(width: 14),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    title,
-                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            Text(
+                              title,
+                              style: GoogleFonts.sora(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w700,
+                                color: _checkoutInk,
+                              ),
+                            ),
+                            if (badge != null && badge!.trim().isNotEmpty)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 9,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: selected
+                                      ? primary.withValues(alpha: 0.14)
+                                      : _checkoutSurfaceAlt,
+                                  borderRadius: BorderRadius.circular(999),
+                                ),
+                                child: Text(
+                                  badge!,
+                                  style: TextStyle(
+                                    color: selected ? primary : _checkoutInk,
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 11,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                      if (trailing.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(left: 10),
+                          child: Text(
+                            trailing,
+                            style: TextStyle(
+                              color: trailing.toLowerCase() == 'free'
+                                  ? _checkoutSuccess
+                                  : _checkoutInk,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
                   if (subtitle.isNotEmpty) ...[
-                    const SizedBox(height: 3),
+                    const SizedBox(height: 8),
                     Text(
                       subtitle,
                       style: const TextStyle(
-                        color: Color(0xFF6B7280),
-                        fontSize: 12,
+                        color: _checkoutMuted,
+                        fontSize: 13,
+                        height: 1.45,
                       ),
                     ),
                   ],
                 ],
               ),
             ),
-            if (trailing.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.only(right: 10),
-                child: Text(
-                  trailing,
-                  style: TextStyle(
-                    color: trailing.toLowerCase() == 'free'
-                        ? const Color(0xFF16A34A)
-                        : const Color(0xFF111827),
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
+            const SizedBox(width: 12),
+            SizedBox(
+              width: 30,
+              height: 30,
+              child: Icon(
+                selected
+                    ? Icons.radio_button_checked_rounded
+                    : Icons.radio_button_off_rounded,
+                size: 22,
+                color: selected ? primary : _checkoutMuted,
               ),
-            Icon(
-              selected ? Icons.radio_button_checked : Icons.radio_button_off,
-              color: selected ? primary : const Color(0xFFD1D5DB),
             ),
           ],
         ),
@@ -858,63 +1846,120 @@ class _OrderItemsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
-      ),
+    return _SurfaceCard(
+      padding: const EdgeInsets.all(18),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const Text(
-                'Order Items',
-                style: TextStyle(fontWeight: FontWeight.w800),
+              Text(
+                'Order items',
+                style: GoogleFonts.sora(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: _checkoutInk,
+                ),
               ),
               const Spacer(),
-              Text(
-                '${items.length} items',
-                style: const TextStyle(color: Color(0xFF6B7280)),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: _checkoutSurfaceAlt,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  '${items.length} items',
+                  style: const TextStyle(
+                    color: _checkoutMuted,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 16),
           ...items.map((item) {
             return Padding(
               padding: const EdgeInsets.symmetric(vertical: 6),
-              child: Row(
-                children: [
-                  Container(
-                    width: 24,
-                    height: 24,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF3F4F6),
-                      borderRadius: BorderRadius.circular(6),
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: _checkoutSurfaceAlt.withValues(alpha: 0.72),
+                  borderRadius: BorderRadius.circular(18),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(16),
+                      child: SizedBox(
+                        width: 58,
+                        height: 58,
+                        child:
+                            item.product.imageUrl != null &&
+                                item.product.imageUrl!.isNotEmpty
+                            ? Image.network(
+                                item.product.imageUrl!,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return _FallbackProductTile(
+                                    quantity: item.quantity,
+                                  );
+                                },
+                              )
+                            : _FallbackProductTile(quantity: item.quantity),
+                      ),
                     ),
-                    child: Text(
-                      '${item.quantity}',
-                      style: const TextStyle(fontWeight: FontWeight.w700),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            item.product.name,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w700,
+                              color: _checkoutInk,
+                              height: 1.35,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 5,
+                            ),
+                            decoration: BoxDecoration(
+                              color: _checkoutSurface,
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                            child: Text(
+                              'Qty ${item.quantity}',
+                              style: const TextStyle(
+                                color: _checkoutMuted,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      item.product.name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    const SizedBox(width: 8),
+                    Text(
+                      '\$${item.subtotal.toStringAsFixed(2)}',
+                      style: GoogleFonts.sora(
+                        fontWeight: FontWeight.w700,
+                        color: _checkoutInk,
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    '\$${item.subtotal.toStringAsFixed(2)}',
-                    style: const TextStyle(fontWeight: FontWeight.w700),
-                  ),
-                ],
+                  ],
+                ),
               ),
             );
           }),
@@ -931,6 +1976,7 @@ class _SummaryCard extends StatelessWidget {
     required this.tax,
     required this.discount,
     required this.total,
+    required this.primary,
   });
 
   final double subtotal;
@@ -938,39 +1984,88 @@ class _SummaryCard extends StatelessWidget {
   final double tax;
   final double discount;
   final double total;
+  final Color primary;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
-      ),
+    return _SurfaceCard(
+      padding: const EdgeInsets.all(18),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Payment Summary',
-            style: TextStyle(fontWeight: FontWeight.w800),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Payment summary',
+                  style: GoogleFonts.sora(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: _checkoutInk,
+                  ),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: primary.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  'Live total',
+                  style: TextStyle(
+                    color: primary,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 8),
-          _SummaryRow(label: 'Subtotal', value: subtotal),
-          _SummaryRow(label: 'Shipping Fee', value: shipping),
-          _SummaryRow(label: 'Tax', value: tax),
-          if (discount > 0)
-            _SummaryRow(
-              label: 'Discount',
-              value: -discount,
-              color: const Color(0xFF16A34A),
+          const SizedBox(height: 14),
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: _checkoutSurfaceAlt.withValues(alpha: 0.72),
+              borderRadius: BorderRadius.circular(18),
             ),
-          const Divider(height: 20),
-          _SummaryRow(
-            label: 'Grand Total',
-            value: total,
-            bold: true,
-            color: const Color(0xFF4F46E5),
+            child: Column(
+              children: [
+                _SummaryRow(label: 'Subtotal', value: subtotal),
+                _SummaryRow(label: 'Shipping Fee', value: shipping),
+                _SummaryRow(label: 'Tax', value: tax),
+                if (discount > 0)
+                  _SummaryRow(
+                    label: 'Discount',
+                    value: -discount,
+                    color: const Color(0xFF16A34A),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 14),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  primary.withValues(alpha: 0.14),
+                  const Color(0xFFF4F8FF),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: primary.withValues(alpha: 0.16)),
+            ),
+            child: _SummaryRow(
+              label: 'Grand Total',
+              value: total,
+              bold: true,
+              color: primary,
+            ),
           ),
         ],
       ),
@@ -1000,7 +2095,7 @@ class _SummaryRow extends StatelessWidget {
           Text(
             label,
             style: TextStyle(
-              color: bold ? const Color(0xFF111827) : const Color(0xFF6B7280),
+              color: bold ? _checkoutInk : _checkoutMuted,
               fontWeight: bold ? FontWeight.w700 : FontWeight.w500,
             ),
           ),
@@ -1010,7 +2105,7 @@ class _SummaryRow extends StatelessWidget {
                 ? '-\$${value.abs().toStringAsFixed(2)}'
                 : '\$${value.toStringAsFixed(2)}',
             style: TextStyle(
-              color: color ?? const Color(0xFF111827),
+              color: color ?? _checkoutInk,
               fontWeight: bold ? FontWeight.w800 : FontWeight.w600,
               fontSize: bold ? 18 : 14,
             ),
@@ -1021,37 +2116,238 @@ class _SummaryRow extends StatelessWidget {
   }
 }
 
-class _ConfirmCard extends StatelessWidget {
-  const _ConfirmCard({required this.title, required this.lines});
+class _ReviewMetaCard extends StatelessWidget {
+  const _ReviewMetaCard({
+    required this.orderType,
+    required this.paymentLabel,
+    required this.total,
+    required this.primary,
+  });
 
-  final String title;
-  final List<String> lines;
+  final String orderType;
+  final String paymentLabel;
+  final double total;
+  final Color primary;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
+    return _SurfaceCard(
+      padding: const EdgeInsets.all(16),
+      child: Row(
+        children: [
+          Expanded(
+            child: _ReviewMetaItem(label: 'Order Type', value: orderType),
+          ),
+          Container(width: 1, height: 38, color: _checkoutBorder),
+          Expanded(
+            child: _ReviewMetaItem(
+              label: 'Payment',
+              value: paymentLabel,
+              alignEnd: true,
+            ),
+          ),
+          Container(width: 1, height: 38, color: _checkoutBorder),
+          Expanded(
+            child: _ReviewMetaItem(
+              label: 'Total',
+              value: '\$${total.toStringAsFixed(2)}',
+              valueColor: primary,
+              alignEnd: true,
+            ),
+          ),
+        ],
       ),
+    );
+  }
+}
+
+class _ReviewMetaItem extends StatelessWidget {
+  const _ReviewMetaItem({
+    required this.label,
+    required this.value,
+    this.valueColor,
+    this.alignEnd = false,
+  });
+
+  final String label;
+  final String value;
+  final Color? valueColor;
+  final bool alignEnd;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+      child: Column(
+        crossAxisAlignment: alignEnd
+            ? CrossAxisAlignment.end
+            : CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(
+              color: _checkoutMuted,
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: alignEnd ? TextAlign.right : TextAlign.left,
+            style: TextStyle(
+              color: valueColor ?? _checkoutInk,
+              fontWeight: FontWeight.w700,
+              fontSize: 13,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ReviewTotalsCard extends StatelessWidget {
+  const _ReviewTotalsCard({
+    required this.subtotal,
+    required this.shipping,
+    required this.tax,
+    required this.discount,
+    required this.total,
+    required this.primary,
+  });
+
+  final double subtotal;
+  final double shipping;
+  final double tax;
+  final double discount;
+  final double total;
+  final Color primary;
+
+  @override
+  Widget build(BuildContext context) {
+    return _SurfaceCard(
+      padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: const TextStyle(fontWeight: FontWeight.w800)),
-          const SizedBox(height: 8),
-          ...lines
-              .where((line) => line.trim().isNotEmpty)
-              .map(
-                (line) => Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 2),
-                  child: Text(
-                    line,
-                    style: const TextStyle(color: Color(0xFF374151)),
-                  ),
+          Text(
+            'Pricing',
+            style: GoogleFonts.sora(
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              color: _checkoutInk,
+            ),
+          ),
+          const SizedBox(height: 12),
+          _SummaryRow(label: 'Subtotal', value: subtotal),
+          _SummaryRow(label: 'Shipping', value: shipping),
+          _SummaryRow(label: 'Tax', value: tax),
+          if (discount > 0)
+            _SummaryRow(
+              label: 'Discount',
+              value: -discount,
+              color: const Color(0xFF16A34A),
+            ),
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 10),
+            child: Divider(height: 1, color: _checkoutBorder),
+          ),
+          _SummaryRow(label: 'Total', value: total, bold: true, color: primary),
+        ],
+      ),
+    );
+  }
+}
+
+class _ConfirmCard extends StatelessWidget {
+  const _ConfirmCard({
+    required this.title,
+    required this.lines,
+    required this.icon,
+  });
+
+  final String title;
+  final List<String> lines;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    final visibleLines = lines.where((line) => line.trim().isNotEmpty).toList();
+    final primaryLine = visibleLines.isEmpty ? '' : visibleLines.first;
+    final secondaryLines = visibleLines.length > 1
+        ? visibleLines.skip(1).toList()
+        : const <String>[];
+    return _SurfaceCard(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: _checkoutSurfaceAlt,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Icon(icon, color: _checkoutPrimary),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                title,
+                style: GoogleFonts.sora(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: _checkoutInk,
                 ),
               ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              color: _checkoutSurfaceAlt,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: _checkoutBorder),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (primaryLine.isNotEmpty)
+                  Text(
+                    primaryLine,
+                    style: const TextStyle(
+                      color: _checkoutInk,
+                      fontWeight: FontWeight.w700,
+                      height: 1.35,
+                    ),
+                  ),
+                if (secondaryLines.isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  ...secondaryLines.asMap().entries.map((entry) {
+                    final isLast = entry.key == secondaryLines.length - 1;
+                    return Padding(
+                      padding: EdgeInsets.only(bottom: isLast ? 0 : 4),
+                      child: Text(
+                        entry.value,
+                        style: const TextStyle(
+                          color: _checkoutMuted,
+                          fontWeight: FontWeight.w500,
+                          height: 1.4,
+                        ),
+                      ),
+                    );
+                  }),
+                ],
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -1063,65 +2359,227 @@ class _BottomTotalBar extends StatelessWidget {
     required this.total,
     required this.buttonText,
     required this.onPressed,
+    required this.primary,
+    required this.stepLabel,
+    required this.stepHint,
+    this.compact = false,
   });
 
   final double total;
   final String buttonText;
   final VoidCallback? onPressed;
+  final Color primary;
+  final String stepLabel;
+  final String stepHint;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      top: false,
+      child: Container(
+        padding: EdgeInsets.fromLTRB(16, compact ? 8 : 10, 16, compact ? 12 : 18),
+        decoration: BoxDecoration(
+          color: _checkoutSurface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          border: const Border(top: BorderSide(color: _checkoutBorder)),
+          boxShadow: const [
+            BoxShadow(
+              color: _checkoutShadow,
+              blurRadius: 12,
+              offset: Offset(0, -2),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              crossAxisAlignment: compact
+                  ? CrossAxisAlignment.center
+                  : CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        stepLabel,
+                        style: GoogleFonts.sora(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: _checkoutPrimary,
+                        ),
+                      ),
+                      if (stepHint.trim().isNotEmpty) ...[
+                        SizedBox(height: compact ? 2 : 4),
+                        Text(
+                          stepHint,
+                          maxLines: compact ? 1 : 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: _checkoutMuted,
+                            height: compact ? 1.25 : 1.4,
+                            fontSize: compact ? 13 : 14,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Container(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: compact ? 11 : 12,
+                    vertical: compact ? 8 : 10,
+                  ),
+                  decoration: BoxDecoration(
+                    color: _checkoutSurfaceAlt,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: _checkoutBorder),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text(
+                        'Total',
+                        style: TextStyle(
+                          color: _checkoutMuted,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 11,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '\$${total.toStringAsFixed(2)}',
+                        style: GoogleFonts.sora(
+                          fontWeight: FontWeight.w800,
+                          fontSize: compact ? 16 : 18,
+                          color: _checkoutInk,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: compact ? 10 : 14),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton(
+                onPressed: onPressed,
+                style: FilledButton.styleFrom(
+                  backgroundColor: primary,
+                  foregroundColor: Colors.white,
+                  padding: EdgeInsets.symmetric(vertical: compact ? 14 : 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  elevation: 0,
+                ),
+                child: Text(
+                  buttonText,
+                  style: GoogleFonts.sora(
+                    fontWeight: FontWeight.w700,
+                    fontSize: compact ? 14 : 15,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _StepMeta {
+  const _StepMeta({
+    required this.label,
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+  });
+
+  final String label;
+  final String title;
+  final String subtitle;
+  final IconData icon;
+}
+
+class _DeliveryMethod {
+  const _DeliveryMethod({
+    required this.code,
+    required this.title,
+    required this.description,
+    required this.icon,
+  });
+
+  final String code;
+  final String title;
+  final String description;
+  final IconData icon;
+}
+
+class _SurfaceCard extends StatelessWidget {
+  const _SurfaceCard({
+    required this.child,
+    this.padding = const EdgeInsets.all(16),
+  });
+
+  final Widget child;
+  final EdgeInsetsGeometry padding;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
+      padding: padding,
+      decoration: BoxDecoration(
+        color: _checkoutSurface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: _checkoutBorder),
+        boxShadow: const [
           BoxShadow(
-            color: Color(0x14000000),
-            blurRadius: 16,
-            offset: Offset(0, -6),
+            color: _checkoutShadow,
+            blurRadius: 10,
+            offset: Offset(0, 4),
           ),
         ],
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Row(
-            children: [
-              const Text(
-                'Total',
-                style: TextStyle(fontWeight: FontWeight.w700),
-              ),
-              const Spacer(),
-              Text(
-                '\$${total.toStringAsFixed(2)}',
-                style: const TextStyle(
-                  fontWeight: FontWeight.w800,
-                  fontSize: 18,
-                ),
-              ),
-            ],
+      child: child,
+    );
+  }
+}
+
+class _FallbackProductTile extends StatelessWidget {
+  const _FallbackProductTile({required this.quantity});
+
+  final int quantity;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: _checkoutSurfaceAlt,
+      child: Center(
+        child: Container(
+          width: 34,
+          height: 34,
+          decoration: BoxDecoration(
+            color: _checkoutSurface,
+            borderRadius: BorderRadius.circular(12),
           ),
-          const SizedBox(height: 10),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: onPressed,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF6366F1),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: Text(
-                buttonText,
-                style: const TextStyle(fontWeight: FontWeight.w700),
+          child: Center(
+            child: Text(
+              'x$quantity',
+              style: GoogleFonts.sora(
+                fontWeight: FontWeight.w700,
+                color: _checkoutMuted,
               ),
             ),
           ),
-        ],
+        ),
       ),
     );
   }
@@ -1130,14 +2588,20 @@ class _BottomTotalBar extends StatelessWidget {
 class _KhqrPaymentSheet extends StatefulWidget {
   const _KhqrPaymentSheet({
     required this.amount,
+    required this.orderId,
+    required this.orderType,
     required this.transactionId,
     required this.qrString,
+    this.orderNumber,
     this.expiresAtIso,
   });
 
   final double amount;
+  final int orderId;
+  final String orderType;
   final String transactionId;
   final String qrString;
+  final String? orderNumber;
   final String? expiresAtIso;
 
   @override
@@ -1145,19 +2609,22 @@ class _KhqrPaymentSheet extends StatefulWidget {
 }
 
 class _KhqrPaymentSheetState extends State<_KhqrPaymentSheet> {
-  static const Duration _checkInterval = Duration(seconds: 5);
-  static const int _maxCheckAttempts = 20;
+  static const Duration _checkInterval = Duration(seconds: 3);
 
   bool _isChecking = false;
   bool _isSuccess = false;
-  bool _isScanned = false;
+  final bool _isScanned = false;
   bool _isTerminalFailure = false;
   bool _autoCheckStopped = false;
+  bool _isOpeningTicket = false;
+  bool _didAutoOpenTicket = false;
   int _checkAttempts = 0;
+  int _maxCheckAttempts = 200;
   String? _lastStatus;
   String? _statusMessage;
   DateTime? _expiresAt;
   Timer? _checkTimer;
+  Timer? _countdownTimer;
 
   bool _isSuccessStatus(String status) {
     switch (status.toUpperCase()) {
@@ -1177,6 +2644,7 @@ class _KhqrPaymentSheetState extends State<_KhqrPaymentSheet> {
       case 'FAILED':
       case 'INVALID_TRANSACTION':
       case 'EXPIRED':
+      case 'TIMEOUT':
       case 'CANCELLED':
       case 'CANCELED':
       case 'REJECTED':
@@ -1214,10 +2682,19 @@ class _KhqrPaymentSheetState extends State<_KhqrPaymentSheet> {
     debugPrint(jsonEncode(payload));
   }
 
+  void _setStatusMessage(String? message) {
+    if (!mounted || _statusMessage == message) return;
+    setState(() {
+      _statusMessage = message;
+    });
+  }
+
   @override
   void initState() {
     super.initState();
     _expiresAt = _parseExpiresAt(widget.expiresAtIso);
+    _maxCheckAttempts = _deriveMaxAttempts();
+    _statusMessage = 'Waiting for payment confirmation...';
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         _startChecking();
@@ -1228,6 +2705,7 @@ class _KhqrPaymentSheetState extends State<_KhqrPaymentSheet> {
   @override
   void dispose() {
     _stopChecking();
+    _stopCountdown();
     super.dispose();
   }
 
@@ -1240,42 +2718,29 @@ class _KhqrPaymentSheetState extends State<_KhqrPaymentSheet> {
     }
   }
 
+  int _deriveMaxAttempts() {
+    final expiresAt = _expiresAt;
+    if (expiresAt == null) return 200;
+    final remaining = expiresAt.difference(DateTime.now()).inSeconds;
+    if (remaining <= 0) return 1;
+    final attempts = (remaining / _checkInterval.inSeconds).ceil() + 2;
+    if (attempts < 10) return 10;
+    if (attempts > 400) return 400;
+    return attempts;
+  }
+
   bool get _isExpired {
     final expiresAt = _expiresAt;
     if (expiresAt == null) return false;
     return DateTime.now().isAfter(expiresAt);
   }
 
-  String get _expiresCountdown {
-    final expiresAt = _expiresAt;
-    if (expiresAt == null) return '--:--';
-    final remaining = expiresAt.difference(DateTime.now());
-    if (remaining.isNegative) return '00:00';
-    final minutes = remaining.inMinutes
-        .remainder(60)
-        .toString()
-        .padLeft(2, '0');
-    final seconds = remaining.inSeconds
-        .remainder(60)
-        .toString()
-        .padLeft(2, '0');
-    return '$minutes:$seconds';
-  }
-
-  void _markScanned() {
-    if (_isChecking || _isSuccess || _isTerminalFailure) return;
-    _logKhqrEvent(event: 'SCAN', status: 'SCANNED');
-    setState(() {
-      _isScanned = true;
-      _statusMessage = 'Waiting for payment confirmation...';
-    });
-    _startChecking();
-  }
-
   void _startChecking() {
     _stopChecking();
+    _startCountdown();
     _autoCheckStopped = false;
     _checkAttempts = 0;
+    _maxCheckAttempts = _deriveMaxAttempts();
     _checkStatus(fromTimer: true);
     _checkTimer = Timer.periodic(_checkInterval, (_) {
       if (!mounted || _isSuccess || _isTerminalFailure) {
@@ -1291,6 +2756,97 @@ class _KhqrPaymentSheetState extends State<_KhqrPaymentSheet> {
     _checkTimer = null;
   }
 
+  void _startCountdown() {
+    _stopCountdown();
+    if (_expiresAt == null) return;
+    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted || _isSuccess || _isTerminalFailure) {
+        _stopCountdown();
+        return;
+      }
+      if (_isExpired) {
+        _stopCountdown();
+        _stopChecking();
+        setState(() {
+          _isTerminalFailure = true;
+          _statusMessage = 'QR expired. Please generate a new one.';
+        });
+      }
+    });
+  }
+
+  void _stopCountdown() {
+    _countdownTimer?.cancel();
+    _countdownTimer = null;
+  }
+
+  bool get _shouldOfferPickupTicket => widget.orderType == 'pickup';
+
+  Future<PickupTicket?> _findMatchingTicket() async {
+    for (var attempt = 0; attempt < 5; attempt++) {
+      final tickets = await ApiService.fetchPickupTickets();
+      for (final ticket in tickets) {
+        if (ticket.orderId == widget.orderId) {
+          return ticket;
+        }
+        final orderNumber = widget.orderNumber;
+        if (orderNumber != null &&
+            orderNumber.isNotEmpty &&
+            ticket.orderNumber == orderNumber) {
+          return ticket;
+        }
+      }
+      if (attempt < 4) {
+        await Future<void>.delayed(const Duration(milliseconds: 800));
+      }
+    }
+    return null;
+  }
+
+  Future<void> _openTicketDetail({bool showFeedback = true}) async {
+    if (_isOpeningTicket || !_shouldOfferPickupTicket) return;
+
+    setState(() {
+      _isOpeningTicket = true;
+    });
+
+    final ticket = await _findMatchingTicket();
+    if (!mounted) return;
+
+    setState(() {
+      _isOpeningTicket = false;
+    });
+
+    if (ticket == null) {
+      if (showFeedback) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Pickup ticket is still being generated. Please try again.',
+            ),
+          ),
+        );
+      }
+      return;
+    }
+
+    await Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
+      MaterialPageRoute(
+        builder: (_) =>
+            MainNavigationScreen(initialIndex: 0, initialPickupTicket: ticket),
+      ),
+      (_) => false,
+    );
+  }
+
+  Future<void> _handlePaymentSuccess() async {
+    if (!_shouldOfferPickupTicket || _didAutoOpenTicket) return;
+    _didAutoOpenTicket = true;
+    await Future<void>.delayed(const Duration(milliseconds: 350));
+    if (!mounted) return;
+    await _openTicketDetail(showFeedback: false);
+  }
+
   Future<void> _checkStatus({bool fromTimer = false}) async {
     if (_isChecking || _isSuccess || _isTerminalFailure || _autoCheckStopped) {
       return;
@@ -1300,8 +2856,7 @@ class _KhqrPaymentSheetState extends State<_KhqrPaymentSheet> {
       if (mounted) {
         setState(() {
           _autoCheckStopped = true;
-          _statusMessage =
-              'Payment still pending. Auto-check stopped. Please check later.';
+          _statusMessage = 'Payment still pending. Auto-check paused.';
         });
       }
       return;
@@ -1310,17 +2865,14 @@ class _KhqrPaymentSheetState extends State<_KhqrPaymentSheet> {
       if (mounted) {
         setState(() {
           _isTerminalFailure = true;
-          _statusMessage = 'Payment failed: QR expired.';
+          _statusMessage = 'QR expired. Please generate a new one.';
         });
       }
       _stopChecking();
       return;
     }
 
-    setState(() {
-      _isChecking = true;
-      _statusMessage = null;
-    });
+    _isChecking = true;
     _checkAttempts += 1;
 
     final result = await ApiService.checkKhqrTransaction(
@@ -1328,10 +2880,7 @@ class _KhqrPaymentSheetState extends State<_KhqrPaymentSheet> {
     );
 
     if (!mounted) return;
-    setState(() {
-      _isChecking = false;
-      _statusMessage = result.message ?? result.status;
-    });
+    _isChecking = false;
     final normalizedStatus = result.status.toUpperCase();
     if (_lastStatus != normalizedStatus) {
       _lastStatus = normalizedStatus;
@@ -1358,19 +2907,26 @@ class _KhqrPaymentSheetState extends State<_KhqrPaymentSheet> {
         bankHash: result.bakongHash,
       );
       _stopChecking();
+      _stopCountdown();
       setState(() {
         _isSuccess = true;
-        _statusMessage = 'Payment successful';
+        _statusMessage = 'Payment confirmed.';
       });
+      _handlePaymentSuccess();
       return;
     }
 
     if (_isFailureStatus(result.status)) {
       _stopChecking();
+      _stopCountdown();
       if (!mounted) return;
       setState(() {
         _isTerminalFailure = true;
-        _statusMessage = 'Payment failed';
+        _statusMessage =
+            result.status.toUpperCase() == 'EXPIRED' ||
+                result.status.toUpperCase() == 'TIMEOUT'
+            ? 'QR expired. Please generate a new one.'
+            : 'Payment failed. Please try again.';
       });
       return;
     }
@@ -1378,18 +2934,29 @@ class _KhqrPaymentSheetState extends State<_KhqrPaymentSheet> {
     if (normalizedStatus == 'NOT_FOUND') {
       if (_isExpired) {
         _stopChecking();
+        _stopCountdown();
         if (!mounted) return;
         setState(() {
           _isTerminalFailure = true;
-          _statusMessage =
-              'Payment failed: transaction not found before expiry.';
+          _statusMessage = 'QR expired before payment was found.';
         });
       } else if (fromTimer && mounted) {
-        setState(() {
-          _statusMessage = 'Waiting for payment confirmation...';
-        });
+        if (_statusMessage == null) {
+          _setStatusMessage('Waiting for payment confirmation...');
+        }
+      } else if (!fromTimer) {
+        _setStatusMessage(result.message ?? result.status);
       }
+      return;
     }
+
+    if (fromTimer) {
+      if (_statusMessage == null) {
+        _setStatusMessage('Waiting for payment confirmation...');
+      }
+      return;
+    }
+    _setStatusMessage(result.message ?? result.status);
   }
 
   @override
@@ -1433,34 +3000,13 @@ class _KhqrPaymentSheetState extends State<_KhqrPaymentSheet> {
                   const SizedBox(width: 8),
                   const Expanded(
                     child: Text(
-                      'ABA KHQR',
+                      'Bakong KHQR',
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.w700,
                         color: Color(0xFF334155),
                       ),
                     ),
-                  ),
-                  Row(
-                    children: [
-                      const SizedBox(
-                        width: 14,
-                        height: 14,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation(Color(0xFF22D3EE)),
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        _expiresCountdown,
-                        style: const TextStyle(
-                          color: Color(0xFF334155),
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ],
                   ),
                 ],
               ),
@@ -1509,7 +3055,7 @@ class _KhqrPaymentSheetState extends State<_KhqrPaymentSheet> {
                   padding: const EdgeInsets.symmetric(vertical: 10),
                   decoration: const BoxDecoration(
                     gradient: LinearGradient(
-                      colors: [Color(0xFFDC2626), Color(0xFFEF4444)],
+                      colors: [Color(0xFF1D4ED8), Color(0xFF3B82F6)],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
@@ -1517,25 +3063,16 @@ class _KhqrPaymentSheetState extends State<_KhqrPaymentSheet> {
                       top: Radius.circular(18),
                     ),
                   ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: const [
-                      Icon(
-                        Icons.qr_code_2_rounded,
+                  child: const Center(
+                    child: Text(
+                      'KHQR Payment',
+                      style: TextStyle(
                         color: Colors.white,
-                        size: 16,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.4,
                       ),
-                      SizedBox(width: 6),
-                      Text(
-                        'KHQR PAYMENT',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w800,
-                          fontSize: 12,
-                          letterSpacing: 0.5,
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
                 ),
                 Padding(
@@ -1549,7 +3086,7 @@ class _KhqrPaymentSheetState extends State<_KhqrPaymentSheet> {
                     ),
                     child: Column(
                       children: [
-                        _qrMetaRow('Merchant', 'YUDDHO SEAVMINH'),
+                        _qrMetaRow('Merchant', 'KNEA YERNG SERVICE CENTER'),
                         const SizedBox(height: 6),
                         _qrMetaRow(
                           'Amount',
@@ -1557,31 +3094,66 @@ class _KhqrPaymentSheetState extends State<_KhqrPaymentSheet> {
                         ),
                         const SizedBox(height: 6),
                         _qrMetaRow(
-                          'Order',
+                          'Reference',
                           '#${widget.transactionId.substring(0, 8)}',
                         ),
                         const SizedBox(height: 6),
-                        _qrMetaRow('Expires In', _expiresCountdown),
+                        _qrMetaRow('Network', 'Bakong KHQR'),
                       ],
                     ),
                   ),
                 ),
-                KhqrCardWidget(
-                  width: 240,
-                  qr: widget.qrString,
-                  receiverName: 'KneaYerng Service Center',
-                  amount: widget.amount,
-                  currency: KhqrCurrency.usd,
-                  duration: const Duration(minutes: 5),
-                  isLoading: false,
-                  isError: false,
+                Stack(
+                  children: [
+                    KhqrCardWidget(
+                      width: 240,
+                      qr: widget.qrString,
+                      receiverName: 'KneaYerng Service Center',
+                      amount: widget.amount,
+                      currency: KhqrCurrency.usd,
+                      duration: null,
+                      isLoading: false,
+                      isError: false,
+                    ),
+                    Positioned.fill(
+                      child: IgnorePointer(
+                        child: Align(
+                          alignment: const Alignment(0, 0.42),
+                          child: Container(
+                            width: 46,
+                            height: 46,
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: const Color(0xFFE2E8F0),
+                                width: 1.5,
+                              ),
+                              boxShadow: const [
+                                BoxShadow(
+                                  color: Color(0x14000000),
+                                  blurRadius: 10,
+                                  offset: Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: Image.asset(
+                              'assets/images/logo_bakong.png',
+                              fit: BoxFit.contain,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
           ),
           const SizedBox(height: 16),
           const Text(
-            'Scan with mobile banking app\nthat supports KHQR',
+            'Scan the KHQR with Bakong or\nany supported banking app',
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 13,
@@ -1797,54 +3369,73 @@ class _KhqrPaymentSheetState extends State<_KhqrPaymentSheet> {
 
   Widget _buildActionButtons() {
     if (_isSuccess) {
+      return Column(
+        children: [
+          if (_shouldOfferPickupTicket) ...[
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: _isOpeningTicket ? null : _openTicketDetail,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF16A34A),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                child: Text(
+                  _isOpeningTicket
+                      ? 'Opening Pickup Ticket...'
+                      : 'View Pickup Ticket',
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+          ],
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF111827),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: const Text(
+                'Done',
+                style: TextStyle(fontWeight: FontWeight.w700),
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
+    if (_isTerminalFailure) {
       return SizedBox(
         width: double.infinity,
-        child: ElevatedButton(
-          onPressed: () => Navigator.of(context).pop(true),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF111827),
-            foregroundColor: Colors.white,
+        child: OutlinedButton(
+          onPressed: () => Navigator.of(context).pop(false),
+          style: OutlinedButton.styleFrom(
             padding: const EdgeInsets.symmetric(vertical: 14),
+            side: const BorderSide(color: Color(0xFFE5E7EB)),
+            foregroundColor: const Color(0xFF111827),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(8),
             ),
           ),
           child: const Text(
-            'Done',
+            'Close',
             style: TextStyle(fontWeight: FontWeight.w700),
           ),
         ),
       );
     }
-
     return const SizedBox.shrink();
   }
-}
-
-class _CheckoutAddress {
-  const _CheckoutAddress({
-    required this.tag,
-    required this.name,
-    required this.phone,
-    required this.line,
-    required this.note,
-  });
-
-  final String tag;
-  final String name;
-  final String phone;
-  final String line;
-  final String note;
-}
-
-class _DeliveryMethod {
-  const _DeliveryMethod({
-    required this.code,
-    required this.title,
-    required this.subtitle,
-  });
-
-  final String code;
-  final String title;
-  final String subtitle;
 }

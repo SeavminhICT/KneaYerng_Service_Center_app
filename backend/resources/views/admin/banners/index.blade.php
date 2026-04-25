@@ -13,13 +13,19 @@
         </div>
 
         <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-            <form id="banner-form" class="flex flex-wrap items-center gap-3">
+            <form id="banner-form" class="grid gap-3 md:grid-cols-2">
                 <label class="flex h-12 w-full max-w-md cursor-pointer items-center justify-between rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-300">
                     <span id="banner-file-name">Choose banner image</span>
                     <input id="banner-image" name="image" type="file" accept="image/*" class="hidden" required />
                     <span class="rounded-lg bg-white px-3 py-1 text-xs font-semibold text-slate-600 shadow-sm dark:bg-slate-800 dark:text-slate-200">Browse</span>
                 </label>
-                <button type="submit" class="inline-flex h-12 items-center rounded-xl bg-primary-600 px-5 text-sm font-semibold text-white shadow-sm">Upload Banner</button>
+                <input id="banner-badge-label" name="badge_label" type="text" placeholder="Badge label (e.g. New Arrival)" class="h-12 rounded-xl border border-slate-200 px-4 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100" />
+                <input id="banner-title" name="title" type="text" placeholder="Banner title" class="h-12 rounded-xl border border-slate-200 px-4 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100" />
+                <input id="banner-cta-label" name="cta_label" type="text" placeholder="CTA label (e.g. Shop Now)" class="h-12 rounded-xl border border-slate-200 px-4 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100" />
+                <textarea id="banner-subtitle" name="subtitle" rows="3" placeholder="Banner subtitle" class="md:col-span-2 rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100"></textarea>
+                <div class="md:col-span-2">
+                    <button type="submit" class="inline-flex h-12 items-center rounded-xl bg-primary-600 px-5 text-sm font-semibold text-white shadow-sm">Upload Banner</button>
+                </div>
             </form>
             <p id="banner-form-message" class="mt-2 text-sm text-slate-500"></p>
             <div id="banner-preview" class="mt-4 hidden">
@@ -53,6 +59,10 @@
             var formMessage = document.getElementById('banner-form-message');
             var previewWrap = document.getElementById('banner-preview');
             var previewImage = document.getElementById('banner-preview-image');
+            var badgeInput = document.getElementById('banner-badge-label');
+            var titleInput = document.getElementById('banner-title');
+            var subtitleInput = document.getElementById('banner-subtitle');
+            var ctaInput = document.getElementById('banner-cta-label');
             var grid = document.getElementById('banner-grid');
             var info = document.getElementById('banner-pagination-info');
             var prevButton = document.getElementById('banner-prev');
@@ -94,6 +104,11 @@
                                 <span>ID: ${banner.id}</span>
                                 <button data-banner-delete="${banner.id}" class="text-xs font-semibold text-danger-600">Delete</button>
                             </div>
+                            <div class="mt-2 space-y-1">
+                                ${banner.badge_label ? `<p class="text-[11px] font-semibold uppercase tracking-wide text-primary-600">${banner.badge_label}</p>` : ''}
+                                ${banner.title ? `<p class="text-sm font-semibold text-slate-900 dark:text-white">${banner.title}</p>` : ''}
+                                ${banner.subtitle ? `<p class="text-xs text-slate-500">${banner.subtitle}</p>` : ''}
+                            </div>
                         </div>
                     `;
                 }).join('') || '<div class="text-sm text-slate-500">No banners yet.</div>';
@@ -116,6 +131,10 @@
                 }
                 var formData = new FormData();
                 formData.append('image', fileInput.files[0]);
+                formData.append('badge_label', badgeInput.value || '');
+                formData.append('title', titleInput.value || '');
+                formData.append('subtitle', subtitleInput.value || '');
+                formData.append('cta_label', ctaInput.value || '');
 
                 formMessage.textContent = 'Uploading...';
                 await window.adminApi.ensureCsrfCookie();

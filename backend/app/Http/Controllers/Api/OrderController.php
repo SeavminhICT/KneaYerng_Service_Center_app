@@ -13,6 +13,10 @@ use App\Models\Payment;
 use App\Models\Part;
 use App\Models\Product;
 use App\Models\VoucherRedemption;
+use App\Services\PickupTicketService;
+use App\Services\OrderPaymentService;
+use App\Services\OrderTrackingService;
+use App\Services\TelegramOrderService;
 use App\Services\VoucherService;
 use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Database\Eloquent\Builder;
@@ -29,12 +33,36 @@ class OrderController extends Controller
     {
         $query = Order::query();
         $this->applyOrderFilters($request, $query);
+        $query->with(['assignedStaff']);
         $query->orderByDesc('placed_at')->orderByDesc('id');
 
         $perPage = (int) $request->input('per_page', 10);
         $perPage = max(1, min(50, $perPage));
 
         $orders = $query->paginate($perPage)->withQueryString();
+
+        return OrderResource::collection($orders);
+    }
+
+    public function myTickets(Request $request)
+    {
+        $actor = $request->user() ?? $request->user('sanctum');
+        if (! $actor) {
+            return response()->json(['message' => 'Unauthorized.'], 401);
+        }
+
+        $query = Order::query()
+            ->where('user_id', $actor->id)
+            ->where('order_type', 'pickup')
+            ->whereNotNull('pickup_qr_token');
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->string('status'));
+        }
+
+        $query->orderByDesc('placed_at')->orderByDesc('id');
+
+        $orders = $query->with(['items'])->get();
 
         return OrderResource::collection($orders);
     }
@@ -171,14 +199,19 @@ class OrderController extends Controller
             $validated['payment_status'] ?? null,
             $paymentMethod
         );
-        $status = $validated['status'] ?? 'pending';
+        $status = $validated['status'] ?? ($orderType === 'delivery'
+            ? OrderTrackingService::STATUS_CREATED
+            : 'pending');
         $deliveryAddress = $orderType === 'delivery' ? ($validated['delivery_address'] ?? null) : null;
         $deliveryPhone = $orderType === 'delivery' ? ($validated['delivery_phone'] ?? null) : null;
         $deliveryNote = $orderType === 'delivery' ? ($validated['delivery_note'] ?? null) : null;
+        $deliveryLat = $orderType === 'delivery' ? ($validated['delivery_lat'] ?? null) : null;
+        $deliveryLng = $orderType === 'delivery' ? ($validated['delivery_lng'] ?? null) : null;
 
         $order = Order::create([
             'order_number' => $orderNumber,
             'user_id' => $resolvedUserId,
+            'assigned_staff_id' => $validated['assigned_staff_id'] ?? null,
             'customer_name' => $validated['customer_name'],
             'customer_email' => $validated['customer_email'] ?? null,
             'order_type' => $orderType,
@@ -186,6 +219,8 @@ class OrderController extends Controller
             'delivery_address' => $deliveryAddress,
             'delivery_phone' => $deliveryPhone,
             'delivery_note' => $deliveryNote,
+            'delivery_lat' => $deliveryLat,
+            'delivery_lng' => $deliveryLng,
             'subtotal' => $subtotal,
             'delivery_fee' => $deliveryFee,
             'voucher_id' => $voucher?->id,
@@ -196,6 +231,7 @@ class OrderController extends Controller
             'total_amount' => $totalAmount,
             'payment_status' => $orderPaymentStatus,
             'status' => $status,
+            'current_status_at' => now(),
             'placed_at' => $validated['placed_at'] ?? now(),
         ]);
 
@@ -241,7 +277,27 @@ class OrderController extends Controller
             ]);
         }
 
-        return new OrderResource($order->load(['items', 'payments']));
+        if ($orderPaymentStatus === 'paid') {
+            app(OrderPaymentService::class)->markOrderPaid($order, $paymentMethod, [
+                'status' => $paymentStatus ?? 'success',
+                'amount' => $totalAmount,
+            ]);
+        }
+
+        if ($orderType === 'delivery') {
+            app(OrderTrackingService::class)->bootstrapDeliveryOrder($order, $actor);
+        }
+
+        return new OrderResource($order->load([
+            'items',
+            'payments',
+            'assignedStaff',
+            'approver',
+            'rejector',
+            'canceller',
+            'trackingHistories.actor',
+            'trackingHistories.assignedStaff',
+        ]));
     }
 
     public function show(Request $request, Order $order)
@@ -249,16 +305,29 @@ class OrderController extends Controller
         $actor = $request->user() ?? $request->user('sanctum');
 
         if ($actor && method_exists($actor, 'isAdmin') && ! $actor->isAdmin()) {
-            if ((int) $order->user_id !== (int) $actor->id) {
+            if (
+                (! method_exists($actor, 'isStaff') || ! $actor->isStaff() || (int) $order->assigned_staff_id !== (int) $actor->id) &&
+                (int) $order->user_id !== (int) $actor->id
+            ) {
                 return response()->json(['message' => 'Forbidden.'], 403);
             }
         }
 
-        return new OrderResource($order->load(['items', 'payments']));
+        return new OrderResource($order->load([
+            'items',
+            'payments',
+            'assignedStaff',
+            'approver',
+            'rejector',
+            'canceller',
+            'trackingHistories.actor',
+            'trackingHistories.assignedStaff',
+        ]));
     }
 
     public function update(UpdateOrderRequest $request, Order $order)
     {
+        $previousPaymentStatus = $order->payment_status;
         $validated = $request->validated();
         $paymentMethod = $validated['payment_method'] ?? ($order->payment_method ?? 'cod');
         $orderType = $validated['order_type'] ?? ($order->order_type ?? 'pickup');
@@ -303,11 +372,19 @@ class OrderController extends Controller
         $deliveryNote = array_key_exists('delivery_note', $validated)
             ? $validated['delivery_note']
             : $order->delivery_note;
+        $deliveryLat = array_key_exists('delivery_lat', $validated)
+            ? $validated['delivery_lat']
+            : $order->delivery_lat;
+        $deliveryLng = array_key_exists('delivery_lng', $validated)
+            ? $validated['delivery_lng']
+            : $order->delivery_lng;
 
         if ($orderType !== 'delivery') {
             $deliveryAddress = null;
             $deliveryPhone = null;
             $deliveryNote = null;
+            $deliveryLat = null;
+            $deliveryLng = null;
         }
 
         try {
@@ -324,7 +401,9 @@ class OrderController extends Controller
                 $status,
                 $deliveryAddress,
                 $deliveryPhone,
-                $deliveryNote
+                $deliveryNote,
+                $deliveryLat,
+                $deliveryLng
             ) {
                 $order->fill(collect($validated)->except(['items', 'payment_status', 'status', 'delivery_fee'])->toArray());
 
@@ -354,6 +433,8 @@ class OrderController extends Controller
                 $order->delivery_address = $deliveryAddress;
                 $order->delivery_phone = $deliveryPhone;
                 $order->delivery_note = $deliveryNote;
+                $order->delivery_lat = $deliveryLat;
+                $order->delivery_lng = $deliveryLng;
                 $order->subtotal = $subtotal;
                 $order->delivery_fee = $deliveryFee;
                 $discountAmount = min((float) ($order->discount_amount ?? 0), $subtotal);
@@ -362,7 +443,10 @@ class OrderController extends Controller
                 $order->payment_method = $paymentMethod;
                 $order->payment_status = $orderPaymentStatus;
 
-                if ($status === 'completed' && $order->status !== 'completed') {
+                if (
+                    in_array($status, ['completed', 'delivered'], true) &&
+                    ! in_array($order->status, ['completed', 'delivered'], true)
+                ) {
                     $this->deductInventoryForOrder($order);
                 }
 
@@ -375,6 +459,12 @@ class OrderController extends Controller
             });
         } catch (\RuntimeException $exception) {
             return response()->json(['message' => $exception->getMessage()], 422);
+        }
+
+        if ($previousPaymentStatus !== 'paid' && $order->payment_status === 'paid') {
+            app(OrderPaymentService::class)->markOrderPaid($order, $order->payment_method, [
+                'amount' => (float) $order->total_amount,
+            ]);
         }
 
         return new OrderResource($order->load(['items', 'payments']));
@@ -393,32 +483,65 @@ class OrderController extends Controller
             return response()->json(['message' => 'QR is only available for pickup orders.'], 422);
         }
 
-        $payload = [
-            'order_id' => $order->id,
-            'nonce' => Str::random(16),
-            'expires_at' => now()->addHours(24)->timestamp,
-        ];
+        if ($order->payment_status !== 'paid') {
+            return response()->json(['message' => 'Payment is not confirmed.'], 422);
+        }
 
-        $token = Crypt::encryptString(json_encode($payload));
-
-        $order->pickup_qr_token = $token;
-        $order->pickup_qr_generated_at = now();
-        $order->save();
+        try {
+            $ticket = app(PickupTicketService::class)->issueForOrder($order);
+        } catch (\RuntimeException $exception) {
+            return response()->json(['message' => $exception->getMessage()], 422);
+        }
 
         return response()->json([
             'order_id' => $order->id,
-            'token' => $token,
+            'ticket_id' => $ticket['ticket_id'],
+            'token' => $ticket['token'],
+            'issued_at' => $ticket['issued_at']?->toISOString(),
+            'expires_at' => $ticket['expires_at']?->toISOString(),
         ]);
     }
 
     public function verifyPickupQr(Request $request)
     {
         $validated = $request->validate([
-            'token' => ['required', 'string'],
+            'token' => ['nullable', 'string'],
+            'ticket_id' => ['nullable', 'string'],
         ]);
 
+        $token = $validated['token'] ?? null;
+        $ticketId = $validated['ticket_id'] ?? null;
+
+        if (! $token && ! $ticketId) {
+            return response()->json(['message' => 'QR token or ticket id is required.'], 422);
+        }
+
+        $orderFromTicket = null;
+        if (! $token && $ticketId) {
+            $ticketId = trim($ticketId);
+            if ($ticketId === '') {
+                return response()->json(['message' => 'Ticket id is required.'], 422);
+            }
+            if (str_starts_with($ticketId, 'TCK-')) {
+                $ticketId = substr($ticketId, 4);
+            }
+            if (is_numeric($ticketId)) {
+                $orderFromTicket = Order::find((int) $ticketId);
+            } else {
+                $orderFromTicket = Order::where('order_number', $ticketId)->first();
+            }
+
+            if (! $orderFromTicket) {
+                return response()->json(['message' => 'Ticket not found.'], 404);
+            }
+            if (! $orderFromTicket->pickup_qr_token) {
+                return response()->json(['message' => 'Ticket QR not issued.'], 422);
+            }
+            $token = $orderFromTicket->pickup_qr_token;
+        }
+
         try {
-            $decoded = json_decode(Crypt::decryptString($validated['token']), true);
+            $decoded = json_decode(Crypt::decryptString($token), true);
         } catch (DecryptException $exception) {
             return response()->json(['message' => 'Invalid QR token.'], 422);
         }
@@ -432,12 +555,15 @@ class OrderController extends Controller
         }
 
         $order = Order::find($decoded['order_id']);
+        if ($orderFromTicket && (int) $orderFromTicket->id !== (int) $order->id) {
+            return response()->json(['message' => 'Ticket does not match order.'], 422);
+        }
 
         if (! $order || $order->order_type !== 'pickup') {
             return response()->json(['message' => 'Order not eligible for pickup.'], 422);
         }
 
-        if ($order->pickup_qr_token !== $validated['token']) {
+        if ($order->pickup_qr_token !== $token) {
             return response()->json(['message' => 'QR token mismatch.'], 422);
         }
 
@@ -445,10 +571,19 @@ class OrderController extends Controller
             return response()->json(['message' => 'Order already completed.'], 422);
         }
 
+        if ($order->payment_status !== 'paid') {
+            return response()->json(['message' => 'Payment not confirmed.'], 422);
+        }
+
+        $actor = $request->user() ?? $request->user('sanctum');
+
         try {
-            DB::transaction(function () use ($order) {
+            DB::transaction(function () use ($order, $actor) {
                 $order->status = 'completed';
                 $order->pickup_verified_at = now();
+                if ($actor) {
+                    $order->pickup_verified_by = $actor->id;
+                }
 
                 if (in_array($order->payment_method, ['cod', 'cash'], true) && $order->payment_status !== 'paid') {
                     $order->payment_status = 'paid';
@@ -462,7 +597,7 @@ class OrderController extends Controller
             return response()->json(['message' => $exception->getMessage()], 422);
         }
 
-        return new OrderResource($order->load(['items', 'payments']));
+        return new OrderResource($order->load(['items', 'payments', 'pickupVerifier']));
     }
 
     private function normalizeOrderItems(array $items): array
@@ -670,7 +805,15 @@ class OrderController extends Controller
 
     private function generateOrderNumber(): string
     {
-        return 'ORD-'.Str::upper(Str::random(6));
+        $prefix = 'KYAPP00'.now()->format('ymd');
+        for ($attempt = 0; $attempt < 5; $attempt++) {
+            $candidate = $prefix.Str::upper(Str::random(4));
+            if (! Order::where('order_number', $candidate)->exists()) {
+                return $candidate;
+            }
+        }
+
+        return $prefix.Str::upper(Str::random(6));
     }
 
     private function resolveUserId($actor, array $validated): ?int
@@ -744,11 +887,15 @@ class OrderController extends Controller
     private function applyOrderFilters(Request $request, Builder $query): void
     {
         if ($request->filled('q')) {
-            $q = $request->string('q');
+            $q = (string) $request->string('q');
             $query->where(function ($builder) use ($q) {
                 $builder->where('order_number', 'like', "%{$q}%")
                     ->orWhere('customer_name', 'like', "%{$q}%")
                     ->orWhere('customer_email', 'like', "%{$q}%");
+
+                if (is_numeric($q)) {
+                    $builder->orWhere('id', (int) $q);
+                }
             });
         }
 
@@ -766,6 +913,30 @@ class OrderController extends Controller
 
         if ($request->filled('order_type')) {
             $query->where('order_type', $request->string('order_type'));
+        }
+
+        if ($request->filled('from_date')) {
+            $fromRaw = (string) $request->input('from_date');
+            try {
+                $fromDate = \Illuminate\Support\Carbon::parse($fromRaw);
+                $query->where(function ($builder) use ($fromDate) {
+                    $builder->whereDate('placed_at', '>=', $fromDate)
+                        ->orWhereDate('created_at', '>=', $fromDate);
+                });
+            } catch (\Throwable $exception) {
+            }
+        }
+
+        if ($request->filled('to_date')) {
+            $toRaw = (string) $request->input('to_date');
+            try {
+                $toDate = \Illuminate\Support\Carbon::parse($toRaw);
+                $query->where(function ($builder) use ($toDate) {
+                    $builder->whereDate('placed_at', '<=', $toDate)
+                        ->orWhereDate('created_at', '<=', $toDate);
+                });
+            } catch (\Throwable $exception) {
+            }
         }
     }
 

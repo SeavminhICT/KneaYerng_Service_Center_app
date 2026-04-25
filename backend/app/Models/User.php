@@ -113,9 +113,34 @@ class User extends Authenticatable
         return $this->hasMany(Order::class);
     }
 
+    public function assignedOrders()
+    {
+        return $this->hasMany(Order::class, 'assigned_staff_id');
+    }
+
+    public function orderTrackingNotifications()
+    {
+        return $this->hasMany(OrderTrackingNotification::class);
+    }
+
+    public function mobileDeviceTokens()
+    {
+        return $this->hasMany(MobileDeviceToken::class);
+    }
+
     public function repairNotifications()
     {
         return $this->hasMany(RepairNotification::class);
+    }
+
+    public function supportConversations()
+    {
+        return $this->hasMany(SupportConversation::class, 'customer_id');
+    }
+
+    public function assignedSupportConversations()
+    {
+        return $this->hasMany(SupportConversation::class, 'assigned_to');
     }
 
     public function isAdmin(): bool
@@ -125,5 +150,10 @@ class User extends Authenticatable
         $isAdmin = (bool) ($this->is_admin ?? false);
 
         return in_array($this->email, $adminEmails, true) || $role === 'admin' || $isAdmin;
+    }
+
+    public function isStaff(): bool
+    {
+        return in_array($this->role, ['staff', 'technician'], true);
     }
 }

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "270800963781",
+    "project_id": "otpappkneayerng",
+    "storage_bucket": "otpappkneayerng.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:270800963781:android:7b4f45a6e531c6a5c708ac",
+        "android_client_info": {
+          "package_name": "com.kneayerng.app_ky_service_center"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC7I5_c3f8SYQWIgvF6V_wD2j9u_SKavZM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

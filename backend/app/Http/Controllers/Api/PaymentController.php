@@ -7,6 +7,7 @@ use App\Http\Resources\PaymentResource;
 use App\Models\KhqrTransaction;
 use App\Models\Order;
 use App\Models\Payment;
+use App\Services\OrderPaymentService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
@@ -134,16 +135,22 @@ class PaymentController extends Controller
 
         $order = Order::find($validated['order_id']);
 
-        if ($order) {
-            $order->payment_status = $this->mapPaymentStatusToOrderStatus($payment->status);
-            $order->save();
-        }
-
         if ($payment->status === 'success') {
+            if ($order) {
+                app(OrderPaymentService::class)->markOrderPaid($order, $payment->method, [
+                    'transaction_id' => $payment->transaction_id,
+                    'provider' => $payment->provider,
+                    'amount' => (float) $payment->amount,
+                    'paid_at' => $payment->paid_at ?? now(),
+                ]);
+            }
             Log::info('Payment pushed to payments system.', [
                 'payment_id' => $payment->id,
                 'order_id' => $payment->order_id,
             ]);
+        } elseif ($order) {
+            $order->payment_status = $this->mapPaymentStatusToOrderStatus($payment->status);
+            $order->save();
         }
 
         return response()->json([

@@ -92,8 +92,12 @@ class OtpService
             ]);
         });
 
-        $message = sprintf('Your OTP code is %s. It expires in %d minutes.', $otpCode, (int) ceil($ttl / 60));
-        $sent = $this->delivery->send($destinationType, $destination, $message);
+        $expiresMinutes = (int) ceil($ttl / 60);
+        $message = sprintf('Your OTP code is %s. It expires in %d minutes.', $otpCode, $expiresMinutes);
+        $sent = $this->delivery->send($destinationType, $destination, $message, [
+            'code' => $otpCode,
+            'expires_minutes' => $expiresMinutes,
+        ]);
 
         return [
             'ok' => $sent,
@@ -177,8 +181,16 @@ class OtpService
         }
 
         $digits = preg_replace('/\D+/', '', $raw) ?? '';
+        if ($digits === '') {
+            return '';
+        }
+
         if (str_starts_with($digits, '00')) {
             $digits = substr($digits, 2);
+        } elseif (! str_starts_with($raw, '+') && str_starts_with($digits, '0')) {
+            $country = preg_replace('/\D+/', '', (string) config('otp.default_phone_country_code', '+855')) ?? '';
+            $local = ltrim($digits, '0');
+            $digits = $country.($local !== '' ? $local : '');
         }
 
         return $digits;

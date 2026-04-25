@@ -1,4 +1,4 @@
-﻿@extends('layouts.admin')
+@extends('layouts.admin')
 
 @section('title', 'Orders')
 @section('page-title', 'Orders')
@@ -40,6 +40,8 @@
                 </div>
             </div>
         </div>
+
+
         <div class="flex flex-wrap items-center justify-between gap-4">
             <div>
                 <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Order List</h2>
@@ -55,10 +57,22 @@
                 <div class="flex flex-wrap items-center gap-3">
                     <select id="order-status-filter" class="h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-600 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300">
                         <option>All statuses</option>
-                        <option>Pending</option>
+                        <option>Created</option>
+                        <option>Pending Approval</option>
+                        <option>Approved</option>
+                        <option>Assigned</option>
+                        <option>In Progress</option>
+                        <option>On The Way</option>
+                        <option>Arrived</option>
                         <option>Processing</option>
                         <option>Completed</option>
                         <option>Cancelled</option>
+                        <option>Rejected</option>
+                    </select>
+                    <select id="order-type-filter" class="h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-600 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300">
+                        <option>All types</option>
+                        <option value="pickup">Pickup</option>
+                        <option value="delivery">Delivery</option>
                     </select>
                     <select id="order-payment-filter" class="h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-600 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300">
                         <option>Payment</option>
@@ -66,6 +80,8 @@
                         <option>Unpaid</option>
                         <option>Refunded</option>
                     </select>
+                    <input id="order-from-date" type="date" class="h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-600 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300" />
+                    <input id="order-to-date" type="date" class="h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-600 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300" />
                 </div>
                 <div class="relative">
                     <input id="order-search" type="text" placeholder="Search orders" class="h-10 w-60 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700 placeholder:text-slate-400 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200" />
@@ -123,12 +139,16 @@
         </div>
     </div>
 
+
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             var currentPage = 1;
             var searchInput = document.getElementById('order-search');
             var statusFilter = document.getElementById('order-status-filter');
+            var orderTypeFilter = document.getElementById('order-type-filter');
             var paymentFilter = document.getElementById('order-payment-filter');
+            var orderFromDate = document.getElementById('order-from-date');
+            var orderToDate = document.getElementById('order-to-date');
             var prevButton = document.getElementById('order-prev');
             var nextButton = document.getElementById('order-next');
             var info = document.getElementById('order-pagination-info');
@@ -156,8 +176,38 @@
                 }
             };
 
+
             function mapStatus(value) {
-                return (value || '').toLowerCase();
+                return (value || '').toLowerCase().replace(/\s+/g, '_');
+            }
+
+            function formatStatusLabel(status) {
+                if (!status) {
+                    return '--';
+                }
+
+                var normalized = String(status).toLowerCase();
+                var labels = {
+                    created: 'Created',
+                    pending_approval: 'Pending Approval',
+                    approved: 'Approved',
+                    assigned: 'Assigned',
+                    in_progress: 'In Progress',
+                    on_the_way: 'On the Way',
+                    arrived: 'Arrived',
+                    completed: 'Completed',
+                    cancelled: 'Cancelled',
+                    rejected: 'Rejected',
+                    processing: 'Processing',
+                    pending: 'Pending',
+                    ready: 'Ready',
+                    out_for_delivery: 'Out for Delivery',
+                    delivered: 'Delivered'
+                };
+
+                return labels[normalized] || normalized.split('_').map(function (part) {
+                    return part.charAt(0).toUpperCase() + part.slice(1);
+                }).join(' ');
             }
 
             function buildOrderQuery() {
@@ -170,6 +220,15 @@
                 }
                 if (mapStatus(paymentFilter.value) && mapStatus(paymentFilter.value) !== 'payment') {
                     query.set('payment_status', mapStatus(paymentFilter.value));
+                }
+                if (orderTypeFilter && orderTypeFilter.value && orderTypeFilter.value !== 'All types') {
+                    query.set('order_type', orderTypeFilter.value);
+                }
+                if (orderFromDate && orderFromDate.value) {
+                    query.set('from_date', orderFromDate.value);
+                }
+                if (orderToDate && orderToDate.value) {
+                    query.set('to_date', orderToDate.value);
                 }
                 return query;
             }
@@ -226,6 +285,310 @@
                 });
             }
 
+            function normalizeTicketStatus(order) {
+                if (!order) {
+                    return 'invalid';
+                }
+                return (order.pickup_ticket_status || (order.pickup_verified_at ? 'used' : 'active') || 'active').toLowerCase();
+            }
+
+            function setPickupStatusBadge(status) {
+                if (!pickupTicketStatus) {
+                    return;
+                }
+                var label = status ? status.toUpperCase() : '--';
+                pickupTicketStatus.textContent = label;
+                var base = 'rounded-full px-3 py-1 text-xs font-semibold ';
+                if (status === 'active') {
+                    pickupTicketStatus.className = base + 'bg-primary-50 text-primary-700 dark:bg-primary-500/10 dark:text-primary-100';
+                } else if (status === 'used' || status === 'completed') {
+                    pickupTicketStatus.className = base + 'bg-success-50 text-success-700 dark:bg-success-500/10 dark:text-success-100';
+                } else if (status === 'expired') {
+                    pickupTicketStatus.className = base + 'bg-danger-50 text-danger-700 dark:bg-danger-500/10 dark:text-danger-100';
+                } else {
+                    pickupTicketStatus.className = base + 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-200';
+                }
+            }
+
+            function renderPickupOrder(order, note) {
+                if (!order) {
+                    pickupOrderTitle.textContent = note || 'No order selected.';
+                    pickupOrderCustomer.textContent = '--';
+                    pickupOrderPayment.textContent = '--';
+                    pickupOrderStatus.textContent = '--';
+                    pickupOrderVerified.textContent = '--';
+                    pickupOrderVerifiedBy.textContent = '--';
+                    setPickupStatusBadge('--');
+                    return;
+                }
+
+                var orderLabel = order.order_number || ('Order #' + order.id);
+                pickupOrderTitle.textContent = orderLabel;
+                pickupOrderCustomer.textContent = order.customer_name || '--';
+                pickupOrderPayment.textContent = order.payment_status || '--';
+                pickupOrderStatus.textContent = order.status || '--';
+                pickupOrderVerified.textContent = order.pickup_verified_at ? new Date(order.pickup_verified_at).toLocaleString() : 'Not verified';
+                pickupOrderVerifiedBy.textContent = order.pickup_verified_by_name || '--';
+                setPickupStatusBadge(normalizeTicketStatus(order));
+            }
+
+            async function verifyPickupToken() {
+                var token = pickupQrInput.value.trim();
+                if (!token) {
+                    pickupQrStatus.textContent = 'Please scan or paste a QR token.';
+                    return;
+                }
+                pickupQrStatus.textContent = 'Verifying ticket...';
+                pickupQrVerify.disabled = true;
+                try {
+                    await window.adminApi.ensureCsrfCookie();
+                    var response = await window.adminApi.request('/api/admin/orders/verify-qr', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ token: token })
+                    });
+                    var payload = await response.json();
+                    if (!response.ok) {
+                        pickupQrStatus.textContent = payload && payload.message ? payload.message : 'Invalid ticket.';
+                        renderPickupOrder(null, pickupQrStatus.textContent);
+                        return;
+                    }
+                    var order = payload.data || payload;
+                    pickupQrStatus.textContent = 'Ticket verified and marked completed.';
+                    renderPickupOrder(order);
+                    refreshListAndSummary();
+                } catch (error) {
+                    pickupQrStatus.textContent = 'Verification failed.';
+                    renderPickupOrder(null, pickupQrStatus.textContent);
+                    console.error(error);
+                } finally {
+                    pickupQrVerify.disabled = false;
+                }
+            }
+
+            function scheduleAutoVerifyToken() {
+                if (!pickupQrInput) {
+                    return;
+                }
+                var token = pickupQrInput.value.trim();
+                if (!token || token === pickupQrLastToken) {
+                    return;
+                }
+                if (pickupQrAutoTimer) {
+                    clearTimeout(pickupQrAutoTimer);
+                }
+                pickupQrAutoTimer = setTimeout(function () {
+                    pickupQrLastToken = token;
+                    verifyPickupToken();
+                }, 400);
+            }
+
+            async function verifyPickupTicketId() {
+                var ticketId = pickupTicketIdInput.value.trim();
+                if (!ticketId) {
+                    pickupQrStatus.textContent = 'Please enter a ticket ID.';
+                    return;
+                }
+                pickupQrStatus.textContent = 'Verifying ticket...';
+                pickupTicketIdVerify.disabled = true;
+                try {
+                    await window.adminApi.ensureCsrfCookie();
+                    var response = await window.adminApi.request('/api/admin/orders/verify-qr', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ ticket_id: ticketId })
+                    });
+                    var payload = await response.json();
+                    if (!response.ok) {
+                        pickupQrStatus.textContent = payload && payload.message ? payload.message : 'Invalid ticket.';
+                        renderPickupOrder(null, pickupQrStatus.textContent);
+                        return;
+                    }
+                    var order = payload.data || payload;
+                    pickupQrStatus.textContent = 'Ticket verified and marked completed.';
+                    renderPickupOrder(order);
+                    refreshListAndSummary();
+                } catch (error) {
+                    pickupQrStatus.textContent = 'Verification failed.';
+                    renderPickupOrder(null, pickupQrStatus.textContent);
+                    console.error(error);
+                } finally {
+                    pickupTicketIdVerify.disabled = false;
+                }
+            }
+
+            function scheduleAutoVerifyTicketId() {
+                if (!pickupTicketIdInput) {
+                    return;
+                }
+                var ticketId = pickupTicketIdInput.value.trim();
+                if (!ticketId || ticketId === pickupTicketLastId) {
+                    return;
+                }
+                if (pickupTicketAutoTimer) {
+                    clearTimeout(pickupTicketAutoTimer);
+                }
+                pickupTicketAutoTimer = setTimeout(function () {
+                    pickupTicketLastId = ticketId;
+                    verifyPickupTicketId();
+                }, 400);
+            }
+
+            async function startPickupQrCamera() {
+                if (!pickupQrReader) {
+                    return;
+                }
+                if (!window.Html5Qrcode) {
+                    pickupQrStatus.textContent = 'QR scanner library not available.';
+                    return;
+                }
+                if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                    pickupQrStatus.textContent = 'Camera not supported on this device.';
+                    return;
+                }
+                try {
+                    pickupQrScanner = pickupQrScanner || new Html5Qrcode('pickup-qr-reader');
+                    var cameras = await Html5Qrcode.getCameras();
+                    if (!cameras || cameras.length === 0) {
+                        pickupQrStatus.textContent = 'No camera found.';
+                        return;
+                    }
+                    pickupQrCameras = cameras;
+                    renderCameraOptions();
+                    pickupQrStatus.textContent = 'Camera ready. Scan the QR code.';
+                    pickupQrCameraWrap.classList.remove('hidden');
+                    pickupQrCameraButton.textContent = 'Stop Camera';
+                    pickupQrActive = true;
+
+                    var cameraId = getSelectedCameraId() || cameras[cameras.length - 1].id;
+                    await pickupQrScanner.start(
+                        { deviceId: { exact: cameraId } },
+                        { fps: 10, qrbox: 280 },
+                        function (decodedText) {
+                            pickupQrInput.value = decodedText;
+                            pickupQrStatus.textContent = 'QR scanned. Verifying...';
+                            stopPickupQrCamera();
+                            verifyPickupToken();
+                        }
+                    );
+                } catch (error) {
+                    pickupQrStatus.textContent = 'Unable to access camera.';
+                    console.error(error);
+                }
+            }
+
+            function getSelectedCameraId() {
+                if (!pickupQrCameraSelect) {
+                    return null;
+                }
+                var value = pickupQrCameraSelect.value;
+                return value ? value : null;
+            }
+
+            function findCamoCameraId() {
+                if (!pickupQrCameras || !pickupQrCameras.length) {
+                    return null;
+                }
+                var camo = pickupQrCameras.find(function (camera) {
+                    return (camera.label || '').toLowerCase().includes('camo');
+                });
+                return camo ? camo.id : null;
+            }
+
+            function renderCameraOptions() {
+                if (!pickupQrCameraSelect) {
+                    return;
+                }
+                var current = pickupQrCameraSelect.value;
+                pickupQrCameraSelect.innerHTML = '<option value=\"\">Select camera</option>';
+                pickupQrCameras.forEach(function (camera) {
+                    var option = document.createElement('option');
+                    option.value = camera.id;
+                    option.textContent = camera.label || ('Camera ' + camera.id);
+                    pickupQrCameraSelect.appendChild(option);
+                });
+                if (pickupQrCameras.length <= 1) {
+                    pickupQrCameraSelect.classList.add('hidden');
+                    pickupQrCameraRefresh.classList.add('hidden');
+                    if (pickupQrCameraSingle) {
+                        pickupQrCameraSingle.classList.remove('hidden');
+                        pickupQrCameraSingle.textContent = pickupQrCameras.length
+                            ? (pickupQrCameras[0].label || 'Camera ready')
+                            : 'No camera found';
+                    }
+                } else {
+                    pickupQrCameraSelect.classList.remove('hidden');
+                    pickupQrCameraRefresh.classList.remove('hidden');
+                    if (pickupQrCameraSingle) {
+                        pickupQrCameraSingle.classList.add('hidden');
+                    }
+                }
+                var camoId = findCamoCameraId();
+                if (camoId) {
+                    pickupQrCameraSelect.value = camoId;
+                } else if (current && pickupQrCameras.some(function (camera) { return camera.id === current; })) {
+                    pickupQrCameraSelect.value = current;
+                } else if (pickupQrCameras.length) {
+                    pickupQrCameraSelect.value = pickupQrCameras[pickupQrCameras.length - 1].id;
+                }
+            }
+
+            function stopPickupQrCamera() {
+                if (!pickupQrScanner) {
+                    pickupQrCameraWrap.classList.add('hidden');
+                    pickupQrCameraButton.textContent = 'Open Camera';
+                    pickupQrActive = false;
+                    return;
+                }
+                pickupQrScanner.stop().then(function () {
+                    pickupQrScanner.clear();
+                    pickupQrCameraWrap.classList.add('hidden');
+                    pickupQrCameraButton.textContent = 'Open Camera';
+                    pickupQrActive = false;
+                }).catch(function (error) {
+                    pickupQrCameraWrap.classList.add('hidden');
+                    pickupQrCameraButton.textContent = 'Open Camera';
+                    pickupQrActive = false;
+                    console.error(error);
+                });
+            }
+
+            async function searchPickupOrder() {
+                var value = pickupOrderSearchInput.value.trim();
+                if (!value) {
+                    renderPickupOrder(null, 'Enter an order id or number to search.');
+                    return;
+                }
+                try {
+                    await window.adminApi.ensureCsrfCookie();
+                    var response;
+                    if (/^\\d+$/.test(value)) {
+                        response = await window.adminApi.request('/api/orders/' + value);
+                    } else {
+                        response = await window.adminApi.request('/api/orders?q=' + encodeURIComponent(value));
+                    }
+                    if (!response.ok) {
+                        renderPickupOrder(null, 'Order not found.');
+                        return;
+                    }
+                    var payload = await response.json();
+                    var order = payload.data || payload;
+                    if (Array.isArray(order)) {
+                        order = order.length ? order[0] : null;
+                    } else if (payload.data && Array.isArray(payload.data)) {
+                        order = payload.data.length ? payload.data[0] : null;
+                    }
+                    if (!order) {
+                        renderPickupOrder(null, 'Order not found.');
+                        return;
+                    }
+                    renderPickupOrder(order);
+                } catch (error) {
+                    renderPickupOrder(null, 'Unable to fetch order.');
+                    console.error(error);
+                }
+            }
+
             async function loadOrders() {
                 await window.adminApi.ensureCsrfCookie();
                 var query = buildOrderQuery();
@@ -247,7 +610,7 @@
                             <td class="px-4 py-3">${(order.placed_at || order.created_at) ? new Date(order.placed_at || order.created_at).toLocaleDateString() : '-'}</td>
                             <td class="px-4 py-3">${currencyFormatter.format(order.total_amount || 0)}</td>
                             <td class="px-4 py-3">${order.payment_status}</td>
-                            <td class="px-4 py-3">${order.status}</td>
+                            <td class="px-4 py-3">${formatStatusLabel(order.status)}</td>
                             <td class="px-4 py-3 text-right"><a href="/admin/orders/${order.id}" class="text-xs font-semibold text-primary-600">Details</a></td>
                         </tr>
                     `;
@@ -303,9 +666,24 @@
             statusFilter.addEventListener('change', function () {
                 refreshListAndSummary();
             });
+            if (orderTypeFilter) {
+                orderTypeFilter.addEventListener('change', function () {
+                    refreshListAndSummary();
+                });
+            }
             paymentFilter.addEventListener('change', function () {
                 refreshListAndSummary();
             });
+            if (orderFromDate) {
+                orderFromDate.addEventListener('change', function () {
+                    refreshListAndSummary();
+                });
+            }
+            if (orderToDate) {
+                orderToDate.addEventListener('change', function () {
+                    refreshListAndSummary();
+                });
+            }
             prevButton.addEventListener('click', function () {
                 if (currentPage > 1) {
                     currentPage -= 1;
@@ -326,6 +704,8 @@
                     window.location.href = url;
                 });
             }
+
+
 
             loadOrders();
             loadShiftSummary();

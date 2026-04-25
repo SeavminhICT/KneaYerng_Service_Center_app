@@ -14,6 +14,10 @@ class BannerResource extends JsonResource
         return [
             'id' => $this->id,
             'image' => $this->formatMediaUrl($this->image, $baseUrl),
+            'badge_label' => $this->badge_label,
+            'title' => $this->title,
+            'subtitle' => $this->subtitle,
+            'cta_label' => $this->cta_label,
             'created_at' => $this->created_at?->toISOString(),
         ];
     }

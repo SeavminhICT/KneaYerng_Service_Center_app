@@ -211,18 +211,26 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
                 child: CircleAvatar(
                   radius: 26,
                   backgroundColor: accent,
-                  backgroundImage:
-                      avatarUrl != null ? NetworkImage(avatarUrl) : null,
-                  child: avatarUrl == null
-                      ? Text(
-                          initials,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 20,
-                            fontWeight: FontWeight.w700,
+                  child: ClipOval(
+                    child: SizedBox.expand(
+                      child: _buildAvatarImage(
+                        avatarUrl: avatarUrl,
+                        accent: accent,
+                        fallback: Container(
+                          color: accent,
+                          alignment: Alignment.center,
+                          child: Text(
+                            initials,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 20,
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
-                        )
-                      : null,
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
               ),
               Positioned(
@@ -341,6 +349,40 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
     );
   }
 
+  Widget _buildAvatarImage({
+    required String? avatarUrl,
+    required Color accent,
+    required Widget fallback,
+  }) {
+    final normalizedUrl = avatarUrl?.trim();
+    if (normalizedUrl == null || normalizedUrl.isEmpty) {
+      return fallback;
+    }
+
+    return Image.network(
+      normalizedUrl,
+      fit: BoxFit.cover,
+      errorBuilder: (context, error, stackTrace) => fallback,
+      loadingBuilder: (context, child, progress) {
+        if (progress == null) return child;
+        return Container(
+          color: accent,
+          alignment: Alignment.center,
+          child: SizedBox(
+            height: 18,
+            width: 18,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              valueColor: AlwaysStoppedAnimation<Color>(
+                Colors.white.withAlpha((0.9 * 255).round()),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   // Field for regular text
   Widget _field(
     String label,
@@ -406,6 +448,109 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
     );
   }
 
+  Future<void> _showSuccessDialog({
+    required String title,
+    required String message,
+  }) {
+    const accent = Color(0xFF1E5EFF);
+    return showDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      builder: (dialogContext) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(22, 24, 22, 20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(28),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x1A0F172A),
+                  blurRadius: 30,
+                  offset: Offset(0, 16),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  height: 68,
+                  width: 68,
+                  decoration: const BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [Color(0xFF4A88F7), Color(0xFF96B5F2)],
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Color(0x334A88F7),
+                        blurRadius: 18,
+                        offset: Offset(0, 10),
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.check_rounded,
+                    color: Colors.white,
+                    size: 34,
+                  ),
+                ),
+                const SizedBox(height: 18),
+                Text(
+                  title,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.black87,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  message,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    height: 1.45,
+                    color: Colors.black54,
+                  ),
+                ),
+                const SizedBox(height: 22),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.of(dialogContext).pop(),
+                    style: ElevatedButton.styleFrom(
+                      elevation: 0,
+                      foregroundColor: Colors.white,
+                      backgroundColor: accent,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
+                    child: const Text(
+                      'OK',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -429,6 +574,12 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
         );
         return;
       }
+      setState(() => _saving = false);
+      await _showSuccessDialog(
+        title: 'Profile Updated',
+        message: 'Your personal information has been saved successfully.',
+      );
+      if (!mounted) return;
       Navigator.pop(context);
     } catch (e) {
       setState(() => _saving = false);
@@ -467,8 +618,9 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
       final updated = await ApiService.getUserProfile();
       if (!mounted) return;
       setState(() => _avatarUrl = updated?.avatarUrl);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Photo updated')),
+      await _showSuccessDialog(
+        title: 'Photo Updated',
+        message: 'Your profile picture has been updated successfully.',
       );
     } finally {
       if (mounted) {

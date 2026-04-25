@@ -13,6 +13,7 @@ use App\Models\OrderItem;
 use App\Models\Part;
 use App\Models\Payment;
 use App\Models\Product;
+use App\Services\OrderPaymentService;
 use App\Models\VoucherRedemption;
 use App\Services\VoucherService;
 use Illuminate\Http\Request;
@@ -156,6 +157,8 @@ class CartController extends Controller
             'delivery_address' => ['required_if:order_type,delivery', 'nullable', 'string', 'max:255'],
             'delivery_phone' => ['required_if:order_type,delivery', 'nullable', 'string', 'max:50'],
             'delivery_note' => ['nullable', 'string', 'max:1000'],
+            'delivery_lat' => ['nullable', 'numeric', 'between:-90,90'],
+            'delivery_lng' => ['nullable', 'numeric', 'between:-180,180'],
             'delivery_fee' => ['nullable', 'numeric', 'min:0'],
             'payment_status' => ['nullable', 'in:unpaid,paid,failed,refunded,pending,processing,success'],
             'voucher_code' => ['nullable', 'string', 'max:50'],
@@ -180,6 +183,8 @@ class CartController extends Controller
         $deliveryAddress = $orderType === 'delivery' ? ($validated['delivery_address'] ?? null) : null;
         $deliveryPhone = $orderType === 'delivery' ? ($validated['delivery_phone'] ?? null) : null;
         $deliveryNote = $orderType === 'delivery' ? ($validated['delivery_note'] ?? null) : null;
+        $deliveryLat = $orderType === 'delivery' ? ($validated['delivery_lat'] ?? null) : null;
+        $deliveryLng = $orderType === 'delivery' ? ($validated['delivery_lng'] ?? null) : null;
 
         $order = DB::transaction(function () use (
             $cart,
@@ -194,6 +199,8 @@ class CartController extends Controller
             $deliveryAddress,
             $deliveryPhone,
             $deliveryNote,
+            $deliveryLat,
+            $deliveryLng,
             $voucherCode,
             $voucherService
         ) {
@@ -213,6 +220,8 @@ class CartController extends Controller
                 'delivery_address' => $deliveryAddress,
                 'delivery_phone' => $deliveryPhone,
                 'delivery_note' => $deliveryNote,
+                'delivery_lat' => $deliveryLat,
+                'delivery_lng' => $deliveryLng,
                 'subtotal' => $subtotal,
                 'delivery_fee' => $deliveryFee,
                 'voucher_id' => $voucher?->id,
@@ -266,6 +275,12 @@ class CartController extends Controller
 
             return $order;
         });
+
+        if ($order->payment_status === 'paid') {
+            app(OrderPaymentService::class)->markOrderPaid($order, $paymentMethod, [
+                'amount' => (float) $order->total_amount,
+            ]);
+        }
 
         return new OrderResource($order->load(['items', 'payments']));
     }

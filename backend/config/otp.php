@@ -9,4 +9,5 @@ return [
     'rate_limit_per_destination_per_hour' => (int) env('OTP_DEST_RATE_PER_HOUR', 5),
     'rate_limit_per_ip_10m' => (int) env('OTP_IP_RATE_PER_10M', 10),
     'email_subject' => env('OTP_EMAIL_SUBJECT', 'Your OTP Code'),
+    'default_phone_country_code' => env('OTP_DEFAULT_PHONE_COUNTRY_CODE', '+855'),
 ];

@@ -4,15 +4,19 @@ class BannerItem {
   const BannerItem({
     required this.id,
     required this.imageUrl,
+    this.badgeLabel,
     this.title,
     this.subtitle,
+    this.ctaLabel,
     this.isActive = true,
   });
 
   final int id;
   final String? imageUrl;
+  final String? badgeLabel;
   final String? title;
   final String? subtitle;
+  final String? ctaLabel;
   final bool isActive;
 
   factory BannerItem.fromJson(Map<String, dynamic> json) {
@@ -26,10 +30,16 @@ class BannerItem {
     return BannerItem(
       id: _toInt(json['id']),
       imageUrl: ApiService.normalizeMediaUrl(rawImage),
+      badgeLabel:
+          json['badge_label']?.toString() ?? json['badge']?.toString(),
       title: json['title']?.toString() ?? json['name']?.toString(),
       subtitle: json['subtitle']?.toString() ??
           json['description']?.toString() ??
           json['caption']?.toString(),
+      ctaLabel:
+          json['cta_label']?.toString() ??
+          json['button_label']?.toString() ??
+          json['button_text']?.toString(),
       isActive: _isActive(status),
     );
   }

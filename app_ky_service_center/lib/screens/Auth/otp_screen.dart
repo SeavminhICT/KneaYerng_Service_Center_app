@@ -98,6 +98,7 @@ class _OtpScreenState extends State<OtpScreen> {
   }
 
   Future<void> _verifyOtp() async {
+    if (_isLoading) return;
     final otp = _controllers.map((e) => e.text).join();
 
     if (otp.length < 6) {
@@ -144,6 +145,44 @@ class _OtpScreenState extends State<OtpScreen> {
     }
 
     Navigator.of(context).pop(result.resetToken);
+  }
+
+  void _handleOtpChange(int index, String value) {
+    final digits = value.replaceAll(RegExp(r'\D'), '');
+    if (digits.isEmpty) {
+      if (value.isEmpty && index > 0) {
+        FocusScope.of(context).previousFocus();
+      }
+      return;
+    }
+
+    if (digits.length >= 6) {
+      for (var i = 0; i < _controllers.length; i++) {
+        _controllers[i].text = i < digits.length ? digits[i] : '';
+      }
+      FocusScope.of(context).unfocus();
+      _maybeAutoVerify();
+      return;
+    }
+
+    if (digits != value) {
+      _controllers[index].text = digits[0];
+      _controllers[index].selection = const TextSelection.collapsed(offset: 1);
+    }
+
+    if (digits.isNotEmpty && index < 5) {
+      FocusScope.of(context).nextFocus();
+    }
+
+    _maybeAutoVerify();
+  }
+
+  void _maybeAutoVerify() {
+    if (_isLoading) return;
+    final otp = _controllers.map((e) => e.text).join();
+    if (otp.length == 6) {
+      _verifyOtp();
+    }
   }
 
   @override
@@ -210,8 +249,7 @@ class _OtpScreenState extends State<OtpScreen> {
                         border: Border.all(color: AppPalette.border),
                         boxShadow: [
                           BoxShadow(
-                            color:
-                                Colors.black.withAlpha((0.05 * 255).round()),
+                            color: Colors.black.withAlpha((0.05 * 255).round()),
                             blurRadius: 18,
                             offset: const Offset(0, 10),
                           ),
@@ -298,8 +336,9 @@ class _OtpScreenState extends State<OtpScreen> {
                                     counterText: '',
                                     filled: true,
                                     fillColor: AppPalette.surface,
-                                    contentPadding:
-                                        const EdgeInsets.symmetric(vertical: 12),
+                                    contentPadding: const EdgeInsets.symmetric(
+                                      vertical: 12,
+                                    ),
                                     enabledBorder: OutlineInputBorder(
                                       borderRadius: BorderRadius.circular(12),
                                       borderSide: const BorderSide(
@@ -315,9 +354,7 @@ class _OtpScreenState extends State<OtpScreen> {
                                     ),
                                   ),
                                   onChanged: (value) {
-                                    if (value.isNotEmpty && index < 5) {
-                                      FocusScope.of(context).nextFocus();
-                                    }
+                                    _handleOtpChange(index, value);
                                   },
                                 ),
                               );
@@ -362,8 +399,8 @@ class _OtpScreenState extends State<OtpScreen> {
                               _resendInSec > 0
                                   ? 'Resend OTP in ${_resendInSec}s'
                                   : (_isResending
-                                      ? 'Sending...'
-                                      : 'Resend OTP'),
+                                        ? 'Sending...'
+                                        : 'Resend OTP'),
                               style: const TextStyle(
                                 color: AppPalette.textMuted,
                               ),

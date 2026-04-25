@@ -11,5 +11,5 @@ class CartItem {
   int quantity;
   final String? variant;
 
-  double get subtotal => product.price * quantity;
+  double get subtotal => product.salePrice * quantity;
 }

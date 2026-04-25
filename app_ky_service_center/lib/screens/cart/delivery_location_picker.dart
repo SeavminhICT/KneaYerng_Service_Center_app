@@ -2,18 +2,24 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:flutter_map/flutter_map.dart';
 import 'package:http/http.dart' as http;
+import 'package:latlong2/latlong.dart';
 
-import '../../services/maps_config.dart';
+const String _osmUserAgent = 'KYServiceCenterApp/1.0 (support@kneyerng.app)';
+const String _streetTileUrl = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+const String _satelliteTileUrl =
+    'https://server.arcgisonline.com/ArcGIS/rest/services/'
+    'World_Imagery/MapServer/tile/{z}/{y}/{x}';
+const String _satelliteLabelsTileUrl =
+    'https://services.arcgisonline.com/ArcGIS/rest/services/'
+    'Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}';
+
+enum _MapStyle { street, satellite }
 
 class DeliveryLocationResult {
-  const DeliveryLocationResult({
-    required this.latLng,
-    required this.address,
-  });
+  const DeliveryLocationResult({required this.latLng, required this.address});
 
   final LatLng latLng;
   final String address;
@@ -36,19 +42,17 @@ class DeliveryLocationPicker extends StatefulWidget {
 class _DeliveryLocationPickerState extends State<DeliveryLocationPicker> {
   static const LatLng _phnomPenh = LatLng(11.5564, 104.9282);
 
-  final Completer<GoogleMapController> _mapController = Completer();
-  final TextEditingController _searchController = TextEditingController();
-  final FocusNode _searchFocusNode = FocusNode();
+  final MapController _mapController = MapController();
   LatLng _selectedPosition = _phnomPenh;
+  LatLng? _currentLocation;
   String _selectedAddress = 'Move the map or tap to select a location';
   bool _isLocating = false;
   bool _isGeocoding = false;
-  bool _hasLocationPermission = false;
   String? _errorMessage;
-  bool _isSearching = false;
-  Timer? _debounce;
-  List<_PlacePrediction> _predictions = [];
-  bool _suppressSearch = false;
+  Timer? _mapMoveDebounce;
+  StreamSubscription<Position>? _positionSubscription;
+  bool _autoCentered = false;
+  _MapStyle _mapStyle = _MapStyle.street;
 
   @override
   void initState() {
@@ -57,18 +61,14 @@ class _DeliveryLocationPickerState extends State<DeliveryLocationPicker> {
     if (widget.initialAddress != null &&
         widget.initialAddress!.trim().isNotEmpty) {
       _selectedAddress = widget.initialAddress!.trim();
-      _searchController.text = widget.initialAddress!.trim();
     }
-    _searchController.addListener(_onSearchChanged);
     _checkPermission();
   }
 
   @override
   void dispose() {
-    _debounce?.cancel();
-    _searchController.removeListener(_onSearchChanged);
-    _searchController.dispose();
-    _searchFocusNode.dispose();
+    _mapMoveDebounce?.cancel();
+    _positionSubscription?.cancel();
     super.dispose();
   }
 
@@ -80,12 +80,62 @@ class _DeliveryLocationPickerState extends State<DeliveryLocationPicker> {
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
     }
-    if (!mounted) return;
-    setState(() {
-      _hasLocationPermission =
-          permission == LocationPermission.whileInUse ||
-              permission == LocationPermission.always;
-    });
+    if (permission == LocationPermission.always ||
+        permission == LocationPermission.whileInUse) {
+      _startLocationTracking();
+    }
+  }
+
+  LocationSettings get _locationSettings => const LocationSettings(
+    accuracy: LocationAccuracy.best,
+    distanceFilter: 5,
+  );
+
+  void _startLocationTracking() {
+    _positionSubscription ??=
+        Geolocator.getPositionStream(
+          locationSettings: _locationSettings,
+        ).listen((position) {
+          if (!mounted) return;
+          setState(() {
+            _currentLocation = LatLng(position.latitude, position.longitude);
+          });
+        }, onError: (_) {});
+  }
+
+  Future<Position?> _resolveCurrentPosition() async {
+    final enabled = await Geolocator.isLocationServiceEnabled();
+    if (!enabled) {
+      setState(() {
+        _errorMessage = 'Location services are disabled.';
+      });
+      return null;
+    }
+
+    var permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+    }
+    if (permission == LocationPermission.denied ||
+        permission == LocationPermission.deniedForever) {
+      setState(() {
+        _errorMessage = 'Location permission is required.';
+      });
+      return null;
+    }
+
+    try {
+      return await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.best,
+        timeLimit: const Duration(seconds: 10),
+      );
+    } catch (_) {
+      try {
+        return await Geolocator.getLastKnownPosition();
+      } catch (_) {
+        return null;
+      }
+    }
   }
 
   Future<void> _moveToCurrentLocation() async {
@@ -95,34 +145,19 @@ class _DeliveryLocationPickerState extends State<DeliveryLocationPicker> {
     });
 
     try {
-      final enabled = await Geolocator.isLocationServiceEnabled();
-      if (!enabled) {
+      final position = await _resolveCurrentPosition();
+      if (position == null) {
         setState(() {
-          _errorMessage = 'Location services are disabled.';
-          _isLocating = false;
+          _errorMessage = 'Unable to get current location.';
         });
         return;
       }
-
-      var permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-      }
-      if (permission == LocationPermission.denied ||
-          permission == LocationPermission.deniedForever) {
-        setState(() {
-          _errorMessage = 'Location permission is required.';
-          _isLocating = false;
-        });
-        return;
-      }
-
-      final position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-      );
 
       final target = LatLng(position.latitude, position.longitude);
-      await _animateCamera(target);
+      setState(() {
+        _currentLocation = target;
+      });
+      _moveTo(target);
       _updateSelectedPosition(target);
     } catch (_) {
       if (!mounted) return;
@@ -133,172 +168,43 @@ class _DeliveryLocationPickerState extends State<DeliveryLocationPicker> {
       if (mounted) {
         setState(() {
           _isLocating = false;
-          _hasLocationPermission = true;
         });
       }
     }
   }
 
-  Future<void> _animateCamera(LatLng target) async {
-    if (!_mapController.isCompleted) return;
-    final controller = await _mapController.future;
-    await controller.animateCamera(
-      CameraUpdate.newCameraPosition(
-        CameraPosition(target: target, zoom: 16),
-      ),
-    );
+  void _moveTo(LatLng target, {double zoom = 16}) {
+    _mapController.move(target, zoom);
   }
 
   void _updateSelectedPosition(LatLng position) {
     setState(() {
       _selectedPosition = position;
-      _predictions = [];
     });
-    FocusScope.of(context).unfocus();
     _reverseGeocode(position);
   }
 
-  void _onSearchChanged() {
-    if (_suppressSearch) {
-      _suppressSearch = false;
-      return;
-    }
-    final query = _searchController.text.trim();
-    _debounce?.cancel();
-    if (query.length < 3) {
-      setState(() {
-        _predictions = [];
-      });
-      return;
-    }
-    _debounce = Timer(const Duration(milliseconds: 400), () {
-      _fetchPlacePredictions(query);
+  void _scheduleReverseGeocode(
+    LatLng position, {
+    Duration delay = const Duration(milliseconds: 450),
+  }) {
+    _mapMoveDebounce?.cancel();
+    setState(() {
+      _isGeocoding = true;
+      _errorMessage = null;
+    });
+    _mapMoveDebounce = Timer(delay, () {
+      _reverseGeocode(position);
     });
   }
 
-  Future<void> _fetchPlacePredictions(String query) async {
-    if (MapsConfig.googleMapsApiKey == 'YOUR_GOOGLE_MAPS_API_KEY') {
-      setState(() {
-        _errorMessage = 'Set Google Maps API key to enable search.';
-        _predictions = [];
-        _isSearching = false;
-      });
-      return;
-    }
-
+  void _handleMapPositionChanged(MapPosition position, bool hasGesture) {
+    if (!hasGesture || position.center == null) return;
+    final center = position.center!;
     setState(() {
-      _isSearching = true;
-      _errorMessage = null;
+      _selectedPosition = center;
     });
-
-    final uri = Uri.parse(
-      'https://maps.googleapis.com/maps/api/place/autocomplete/json',
-    ).replace(queryParameters: {
-      'input': query,
-      'key': MapsConfig.googleMapsApiKey,
-      'components': 'country:kh',
-      'language': 'en',
-    });
-
-    try {
-      final res = await http.get(uri).timeout(const Duration(seconds: 8));
-      final decoded = jsonDecode(res.body);
-      final status = decoded['status']?.toString();
-      if (status != 'OK' && status != 'ZERO_RESULTS') {
-        setState(() {
-          _errorMessage = decoded['error_message']?.toString() ??
-              'Search failed. Please try again.';
-          _predictions = [];
-          _isSearching = false;
-        });
-        return;
-      }
-
-      final raw = decoded['predictions'];
-      final predictions = raw is List
-          ? raw
-              .whereType<Map>()
-              .map((item) => _PlacePrediction.fromJson(
-                    Map<String, dynamic>.from(item),
-                  ))
-              .where((item) => item.placeId.isNotEmpty)
-              .toList()
-          : <_PlacePrediction>[];
-
-      setState(() {
-        _predictions = predictions;
-        _isSearching = false;
-      });
-    } catch (_) {
-      setState(() {
-        _errorMessage = 'Unable to search address.';
-        _predictions = [];
-        _isSearching = false;
-      });
-    }
-  }
-
-  Future<void> _selectPrediction(_PlacePrediction prediction) async {
-    setState(() {
-      _predictions = [];
-      _isSearching = true;
-      _errorMessage = null;
-    });
-
-    final uri = Uri.parse(
-      'https://maps.googleapis.com/maps/api/place/details/json',
-    ).replace(queryParameters: {
-      'place_id': prediction.placeId,
-      'fields': 'geometry,formatted_address',
-      'key': MapsConfig.googleMapsApiKey,
-    });
-
-    try {
-      final res = await http.get(uri).timeout(const Duration(seconds: 8));
-      final decoded = jsonDecode(res.body);
-      final status = decoded['status']?.toString();
-      if (status != 'OK') {
-        setState(() {
-          _errorMessage = decoded['error_message']?.toString() ??
-              'Unable to load place details.';
-          _isSearching = false;
-        });
-        return;
-      }
-
-      final result = decoded['result'];
-      final geometry = result is Map ? result['geometry'] : null;
-      final location = geometry is Map ? geometry['location'] : null;
-      final lat = location is Map ? location['lat'] : null;
-      final lng = location is Map ? location['lng'] : null;
-      if (lat is! num || lng is! num) {
-        setState(() {
-          _errorMessage = 'Unable to locate this address.';
-          _isSearching = false;
-        });
-        return;
-      }
-
-      final position = LatLng(lat.toDouble(), lng.toDouble());
-      final address = result is Map && result['formatted_address'] != null
-          ? result['formatted_address'].toString()
-          : prediction.description;
-
-      _searchController.text = address;
-      _suppressSearch = true;
-      _searchFocusNode.unfocus();
-      await _animateCamera(position);
-      _updateSelectedPosition(position);
-      setState(() {
-        _selectedAddress = address;
-        _isSearching = false;
-      });
-    } catch (_) {
-      setState(() {
-        _errorMessage = 'Unable to load place details.';
-        _isSearching = false;
-      });
-    }
+    _scheduleReverseGeocode(center);
   }
 
   Future<void> _reverseGeocode(LatLng position) async {
@@ -308,12 +214,26 @@ class _DeliveryLocationPickerState extends State<DeliveryLocationPicker> {
     });
 
     try {
-      final placemarks = await placemarkFromCoordinates(
-        position.latitude,
-        position.longitude,
-      );
+      final uri = Uri.https('nominatim.openstreetmap.org', '/reverse', {
+        'format': 'jsonv2',
+        'lat': position.latitude.toString(),
+        'lon': position.longitude.toString(),
+        'addressdetails': '1',
+      });
+
+      final res = await http
+          .get(
+            uri,
+            headers: {
+              'User-Agent': _osmUserAgent,
+              'Accept': 'application/json',
+            },
+          )
+          .timeout(const Duration(seconds: 8));
+
       if (!mounted) return;
-      if (placemarks.isEmpty) {
+
+      if (res.statusCode != 200) {
         setState(() {
           _selectedAddress = _formatCoordinates(position);
           _isGeocoding = false;
@@ -321,24 +241,14 @@ class _DeliveryLocationPickerState extends State<DeliveryLocationPicker> {
         return;
       }
 
-      final place = placemarks.first;
-      final parts = <String>[
-        if (place.name != null && place.name!.isNotEmpty) place.name!,
-        if (place.street != null && place.street!.isNotEmpty) place.street!,
-        if (place.subLocality != null && place.subLocality!.isNotEmpty)
-          place.subLocality!,
-        if (place.locality != null && place.locality!.isNotEmpty)
-          place.locality!,
-        if (place.administrativeArea != null &&
-            place.administrativeArea!.isNotEmpty)
-          place.administrativeArea!,
-        if (place.country != null && place.country!.isNotEmpty)
-          place.country!,
-      ];
+      final decoded = jsonDecode(res.body);
+      final displayName = decoded is Map
+          ? decoded['display_name']?.toString()
+          : null;
 
       setState(() {
-        _selectedAddress = parts.isNotEmpty
-            ? parts.join(', ')
+        _selectedAddress = displayName?.isNotEmpty == true
+            ? displayName!
             : _formatCoordinates(position);
         _isGeocoding = false;
       });
@@ -365,6 +275,50 @@ class _DeliveryLocationPickerState extends State<DeliveryLocationPicker> {
     );
   }
 
+  void _toggleMapStyle() {
+    setState(() {
+      _mapStyle = _mapStyle == _MapStyle.street
+          ? _MapStyle.satellite
+          : _MapStyle.street;
+    });
+  }
+
+  List<Widget> _buildMapLayers() {
+    switch (_mapStyle) {
+      case _MapStyle.street:
+        return [
+          TileLayer(
+            urlTemplate: _streetTileUrl,
+            userAgentPackageName: 'com.kneayerng.app_ky_service_center',
+            maxZoom: 19,
+          ),
+        ];
+      case _MapStyle.satellite:
+        return [
+          TileLayer(
+            urlTemplate: _satelliteTileUrl,
+            userAgentPackageName: 'com.kneayerng.app_ky_service_center',
+            maxZoom: 19,
+          ),
+          TileLayer(
+            urlTemplate: _satelliteLabelsTileUrl,
+            userAgentPackageName: 'com.kneayerng.app_ky_service_center',
+            maxZoom: 19,
+            tileDisplay: const TileDisplay.fadeIn(),
+          ),
+        ];
+    }
+  }
+
+  String get _mapAttributionLabel {
+    switch (_mapStyle) {
+      case _MapStyle.street:
+        return 'Map data: OpenStreetMap';
+      case _MapStyle.satellite:
+        return 'Imagery: Esri';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final infoText = _isGeocoding ? 'Finding address...' : _selectedAddress;
@@ -373,170 +327,127 @@ class _DeliveryLocationPickerState extends State<DeliveryLocationPicker> {
       appBar: AppBar(
         title: const Text('Select Location'),
         actions: [
-          TextButton(
-            onPressed: _confirmSelection,
-            child: const Text('Use'),
-          ),
+          TextButton(onPressed: _confirmSelection, child: const Text('Use')),
         ],
       ),
       body: Stack(
         children: [
-          GoogleMap(
-            initialCameraPosition: CameraPosition(
-              target: _selectedPosition,
-              zoom: 15,
-            ),
-            onMapCreated: (controller) {
-              if (!_mapController.isCompleted) {
-                _mapController.complete(controller);
-              }
-            },
-            onTap: _updateSelectedPosition,
-            markers: {
-              Marker(
-                markerId: const MarkerId('selected'),
-                position: _selectedPosition,
+          FlutterMap(
+            mapController: _mapController,
+            options: MapOptions(
+              initialCenter: _selectedPosition,
+              initialZoom: 15,
+              interactionOptions: const InteractionOptions(
+                flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
               ),
-            },
-            myLocationEnabled: _hasLocationPermission,
-            myLocationButtonEnabled: false,
+              onMapReady: () {
+                if (!_autoCentered && widget.initialLocation == null) {
+                  _autoCentered = true;
+                  _moveToCurrentLocation();
+                }
+              },
+              onPositionChanged: _handleMapPositionChanged,
+              onTap: (_, point) => _updateSelectedPosition(point),
+            ),
+            children: [
+              ..._buildMapLayers(),
+              MarkerLayer(
+                markers: [
+                  if (_currentLocation != null)
+                    Marker(
+                      width: 30,
+                      height: 30,
+                      point: _currentLocation!,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: const Color(
+                            0xFF2563EB,
+                          ).withValues(alpha: 0.18),
+                        ),
+                        child: Center(
+                          child: Container(
+                            width: 14,
+                            height: 14,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF2563EB),
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.white, width: 3),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  Marker(
+                    width: 46,
+                    height: 46,
+                    point: _selectedPosition,
+                    alignment: Alignment.topCenter,
+                    child: const Icon(
+                      Icons.location_pin,
+                      size: 46,
+                      color: Color(0xFF2563EB),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+              child: Align(
+                alignment: Alignment.topRight,
+                child: _MapStyleSwitch(
+                  mapStyle: _mapStyle,
+                  onStreetSelected: _mapStyle == _MapStyle.street
+                      ? null
+                      : () => setState(() => _mapStyle = _MapStyle.street),
+                  onSatelliteSelected: _mapStyle == _MapStyle.satellite
+                      ? null
+                      : () => setState(() => _mapStyle = _MapStyle.satellite),
+                ),
+              ),
+            ),
           ),
           Positioned(
             left: 16,
-            right: 16,
-            top: 16,
-            child: Material(
-              elevation: 6,
-              borderRadius: BorderRadius.circular(12),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextField(
-                    controller: _searchController,
-                    focusNode: _searchFocusNode,
-                    textInputAction: TextInputAction.search,
-                    decoration: InputDecoration(
-                      hintText: 'Search address',
-                      prefixIcon: const Icon(Icons.search),
-                      suffixIcon: _searchController.text.isEmpty
-                          ? null
-                          : IconButton(
-                              onPressed: () {
-                                _searchController.clear();
-                                setState(() {
-                                  _predictions = [];
-                                });
-                              },
-                              icon: const Icon(Icons.clear),
-                            ),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide.none,
-                      ),
-                      filled: true,
-                      fillColor: Colors.white,
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 12,
-                      ),
-                    ),
-                  ),
-                  if (_isSearching)
-                    const LinearProgressIndicator(minHeight: 2),
-                  if (_predictions.isNotEmpty)
-                    ConstrainedBox(
-                      constraints: const BoxConstraints(maxHeight: 220),
-                      child: ListView.separated(
-                        shrinkWrap: true,
-                        itemCount: _predictions.length,
-                        separatorBuilder: (_, _) =>
-                            const Divider(height: 1),
-                        itemBuilder: (context, index) {
-                          final item = _predictions[index];
-                          return ListTile(
-                            dense: true,
-                            title: Text(item.description),
-                            onTap: () => _selectPrediction(item),
-                          );
-                        },
-                      ),
-                    ),
-                ],
-              ),
-            ),
+            bottom: 132,
+            child: _AttributionBadge(label: _mapAttributionLabel),
           ),
           Positioned(
             right: 16,
-            top: 86,
-            child: FloatingActionButton(
-              heroTag: 'current-location',
-              onPressed: _isLocating ? null : _moveToCurrentLocation,
-              backgroundColor: Colors.white,
-              foregroundColor: const Color(0xFF0F6BFF),
-              child: _isLocating
-                  ? const SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.my_location),
+            bottom: 150,
+            child: Column(
+              children: [
+                _MapFab(
+                  heroTag: 'current-location',
+                  icon: Icons.my_location,
+                  onPressed: _isLocating ? null : _moveToCurrentLocation,
+                  isLoading: _isLocating,
+                ),
+                const SizedBox(height: 10),
+                _MapFab(
+                  heroTag: 'map-style-toggle',
+                  icon: _mapStyle == _MapStyle.street
+                      ? Icons.satellite_alt_outlined
+                      : Icons.map_outlined,
+                  onPressed: _toggleMapStyle,
+                ),
+              ],
             ),
           ),
           Positioned(
             left: 16,
             right: 16,
             bottom: 16,
-            child: Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(14),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Color(0x1A000000),
-                    blurRadius: 12,
-                    offset: Offset(0, 6),
-                  ),
-                ],
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Delivery Location',
-                    style: TextStyle(fontWeight: FontWeight.w700),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    infoText,
-                    style: const TextStyle(color: Color(0xFF4B5563)),
-                  ),
-                  if (_errorMessage != null) ...[
-                    const SizedBox(height: 6),
-                    Text(
-                      _errorMessage ?? '',
-                      style: const TextStyle(color: Color(0xFFDC2626)),
-                    ),
-                  ],
-                  const SizedBox(height: 10),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: _confirmSelection,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF0F6BFF),
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                      child: const Text('Use this location'),
-                    ),
-                  ),
-                ],
-              ),
+            child: _BottomSheetCard(
+              title: 'Delivery Location',
+              subtitle: infoText,
+              helper:
+                  'Drag the map, tap to drop a pin, or use your current location.',
+              errorMessage: _errorMessage,
+              onConfirm: _confirmSelection,
             ),
           ),
         ],
@@ -545,19 +456,223 @@ class _DeliveryLocationPickerState extends State<DeliveryLocationPicker> {
   }
 }
 
-class _PlacePrediction {
-  const _PlacePrediction({
-    required this.placeId,
-    required this.description,
+class _MapFab extends StatelessWidget {
+  const _MapFab({
+    required this.heroTag,
+    required this.icon,
+    required this.onPressed,
+    this.isLoading = false,
   });
 
-  final String placeId;
-  final String description;
+  final String heroTag;
+  final IconData icon;
+  final VoidCallback? onPressed;
+  final bool isLoading;
 
-  factory _PlacePrediction.fromJson(Map<String, dynamic> json) {
-    return _PlacePrediction(
-      placeId: json['place_id']?.toString() ?? '',
-      description: json['description']?.toString() ?? '',
+  @override
+  Widget build(BuildContext context) {
+    return FloatingActionButton(
+      heroTag: heroTag,
+      onPressed: onPressed,
+      backgroundColor: Colors.white,
+      foregroundColor: const Color(0xFF0F6BFF),
+      child: isLoading
+          ? const SizedBox(
+              height: 20,
+              width: 20,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          : Icon(icon),
+    );
+  }
+}
+
+class _BottomSheetCard extends StatelessWidget {
+  const _BottomSheetCard({
+    required this.title,
+    required this.subtitle,
+    required this.helper,
+    required this.onConfirm,
+    this.errorMessage,
+  });
+
+  final String title;
+  final String subtitle;
+  final String helper;
+  final String? errorMessage;
+  final VoidCallback onConfirm;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x1A000000),
+            blurRadius: 12,
+            offset: Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
+          const SizedBox(height: 6),
+          Text(subtitle, style: const TextStyle(color: Color(0xFF4B5563))),
+          const SizedBox(height: 6),
+          Text(
+            helper,
+            style: const TextStyle(fontSize: 12, color: Color(0xFF6B7280)),
+          ),
+          if (errorMessage != null) ...[
+            const SizedBox(height: 6),
+            Text(
+              errorMessage ?? '',
+              style: const TextStyle(color: Color(0xFFDC2626)),
+            ),
+          ],
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: onConfirm,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF0F6BFF),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              child: const Text('Use this location'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AttributionBadge extends StatelessWidget {
+  const _AttributionBadge({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.white.withAlpha((0.9 * 255).round()),
+        borderRadius: BorderRadius.circular(10),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x22000000),
+            blurRadius: 6,
+            offset: Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(fontSize: 10, color: Color(0xFF6B7280)),
+      ),
+    );
+  }
+}
+
+class _MapStyleSwitch extends StatelessWidget {
+  const _MapStyleSwitch({
+    required this.mapStyle,
+    required this.onStreetSelected,
+    required this.onSatelliteSelected,
+  });
+
+  final _MapStyle mapStyle;
+  final VoidCallback? onStreetSelected;
+  final VoidCallback? onSatelliteSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.white,
+      elevation: 6,
+      borderRadius: BorderRadius.circular(16),
+      child: Padding(
+        padding: const EdgeInsets.all(4),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _MapStyleButton(
+              icon: Icons.map_outlined,
+              label: 'Map',
+              selected: mapStyle == _MapStyle.street,
+              onTap: onStreetSelected,
+            ),
+            const SizedBox(width: 4),
+            _MapStyleButton(
+              icon: Icons.satellite_alt_outlined,
+              label: 'Satellite',
+              selected: mapStyle == _MapStyle.satellite,
+              onTap: onSatelliteSelected,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MapStyleButton extends StatelessWidget {
+  const _MapStyleButton({
+    required this.icon,
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final bool selected;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        decoration: BoxDecoration(
+          color: selected ? const Color(0xFF0F6BFF) : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: 16,
+              color: selected ? Colors.white : const Color(0xFF111827),
+            ),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: selected ? Colors.white : const Color(0xFF111827),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

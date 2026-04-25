@@ -11,6 +11,8 @@ class KhqrTransaction extends Model
 
     protected $fillable = [
         'transaction_id',
+        'md5',
+        'full_hash',
         'order_id',
         'amount',
         'currency',

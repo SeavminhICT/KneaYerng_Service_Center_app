@@ -2,62 +2,47 @@
 
 namespace App\Services;
 
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
 class OtpDeliveryService
 {
-    public function send(string $destinationType, string $destination, string $message): bool
+    public function send(string $destinationType, string $destination, string $message, array $context = []): bool
     {
-        if ($destinationType === 'phone') {
-            return $this->sendSms($destination, $message);
-        }
-
-        return $this->sendEmail($destination, $message);
-    }
-
-    public function sendSms(string $phone, string $message): bool
-    {
-        $baseUrl = (string) config('services.easysendsms.base_url', '');
-        $username = (string) config('services.easysendsms.username', '');
-        $password = (string) config('services.easysendsms.password', '');
-        $from = (string) config('services.easysendsms.from', 'OTP');
-
-        if ($baseUrl === '' || $username === '' || $password === '') {
-            Log::warning('EasySendSMS credentials are missing.');
-            return false;
-        }
-
-        $response = Http::asForm()
-            ->timeout(10)
-            ->post($baseUrl, [
-                'username' => $username,
-                'password' => $password,
-                'from' => $from,
-                'to' => $this->normalizeSmsDestination($phone),
-                'text' => $message,
-                'type' => 0,
-            ]);
-
-        $body = trim((string) $response->body());
-        if ($response->failed() || ! str_starts_with($body, 'OK:')) {
-            Log::warning('EasySendSMS send failed.', [
-                'status' => $response->status(),
-                'body' => $body,
+        if ($destinationType !== 'email') {
+            Log::warning('OTP delivery is configured for email only.', [
+                'type' => $destinationType,
             ]);
             return false;
         }
 
-        return true;
+        return $this->sendEmail($destination, $message, $context);
     }
 
-    public function sendEmail(string $email, string $message): bool
+    public function sendEmail(string $email, string $message, array $context = []): bool
+    {
+        $subject = (string) config('otp.email_subject', 'Your OTP Code');
+        $payload = $this->buildEmailPayload($message, $context);
+
+        return $this->sendViaMailer($email, $subject, $payload['text'], $payload['html'], $payload['data']);
+    }
+
+    private function sendViaMailer(
+        string $email,
+        string $subject,
+        string $textMessage,
+        string $htmlMessage,
+        array $data
+    ): bool
     {
         try {
-            Mail::raw($message, function ($m) use ($email) {
-                $m->to($email)->subject((string) config('otp.email_subject', 'Your OTP Code'));
-            });
+            Mail::send(
+                ['html' => 'emails.otp', 'text' => 'emails.otp_text'],
+                $data,
+                function ($m) use ($email, $subject) {
+                    $m->to($email)->subject($subject);
+                }
+            );
 
             return true;
         } catch (\Throwable $exception) {
@@ -69,12 +54,36 @@ class OtpDeliveryService
         }
     }
 
-    private function normalizeSmsDestination(string $raw): string
+    private function buildEmailPayload(string $message, array $context): array
     {
-        $value = preg_replace('/\D+/', '', $raw) ?? '';
-        if (str_starts_with($value, '00')) {
-            $value = substr($value, 2);
+        $appName = (string) config('app.name', 'KneaYerng');
+        $code = (string) ($context['code'] ?? '');
+        $expiresMinutes = (int) ($context['expires_minutes'] ?? 5);
+
+        $data = [
+            'appName' => $appName,
+            'otpCode' => $code,
+            'expiresMinutes' => $expiresMinutes,
+            'supportEmail' => (string) config('mail.from.address', ''),
+            'year' => (int) date('Y'),
+        ];
+
+        $text = $message;
+        if ($code !== '') {
+            $text = sprintf(
+                '[%s] Your OTP code is %s. It expires in %d minutes.',
+                $appName,
+                $code,
+                $expiresMinutes
+            );
         }
-        return $value;
+
+        $html = view('emails.otp', $data)->render();
+
+        return [
+            'text' => $text,
+            'html' => $html,
+            'data' => $data,
+        ];
     }
 }

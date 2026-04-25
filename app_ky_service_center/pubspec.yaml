@@ -2,7 +2,7 @@ name: app_ky_service_center
 description: "A new Flutter project."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
-publish_to: 'none' # Remove this line if you wish to publish to pub.dev
+publish_to: 'none' # Remove this line if you wish to publish your package.
 
 # The following defines the version and build number for your application.
 # A version number is three numbers separated by dots, like 1.2.43
@@ -28,7 +28,13 @@ environment:
 # the latest version available on pub.dev. To see which dependencies have newer
 # versions available, run `flutter pub outdated`.
 dependencies:
+  google_fonts: ^6.2.1
   lottie: ^3.1.0
+  curved_labeled_navigation_bar: 2.0.6
+  firebase_core: ^4.5.0
+  firebase_auth: ^6.2.0
+  firebase_messaging: ^16.0.2
+  flutter_local_notifications: ^19.4.1
 
 
   flutter:
@@ -43,9 +49,10 @@ dependencies:
   shared_preferences: ^2.5.4
   intl: ^0.20.2
   khqr_sdk: ^2.0.0
-  google_maps_flutter: ^2.5.0
-  geocoding: ^2.2.0
+  flutter_map: ^6.1.0
+  latlong2: ^0.9.1
   geolocator: ^10.1.0
+  qr_flutter: ^4.1.0
 
 dev_dependencies:
   flutter_test:
@@ -73,7 +80,11 @@ flutter:
   uses-material-design: true
   assets:
     - assets/lottie/
-    - assets/images/
+    - assets/images/Bakong.jpg
+    - assets/images/BakongLogo.png
+    - assets/images/google-color.png
+    - assets/images/logo_bakong.png
+    - assets/images/Logo_KYSC.png
 
 flutter_launcher_icons:
   android: true

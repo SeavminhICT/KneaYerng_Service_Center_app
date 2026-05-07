@@ -12,9 +12,11 @@ use App\Models\OrderItem;
 use App\Models\Payment;
 use App\Models\Part;
 use App\Models\Product;
+use App\Models\ProductVariant;
 use App\Models\VoucherRedemption;
 use App\Services\PickupTicketService;
 use App\Services\OrderPaymentService;
+use App\Services\OrderInventoryService;
 use App\Services\OrderTrackingService;
 use App\Services\TelegramOrderService;
 use App\Services\VoucherService;
@@ -208,73 +210,106 @@ class OrderController extends Controller
         $deliveryLat = $orderType === 'delivery' ? ($validated['delivery_lat'] ?? null) : null;
         $deliveryLng = $orderType === 'delivery' ? ($validated['delivery_lng'] ?? null) : null;
 
-        $order = Order::create([
-            'order_number' => $orderNumber,
-            'user_id' => $resolvedUserId,
-            'assigned_staff_id' => $validated['assigned_staff_id'] ?? null,
-            'customer_name' => $validated['customer_name'],
-            'customer_email' => $validated['customer_email'] ?? null,
-            'order_type' => $orderType,
-            'payment_method' => $paymentMethod,
-            'delivery_address' => $deliveryAddress,
-            'delivery_phone' => $deliveryPhone,
-            'delivery_note' => $deliveryNote,
-            'delivery_lat' => $deliveryLat,
-            'delivery_lng' => $deliveryLng,
-            'subtotal' => $subtotal,
-            'delivery_fee' => $deliveryFee,
-            'voucher_id' => $voucher?->id,
-            'voucher_code' => $voucher?->code,
-            'discount_type' => $voucher?->discount_type,
-            'discount_value' => $voucher?->discount_value ?? 0,
-            'discount_amount' => $discountAmount,
-            'total_amount' => $totalAmount,
-            'payment_status' => $orderPaymentStatus,
-            'status' => $status,
-            'current_status_at' => now(),
-            'placed_at' => $validated['placed_at'] ?? now(),
-        ]);
+        try {
+            $order = DB::transaction(function () use (
+                $validated,
+                $resolvedUserId,
+                $orderNumber,
+                $orderType,
+                $paymentMethod,
+                $deliveryAddress,
+                $deliveryPhone,
+                $deliveryNote,
+                $deliveryLat,
+                $deliveryLng,
+                $subtotal,
+                $deliveryFee,
+                $voucher,
+                $discountAmount,
+                $totalAmount,
+                $orderPaymentStatus,
+                $status,
+                $paymentStatus,
+                $items
+            ) {
+                $order = Order::create([
+                    'order_number' => $orderNumber,
+                    'user_id' => $resolvedUserId,
+                    'assigned_staff_id' => $validated['assigned_staff_id'] ?? null,
+                    'customer_name' => $validated['customer_name'],
+                    'customer_email' => $validated['customer_email'] ?? null,
+                    'order_type' => $orderType,
+                    'payment_method' => $paymentMethod,
+                    'delivery_address' => $deliveryAddress,
+                    'delivery_phone' => $deliveryPhone,
+                    'delivery_note' => $deliveryNote,
+                    'delivery_lat' => $deliveryLat,
+                    'delivery_lng' => $deliveryLng,
+                    'subtotal' => $subtotal,
+                    'delivery_fee' => $deliveryFee,
+                    'voucher_id' => $voucher?->id,
+                    'voucher_code' => $voucher?->code,
+                    'discount_type' => $voucher?->discount_type,
+                    'discount_value' => $voucher?->discount_value ?? 0,
+                    'discount_amount' => $discountAmount,
+                    'total_amount' => $totalAmount,
+                    'payment_status' => $orderPaymentStatus,
+                    'status' => $status,
+                    'current_status_at' => now(),
+                    'placed_at' => $validated['placed_at'] ?? now(),
+                ]);
 
-        $paymentStatus = $paymentStatus ?? $this->mapOrderPaymentStatusToPaymentStatus($orderPaymentStatus, $paymentMethod);
-        $payment = Payment::create([
-            'order_id' => $order->id,
-            'method' => $paymentMethod,
-            'status' => $paymentStatus,
-            'amount' => $totalAmount,
-        ]);
+                $resolvedPaymentStatus = $paymentStatus ?? $this->mapOrderPaymentStatusToPaymentStatus($orderPaymentStatus, $paymentMethod);
+                $payment = Payment::create([
+                    'order_id' => $order->id,
+                    'method' => $paymentMethod,
+                    'status' => $resolvedPaymentStatus,
+                    'amount' => $totalAmount,
+                ]);
 
-        if ($payment->status === 'success') {
-            $payment->paid_at = now();
-            $payment->save();
-        }
+                if ($payment->status === 'success') {
+                    $payment->paid_at = now();
+                    $payment->save();
+                }
 
-        if ($voucher && $resolvedUserId) {
-            VoucherRedemption::create([
-                'voucher_id' => $voucher->id,
-                'user_id' => $resolvedUserId,
-                'order_id' => $order->id,
-                'redeemed_at' => now(),
-            ]);
-        }
+                if ($voucher && $resolvedUserId) {
+                    VoucherRedemption::create([
+                        'voucher_id' => $voucher->id,
+                        'user_id' => $resolvedUserId,
+                        'order_id' => $order->id,
+                        'redeemed_at' => now(),
+                    ]);
+                }
 
-        Log::info('Payment created for order.', [
-            'order_id' => $order->id,
-            'payment_id' => $payment->id,
-            'status' => $payment->status,
-            'method' => $payment->method,
-        ]);
+                Log::info('Payment created for order.', [
+                    'order_id' => $order->id,
+                    'payment_id' => $payment->id,
+                    'status' => $payment->status,
+                    'method' => $payment->method,
+                ]);
 
-        foreach ($items as $item) {
-            OrderItem::create([
-                'order_id' => $order->id,
-                'product_id' => $item['product_id'] ?? null,
-                'item_type' => $item['item_type'] ?? null,
-                'item_id' => $item['item_id'] ?? null,
-                'product_name' => $item['product_name'],
-                'quantity' => $item['quantity'],
-                'price' => $item['price'],
-                'line_total' => $item['line_total'],
-            ]);
+                foreach ($items as $item) {
+                    OrderItem::create([
+                        'order_id' => $order->id,
+                        'product_id' => $item['product_id'] ?? null,
+                        'item_type' => $item['item_type'] ?? null,
+                        'item_id' => $item['item_id'] ?? null,
+                        'product_variant_id' => $item['product_variant_id'] ?? null,
+                        'product_name' => $item['product_name'],
+                        'variant_label' => $item['variant_label'] ?? null,
+                        'quantity' => $item['quantity'],
+                        'price' => $item['price'],
+                        'line_total' => $item['line_total'],
+                    ]);
+                }
+
+                app(OrderInventoryService::class)->deductInventoryForOrder($order);
+                $order->save();
+
+                return $order;
+            });
+        } catch (\RuntimeException $exception) {
+            return response()->json(['message' => $exception->getMessage()], 422);
         }
 
         if ($orderPaymentStatus === 'paid') {
@@ -416,7 +451,9 @@ class OrderController extends Controller
                             'product_id' => $item['product_id'] ?? null,
                             'item_type' => $item['item_type'] ?? null,
                             'item_id' => $item['item_id'] ?? null,
+                            'product_variant_id' => $item['product_variant_id'] ?? null,
                             'product_name' => $item['product_name'],
+                            'variant_label' => $item['variant_label'] ?? null,
                             'quantity' => $item['quantity'],
                             'price' => $item['price'],
                             'line_total' => $item['line_total'],
@@ -620,16 +657,51 @@ class OrderController extends Controller
             $itemType = $resolved['type'];
             $catalogItem = $resolved['item'];
             $quantity = (int) $item['quantity'];
+            $variantId = null;
+            $variantLabel = null;
+            $defaultPrice = $this->resolveCatalogPrice($itemType, $catalogItem);
+
+            if ($itemType === 'product') {
+                $rawVariantId = $item['product_variant_id'] ?? null;
+                if ($rawVariantId !== null && $rawVariantId !== '') {
+                    $variantId = (int) $rawVariantId;
+                    $variant = $this->resolveProductVariant($catalogItem, $variantId);
+                    if (! $variant) {
+                        throw ValidationException::withMessages([
+                            'items' => ['Selected variant is not available for this product.'],
+                        ]);
+                    }
+
+                    if ((int) $variant->stock < $quantity) {
+                        throw ValidationException::withMessages([
+                            'items' => ['Insufficient stock for selected product variant.'],
+                        ]);
+                    }
+
+                    $defaultPrice = (float) $variant->price;
+                    $variantLabel = trim((string) ($item['variant_label'] ?? ''));
+                    if ($variantLabel === '') {
+                        $variantLabel = $this->buildVariantLabel($variant);
+                    }
+                } elseif ($catalogItem->variants()->where('is_active', true)->exists()) {
+                    throw ValidationException::withMessages([
+                        'items' => ['Please select a product variant.'],
+                    ]);
+                }
+            }
+
             $price = array_key_exists('price', $item)
                 ? (float) $item['price']
-                : $this->resolveCatalogPrice($itemType, $catalogItem);
+                : $defaultPrice;
             $productName = $item['product_name'] ?? ($catalogItem->name ?? 'Item');
 
             return [
                 'product_id' => $itemType === 'product' ? (int) $itemId : null,
                 'item_type' => $itemType,
                 'item_id' => (int) $itemId,
+                'product_variant_id' => $variantId,
                 'product_name' => $productName,
+                'variant_label' => $variantLabel,
                 'quantity' => $quantity,
                 'price' => $price,
                 'line_total' => $price * $quantity,
@@ -751,56 +823,7 @@ class OrderController extends Controller
 
     private function deductInventoryForOrder(Order $order): void
     {
-        if ($order->inventory_deducted) {
-            return;
-        }
-
-        $order->loadMissing('items');
-        if ($order->items->isEmpty()) {
-            return;
-        }
-
-        $productIds = $order->items
-            ->pluck('product_id')
-            ->filter()
-            ->unique()
-            ->values();
-
-        if ($productIds->isEmpty()) {
-            $order->inventory_deducted = true;
-            return;
-        }
-
-        $products = Product::whereIn('id', $productIds)
-            ->lockForUpdate()
-            ->get()
-            ->keyBy('id');
-
-        foreach ($order->items as $item) {
-            if (! $item->product_id) {
-                continue;
-            }
-            $product = $products->get($item->product_id);
-            if (! $product) {
-                throw new \RuntimeException('Product not found for order item.');
-            }
-            $available = (int) $product->stock;
-            if ($available < $item->quantity) {
-                throw new \RuntimeException('Insufficient stock for '.$product->name.'.');
-            }
-        }
-
-        foreach ($order->items as $item) {
-            if (! $item->product_id) {
-                continue;
-            }
-            $product = $products->get($item->product_id);
-            if ($product) {
-                $product->decrement('stock', $item->quantity);
-            }
-        }
-
-        $order->inventory_deducted = true;
+        app(OrderInventoryService::class)->deductInventoryForOrder($order);
     }
 
     private function generateOrderNumber(): string
@@ -873,6 +896,25 @@ class OrderController extends Controller
         }
 
         return Product::find($itemId);
+    }
+
+    private function resolveProductVariant(Product $product, int $variantId): ?ProductVariant
+    {
+        return $product->variants()
+            ->where('is_active', true)
+            ->where('id', $variantId)
+            ->first();
+    }
+
+    private function buildVariantLabel(ProductVariant $variant): string
+    {
+        $parts = [
+            trim((string) $variant->storage_capacity),
+            trim((string) $variant->color),
+            trim((string) $variant->condition),
+        ];
+
+        return implode(' / ', array_values(array_filter($parts, fn ($value) => $value !== '')));
     }
 
     private function resolveCatalogPrice(string $itemType, $catalogItem): float

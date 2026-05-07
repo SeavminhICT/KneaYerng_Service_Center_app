@@ -6,6 +6,27 @@ import '../../services/api_service.dart';
 import '../../widgets/page_transitions.dart';
 import 'delivery_tracking_screen.dart';
 
+bool _isDark(BuildContext context) =>
+    Theme.of(context).brightness == Brightness.dark;
+
+Color _screenBg(BuildContext context) =>
+    _isDark(context) ? const Color(0xFF0D1117) : const Color(0xFFF6F7FB);
+
+Color _surface(BuildContext context) =>
+    _isDark(context) ? const Color(0xFF161B22) : Colors.white;
+
+Color _surfaceAlt(BuildContext context) =>
+    _isDark(context) ? const Color(0xFF1D2635) : const Color(0xFFEFF6FF);
+
+Color _border(BuildContext context) =>
+    _isDark(context) ? const Color(0xFF2B3442) : const Color(0xFFE5E7EB);
+
+Color _textPrimary(BuildContext context) =>
+    _isDark(context) ? const Color(0xFFE6EDF7) : const Color(0xFF111827);
+
+Color _textMuted(BuildContext context) =>
+    _isDark(context) ? const Color(0xFF97A2B5) : const Color(0xFF6B7280);
+
 class OrdersScreen extends StatefulWidget {
   const OrdersScreen({super.key});
 
@@ -56,19 +77,20 @@ class _OrdersScreenState extends State<OrdersScreen> {
     return DefaultTabController(
       length: 2,
       child: Scaffold(
-        backgroundColor: const Color(0xFFF6F7FB),
+        backgroundColor: _screenBg(context),
         appBar: AppBar(
           title: const Text(
             'My Orders',
             style: TextStyle(fontWeight: FontWeight.w700),
           ),
-          backgroundColor: Colors.white,
-          foregroundColor: const Color(0xFF111827),
+          backgroundColor: _surface(context),
+          foregroundColor: _textPrimary(context),
           elevation: 0,
-          bottom: const TabBar(
-            labelColor: Color(0xFF1F2937),
-            indicatorColor: Color(0xFF2563EB),
-            tabs: [
+          bottom: TabBar(
+            labelColor: _textPrimary(context),
+            unselectedLabelColor: _textMuted(context),
+            indicatorColor: const Color(0xFF2563EB),
+            tabs: const [
               Tab(text: 'Active'),
               Tab(text: 'History'),
             ],
@@ -189,9 +211,9 @@ class _OrderCard extends StatelessWidget {
         child: Ink(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: _surface(context),
             borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: const Color(0xFFE5E7EB)),
+            border: Border.all(color: _border(context)),
             boxShadow: const [
               BoxShadow(
                 color: Color(0x0F000000),
@@ -209,7 +231,7 @@ class _OrderCard extends StatelessWidget {
                     height: 42,
                     width: 42,
                     decoration: BoxDecoration(
-                      color: const Color(0xFFEFF6FF),
+                      color: _surfaceAlt(context),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: const Icon(
@@ -227,7 +249,6 @@ class _OrderCard extends StatelessWidget {
                           style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w700,
-                            color: Color(0xFF111827),
                           ),
                         ),
                         const SizedBox(height: 4),
@@ -237,10 +258,7 @@ class _OrderCard extends StatelessWidget {
                               : DateFormat(
                                   'dd MMM yyyy • hh:mm a',
                                 ).format(placedAt),
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: Color(0xFF6B7280),
-                          ),
+                          style: const TextStyle(fontSize: 12),
                         ),
                       ],
                     ),
@@ -331,14 +349,14 @@ class _InfoLine extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, size: 18, color: const Color(0xFF6B7280)),
+        Icon(icon, size: 18, color: _textMuted(context)),
         const SizedBox(width: 8),
         Expanded(
           child: Text(
             text,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 13,
-              color: Color(0xFF4B5563),
+              color: _textMuted(context),
               fontWeight: FontWeight.w600,
               height: 1.35,
             ),
@@ -418,17 +436,17 @@ class _EmptyState extends StatelessWidget {
             Text(
               title,
               textAlign: TextAlign.center,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w700,
-                color: Color(0xFF111827),
+                color: _textPrimary(context),
               ),
             ),
             const SizedBox(height: 8),
             Text(
               subtitle,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: Color(0xFF6B7280), height: 1.4),
+              style: TextStyle(color: _textMuted(context), height: 1.4),
             ),
             const SizedBox(height: 16),
             OutlinedButton(

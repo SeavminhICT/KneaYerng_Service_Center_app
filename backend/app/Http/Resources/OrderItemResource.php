@@ -14,7 +14,13 @@ class OrderItemResource extends JsonResource
             'product_id' => $this->product_id,
             'item_type' => $this->item_type,
             'item_id' => $this->item_id,
+            'product_variant_id' => $this->product_variant_id,
+            'variant_label' => $this->variant_label,
             'product_name' => $this->product_name,
+            'display_name' => trim(implode(' ', array_filter([
+                $this->product_name,
+                $this->variant_label ? '('.$this->variant_label.')' : null,
+            ]))),
             'quantity' => $this->quantity,
             'unit_price' => $this->price,
             'price' => $this->price,

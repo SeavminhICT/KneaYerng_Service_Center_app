@@ -8,15 +8,25 @@ use App\Http\Requests\Api\UpdateProductRequest;
 use App\Http\Resources\ProductResource;
 use App\Models\Part;
 use App\Models\Product;
+use App\Models\ProductVariant;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 
 class ProductController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Product::query()->with('category')->orderByDesc('id');
+        $relations = ['category'];
+        if ($this->variantsEnabled()) {
+            $relations['variants'] = fn ($builder) => $builder->orderBy('sort_order')->orderBy('id');
+        }
+
+        $query = Product::query()
+            ->with($relations)
+            ->orderByDesc('id');
 
         if ($request->filled('q')) {
             $q = $request->string('q');
@@ -56,7 +66,23 @@ class ProductController extends Controller
     public function store(StoreProductRequest $request)
     {
         $validated = $request->validated();
-        unset($validated['image'], $validated['thumbnail'], $validated['image_gallery']);
+        $variantRows = $this->normalizeVariantRows((array) ($validated['variants'] ?? []));
+
+        if (! empty($variantRows) && ! $this->variantsEnabled()) {
+            $this->throwVariantsTableMissing();
+        }
+
+        unset(
+            $validated['image'],
+            $validated['thumbnail'],
+            $validated['image_gallery'],
+            $validated['variants'],
+            $validated['variant_images']
+        );
+
+        if (! empty($variantRows)) {
+            $this->applyVariantDerivedFields($validated, $variantRows);
+        }
 
         if (empty($validated['sku'])) {
             $validated['sku'] = $this->generateSku($validated['name'] ?? '', $validated['brand'] ?? null);
@@ -76,20 +102,38 @@ class ProductController extends Controller
         }
 
         $product = Product::create($validated);
+        $this->syncVariants(
+            $product,
+            $variantRows,
+            (array) $request->file('variant_images')
+        );
         $this->ensurePartFromProduct($product);
 
-        return new ProductResource($product->load('category'));
+        return new ProductResource($this->loadProductRelations($product));
     }
 
     public function show(Product $product)
     {
-        return new ProductResource($product->load('category'));
+        return new ProductResource($this->loadProductRelations($product));
     }
 
     public function update(UpdateProductRequest $request, Product $product)
     {
         $validated = $request->validated();
-        unset($validated['image'], $validated['thumbnail'], $validated['image_gallery']);
+        $hasVariantsPayload = array_key_exists('variants', $validated);
+        $variantRows = $this->normalizeVariantRows((array) ($validated['variants'] ?? []));
+
+        if ($hasVariantsPayload && ! empty($variantRows) && ! $this->variantsEnabled()) {
+            $this->throwVariantsTableMissing();
+        }
+
+        unset(
+            $validated['image'],
+            $validated['thumbnail'],
+            $validated['image_gallery'],
+            $validated['variants'],
+            $validated['variant_images']
+        );
 
         $thumbnailFile = $request->file('thumbnail') ?? $request->file('image');
         if ($thumbnailFile) {
@@ -118,9 +162,20 @@ class ProductController extends Controller
             $validated['image_gallery'] = $galleryPaths;
         }
 
-        $product->update($validated);
+        if ($hasVariantsPayload) {
+            $this->applyVariantDerivedFields($validated, $variantRows);
+        }
 
-        return new ProductResource($product->load('category'));
+        $product->update($validated);
+        if ($hasVariantsPayload) {
+            $this->syncVariants(
+                $product,
+                $variantRows,
+                (array) $request->file('variant_images')
+            );
+        }
+
+        return new ProductResource($this->loadProductRelations($product));
     }
 
     public function destroy(Product $product)
@@ -139,6 +194,15 @@ class ProductController extends Controller
             Storage::disk('public')->delete($oldPath);
         }
 
+        if ($this->variantsEnabled()) {
+            foreach ($product->variants as $variant) {
+                if ($variant->image) {
+                    $oldPath = $this->toStorageRelativePath($variant->image);
+                    Storage::disk('public')->delete($oldPath);
+                }
+            }
+        }
+
         $product->delete();
 
         return response()->noContent();
@@ -149,7 +213,7 @@ class ProductController extends Controller
         $product->status = $product->status === 'active' ? 'draft' : 'active';
         $product->save();
 
-        return new ProductResource($product->load('category'));
+        return new ProductResource($this->loadProductRelations($product));
     }
 
     private function generateSku(string $name, ?string $brand): string
@@ -226,6 +290,184 @@ class ProductController extends Controller
             'unit_cost' => (float) ($product->price ?? 0),
             'status' => $this->mapProductStatusToPartStatus($product->status),
             'tag' => $product->tag,
+        ]);
+    }
+
+    /**
+     * @param array<int, mixed> $rawRows
+     * @return array<int, array<string, mixed>>
+     */
+    private function normalizeVariantRows(array $rawRows): array
+    {
+        $rows = [];
+
+        foreach ($rawRows as $index => $rawRow) {
+            if (! is_array($rawRow)) {
+                continue;
+            }
+
+            $storage = trim((string) ($rawRow['storage_capacity'] ?? ''));
+            $color = trim((string) ($rawRow['color'] ?? ''));
+            $condition = trim((string) ($rawRow['condition'] ?? ''));
+            $ram = trim((string) ($rawRow['ram'] ?? ''));
+            $ssd = trim((string) ($rawRow['ssd'] ?? ''));
+            $sku = trim((string) ($rawRow['sku'] ?? ''));
+            $image = trim((string) ($rawRow['image'] ?? ''));
+            $price = is_numeric($rawRow['price'] ?? null) ? (float) $rawRow['price'] : 0.0;
+            $stock = is_numeric($rawRow['stock'] ?? null) ? (int) $rawRow['stock'] : 0;
+
+            if ($storage === '' || $color === '' || $condition === '') {
+                continue;
+            }
+
+            $rows[] = [
+                '__row_index' => (int) $index,
+                'storage_capacity' => $storage,
+                'color' => $color,
+                'condition' => $condition,
+                'ram' => $ram !== '' ? $ram : null,
+                'ssd' => $ssd !== '' ? $ssd : null,
+                'price' => max($price, 0),
+                'stock' => max($stock, 0),
+                'sku' => $sku !== '' ? $sku : null,
+                'image' => $image !== '' ? $image : null,
+            ];
+        }
+
+        return $rows;
+    }
+
+    /**
+     * @param array<string, mixed> $validated
+     * @param array<int, array<string, mixed>> $variantRows
+     */
+    private function applyVariantDerivedFields(array &$validated, array $variantRows): void
+    {
+        if (empty($variantRows)) {
+            $validated['storage_capacity'] = [];
+            $validated['color'] = [];
+            $validated['condition'] = [];
+            $validated['ram'] = [];
+            $validated['ssd'] = [];
+
+            return;
+        }
+
+        $prices = array_map(fn ($row) => (float) ($row['price'] ?? 0), $variantRows);
+        $stocks = array_map(fn ($row) => (int) ($row['stock'] ?? 0), $variantRows);
+
+        $validated['price'] = min($prices);
+        $validated['stock'] = array_sum($stocks);
+
+        $validated['storage_capacity'] = $this->uniqueVariantValues($variantRows, 'storage_capacity');
+        $validated['color'] = $this->uniqueVariantValues($variantRows, 'color');
+        $validated['condition'] = $this->uniqueVariantValues($variantRows, 'condition');
+        $validated['ram'] = $this->uniqueVariantValues($variantRows, 'ram');
+        $validated['ssd'] = $this->uniqueVariantValues($variantRows, 'ssd');
+    }
+
+    /**
+     * @param array<int, array<string, mixed>> $variantRows
+     * @return array<int, string>
+     */
+    private function uniqueVariantValues(array $variantRows, string $key): array
+    {
+        $values = [];
+        foreach ($variantRows as $row) {
+            $value = trim((string) ($row[$key] ?? ''));
+            if ($value === '') {
+                continue;
+            }
+            if (! in_array($value, $values, true)) {
+                $values[] = $value;
+            }
+        }
+
+        return $values;
+    }
+
+    /**
+     * @param array<int, array<string, mixed>> $variantRows
+     * @param array<int|string, UploadedFile> $variantImageFiles
+     */
+    private function syncVariants(Product $product, array $variantRows, array $variantImageFiles): void
+    {
+        if (! $this->variantsEnabled()) {
+            return;
+        }
+
+        $retainedImages = [];
+        foreach ($variantRows as $row) {
+            $rowIndex = (int) ($row['__row_index'] ?? 0);
+            $imageFile = $variantImageFiles[$rowIndex] ?? null;
+            if ($imageFile instanceof UploadedFile) {
+                continue;
+            }
+            $existingImage = trim((string) ($row['image'] ?? ''));
+            if ($existingImage === '') {
+                continue;
+            }
+            $retainedImages[] = $this->toStorageRelativePath($existingImage);
+        }
+
+        foreach ($product->variants as $existingVariant) {
+            if ($existingVariant->image) {
+                $oldPath = $this->toStorageRelativePath($existingVariant->image);
+                if (! in_array($oldPath, $retainedImages, true)) {
+                    Storage::disk('public')->delete($oldPath);
+                }
+            }
+        }
+        $product->variants()->delete();
+
+        if (empty($variantRows)) {
+            return;
+        }
+
+        foreach ($variantRows as $order => $row) {
+            $rowIndex = (int) ($row['__row_index'] ?? $order);
+            unset($row['__row_index']);
+
+            $imageFile = $variantImageFiles[$rowIndex] ?? null;
+            if ($imageFile instanceof UploadedFile) {
+                $row['image'] = $this->storeOptimizedImage(
+                    $imageFile,
+                    'products/variants'
+                );
+            }
+
+            $row['sort_order'] = $order;
+            $row['is_active'] = true;
+
+            $product->variants()->create($row);
+        }
+    }
+
+    private function loadProductRelations(Product $product): Product
+    {
+        $relations = ['category'];
+        if ($this->variantsEnabled()) {
+            $relations['variants'] = fn ($builder) => $builder->orderBy('sort_order')->orderBy('id');
+        }
+
+        return $product->load($relations);
+    }
+
+    private function variantsEnabled(): bool
+    {
+        static $exists = null;
+
+        if ($exists === null) {
+            $exists = Schema::hasTable((new ProductVariant())->getTable());
+        }
+
+        return $exists;
+    }
+
+    private function throwVariantsTableMissing(): void
+    {
+        throw ValidationException::withMessages([
+            'variants' => ['Product variants table is missing. Please run migrations first.'],
         ]);
     }
 

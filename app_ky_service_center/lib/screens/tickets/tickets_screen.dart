@@ -6,6 +6,27 @@ import '../../services/api_service.dart';
 import '../../widgets/page_transitions.dart';
 import 'ticket_detail_screen.dart';
 
+bool _isDark(BuildContext context) =>
+    Theme.of(context).brightness == Brightness.dark;
+
+Color _screenBg(BuildContext context) =>
+    _isDark(context) ? const Color(0xFF0D1117) : const Color(0xFFF6F7FB);
+
+Color _surface(BuildContext context) =>
+    _isDark(context) ? const Color(0xFF161B22) : Colors.white;
+
+Color _surfaceAlt(BuildContext context) =>
+    _isDark(context) ? const Color(0xFF1D2635) : const Color(0xFFEFF6FF);
+
+Color _border(BuildContext context) =>
+    _isDark(context) ? const Color(0xFF2B3442) : const Color(0xFFE6E9F0);
+
+Color _textPrimary(BuildContext context) =>
+    _isDark(context) ? const Color(0xFFE6EDF7) : const Color(0xFF111827);
+
+Color _textMuted(BuildContext context) =>
+    _isDark(context) ? const Color(0xFF97A2B5) : const Color(0xFF6B7280);
+
 class TicketsScreen extends StatefulWidget {
   const TicketsScreen({super.key});
 
@@ -34,19 +55,20 @@ class _TicketsScreenState extends State<TicketsScreen> {
     return DefaultTabController(
       length: 2,
       child: Scaffold(
-        backgroundColor: const Color(0xFFF6F7FB),
+        backgroundColor: _screenBg(context),
         appBar: AppBar(
           title: const Text(
             'My Tickets',
             style: TextStyle(fontWeight: FontWeight.w700),
           ),
-          backgroundColor: Colors.white,
-          foregroundColor: const Color(0xFF111827),
+          backgroundColor: _surface(context),
+          foregroundColor: _textPrimary(context),
           elevation: 0,
-          bottom: const TabBar(
-            labelColor: Color(0xFF1F2937),
-            indicatorColor: Color(0xFF2563EB),
-            tabs: [
+          bottom: TabBar(
+            labelColor: _textPrimary(context),
+            unselectedLabelColor: _textMuted(context),
+            indicatorColor: const Color(0xFF2563EB),
+            tabs: const [
               Tab(text: 'Incoming'),
               Tab(text: 'Completed'),
             ],
@@ -166,9 +188,9 @@ class _TicketCard extends StatelessWidget {
         child: Ink(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: _surface(context),
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: const Color(0xFFE6E9F0)),
+            border: Border.all(color: _border(context)),
             boxShadow: const [
               BoxShadow(
                 color: Color(0x0F000000),
@@ -186,7 +208,7 @@ class _TicketCard extends StatelessWidget {
                     height: 36,
                     width: 36,
                     decoration: BoxDecoration(
-                      color: const Color(0xFFEFF6FF),
+                      color: _surfaceAlt(context),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: const Icon(
@@ -202,17 +224,17 @@ class _TicketCard extends StatelessWidget {
                       children: [
                         Text(
                           ticket.orderNumber ?? 'Order #${ticket.orderId}',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontWeight: FontWeight.w700,
-                            color: Color(0xFF111827),
+                            color: _textPrimary(context),
                           ),
                         ),
                         const SizedBox(height: 4),
                         Text(
                           date,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 12,
-                            color: Color(0xFF6B7280),
+                            color: _textMuted(context),
                           ),
                         ),
                       ],
@@ -227,17 +249,17 @@ class _TicketCard extends StatelessWidget {
                   Expanded(
                     child: Text(
                       ticket.customerName,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontWeight: FontWeight.w600,
-                        color: Color(0xFF374151),
+                        color: _textMuted(context),
                       ),
                     ),
                   ),
                   Text(
                     NumberFormat.currency(symbol: '\$').format(amount),
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontWeight: FontWeight.w700,
-                      color: Color(0xFF111827),
+                      color: _textPrimary(context),
                     ),
                   ),
                 ],
@@ -322,7 +344,7 @@ class _EmptyState extends StatelessWidget {
               height: 64,
               width: 64,
               decoration: BoxDecoration(
-                color: const Color(0xFFEFF6FF),
+                color: _surfaceAlt(context),
                 borderRadius: BorderRadius.circular(18),
               ),
               child: const Icon(
@@ -334,17 +356,17 @@ class _EmptyState extends StatelessWidget {
             const SizedBox(height: 16),
             Text(
               title,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w700,
-                color: Color(0xFF111827),
+                color: _textPrimary(context),
               ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 6),
             Text(
               subtitle,
-              style: const TextStyle(fontSize: 12, color: Color(0xFF6B7280)),
+              style: TextStyle(fontSize: 12, color: _textMuted(context)),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 16),

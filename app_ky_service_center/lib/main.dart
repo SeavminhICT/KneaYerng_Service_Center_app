@@ -5,12 +5,15 @@ import 'screens/main_navigation_screen.dart';
 import 'screens/splash/splash_screen.dart';
 import 'services/api_service.dart';
 import 'services/app_notification_service.dart';
+import 'services/theme_service.dart';
+import 'theme/app_theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
   await ApiService.initialize();
   await AppNotificationService.instance.initialize();
+  await ThemeService.instance.load();
   runApp(const MyApp());
 }
 
@@ -19,10 +22,18 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      navigatorKey: AppNotificationService.instance.navigatorKey,
-      home: const _StartupGate(),
+    return AnimatedBuilder(
+      animation: ThemeService.instance,
+      builder: (context, _) {
+        return MaterialApp(
+          debugShowCheckedModeBanner: false,
+          navigatorKey: AppNotificationService.instance.navigatorKey,
+          theme: AppTheme.light,
+          darkTheme: AppTheme.dark,
+          themeMode: ThemeService.instance.themeMode,
+          home: const _StartupGate(),
+        );
+      },
     );
   }
 }

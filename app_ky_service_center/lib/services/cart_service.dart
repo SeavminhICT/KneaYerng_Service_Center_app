@@ -17,14 +17,35 @@ class CartService extends ChangeNotifier {
     Product product, {
     int quantity = 1,
     String? variant,
+    int? variantId,
+    String? variantImageUrl,
+    int? variantStock,
+    double? unitPrice,
   }) {
+    final normalizedVariant = variant?.trim();
     final existing = _items.indexWhere(
-      (item) => item.product.id == product.id && item.variant == variant,
+      (item) {
+        if (item.product.id != product.id) return false;
+        if (variantId != null || item.variantId != null) {
+          return item.variantId == variantId;
+        }
+        return (item.variant ?? '') == (normalizedVariant ?? '');
+      },
     );
     if (existing != -1) {
       _items[existing].quantity += quantity;
     } else {
-      _items.add(CartItem(product: product, quantity: quantity, variant: variant));
+      _items.add(
+        CartItem(
+          product: product,
+          quantity: quantity,
+          variant: normalizedVariant?.isEmpty == true ? null : normalizedVariant,
+          variantId: variantId,
+          variantImageUrl: variantImageUrl,
+          variantStock: variantStock,
+          unitPrice: unitPrice,
+        ),
+      );
     }
     notifyListeners();
   }

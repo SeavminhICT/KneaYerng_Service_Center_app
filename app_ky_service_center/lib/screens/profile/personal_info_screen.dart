@@ -29,13 +29,32 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
   @override
   void initState() {
     super.initState();
-    _firstNameCtrl = TextEditingController(text: widget.profile.firstName ?? '');
-    _lastNameCtrl  = TextEditingController(text: widget.profile.lastName ?? '');
+    _firstNameCtrl = TextEditingController(
+      text: widget.profile.firstName ?? '',
+    );
+    _lastNameCtrl = TextEditingController(text: widget.profile.lastName ?? '');
     // Initialize with the profile data
-    _birthCtrl     = TextEditingController(text: widget.profile.birth ?? '');
-    _emailCtrl     = TextEditingController(text: widget.profile.email ?? '');
-    _gender        = widget.profile.gender;
-    _avatarUrl     = widget.profile.avatarUrl;
+    _birthCtrl = TextEditingController(text: widget.profile.birth ?? '');
+    _emailCtrl = TextEditingController(text: widget.profile.email ?? '');
+    _gender = widget.profile.gender;
+    _avatarUrl = widget.profile.avatarUrl;
+    _firstNameCtrl.addListener(_onHeaderFieldChanged);
+    _lastNameCtrl.addListener(_onHeaderFieldChanged);
+    _emailCtrl.addListener(_onHeaderFieldChanged);
+  }
+
+  void _onHeaderFieldChanged() {
+    if (!mounted) return;
+    setState(() {});
+  }
+
+  @override
+  void dispose() {
+    _firstNameCtrl.dispose();
+    _lastNameCtrl.dispose();
+    _birthCtrl.dispose();
+    _emailCtrl.dispose();
+    super.dispose();
   }
 
   // New function to handle the Date Picker
@@ -66,31 +85,35 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     const brandBlue = Color(0xFF1E5EFF);
     const brandMint = Color(0xFF00C2A8);
     const brandPeach = Color(0xFFFFB870);
-    const canvas = Color(0xFFF6F7FB);
-    const titleStyle = TextStyle(
+    final canvas = isDark ? const Color(0xFF0D1117) : const Color(0xFFF6F7FB);
+    final titleStyle = TextStyle(
       fontSize: 20,
       fontWeight: FontWeight.w700,
       letterSpacing: 0.2,
-      color: Colors.black87,
+      color: isDark ? const Color(0xFFE6EDF7) : Colors.black87,
     );
 
     return Scaffold(
       backgroundColor: canvas,
       appBar: AppBar(
-        title: const Text('Personal Information', style: titleStyle),
+        automaticallyImplyLeading: false,
+        title: Text('Personal Information', style: titleStyle),
         backgroundColor: Colors.transparent,
         elevation: 0,
-        foregroundColor: Colors.black87,
+        foregroundColor: isDark ? const Color(0xFFE6EDF7) : Colors.black87,
       ),
       body: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [Color(0xFFEAF2FF), Color(0xFFFFF2E5)],
+            colors: isDark
+                ? const [Color(0xFF0D1117), Color(0xFF101A29)]
+                : const [Color(0xFFEAF2FF), Color(0xFFFFF2E5)],
           ),
         ),
         child: SafeArea(
@@ -104,11 +127,12 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
                   _animatedEntry(
                     0,
                     _headerCard(
-                      firstName: widget.profile.firstName ?? '',
-                      lastName: widget.profile.lastName ?? '',
+                      firstName: _firstNameCtrl.text,
+                      lastName: _lastNameCtrl.text,
                       phone: widget.profile.phone ?? '',
-                      email: widget.profile.email ?? '',
+                      email: _emailCtrl.text,
                       accent: brandBlue,
+                      isDark: isDark,
                       avatarUrl: _avatarUrl,
                       onChangePhoto: _handleChangePhoto,
                     ),
@@ -156,8 +180,9 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
                                 width: 20,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2,
-                                  valueColor:
-                                      AlwaysStoppedAnimation<Color>(Colors.white),
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    Colors.white,
+                                  ),
                                 ),
                               )
                             : const Text('Save Changes'),
@@ -181,6 +206,7 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
     required String phone,
     required String email,
     required Color accent,
+    required bool isDark,
     required String? avatarUrl,
     required VoidCallback onChangePhoto,
   }) {
@@ -190,10 +216,14 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? const Color(0xFF161B22) : Colors.white,
         borderRadius: BorderRadius.circular(18),
-        boxShadow: const [
-          BoxShadow(color: Color(0x1A1E2A78), blurRadius: 16, offset: Offset(0, 8)),
+        boxShadow: [
+          BoxShadow(
+            color: Color(0x1A1E2A78),
+            blurRadius: 16,
+            offset: Offset(0, 8),
+          ),
         ],
       ),
       child: Row(
@@ -243,9 +273,13 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
                     height: 22,
                     width: 22,
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: isDark ? const Color(0xFF1D2635) : Colors.white,
                       shape: BoxShape.circle,
-                      border: Border.all(color: Colors.black12),
+                      border: Border.all(
+                        color: isDark
+                            ? const Color(0xFF2B3442)
+                            : Colors.black12,
+                      ),
                       boxShadow: const [
                         BoxShadow(
                           color: Color(0x22000000),
@@ -276,12 +310,18 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
               children: [
                 Text(
                   '${firstName.isEmpty ? 'User' : firstName} $lastName'.trim(),
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: isDark ? const Color(0xFFE6EDF7) : null,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   phone.isNotEmpty ? phone : email,
-                  style: const TextStyle(color: Colors.black54),
+                  style: TextStyle(
+                    color: isDark ? const Color(0xFF97A2B5) : Colors.black54,
+                  ),
                   overflow: TextOverflow.ellipsis,
                 ),
               ],
@@ -293,13 +333,14 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
   }
 
   Widget _sectionTitle(String title) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Text(
       title.toUpperCase(),
-      style: const TextStyle(
+      style: TextStyle(
         fontSize: 12,
         letterSpacing: 1.1,
         fontWeight: FontWeight.w700,
-        color: Colors.black54,
+        color: isDark ? const Color(0xFF97A2B5) : Colors.black54,
       ),
     );
   }
@@ -432,11 +473,14 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
   }
 
   InputDecoration _inputDecoration(String label, IconData icon) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return InputDecoration(
       labelText: label,
       prefixIcon: Icon(icon),
       filled: true,
-      fillColor: Colors.white,
+      labelStyle: TextStyle(color: isDark ? const Color(0xFF97A2B5) : null),
+      prefixIconColor: isDark ? const Color(0xFF97A2B5) : null,
+      fillColor: isDark ? const Color(0xFF161B22) : Colors.white,
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
         borderSide: BorderSide.none,
@@ -453,6 +497,7 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
     required String message,
   }) {
     const accent = Color(0xFF1E5EFF);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return showDialog<void>(
       context: context,
       barrierDismissible: true,
@@ -463,7 +508,7 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
           child: Container(
             padding: const EdgeInsets.fromLTRB(22, 24, 22, 20),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: isDark ? const Color(0xFF161B22) : Colors.white,
               borderRadius: BorderRadius.circular(28),
               boxShadow: const [
                 BoxShadow(
@@ -504,20 +549,20 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
                 Text(
                   title,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.w700,
-                    color: Colors.black87,
+                    color: isDark ? const Color(0xFFE6EDF7) : Colors.black87,
                   ),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   message,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 14,
                     height: 1.45,
-                    color: Colors.black54,
+                    color: isDark ? const Color(0xFF97A2B5) : Colors.black54,
                   ),
                 ),
                 const SizedBox(height: 22),
@@ -569,9 +614,9 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
       if (!mounted) return;
       if (error != null) {
         setState(() => _saving = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(error)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error)));
         return;
       }
       setState(() => _saving = false);
@@ -609,9 +654,9 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
       );
       if (!mounted) return;
       if (error != null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(error)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error)));
         return;
       }
 

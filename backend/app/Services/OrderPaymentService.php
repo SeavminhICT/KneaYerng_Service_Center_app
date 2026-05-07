@@ -2,11 +2,8 @@
 
 namespace App\Services;
 
-use App\Models\Accessory;
 use App\Models\Order;
-use App\Models\Part;
 use App\Models\Payment;
-use App\Models\Product;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -48,7 +45,7 @@ class OrderPaymentService
 
             $order->payment_method = $method;
             $order->payment_status = 'paid';
-            $this->deductInventoryForOrder($order);
+            app(OrderInventoryService::class)->deductInventoryForOrder($order);
             $order->save();
         });
 
@@ -68,97 +65,5 @@ class OrderPaymentService
         if (! $wasPaid) {
             app(TelegramOrderService::class)->handlePaymentSuccess($order);
         }
-    }
-
-    private function deductInventoryForOrder(Order $order): void
-    {
-        if ($order->inventory_deducted) {
-            return;
-        }
-
-        $order->loadMissing('items');
-        if ($order->items->isEmpty()) {
-            $order->inventory_deducted = true;
-
-            return;
-        }
-
-        $productIds = [];
-        $accessoryIds = [];
-        $partIds = [];
-
-        foreach ($order->items as $item) {
-            $itemType = strtolower((string) ($item->item_type ?: ($item->product_id ? 'product' : '')));
-            $itemId = (int) ($item->item_id ?: $item->product_id ?: 0);
-
-            if (! $itemId) {
-                continue;
-            }
-
-            if ($itemType === 'accessory') {
-                $accessoryIds[] = $itemId;
-            } elseif ($itemType === 'part' || $itemType === 'repair_part') {
-                $partIds[] = $itemId;
-            } else {
-                $productIds[] = $itemId;
-            }
-        }
-
-        $products = Product::whereIn('id', array_values(array_unique($productIds)))
-            ->lockForUpdate()
-            ->get()
-            ->keyBy('id');
-        $accessories = Accessory::whereIn('id', array_values(array_unique($accessoryIds)))
-            ->lockForUpdate()
-            ->get()
-            ->keyBy('id');
-        $parts = Part::whereIn('id', array_values(array_unique($partIds)))
-            ->lockForUpdate()
-            ->get()
-            ->keyBy('id');
-
-        foreach ($order->items as $item) {
-            $itemType = strtolower((string) ($item->item_type ?: ($item->product_id ? 'product' : '')));
-            $itemId = (int) ($item->item_id ?: $item->product_id ?: 0);
-
-            if (! $itemId) {
-                continue;
-            }
-
-            [$catalogItem, $label] = match ($itemType) {
-                'accessory' => [$accessories->get($itemId), 'Accessory'],
-                'part', 'repair_part' => [$parts->get($itemId), 'Part'],
-                default => [$products->get($itemId), 'Product'],
-            };
-
-            if (! $catalogItem) {
-                throw new \RuntimeException($label.' not found for order item.');
-            }
-
-            if ($catalogItem->stock !== null && (int) $catalogItem->stock < (int) $item->quantity) {
-                throw new \RuntimeException('Insufficient stock for '.$catalogItem->name.'.');
-            }
-        }
-
-        foreach ($order->items as $item) {
-            $itemType = strtolower((string) ($item->item_type ?: ($item->product_id ? 'product' : '')));
-            $itemId = (int) ($item->item_id ?: $item->product_id ?: 0);
-
-            if (! $itemId) {
-                continue;
-            }
-
-            $catalogItem = match ($itemType) {
-                'accessory' => $accessories->get($itemId),
-                'part', 'repair_part' => $parts->get($itemId),
-                default => $products->get($itemId),
-            };
-
-            if ($catalogItem && $catalogItem->stock !== null) {
-                $catalogItem->decrement('stock', (int) $item->quantity);
-            }
-        }
-
-        $order->inventory_deducted = true;
     }
 }

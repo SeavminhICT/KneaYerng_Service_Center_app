@@ -19,9 +19,9 @@ class StoreProductRequest extends FormRequest
             'description' => ['nullable', 'string'],
             'sku' => ['nullable', 'string', 'max:100', 'unique:products,sku'],
             'category_id' => ['nullable', 'exists:categories,id'],
-            'price' => ['required', 'numeric', 'min:0'],
+            'price' => ['nullable', 'numeric', 'min:0', 'required_without:variants'],
             'discount' => ['nullable', 'numeric', 'min:0'],
-            'stock' => ['required', 'integer', 'min:0'],
+            'stock' => ['nullable', 'integer', 'min:0', 'required_without:variants'],
             'status' => ['required', 'in:active,draft,archived'],
             'tag' => ['nullable', 'in:'.implode(',', Product::TAGS)],
             'brand' => ['nullable', 'string', 'max:255'],
@@ -46,11 +46,58 @@ class StoreProductRequest extends FormRequest
             'country' => ['nullable', 'array'],
             'country.*' => ['string', 'max:100'],
             'image' => ['nullable', 'image', 'max:2048'],
+            'variants' => ['nullable', 'array'],
+            'variants.*.storage_capacity' => ['required_with:variants', 'string', 'max:100'],
+            'variants.*.color' => ['required_with:variants', 'string', 'max:100'],
+            'variants.*.condition' => ['required_with:variants', 'string', 'max:100'],
+            'variants.*.ram' => ['nullable', 'string', 'max:100'],
+            'variants.*.ssd' => ['nullable', 'string', 'max:100'],
+            'variants.*.price' => ['required_with:variants', 'numeric', 'min:0'],
+            'variants.*.stock' => ['required_with:variants', 'integer', 'min:0'],
+            'variants.*.sku' => ['nullable', 'string', 'max:120', 'distinct'],
+            'variants.*.image' => ['nullable', 'string', 'max:500'],
+            'variant_images' => ['nullable', 'array'],
+            'variant_images.*' => ['nullable', 'image', 'max:2048'],
         ];
     }
 
     protected function prepareForValidation(): void
     {
+        if (is_string($this->input('variants'))) {
+            $decoded = json_decode($this->input('variants'), true);
+            if (is_array($decoded)) {
+                $this->merge(['variants' => $decoded]);
+            }
+        }
+
+        $arrayFields = [
+            'storage_capacity',
+            'color',
+            'condition',
+            'ram',
+            'ssd',
+            'cpu',
+            'display',
+            'country',
+        ];
+
+        foreach ($arrayFields as $field) {
+            $value = $this->input($field);
+
+            if (is_string($value)) {
+                $this->merge([$field => $this->splitMultiValue($value)]);
+                continue;
+            }
+
+            if (is_array($value)) {
+                $normalized = array_values(array_filter(array_map(
+                    fn ($item) => trim((string) $item),
+                    $value
+                ), fn ($item) => $item !== ''));
+                $this->merge([$field => $normalized]);
+            }
+        }
+
         if ($this->has('discount')) {
             $value = $this->input('discount');
             if ($value === '' || $value === null) {
@@ -59,5 +106,31 @@ class StoreProductRequest extends FormRequest
         } else {
             $this->merge(['discount' => 0]);
         }
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function splitMultiValue(string $value): array
+    {
+        $trimmed = trim($value);
+        if ($trimmed === '') {
+            return [];
+        }
+
+        if (str_starts_with($trimmed, '[') && str_ends_with($trimmed, ']')) {
+            $decoded = json_decode($trimmed, true);
+            if (is_array($decoded)) {
+                return array_values(array_filter(array_map(
+                    fn ($item) => trim((string) $item),
+                    $decoded
+                ), fn ($item) => $item !== ''));
+            }
+        }
+
+        return array_values(array_filter(array_map(
+            fn ($item) => trim($item),
+            preg_split('/[|,]/', $trimmed) ?: []
+        ), fn ($item) => $item !== ''));
     }
 }

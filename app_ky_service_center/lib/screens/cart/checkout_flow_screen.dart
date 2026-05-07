@@ -120,6 +120,10 @@ class _CheckoutFlowScreenState extends State<CheckoutFlowScreen> {
             product: item.product,
             quantity: item.quantity,
             variant: item.variant,
+            variantId: item.variantId,
+            variantImageUrl: item.variantImageUrl,
+            variantStock: item.variantStock,
+            unitPrice: item.unitPrice,
           ),
         )
         .toList();
@@ -548,9 +552,12 @@ class _CheckoutFlowScreenState extends State<CheckoutFlowScreen> {
             'product_id': item.product.id,
             'item_type': 'product',
             'item_id': item.product.id,
+            if (item.variantId != null) 'product_variant_id': item.variantId,
+            if (item.variant != null && item.variant!.trim().isNotEmpty)
+              'variant_label': item.variant!.trim(),
             'product_name': item.product.name,
             'quantity': item.quantity,
-            'price': item.product.salePrice,
+            'price': item.effectiveUnitPrice,
           },
         )
         .toList();

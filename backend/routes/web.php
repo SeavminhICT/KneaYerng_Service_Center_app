@@ -67,9 +67,22 @@ Route::prefix('admin')->name('admin.')->middleware(['admin'])->group(function ()
     Route::view('/banners', 'admin.banners.index')->name('banners.index');
 
     Route::view('/products', 'admin.products.index')->name('products.index');
-    Route::view('/products/create', 'admin.products.create')->name('products.create');
+    Route::get('/products/create', function () {
+        return view('admin.products.create', [
+            'categories' => \App\Models\Category::query()
+                ->orderBy('sort_order')
+                ->orderBy('id')
+                ->get(['id', 'name']),
+        ]);
+    })->name('products.create');
     Route::get('/products/{product}/edit', function (\App\Models\Product $product) {
-        return view('admin.products.edit', ['productId' => $product->id]);
+        return view('admin.products.edit', [
+            'productId' => $product->id,
+            'categories' => \App\Models\Category::query()
+                ->orderBy('sort_order')
+                ->orderBy('id')
+                ->get(['id', 'name']),
+        ]);
     })->name('products.edit');
     Route::view('/product-attributes', 'admin.product-attributes.index')->name('product-attributes.index');
 

@@ -59,6 +59,7 @@
                                 </button>
                             </th>
                             <th class="px-4 py-3">Discount</th>
+                            <th class="px-4 py-3">Variants</th>
                             <th class="px-4 py-3">
                                 <button class="inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-widest text-slate-400">
                                     Stock
@@ -142,7 +143,7 @@
                 await window.adminApi.ensureCsrfCookie();
                 var response = await window.adminApi.request('/api/products?q=' + encodeURIComponent(currentQuery) + '&page=' + currentPage);
                 if (!response.ok) {
-                    rows.innerHTML = '<tr><td class="px-4 py-6 text-center text-sm text-slate-500" colspan="9">Unable to load products.</td></tr>';
+                    rows.innerHTML = '<tr><td class="px-4 py-6 text-center text-sm text-slate-500" colspan="11">Unable to load products.</td></tr>';
                     return;
                 }
                 var data = await response.json();
@@ -169,6 +170,7 @@
                             <td class="px-4 py-3">${warrantyBadge(product.warranty)}</td>
                             <td class="px-4 py-3">${formatCurrency(product.price)}</td>
                             <td class="px-4 py-3">${formatCurrency(product.discount)}</td>
+                            <td class="px-4 py-3">${(product.variants || []).length}</td>
                             <td class="px-4 py-3">${product.stock}</td>
                             <td class="px-4 py-3">${statusBadge(product.status)}</td>
                             <td class="px-4 py-3 text-right">
@@ -179,7 +181,7 @@
                             </td>
                         </tr>
                     `;
-                }).join('') || '<tr><td class="px-4 py-6 text-center text-sm text-slate-500" colspan="9">No products found.</td></tr>';
+                }).join('') || '<tr><td class="px-4 py-6 text-center text-sm text-slate-500" colspan="11">No products found.</td></tr>';
 
                 info.textContent = 'Showing ' + list.length + ' of ' + (data.meta?.total ?? list.length) + ' products';
                 prevButton.disabled = !data.links?.prev;
@@ -222,6 +224,15 @@
                     var product = payload.data || payload;
                     var imageUrl = resolveImage(product.thumbnail || product.image);
                     var badge = statusBadge(product.status || 'archived');
+                    var variants = Array.isArray(product.variants) ? product.variants : [];
+                    var variantRows = variants.slice(0, 8).map(function (variant) {
+                        var label = [variant.storage_capacity, variant.color, variant.condition].filter(Boolean).join(' / ');
+                        return '<tr>' +
+                            '<td class="px-2 py-1 text-slate-500">' + label + '</td>' +
+                            '<td class="px-2 py-1 text-right text-slate-900">' + formatCurrency(variant.price || 0) + '</td>' +
+                            '<td class="px-2 py-1 text-right text-slate-900">' + (variant.stock ?? 0) + '</td>' +
+                            '</tr>';
+                    }).join('');
                     var html = `
                         <div class="text-left">
                             <div class="flex items-center gap-4">
@@ -263,6 +274,16 @@
                                     <span class="font-semibold text-slate-500">Stock</span>
                                     <span class="text-slate-900">${product.stock ?? 0}</span>
                                 </div>
+                                <div class="flex items-center justify-between gap-4">
+                                    <span class="font-semibold text-slate-500">Variant Count</span>
+                                    <span class="text-slate-900">${variants.length}</span>
+                                </div>
+                            </div>
+                            <div class="mt-4 rounded-2xl border border-slate-200 bg-white p-3">
+                                <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Variants</p>
+                                ${variantRows
+                                    ? `<table class="w-full text-xs"><thead><tr><th class="px-2 py-1 text-left text-slate-400">Variant</th><th class="px-2 py-1 text-right text-slate-400">Price</th><th class="px-2 py-1 text-right text-slate-400">Stock</th></tr></thead><tbody>${variantRows}</tbody></table>`
+                                    : '<p class="text-xs text-slate-400">No variants configured.</p>'}
                             </div>
                         </div>
                     `;

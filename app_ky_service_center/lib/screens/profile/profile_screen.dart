@@ -7,6 +7,7 @@ import '../../models/pickup_ticket.dart';
 import '../../models/user_profile.dart';
 import '../../services/api_service.dart';
 import '../../services/app_notification_service.dart';
+import '../../services/theme_service.dart';
 import '../Auth/login_screen.dart';
 import '../notifications/notification_screen.dart';
 import 'edit_profile_screen.dart';
@@ -21,12 +22,18 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   static const Color _brandBlue = Color(0xFF4A88F7);
   static const Color _brandPeach = Color(0xFFEAF1FF);
-  static const Color _canvas = Color(0xFFF5F7FB);
-  static const Color _surface = Colors.white;
-  static const Color _surfaceAlt = Color(0xFFF6F9FF);
-  static const Color _border = Color(0xFFE6ECF5);
-  static const Color _textPrimary = Color(0xFF111827);
-  static const Color _textMuted = Color(0xFF6B7280);
+  static const Color _canvasLight = Color(0xFFF5F7FB);
+  static const Color _canvasDark = Color(0xFF0D1117);
+  static const Color _surfaceLight = Colors.white;
+  static const Color _surfaceDark = Color(0xFF161B22);
+  static const Color _surfaceAltLight = Color(0xFFF6F9FF);
+  static const Color _surfaceAltDark = Color(0xFF1D2635);
+  static const Color _borderLight = Color(0xFFE6ECF5);
+  static const Color _borderDark = Color(0xFF2B3442);
+  static const Color _textPrimaryLight = Color(0xFF111827);
+  static const Color _textPrimaryDark = Color(0xFFE6EDF7);
+  static const Color _textMutedLight = Color(0xFF6B7280);
+  static const Color _textMutedDark = Color(0xFF97A2B5);
   static const Color _heroStart = Color(0xFF4A88F7);
   static const Color _heroEnd = Color(0xFF96B5F2);
   static const Color _danger = Color(0xFFE65054);
@@ -35,6 +42,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   bool _loggingOut = false;
   bool _uploadingAvatar = false;
+
+  bool get _isDarkMode => ThemeService.instance.isDark(context);
+  Color get _canvas => _isDarkMode ? _canvasDark : _canvasLight;
+  Color get _surface => _isDarkMode ? _surfaceDark : _surfaceLight;
+  Color get _surfaceAlt => _isDarkMode ? _surfaceAltDark : _surfaceAltLight;
+  Color get _border => _isDarkMode ? _borderDark : _borderLight;
+  Color get _textPrimary => _isDarkMode ? _textPrimaryDark : _textPrimaryLight;
+  Color get _textMuted => _isDarkMode ? _textMutedDark : _textMutedLight;
 
   @override
   void initState() {
@@ -45,15 +60,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = ThemeService.instance.isDark(context);
     return Theme(
       data: theme.copyWith(
         textTheme: GoogleFonts.interTextTheme(theme.textTheme),
       ),
       child: Scaffold(
-        backgroundColor: _canvas,
+        backgroundColor: isDark ? const Color(0xFF0D1117) : _canvas,
         body: Stack(
           children: [
-            _backgroundDecorations(),
+            _backgroundDecorations(isDark: isDark),
             SafeArea(
               child: FutureBuilder<UserProfile?>(
                 future: _profileFuture,
@@ -86,8 +102,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _backgroundDecorations() {
-    return Container(decoration: const BoxDecoration(color: _canvas));
+  Widget _backgroundDecorations({required bool isDark}) {
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF0D1117) : _canvas,
+      ),
+    );
   }
 
   Widget _profileView(UserProfile profile) {
@@ -141,6 +161,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _heroCard(UserProfile profile) {
+    final isDark = ThemeService.instance.isDark(context);
     final name = profile.displayName.isNotEmpty ? profile.displayName : 'User';
     final subtitle = _profileStatus(profile);
     final email = _displayValue(profile.email, 'No email added');
@@ -169,8 +190,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
           Row(
             children: [
               _headerActionButton(
-                icon: Icons.settings_outlined,
-                onTap: () => _showFeatureComingSoon('Settings'),
+                icon: isDark
+                    ? Icons.light_mode_rounded
+                    : Icons.dark_mode_rounded,
+                tooltip: isDark
+                    ? 'Switch to Light Mode'
+                    : 'Switch to Dark Mode',
+                onTap: _toggleThemeMode,
               ),
               const Spacer(),
               _headerActionButton(
@@ -262,8 +288,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget _headerActionButton({
     required IconData icon,
     required VoidCallback onTap,
+    String? tooltip,
   }) {
-    return Material(
+    final button = Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
@@ -282,6 +309,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
       ),
     );
+
+    if (tooltip == null || tooltip.trim().isEmpty) return button;
+    return Tooltip(message: tooltip, child: button);
   }
 
   Widget _informationCard(UserProfile profile) {
@@ -375,29 +405,38 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _quickActions() {
+    final isDark = ThemeService.instance.isDark(context);
     final actions = [
       (
         icon: Icons.description_outlined,
         label: 'Documents',
-        colors: const [Color(0xFFEAF2FF), Color(0xFFDDEAFF)],
+        colors: isDark
+            ? const [Color(0xFF24324A), Color(0xFF1F2B42)]
+            : const [Color(0xFFEAF2FF), Color(0xFFDDEAFF)],
         onTap: () => _showFeatureComingSoon('Documents'),
       ),
       (
         icon: Icons.insights_outlined,
         label: 'Activity',
-        colors: const [Color(0xFFEFF7FF), Color(0xFFE5F2FF)],
+        colors: isDark
+            ? const [Color(0xFF22324A), Color(0xFF1C2A3F)]
+            : const [Color(0xFFEFF7FF), Color(0xFFE5F2FF)],
         onTap: _openOrderHistory,
       ),
       (
         icon: Icons.verified_user_outlined,
         label: 'Security',
-        colors: const [Color(0xFFF2F5FF), Color(0xFFE9EEFF)],
+        colors: isDark
+            ? const [Color(0xFF2A2F4A), Color(0xFF222741)]
+            : const [Color(0xFFF2F5FF), Color(0xFFE9EEFF)],
         onTap: () => _showFeatureComingSoon('Security'),
       ),
       (
         icon: Icons.account_balance_wallet_outlined,
         label: 'Payment',
-        colors: const [Color(0xFFEEF4FF), Color(0xFFE2ECFF)],
+        colors: isDark
+            ? const [Color(0xFF22354A), Color(0xFF1C2D40)]
+            : const [Color(0xFFEEF4FF), Color(0xFFE2ECFF)],
         onTap: () => _showFeatureComingSoon('Payment'),
       ),
     ];
@@ -430,6 +469,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     required List<Color> colors,
     required VoidCallback onTap,
   }) {
+    final isDark = ThemeService.instance.isDark(context);
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -460,7 +500,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   height: 44,
                   width: 44,
                   decoration: BoxDecoration(
-                    color: Colors.white.withAlpha((0.72 * 255).round()),
+                    color: isDark
+                        ? Colors.white.withAlpha((0.14 * 255).round())
+                        : Colors.white.withAlpha((0.72 * 255).round()),
                     borderRadius: BorderRadius.circular(14),
                   ),
                   child: Icon(icon, color: _brandBlue, size: 22),
@@ -476,7 +518,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
                 const SizedBox(height: 4),
                 Row(
-                  children: const [
+                  children: [
                     Text(
                       'Open',
                       style: TextStyle(
@@ -613,10 +655,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                 ),
               ),
-              const Icon(
+              Icon(
                 Icons.arrow_forward_ios_rounded,
                 size: 16,
-                color: Color(0xFF99A1AE),
+                color: _textMuted,
               ),
             ],
           ),
@@ -626,7 +668,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _settingsDivider() {
-    return const Padding(
+    return Padding(
       padding: EdgeInsets.symmetric(horizontal: 16),
       child: Divider(height: 1, color: _border),
     );
@@ -1225,6 +1267,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
       _profileFuture = ApiService.getUserProfile();
     });
     await _profileFuture;
+  }
+
+  Future<void> _toggleThemeMode() async {
+    await ThemeService.instance.toggleLightDark();
+    if (!mounted) return;
+
+    final isDark = ThemeService.instance.isDark(context);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(isDark ? 'Dark mode enabled' : 'Light mode enabled'),
+        duration: const Duration(milliseconds: 1400),
+      ),
+    );
   }
 }
 

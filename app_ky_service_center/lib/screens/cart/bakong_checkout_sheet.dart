@@ -234,9 +234,12 @@ class _BakongCheckoutSheetState extends State<BakongCheckoutSheet> {
         .map(
           (item) => {
             'product_id': item.product.id,
+            if (item.variantId != null) 'product_variant_id': item.variantId,
+            if (item.variant != null && item.variant!.trim().isNotEmpty)
+              'variant_label': item.variant!.trim(),
             'product_name': item.product.name,
             'quantity': item.quantity,
-            'price': item.product.salePrice,
+            'price': item.effectiveUnitPrice,
           },
         )
         .toList();

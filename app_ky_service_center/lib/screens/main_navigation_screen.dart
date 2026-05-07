@@ -1,21 +1,21 @@
 import 'dart:async';
 
-import 'package:app_ky_service_center/screens/home/home_screen.dart';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+
 import '../models/pickup_ticket.dart';
-import '../services/app_notification_service.dart';
 import '../services/api_service.dart';
-import 'categories/categories_screen.dart';
-import 'repair/repair_screen.dart';
-import 'orders/delivery_tracking_screen.dart';
-import 'orders/orders_screen.dart';
-import 'tickets/tickets_screen.dart';
-import 'tickets/ticket_detail_screen.dart';
-import 'profile/profile_screen.dart';
-import 'support/support_chat_screen.dart';
+import '../services/app_notification_service.dart';
 import '../widgets/auth_guard.dart';
 import '../widgets/page_transitions.dart';
+import 'categories/categories_screen.dart';
+import 'home/home_screen.dart';
+import 'orders/delivery_tracking_screen.dart';
+import 'orders/orders_screen.dart';
+import 'profile/profile_screen.dart';
+import 'repair/repair_screen.dart';
+import 'support/support_chat_screen.dart';
+import 'tickets/ticket_detail_screen.dart';
+import 'tickets/tickets_screen.dart';
 
 class MainNavigationScreen extends StatefulWidget {
   const MainNavigationScreen({
@@ -44,13 +44,17 @@ class MainNavigationScreen extends StatefulWidget {
 }
 
 class _MainNavigationScreenState extends State<MainNavigationScreen>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   late int _currentIndex;
+  int? _previousIndex;
+  int? _pressedNavIndex;
   bool _didOpenInitialPickupTicket = false;
   bool _didOpenInitialDeliveryTracking = false;
   int _supportUnreadCount = 0;
   Timer? _supportBadgeTimer;
   late final AnimationController _supportPulseController;
+  late final AnimationController _tabTransitionController;
+  late final Animation<double> _tabTransition;
 
   final List<Widget> _screens = const [
     HomeScreen(),
@@ -61,14 +65,63 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
     ProfileScreen(),
   ];
 
+  static const List<_NavItemData> _navItems = [
+    _NavItemData(
+      label: 'Home',
+      icon: Icons.home_outlined,
+      activeIcon: Icons.home_rounded,
+    ),
+    _NavItemData(
+      label: 'Categories',
+      icon: Icons.grid_view_outlined,
+      activeIcon: Icons.grid_view_rounded,
+    ),
+    _NavItemData(
+      label: 'Repair',
+      icon: Icons.build_outlined,
+      activeIcon: Icons.build_rounded,
+    ),
+    _NavItemData(
+      label: 'Orders',
+      icon: Icons.receipt_long_outlined,
+      activeIcon: Icons.receipt_long_rounded,
+    ),
+    _NavItemData(
+      label: 'Tickets',
+      icon: Icons.confirmation_number_outlined,
+      activeIcon: Icons.confirmation_number_rounded,
+    ),
+    _NavItemData(
+      label: 'Profile',
+      icon: Icons.person_outline_rounded,
+      activeIcon: Icons.person_rounded,
+    ),
+  ];
+
   @override
   void initState() {
     super.initState();
-    _currentIndex = widget.initialIndex.clamp(0, _screens.length - 1);
+    _currentIndex = widget.initialIndex.clamp(0, _screens.length - 1).toInt();
     _supportPulseController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1600),
     )..repeat(reverse: true);
+    _tabTransitionController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+      value: 1,
+    );
+    _tabTransition = CurvedAnimation(
+      parent: _tabTransitionController,
+      curve: Curves.easeOut,
+    );
+    _tabTransitionController.addStatusListener((status) {
+      if (status != AnimationStatus.completed || !mounted) return;
+      setState(() {
+        _previousIndex = null;
+      });
+    });
+
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await AppNotificationService.instance.syncTokenWithBackend();
       await _openInitialPickupTicketIfNeeded();
@@ -86,13 +139,23 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
   void dispose() {
     _supportBadgeTimer?.cancel();
     _supportPulseController.dispose();
+    _tabTransitionController.dispose();
     super.dispose();
   }
 
   void _onTabSelected(int index) {
+    if (index == _currentIndex || index < 0 || index >= _screens.length) {
+      return;
+    }
+
     setState(() {
+      _previousIndex = _currentIndex;
       _currentIndex = index;
+      _pressedNavIndex = null;
     });
+    _tabTransitionController
+      ..stop()
+      ..forward(from: 0);
   }
 
   Future<void> _refreshSupportUnreadCount() async {
@@ -150,122 +213,350 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: IndexedStack(index: _currentIndex, children: _screens),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      body: AnimatedBuilder(
+        animation: _tabTransition,
+        builder: (context, _) {
+          return _AnimatedTabStack(
+            screens: _screens,
+            currentIndex: _currentIndex,
+            previousIndex: _previousIndex,
+            progress: _tabTransition.value,
+          );
+        },
+      ),
       floatingActionButton: ScaleTransition(
         scale: Tween<double>(
           begin: 1,
           end: 1.04,
-        ).animate(CurvedAnimation(
-          parent: _supportPulseController,
-          curve: Curves.easeInOut,
-        )),
+        ).animate(
+          CurvedAnimation(
+            parent: _supportPulseController,
+            curve: Curves.easeInOut,
+          ),
+        ),
         child: _SupportFab(
           unreadCount: _supportUnreadCount,
           onTap: _openSupportChat,
         ),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
-      bottomNavigationBar: SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-          child: Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(28),
-              gradient: const LinearGradient(
-                colors: [Color(0xFFF3F7FF), Color(0xFFF7F5FF)],
-              ),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.88)),
-              boxShadow: const [
-                BoxShadow(
-                  color: Color(0x1F20304A),
-                  blurRadius: 20,
-                  offset: Offset(0, 10),
-                ),
-              ],
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(28),
-              child: Theme(
-                data: Theme.of(context).copyWith(
-                  textTheme: GoogleFonts.manropeTextTheme(
-                    Theme.of(context).textTheme,
-                  ),
-                ),
-                child: NavigationBarTheme(
-                  data: NavigationBarThemeData(
-                    backgroundColor: Colors.white.withValues(alpha: 0.92),
-                    height: 78,
-                    indicatorColor: const Color(0xFFE3EBFF),
-                    iconTheme: WidgetStateProperty.resolveWith((states) {
-                      final selected = states.contains(WidgetState.selected);
-                      return IconThemeData(
-                        size: 24,
-                        color: selected
-                            ? const Color(0xFF3D74FF)
-                            : const Color(0xFF6C7690),
-                      );
-                    }),
-                    labelTextStyle: WidgetStateProperty.resolveWith((states) {
-                      final selected = states.contains(WidgetState.selected);
-                      return GoogleFonts.manrope(
-                        fontSize: 11.5,
-                        fontWeight: selected
-                            ? FontWeight.w800
-                            : FontWeight.w700,
-                        color: selected
-                            ? const Color(0xFF22304A)
-                            : const Color(0xFF7B849C),
-                      );
-                    }),
-                  ),
-                  child: NavigationBar(
-                    selectedIndex: _currentIndex,
-                    labelBehavior:
-                        NavigationDestinationLabelBehavior.alwaysShow,
-                    animationDuration: const Duration(milliseconds: 320),
-                    onDestinationSelected: _onTabSelected,
-                    destinations: const [
-                      NavigationDestination(
-                        icon: Icon(Icons.home_outlined),
-                        selectedIcon: Icon(Icons.home_rounded),
-                        label: 'Home',
-                      ),
-                      NavigationDestination(
-                        icon: Icon(Icons.grid_view_outlined),
-                        selectedIcon: Icon(Icons.grid_view_rounded),
-                        label: 'Categories',
-                      ),
-                      NavigationDestination(
-                        icon: Icon(Icons.build_outlined),
-                        selectedIcon: Icon(Icons.build_rounded),
-                        label: 'Repair',
-                      ),
-                      NavigationDestination(
-                        icon: Icon(Icons.receipt_long_outlined),
-                        selectedIcon: Icon(Icons.receipt_long_rounded),
-                        label: 'Orders',
-                      ),
-                      NavigationDestination(
-                        icon: Icon(Icons.confirmation_number_outlined),
-                        selectedIcon: Icon(Icons.confirmation_number_rounded),
-                        label: 'Tickets',
-                      ),
-                      NavigationDestination(
-                        icon: Icon(Icons.person_outline_rounded),
-                        selectedIcon: Icon(Icons.person_rounded),
-                        label: 'Profile',
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
+      bottomNavigationBar: _AnimatedBottomNavBar(
+        items: _navItems,
+        activeIndex: _currentIndex,
+        pressedIndex: _pressedNavIndex,
+        onTapDown: (index) {
+          setState(() {
+            _pressedNavIndex = index;
+          });
+        },
+        onTapCancel: () {
+          if (_pressedNavIndex == null) return;
+          setState(() {
+            _pressedNavIndex = null;
+          });
+        },
+        onTap: _onTabSelected,
+      ),
+    );
+  }
+}
+
+class _AnimatedTabStack extends StatelessWidget {
+  const _AnimatedTabStack({
+    required this.screens,
+    required this.currentIndex,
+    required this.previousIndex,
+    required this.progress,
+  });
+
+  final List<Widget> screens;
+  final int currentIndex;
+  final int? previousIndex;
+  final double progress;
+
+  @override
+  Widget build(BuildContext context) {
+    final clampedProgress = progress.clamp(0.0, 1.0);
+    final animating = previousIndex != null && clampedProgress < 1;
+
+    final children = <Widget>[];
+
+    for (var index = 0; index < screens.length; index++) {
+      if (index == currentIndex || (animating && index == previousIndex)) {
+        continue;
+      }
+      children.add(
+        Offstage(
+          offstage: true,
+          child: TickerMode(
+            enabled: false,
+            child: screens[index],
+          ),
+        ),
+      );
+    }
+
+    if (animating && previousIndex != null) {
+      children.add(
+        _buildLayer(
+          screen: screens[previousIndex!],
+          isCurrent: false,
+          progress: clampedProgress,
+        ),
+      );
+    }
+
+    children.add(
+      _buildLayer(
+        screen: screens[currentIndex],
+        isCurrent: true,
+        progress: clampedProgress,
+      ),
+    );
+
+    return Stack(fit: StackFit.expand, children: children);
+  }
+
+  Widget _buildLayer({
+    required Widget screen,
+    required bool isCurrent,
+    required double progress,
+  }) {
+    var horizontalShift = 0.0;
+    var opacity = 1.0;
+
+    if (previousIndex != null && progress < 1) {
+      if (isCurrent) {
+        horizontalShift = 0.16 * (1 - progress);
+        opacity = progress;
+      } else {
+        horizontalShift = -0.12 * progress;
+        opacity = 1 - progress;
+      }
+    }
+
+    return IgnorePointer(
+      ignoring: !isCurrent,
+      child: FractionalTranslation(
+        translation: Offset(horizontalShift, 0),
+        child: Opacity(
+          opacity: opacity.clamp(0.0, 1.0),
+          child: TickerMode(
+            enabled: true,
+            child: screen,
           ),
         ),
       ),
     );
   }
+}
+
+class _AnimatedBottomNavBar extends StatelessWidget {
+  const _AnimatedBottomNavBar({
+    required this.items,
+    required this.activeIndex,
+    required this.pressedIndex,
+    required this.onTapDown,
+    required this.onTapCancel,
+    required this.onTap,
+  });
+
+  final List<_NavItemData> items;
+  final int activeIndex;
+  final int? pressedIndex;
+  final ValueChanged<int> onTapDown;
+  final VoidCallback onTapCancel;
+  final ValueChanged<int> onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    const horizontalPadding = 14.0;
+    const verticalPadding = 12.0;
+
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+        child: Container(
+          height: 88,
+          padding: const EdgeInsets.symmetric(
+            horizontal: horizontalPadding,
+            vertical: verticalPadding,
+          ),
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF161B22) : Colors.white,
+            borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(20),
+              bottom: Radius.circular(24),
+            ),
+            border: Border.all(
+              color: isDark ? const Color(0xFF2B3442) : const Color(0xFFE6EBF3),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: isDark
+                    ? const Color(0x55000000)
+                    : const Color(0x16000000),
+                blurRadius: 22,
+                offset: Offset(0, -3),
+              ),
+            ],
+          ),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final itemWidth = constraints.maxWidth / items.length;
+              const pillWidth = 50.0;
+              const pillHeight = 36.0;
+              final pillLeft =
+                  itemWidth * activeIndex + (itemWidth - pillWidth) / 2;
+
+              return Stack(
+                children: [
+                  AnimatedPositioned(
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeOut,
+                    left: pillLeft,
+                    top: 0,
+                    width: pillWidth,
+                    height: pillHeight,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? const Color(0xFF213154)
+                            : const Color(0xFFEAF0FF),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                    ),
+                  ),
+                  Row(
+                    children: List.generate(items.length, (index) {
+                      final item = items[index];
+                      final active = index == activeIndex;
+                      final pressed = index == pressedIndex;
+                      return Expanded(
+                        child: _BottomNavItem(
+                          label: item.label,
+                          icon: item.icon,
+                          activeIcon: item.activeIcon,
+                          active: active,
+                          pressed: pressed,
+                          onTapDown: () => onTapDown(index),
+                          onTapCancel: onTapCancel,
+                          onTap: () => onTap(index),
+                        ),
+                      );
+                    }),
+                  ),
+                ],
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _BottomNavItem extends StatelessWidget {
+  const _BottomNavItem({
+    required this.label,
+    required this.icon,
+    required this.activeIcon,
+    required this.active,
+    required this.pressed,
+    required this.onTapDown,
+    required this.onTapCancel,
+    required this.onTap,
+  });
+
+  final String label;
+  final IconData icon;
+  final IconData activeIcon;
+  final bool active;
+  final bool pressed;
+  final VoidCallback onTapDown;
+  final VoidCallback onTapCancel;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final iconColor = active
+        ? const Color(0xFF4A6CF7)
+        : (isDark ? const Color(0xFF97A2B5) : const Color(0xFF888888));
+    final labelColor = active
+        ? (isDark ? const Color(0xFFE6EDF7) : const Color(0xFF1A1A1A))
+        : (isDark ? const Color(0xFF97A2B5) : const Color(0xFF888888));
+    final targetScale = pressed
+        ? 0.95
+        : active
+        ? 1.15
+        : 1.0;
+
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTapDown: (_) => onTapDown(),
+      onTapCancel: onTapCancel,
+      onTapUp: (_) => onTapCancel(),
+      onTap: onTap,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const SizedBox(height: 2),
+          AnimatedSlide(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOut,
+            offset: active ? const Offset(0, -0.16) : Offset.zero,
+            child: AnimatedScale(
+              duration: const Duration(milliseconds: 170),
+              curve: Curves.easeOut,
+              scale: targetScale,
+              child: Icon(
+                active ? activeIcon : icon,
+                color: iconColor,
+                size: active ? 23 : 21,
+              ),
+            ),
+          ),
+          const SizedBox(height: 4),
+          AnimatedDefaultTextStyle(
+            duration: const Duration(milliseconds: 260),
+            curve: Curves.easeOut,
+            style: TextStyle(
+              color: labelColor,
+              fontSize: 11.5,
+              fontWeight: active ? FontWeight.w700 : FontWeight.w500,
+              height: 1.1,
+            ),
+            child: AnimatedOpacity(
+              duration: const Duration(milliseconds: 260),
+              curve: Curves.easeOut,
+              opacity: active ? 1 : 0.88,
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _NavItemData {
+  const _NavItemData({
+    required this.label,
+    required this.icon,
+    required this.activeIcon,
+  });
+
+  final String label;
+  final IconData icon;
+  final IconData activeIcon;
 }
 
 class _SupportFab extends StatelessWidget {

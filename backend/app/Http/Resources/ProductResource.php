@@ -10,8 +10,39 @@ class ProductResource extends JsonResource
     public function toArray(Request $request): array
     {
         $primaryImage = $this->firstNonEmptyPath($this->thumbnail, $this->image);
-        $gallery = $this->image_gallery;
+        $gallery = is_array($this->image_gallery) ? $this->image_gallery : [];
         $baseUrl = $this->resolveBaseUrl($request);
+        $variants = $this->whenLoaded(
+            'variants',
+            function () use ($baseUrl) {
+                return $this->variants
+                    ->map(function ($variant) use ($baseUrl) {
+                        $storage = trim((string) ($variant->storage_capacity ?? ''));
+                        $color = trim((string) ($variant->color ?? ''));
+                        $condition = trim((string) ($variant->condition ?? ''));
+                        $label = implode(' / ', array_values(array_filter([$storage, $color, $condition])));
+
+                        return [
+                            'id' => $variant->id,
+                            'storage_capacity' => $variant->storage_capacity,
+                            'color' => $variant->color,
+                            'condition' => $variant->condition,
+                            'ram' => $variant->ram,
+                            'ssd' => $variant->ssd,
+                            'price' => (float) $variant->price,
+                            'stock' => (int) $variant->stock,
+                            'sku' => $variant->sku,
+                            'image' => $this->formatMediaUrl($variant->image, $baseUrl),
+                            'is_active' => (bool) $variant->is_active,
+                            'sort_order' => (int) $variant->sort_order,
+                            'label' => $label,
+                        ];
+                    })
+                    ->values()
+                    ->all();
+            },
+            []
+        );
 
         return [
             'id' => $this->id,
@@ -27,9 +58,7 @@ class ProductResource extends JsonResource
             'warranty' => $this->warranty,
             'thumbnail' => $this->formatMediaUrl($primaryImage, $baseUrl),
             'image' => $this->formatMediaUrl($primaryImage, $baseUrl),
-            'image_gallery' => $gallery === null
-                ? null
-                : array_map(fn ($image) => $this->formatMediaUrl($image, $baseUrl), $gallery),
+            'image_gallery' => array_map(fn ($image) => $this->formatMediaUrl($image, $baseUrl), $gallery),
             'storage_capacity' => $this->storage_capacity,
             'color' => $this->color,
             'condition' => $this->condition,
@@ -38,6 +67,7 @@ class ProductResource extends JsonResource
             'cpu' => $this->cpu,
             'display' => $this->display,
             'country' => $this->country,
+            'variants' => $variants,
             'category' => $this->whenLoaded('category', fn () => [
                 'id' => $this->category?->id,
                 'name' => $this->category?->name,

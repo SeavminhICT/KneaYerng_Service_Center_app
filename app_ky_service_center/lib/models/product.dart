@@ -1,6 +1,60 @@
 import 'dart:convert';
 import '../services/api_service.dart';
 
+class ProductVariant {
+  const ProductVariant({
+    required this.id,
+    required this.storageCapacity,
+    required this.color,
+    required this.condition,
+    required this.price,
+    required this.stock,
+    this.ram,
+    this.ssd,
+    this.sku,
+    this.imageUrl,
+    this.isActive = true,
+  });
+
+  final int id;
+  final String storageCapacity;
+  final String color;
+  final String condition;
+  final double price;
+  final int stock;
+  final String? ram;
+  final String? ssd;
+  final String? sku;
+  final String? imageUrl;
+  final bool isActive;
+
+  String get label => '$storageCapacity / $color / $condition';
+
+  factory ProductVariant.fromJson(Map<String, dynamic> json) {
+    return ProductVariant(
+      id: Product._toInt(json['id']),
+      storageCapacity: Product._toTextValue(json['storage_capacity']) ?? '',
+      color: Product._toTextValue(json['color']) ?? '',
+      condition: Product._toTextValue(json['condition']) ?? '',
+      price: Product._toDoubleOrNull(json['price']) ?? 0,
+      stock: Product._toIntOrNull(json['stock']) ?? 0,
+      ram: Product._toTextValue(json['ram']),
+      ssd: Product._toTextValue(json['ssd']),
+      sku: Product._toTextValue(json['sku']),
+      imageUrl: ApiService.normalizeMediaUrl(
+        Product._pickImageValue(json, const [
+          'image',
+          'image_url',
+          'imageUrl',
+          'thumbnail',
+          'thumbnail_url',
+        ]),
+      ),
+      isActive: json['is_active'] != false,
+    );
+  }
+}
+
 class Product {
   const Product({
     required this.id,
@@ -30,6 +84,7 @@ class Product {
     this.cpu,
     this.display,
     this.country,
+    this.variants = const [],
     this.createdAt,
   });
 
@@ -60,6 +115,7 @@ class Product {
   final String? cpu;
   final String? display;
   final String? country;
+  final List<ProductVariant> variants;
   final DateTime? createdAt;
 
   bool get hasDiscount {
@@ -167,6 +223,7 @@ class Product {
       cpu: _toTextValue(json['cpu']),
       display: _toTextValue(json['display']),
       country: _toTextValue(json['country']),
+      variants: _parseVariants(json['variants']),
       createdAt: _toDateTime(json['created_at']),
     );
   }
@@ -362,5 +419,19 @@ class Product {
     final text = value.toString().trim();
     if (text.isEmpty || text == 'null') return null;
     return text;
+  }
+
+  static List<ProductVariant> _parseVariants(dynamic value) {
+    if (value is! List) return const [];
+    return value
+        .whereType<Map>()
+        .map((item) => ProductVariant.fromJson(Map<String, dynamic>.from(item)))
+        .where(
+          (variant) =>
+              variant.storageCapacity.trim().isNotEmpty &&
+              variant.color.trim().isNotEmpty &&
+              variant.condition.trim().isNotEmpty,
+        )
+        .toList();
   }
 }

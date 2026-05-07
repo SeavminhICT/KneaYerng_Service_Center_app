@@ -13,6 +13,8 @@ use App\Models\OrderItem;
 use App\Models\Part;
 use App\Models\Payment;
 use App\Models\Product;
+use App\Models\ProductVariant;
+use App\Services\OrderInventoryService;
 use App\Services\OrderPaymentService;
 use App\Models\VoucherRedemption;
 use App\Services\VoucherService;
@@ -25,7 +27,7 @@ class CartController extends Controller
     public function show(Request $request)
     {
         $user = $request->user();
-        $cart = $this->getOrCreateCart($user->id)->load('items');
+        $cart = $this->getOrCreateCart($user->id)->load(['items', 'items.productVariant']);
 
         return new CartResource($cart);
     }
@@ -37,6 +39,8 @@ class CartController extends Controller
             'product_id' => ['required_without_all:item_type,item_id', 'nullable', 'integer'],
             'item_type' => ['nullable', 'in:product,accessory,part,repair_part'],
             'item_id' => ['nullable', 'integer'],
+            'product_variant_id' => ['nullable', 'integer', 'exists:product_variants,id'],
+            'variant_label' => ['nullable', 'string', 'max:255'],
             'quantity' => ['nullable', 'integer', 'min:1'],
         ]);
 
@@ -54,20 +58,62 @@ class CartController extends Controller
 
         $itemType = $resolved['type'];
         $catalogItem = $resolved['item'];
+        $productVariant = null;
+        if ($itemType === 'product') {
+            $requestedVariantId = isset($validated['product_variant_id'])
+                ? (int) $validated['product_variant_id']
+                : null;
+
+            if ($requestedVariantId) {
+                $productVariant = $this->resolveProductVariant($catalogItem, $requestedVariantId);
+                if (! $productVariant) {
+                    return response()->json(['message' => 'Selected variant is not available for this product.'], 422);
+                }
+            } elseif ($catalogItem->variants()->where('is_active', true)->exists()) {
+                return response()->json(['message' => 'Please select a product variant.'], 422);
+            }
+        }
+
+        $variantLabel = trim((string) ($validated['variant_label'] ?? ''));
+        if ($variantLabel === '' && $productVariant) {
+            $variantLabel = $productVariant->label();
+        }
+
         $cart = $this->getOrCreateCart($user->id);
 
-        $item = $cart->items()
+        $itemQuery = $cart->items()
             ->where('item_type', $itemType)
-            ->where('item_id', $itemId)
-            ->first();
+            ->where('item_id', $itemId);
+
+        if ($itemType === 'product') {
+            if ($productVariant) {
+                $itemQuery->where('product_variant_id', $productVariant->id);
+            } else {
+                $itemQuery->whereNull('product_variant_id');
+            }
+        }
+
+        $item = $itemQuery->first();
 
         if (! $item && $itemType === 'product') {
-            $item = $cart->items()->whereNull('item_type')->where('product_id', $itemId)->first();
+            $legacyQuery = $cart->items()
+                ->whereNull('item_type')
+                ->where('product_id', $itemId);
+
+            if ($productVariant) {
+                $legacyQuery->where('product_variant_id', $productVariant->id);
+            } else {
+                $legacyQuery->whereNull('product_variant_id');
+            }
+
+            $item = $legacyQuery->first();
         }
 
         $newQuantity = $item ? ($item->quantity + $quantity) : $quantity;
 
-        $availableStock = $this->resolveCatalogStock($itemType, $catalogItem);
+        $availableStock = $productVariant
+            ? (int) $productVariant->stock
+            : $this->resolveCatalogStock($itemType, $catalogItem);
         if ($availableStock !== null && $availableStock < $newQuantity) {
             return response()->json(['message' => 'Insufficient stock available.'], 422);
         }
@@ -80,26 +126,37 @@ class CartController extends Controller
             if ($itemType === 'product' && ! $item->product_id) {
                 $item->product_id = $itemId;
             }
+            if ($itemType === 'product') {
+                $item->product_variant_id = $productVariant?->id;
+                $item->variant_label = $variantLabel !== '' ? $variantLabel : null;
+            }
             if (! $item->product_name) {
                 $item->product_name = $this->resolveCatalogName($itemType, $catalogItem);
+            }
+            if ($productVariant) {
+                $item->unit_price = (float) $productVariant->price;
             }
             $item->quantity = $newQuantity;
             $item->line_total = $item->unit_price * $newQuantity;
             $item->save();
         } else {
-            $unitPrice = $this->resolveCatalogPrice($itemType, $catalogItem);
+            $unitPrice = $productVariant
+                ? (float) $productVariant->price
+                : $this->resolveCatalogPrice($itemType, $catalogItem);
             $cart->items()->create([
                 'product_id' => $itemType === 'product' ? $itemId : null,
                 'item_type' => $itemType,
                 'item_id' => $itemId,
+                'product_variant_id' => $productVariant?->id,
                 'product_name' => $this->resolveCatalogName($itemType, $catalogItem),
+                'variant_label' => $variantLabel !== '' ? $variantLabel : null,
                 'unit_price' => $unitPrice,
                 'quantity' => $newQuantity,
                 'line_total' => $unitPrice * $newQuantity,
             ]);
         }
 
-        return new CartResource($cart->load('items'));
+        return new CartResource($cart->load(['items', 'items.productVariant']));
     }
 
     public function updateItem(Request $request, CartItem $cartItem)
@@ -119,7 +176,16 @@ class CartController extends Controller
         if ($itemId) {
             $resolved = $this->resolveCatalogItem($itemType, (int) $itemId);
             if ($resolved) {
-                $availableStock = $this->resolveCatalogStock($resolved['type'], $resolved['item']);
+                $availableStock = null;
+                if ($resolved['type'] === 'product' && $cartItem->product_variant_id) {
+                    $variant = $this->resolveProductVariant(
+                        $resolved['item'],
+                        (int) $cartItem->product_variant_id
+                    );
+                    $availableStock = $variant ? (int) $variant->stock : 0;
+                } else {
+                    $availableStock = $this->resolveCatalogStock($resolved['type'], $resolved['item']);
+                }
                 if ($availableStock !== null && $availableStock < $newQuantity) {
                     return response()->json(['message' => 'Insufficient stock available.'], 422);
                 }
@@ -130,7 +196,7 @@ class CartController extends Controller
         $cartItem->line_total = $cartItem->unit_price * $newQuantity;
         $cartItem->save();
 
-        return new CartResource($cartItem->cart->load('items'));
+        return new CartResource($cartItem->cart->load(['items', 'items.productVariant']));
     }
 
     public function destroyItem(Request $request, CartItem $cartItem)
@@ -143,7 +209,7 @@ class CartController extends Controller
         $cart = $cartItem->cart;
         $cartItem->delete();
 
-        return new CartResource($cart->load('items'));
+        return new CartResource($cart->load(['items', 'items.productVariant']));
     }
 
     public function checkout(Request $request)
@@ -164,7 +230,7 @@ class CartController extends Controller
             'voucher_code' => ['nullable', 'string', 'max:50'],
         ]);
 
-        $cart = $this->getOrCreateCart($user->id)->load('items');
+        $cart = $this->getOrCreateCart($user->id)->load(['items', 'items.productVariant']);
         if ($cart->items->isEmpty()) {
             return response()->json(['message' => 'Cart is empty.'], 422);
         }
@@ -186,95 +252,104 @@ class CartController extends Controller
         $deliveryLat = $orderType === 'delivery' ? ($validated['delivery_lat'] ?? null) : null;
         $deliveryLng = $orderType === 'delivery' ? ($validated['delivery_lng'] ?? null) : null;
 
-        $order = DB::transaction(function () use (
-            $cart,
-            $user,
-            $validated,
-            $orderType,
-            $deliveryFee,
-            $subtotal,
-            $paymentMethod,
-            $orderPaymentStatus,
-            $paymentStatus,
-            $deliveryAddress,
-            $deliveryPhone,
-            $deliveryNote,
-            $deliveryLat,
-            $deliveryLng,
-            $voucherCode,
-            $voucherService
-        ) {
-            $voucherData = $voucherService->evaluate($voucherCode, $subtotal, $user->id, true);
-            $voucher = $voucherData['voucher'] ?? null;
-            $discountAmount = $voucherData['discount_amount'] ?? 0;
-            $discountAmount = min($discountAmount, $subtotal);
-            $totalAmount = max($subtotal - $discountAmount, 0) + $deliveryFee;
+        try {
+            $order = DB::transaction(function () use (
+                $cart,
+                $user,
+                $validated,
+                $orderType,
+                $deliveryFee,
+                $subtotal,
+                $paymentMethod,
+                $orderPaymentStatus,
+                $paymentStatus,
+                $deliveryAddress,
+                $deliveryPhone,
+                $deliveryNote,
+                $deliveryLat,
+                $deliveryLng,
+                $voucherCode,
+                $voucherService
+            ) {
+                $voucherData = $voucherService->evaluate($voucherCode, $subtotal, $user->id, true);
+                $voucher = $voucherData['voucher'] ?? null;
+                $discountAmount = $voucherData['discount_amount'] ?? 0;
+                $discountAmount = min($discountAmount, $subtotal);
+                $totalAmount = max($subtotal - $discountAmount, 0) + $deliveryFee;
 
-            $order = Order::create([
-                'order_number' => $this->generateOrderNumber(),
-                'user_id' => $user->id,
-                'customer_name' => $validated['customer_name'],
-                'customer_email' => $validated['customer_email'] ?? null,
-                'order_type' => $orderType,
-                'payment_method' => $paymentMethod,
-                'delivery_address' => $deliveryAddress,
-                'delivery_phone' => $deliveryPhone,
-                'delivery_note' => $deliveryNote,
-                'delivery_lat' => $deliveryLat,
-                'delivery_lng' => $deliveryLng,
-                'subtotal' => $subtotal,
-                'delivery_fee' => $deliveryFee,
-                'voucher_id' => $voucher?->id,
-                'voucher_code' => $voucher?->code,
-                'discount_type' => $voucher?->discount_type,
-                'discount_value' => $voucher?->discount_value ?? 0,
-                'discount_amount' => $discountAmount,
-                'total_amount' => $totalAmount,
-                'payment_status' => $orderPaymentStatus,
-                'status' => 'pending',
-                'placed_at' => now(),
-            ]);
-
-            foreach ($cart->items as $item) {
-                OrderItem::create([
-                    'order_id' => $order->id,
-                    'product_id' => $item->item_type === 'product' ? $item->item_id : null,
-                    'item_type' => $item->item_type ?? 'product',
-                    'item_id' => $item->item_id ?? $item->product_id,
-                    'product_name' => $item->product_name,
-                    'quantity' => $item->quantity,
-                    'price' => $item->unit_price,
-                    'line_total' => $item->line_total,
-                ]);
-            }
-
-            $paymentStatus = $paymentStatus ?? $this->mapOrderPaymentStatusToPaymentStatus($orderPaymentStatus, $paymentMethod);
-            $payment = Payment::create([
-                'order_id' => $order->id,
-                'method' => $paymentMethod,
-                'status' => $paymentStatus,
-                'amount' => $totalAmount,
-            ]);
-
-            if ($payment->status === 'success') {
-                $payment->paid_at = now();
-                $payment->save();
-            }
-
-            if ($voucher) {
-                VoucherRedemption::create([
-                    'voucher_id' => $voucher->id,
+                $order = Order::create([
+                    'order_number' => $this->generateOrderNumber(),
                     'user_id' => $user->id,
-                    'order_id' => $order->id,
-                    'redeemed_at' => now(),
+                    'customer_name' => $validated['customer_name'],
+                    'customer_email' => $validated['customer_email'] ?? null,
+                    'order_type' => $orderType,
+                    'payment_method' => $paymentMethod,
+                    'delivery_address' => $deliveryAddress,
+                    'delivery_phone' => $deliveryPhone,
+                    'delivery_note' => $deliveryNote,
+                    'delivery_lat' => $deliveryLat,
+                    'delivery_lng' => $deliveryLng,
+                    'subtotal' => $subtotal,
+                    'delivery_fee' => $deliveryFee,
+                    'voucher_id' => $voucher?->id,
+                    'voucher_code' => $voucher?->code,
+                    'discount_type' => $voucher?->discount_type,
+                    'discount_value' => $voucher?->discount_value ?? 0,
+                    'discount_amount' => $discountAmount,
+                    'total_amount' => $totalAmount,
+                    'payment_status' => $orderPaymentStatus,
+                    'status' => 'pending',
+                    'placed_at' => now(),
                 ]);
-            }
 
-            $cart->items()->delete();
-            $cart->delete();
+                foreach ($cart->items as $item) {
+                    OrderItem::create([
+                        'order_id' => $order->id,
+                        'product_id' => $item->item_type === 'product' ? $item->item_id : null,
+                        'item_type' => $item->item_type ?? 'product',
+                        'item_id' => $item->item_id ?? $item->product_id,
+                        'product_variant_id' => $item->product_variant_id,
+                        'product_name' => $item->product_name,
+                        'variant_label' => $item->variant_label,
+                        'quantity' => $item->quantity,
+                        'price' => $item->unit_price,
+                        'line_total' => $item->line_total,
+                    ]);
+                }
 
-            return $order;
-        });
+                app(OrderInventoryService::class)->deductInventoryForOrder($order);
+                $order->save();
+
+                $paymentStatus = $paymentStatus ?? $this->mapOrderPaymentStatusToPaymentStatus($orderPaymentStatus, $paymentMethod);
+                $payment = Payment::create([
+                    'order_id' => $order->id,
+                    'method' => $paymentMethod,
+                    'status' => $paymentStatus,
+                    'amount' => $totalAmount,
+                ]);
+
+                if ($payment->status === 'success') {
+                    $payment->paid_at = now();
+                    $payment->save();
+                }
+
+                if ($voucher) {
+                    VoucherRedemption::create([
+                        'voucher_id' => $voucher->id,
+                        'user_id' => $user->id,
+                        'order_id' => $order->id,
+                        'redeemed_at' => now(),
+                    ]);
+                }
+
+                $cart->items()->delete();
+                $cart->delete();
+
+                return $order;
+            });
+        } catch (\RuntimeException $exception) {
+            return response()->json(['message' => $exception->getMessage()], 422);
+        }
 
         if ($order->payment_status === 'paid') {
             app(OrderPaymentService::class)->markOrderPaid($order, $paymentMethod, [
@@ -336,6 +411,14 @@ class CartController extends Controller
         return Product::find($itemId);
     }
 
+    private function resolveProductVariant(Product $product, int $variantId): ?ProductVariant
+    {
+        return $product->variants()
+            ->where('is_active', true)
+            ->where('id', $variantId)
+            ->first();
+    }
+
     private function resolveCatalogName(string $itemType, $catalogItem): string
     {
         return $catalogItem->name ?? 'Item';
@@ -352,11 +435,7 @@ class CartController extends Controller
 
     private function resolveCatalogStock(string $itemType, $catalogItem): ?int
     {
-        if ($itemType === 'product') {
-            return $catalogItem->stock !== null ? (int) $catalogItem->stock : null;
-        }
-
-        if ($itemType === 'part') {
+        if (in_array($itemType, ['product', 'accessory', 'part'], true)) {
             return $catalogItem->stock !== null ? (int) $catalogItem->stock : null;
         }
 

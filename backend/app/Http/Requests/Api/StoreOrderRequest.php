@@ -35,6 +35,8 @@ class StoreOrderRequest extends FormRequest
             'items.*.product_id' => ['nullable', 'integer'],
             'items.*.item_type' => ['nullable', 'in:product,accessory,part,repair_part'],
             'items.*.item_id' => ['nullable', 'integer'],
+            'items.*.product_variant_id' => ['nullable', 'integer', 'exists:product_variants,id'],
+            'items.*.variant_label' => ['nullable', 'string', 'max:255'],
             'items.*.product_name' => ['nullable', 'string', 'max:255'],
             'items.*.quantity' => ['required', 'integer', 'min:1'],
             'items.*.price' => ['nullable', 'numeric', 'min:0'],

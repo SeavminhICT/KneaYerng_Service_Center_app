@@ -2,7 +2,13 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart'
-    show kIsWeb, defaultTargetPlatform, TargetPlatform, debugPrint;
+    show
+        kIsWeb,
+        defaultTargetPlatform,
+        TargetPlatform,
+        debugPrint,
+        ValueNotifier,
+        ValueListenable;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'local_host_resolver_stub.dart'
     if (dart.library.io) 'local_host_resolver_io.dart'
@@ -18,6 +24,10 @@ import '../models/user_profile.dart';
 import '../models/pickup_ticket.dart';
 
 class ApiService {
+  static final ValueNotifier<int> _profileVersion = ValueNotifier<int>(0);
+
+  static ValueListenable<int> get profileVersionListenable => _profileVersion;
+
   static const String _baseUrlOverride = String.fromEnvironment(
     'API_BASE_URL',
     defaultValue: '',
@@ -502,6 +512,7 @@ class ApiService {
   static Future<void> _saveUserProfile(UserProfile profile) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_userProfileKey, jsonEncode(profile.toMap()));
+    _profileVersion.value++;
   }
 
   static Future<UserProfile?> getUserProfile() async {
@@ -550,6 +561,7 @@ class ApiService {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_tokenKey);
     await prefs.remove(_userProfileKey);
+    _profileVersion.value++;
   }
 
   // ================= EXTRACT PROFILE =================
@@ -558,6 +570,10 @@ class ApiService {
     String? fallbackFirstName,
     String? fallbackLastName,
     String? fallbackEmail,
+    String? fallbackPhone,
+    String? fallbackBirth,
+    String? fallbackGender,
+    String? fallbackAvatarUrl,
   }) {
     Map<String, dynamic> user = {};
 
@@ -570,14 +586,15 @@ class ApiService {
     }
 
     final avatarValue = user['avatar_url'] ?? user['avatar'];
+    final normalizedAvatar = normalizeMediaUrl(avatarValue);
     return UserProfile(
       firstName: user['first_name'] ?? fallbackFirstName,
       lastName: user['last_name'] ?? fallbackLastName,
       email: user['email'] ?? fallbackEmail,
-      phone: user['phone'],
-      birth: user['birth'],
-      gender: user['gender'],
-      avatarUrl: normalizeMediaUrl(avatarValue),
+      phone: user['phone'] ?? fallbackPhone,
+      birth: user['birth'] ?? fallbackBirth,
+      gender: user['gender'] ?? fallbackGender,
+      avatarUrl: normalizedAvatar ?? fallbackAvatarUrl,
     );
   }
 
@@ -841,6 +858,7 @@ class ApiService {
     }
 
     final sanitizedEmail = email.trim();
+    final existingProfile = await getUserProfile();
 
     http.Response res;
     if (avatarPath != null && avatarPath.isNotEmpty) {
@@ -901,7 +919,17 @@ class ApiService {
           data,
           fallbackFirstName: firstName,
           fallbackLastName: lastName,
-          fallbackEmail: sanitizedEmail.isNotEmpty ? sanitizedEmail : null,
+          fallbackEmail: sanitizedEmail.isNotEmpty
+              ? sanitizedEmail
+              : existingProfile?.email,
+          fallbackPhone: existingProfile?.phone,
+          fallbackBirth: (birth != null && birth.isNotEmpty)
+              ? birth
+              : existingProfile?.birth,
+          fallbackGender: (gender != null && gender.isNotEmpty)
+              ? gender
+              : existingProfile?.gender,
+          fallbackAvatarUrl: existingProfile?.avatarUrl,
         );
         if (profile != null) {
           await _saveUserProfile(profile);
@@ -926,10 +954,7 @@ class ApiService {
     if (trimmed.isEmpty) return [];
 
     final uri = Uri.parse('$baseUrl/search/suggestions').replace(
-      queryParameters: {
-        'q': trimmed,
-        'limit': limit.clamp(1, 12).toString(),
-      },
+      queryParameters: {'q': trimmed, 'limit': limit.clamp(1, 12).toString()},
     );
 
     http.Response res;
@@ -967,9 +992,9 @@ class ApiService {
       return const SearchResults(query: '');
     }
 
-    final uri = Uri.parse('$baseUrl/search/results').replace(
-      queryParameters: {'q': trimmed},
-    );
+    final uri = Uri.parse(
+      '$baseUrl/search/results',
+    ).replace(queryParameters: {'q': trimmed});
 
     final res = await http
         .get(uri, headers: const {'Accept': 'application/json'})
@@ -1003,7 +1028,8 @@ class ApiService {
         if (contextType != null && contextType.trim().isNotEmpty)
           'context_type': contextType.trim(),
         if (contextId != null) 'context_id': contextId.toString(),
-        if (subject != null && subject.trim().isNotEmpty) 'subject': subject.trim(),
+        if (subject != null && subject.trim().isNotEmpty)
+          'subject': subject.trim(),
         'include_messages': includeMessages ? '1' : '0',
       },
     );
@@ -1072,7 +1098,8 @@ class ApiService {
       throw Exception('Failed to send support message');
     }
 
-    final payload = decoded is Map &&
+    final payload =
+        decoded is Map &&
             decoded['data'] is Map &&
             decoded['data']['message'] is Map
         ? Map<String, dynamic>.from(decoded['data']['message'])

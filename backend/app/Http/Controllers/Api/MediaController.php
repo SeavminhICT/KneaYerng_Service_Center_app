@@ -32,13 +32,23 @@ class MediaController extends Controller
 
         $mime = $disk->mimeType($clean) ?: 'application/octet-stream';
         $size = $disk->size($clean);
-        $content = $disk->get($clean);
+        $stream = $disk->readStream($clean);
+        if (! is_resource($stream)) {
+            abort(404);
+        }
 
-        return response($content, Response::HTTP_OK, [
-            'Content-Type' => $mime,
-            'Content-Length' => (string) $size,
-            'Content-Disposition' => 'inline; filename="'.basename($clean).'"',
-            'Cache-Control' => 'public, max-age=86400',
-        ]);
+        return response()->stream(
+            function () use ($stream): void {
+                fpassthru($stream);
+                fclose($stream);
+            },
+            Response::HTTP_OK,
+            [
+                'Content-Type' => $mime,
+                'Content-Length' => (string) $size,
+                'Content-Disposition' => 'inline; filename="'.basename($clean).'"',
+                'Cache-Control' => 'public, max-age=86400',
+            ]
+        );
     }
 }

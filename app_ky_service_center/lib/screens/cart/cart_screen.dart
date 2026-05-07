@@ -602,11 +602,11 @@ class _CartItemCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final product = item.product;
-    final imageUrl = product.imageUrl;
+    final imageUrl = item.variantImageUrl ?? product.imageUrl;
     final variant = item.variant?.trim().isNotEmpty == true
         ? item.variant!.trim()
         : '';
-    final unitPrice = product.salePrice;
+    final unitPrice = item.effectiveUnitPrice;
     final oldPrice = product.hasDiscount && product.price > unitPrice
         ? product.price
         : null;

@@ -6,6 +6,8 @@ class UserProfile {
   final String? birth;
   final String? gender;
   final String? avatarUrl;
+  final String? role;
+  final bool isAdmin;
 
   const UserProfile({
     this.firstName,
@@ -15,6 +17,8 @@ class UserProfile {
     this.birth,
     this.gender,
     this.avatarUrl,
+    this.role,
+    this.isAdmin = false,
   });
 
   String get displayName {
@@ -34,6 +38,11 @@ class UserProfile {
       birth: map['birth'],
       gender: map['gender'],
       avatarUrl: map['avatar_url'] ?? map['avatar'],
+      role: map['role']?.toString(),
+      isAdmin:
+          map['is_admin'] == true ||
+          map['is_admin']?.toString().toLowerCase() == 'true' ||
+          map['role']?.toString().toLowerCase() == 'admin',
     );
   }
 
@@ -46,6 +55,8 @@ class UserProfile {
       'birth': birth,
       'gender': gender,
       'avatar_url': avatarUrl,
+      'role': role,
+      'is_admin': isAdmin,
     };
   }
 }

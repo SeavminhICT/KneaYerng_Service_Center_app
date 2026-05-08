@@ -105,9 +105,9 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
         return;
     }
 
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => destination),
-    );
+    Navigator.of(
+      context,
+    ).pushReplacement(MaterialPageRoute(builder: (_) => destination));
   }
 
   @override
@@ -203,7 +203,7 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
             crossAxisCount: columns,
             crossAxisSpacing: 12,
             mainAxisSpacing: 12,
-            childAspectRatio: 0.9,
+            childAspectRatio: 0.84,
           ),
           itemBuilder: (context, index) {
             final category = _categories[index];
@@ -284,69 +284,82 @@ class _CategoryCardState extends State<_CategoryCard> {
               ),
             ],
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Expanded(
-                child: Center(
-                  child: Container(
-                    width: 68,
-                    height: 68,
-                    decoration: BoxDecoration(
-                      color: isDark
-                          ? const Color(0xFF22304A)
-                          : const Color(0xFFEAF0FF),
-                      borderRadius: BorderRadius.circular(14),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final imageBoxSize = (constraints.maxWidth * 0.56).clamp(
+                78.0,
+                108.0,
+              );
+              final iconSize = (imageBoxSize * 0.46).clamp(32.0, 48.0);
+              final imageRadius = (imageBoxSize * 0.2).clamp(14.0, 22.0);
+
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Expanded(
+                    child: Center(
+                      child: Container(
+                        width: imageBoxSize,
+                        height: imageBoxSize,
+                        decoration: BoxDecoration(
+                          color: isDark
+                              ? const Color(0xFF22304A)
+                              : const Color(0xFFEAF0FF),
+                          borderRadius: BorderRadius.circular(imageRadius),
+                        ),
+                        child: imageUrl != null && imageUrl.isNotEmpty
+                            ? ClipRRect(
+                                borderRadius: BorderRadius.circular(
+                                  imageRadius,
+                                ),
+                                child: Image.network(
+                                  imageUrl,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return Icon(
+                                      _iconForCategory(category.name),
+                                      size: iconSize,
+                                      color: _primary,
+                                    );
+                                  },
+                                ),
+                              )
+                            : Icon(
+                                _iconForCategory(category.name),
+                                size: iconSize,
+                                color: _primary,
+                              ),
+                      ),
                     ),
-                    child: imageUrl != null && imageUrl.isNotEmpty
-                        ? ClipRRect(
-                            borderRadius: BorderRadius.circular(14),
-                            child: Image.network(
-                              imageUrl,
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) {
-                                return Icon(
-                                  _iconForCategory(category.name),
-                                  size: 32,
-                                  color: _primary,
-                                );
-                              },
-                            ),
-                          )
-                        : Icon(
-                            _iconForCategory(category.name),
-                            size: 32,
-                            color: _primary,
-                          ),
                   ),
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                category.name,
-                textAlign: TextAlign.center,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: isDark ? _darkTextPrimary : _textPrimary,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  height: 1.2,
-                ),
-              ),
-              if (category.productsCount != null) ...[
-                const SizedBox(height: 4),
-                Text(
-                  '${category.productsCount} items',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: isDark ? _darkTextSecondary : _textSecondary,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
+                  const SizedBox(height: 8),
+                  Text(
+                    category.name,
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: isDark ? _darkTextPrimary : _textPrimary,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      height: 1.2,
+                    ),
                   ),
-                ),
-              ],
-            ],
+                  if (category.productsCount != null) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      '${category.productsCount} items',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: isDark ? _darkTextSecondary : _textSecondary,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ],
+              );
+            },
           ),
         ),
       ),

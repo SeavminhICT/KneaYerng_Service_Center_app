@@ -62,7 +62,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
           item.category == NotificationCategory.message,
         NotificationFilter.updates =>
           item.category == NotificationCategory.update ||
-          item.category == NotificationCategory.announcement,
+              item.category == NotificationCategory.announcement,
       };
       return matchesTab && matchesFilter;
     }).toList();
@@ -192,10 +192,9 @@ class _NotificationScreenState extends State<NotificationScreen> {
   _NotificationItem _mapOrderNotification(OrderTrackingNotificationItem item) {
     final category = _categoryFromNotification(item);
     final body = item.body?.trim();
-    final deepLink =
-        item.deepLink?.trim().isNotEmpty == true
-            ? item.deepLink!.trim()
-            : (item.orderId == null ? null : '/orders/${item.orderId}');
+    final deepLink = item.deepLink?.trim().isNotEmpty == true
+        ? item.deepLink!.trim()
+        : (item.orderId == null ? null : '/orders/${item.orderId}');
     final preview = (body != null && body.isNotEmpty)
         ? body
         : _defaultMessageForCategory(category);
@@ -1211,8 +1210,14 @@ NotificationCategory _categoryFromNotification(
   if (rawType.contains('message')) {
     return NotificationCategory.message;
   }
+  if (rawType.contains('promotion')) {
+    return NotificationCategory.announcement;
+  }
   if (rawType.contains('announcement')) {
     return NotificationCategory.announcement;
+  }
+  if (rawType.contains('reminder') || rawType == 'info') {
+    return NotificationCategory.update;
   }
   if (rawType.contains('order')) {
     return NotificationCategory.order;

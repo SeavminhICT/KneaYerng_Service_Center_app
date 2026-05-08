@@ -61,7 +61,7 @@ class UnimatrixOtpService
 
         $response = $this->post('otp.send', [
             'to' => $normalizedPhone,
-            'channel' => (string) config('services.unimatrix.channel', 'sms'),
+            'channel' => 'sms',
             'digits' => max(4, min(8, (int) config('otp.code_length', 6))),
             'ttl' => $ttl,
             'intent' => substr($purpose, 0, 36),

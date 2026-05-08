@@ -9,8 +9,10 @@ import '../../services/api_service.dart';
 import '../../services/app_notification_service.dart';
 import '../../services/theme_service.dart';
 import '../Auth/login_screen.dart';
+import '../notifications/admin_notification_panel_screen.dart';
 import '../notifications/notification_screen.dart';
 import 'edit_profile_screen.dart';
+import 'reviews_preview_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -409,11 +411,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final actions = [
       (
         icon: Icons.description_outlined,
-        label: 'Documents',
+        label: 'Reviews Preview',
         colors: isDark
             ? const [Color(0xFF24324A), Color(0xFF1F2B42)]
             : const [Color(0xFFEAF2FF), Color(0xFFDDEAFF)],
-        onTap: () => _showFeatureComingSoon('Documents'),
+        onTap: _openReviewsPreviewAction,
       ),
       (
         icon: Icons.insights_outlined,
@@ -598,6 +600,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
               );
             },
           ),
+          if (profile.isAdmin) ...[
+            _settingsDivider(),
+            _settingsRow(
+              icon: Icons.campaign_rounded,
+              title: 'Admin Push Center',
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const AdminNotificationPanelScreen(),
+                  ),
+                );
+              },
+            ),
+          ],
           _settingsDivider(),
           _settingsRow(
             icon: Icons.language_rounded,
@@ -861,6 +877,38 @@ class _ProfileScreenState extends State<ProfileScreen> {
     await Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => const OrderHistoryScreen()),
+    );
+  }
+
+  Future<void> _openReviewsPreviewAction() async {
+    final submitted = await Navigator.push<bool>(
+      context,
+      PageRouteBuilder<bool>(
+        transitionDuration: const Duration(milliseconds: 320),
+        reverseTransitionDuration: const Duration(milliseconds: 280),
+        pageBuilder: (context, animation, secondaryAnimation) =>
+            const ReviewsPreviewScreen(),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          final curved = CurvedAnimation(
+            parent: animation,
+            curve: Curves.easeOutCubic,
+            reverseCurve: Curves.easeInCubic,
+          );
+          final slide = Tween<Offset>(
+            begin: const Offset(0, 0.08),
+            end: Offset.zero,
+          ).animate(curved);
+          return FadeTransition(
+            opacity: curved,
+            child: SlideTransition(position: slide, child: child),
+          );
+        },
+      ),
+    );
+
+    if (!mounted || submitted != true) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Review submitted successfully.')),
     );
   }
 

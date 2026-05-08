@@ -24,7 +24,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
   bool _loading = false;
   final TextEditingController _otpDestinationCtrl = TextEditingController();
-  String _otpType = 'email';
 
   @override
   void dispose() {
@@ -77,9 +76,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       bottomInset + 24,
                     ),
                     child: ConstrainedBox(
-                      constraints: BoxConstraints(
-                        minHeight: minContentHeight,
-                      ),
+                      constraints: BoxConstraints(minHeight: minContentHeight),
                       child: Center(
                         child: ConstrainedBox(
                           constraints: const BoxConstraints(maxWidth: 560),
@@ -206,8 +203,9 @@ class _LoginScreenState extends State<LoginScreen> {
                                         ),
                                         decoration: BoxDecoration(
                                           color: const Color(0xFFF8FAFC),
-                                          borderRadius:
-                                              BorderRadius.circular(14),
+                                          borderRadius: BorderRadius.circular(
+                                            14,
+                                          ),
                                           border: Border.all(
                                             color: AppPalette.border,
                                           ),
@@ -358,12 +356,11 @@ class _LoginScreenState extends State<LoginScreen> {
                                                             'reset_password',
                                                       );
                                                     },
-                                                    style:
-                                                        TextButton.styleFrom(
+                                                    style: TextButton.styleFrom(
                                                       foregroundColor:
                                                           const Color(
-                                                        0xFF2F6BFF,
-                                                      ),
+                                                            0xFF2F6BFF,
+                                                          ),
                                                     ),
                                                     child: const Text(
                                                       'Forgot Password ?',
@@ -434,8 +431,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                             shape: RoundedRectangleBorder(
                                               borderRadius:
                                                   BorderRadius.circular(
-                                                _radius,
-                                              ),
+                                                    _radius,
+                                                  ),
                                             ),
                                           ),
                                           onPressed: () async {
@@ -448,10 +445,10 @@ class _LoginScreenState extends State<LoginScreen> {
 
                                             final error =
                                                 await ApiService.login(
-                                              identifier:
-                                                  _emailCtrl.text.trim(),
-                                              password: _passwordCtrl.text,
-                                            );
+                                                  identifier: _emailCtrl.text
+                                                      .trim(),
+                                                  password: _passwordCtrl.text,
+                                                );
 
                                             if (!context.mounted) return;
                                             setState(() => _loading = false);
@@ -468,9 +465,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                               ScaffoldMessenger.of(
                                                 context,
                                               ).showSnackBar(
-                                                SnackBar(
-                                                  content: Text(error),
-                                                ),
+                                                SnackBar(content: Text(error)),
                                               );
                                             }
                                           },
@@ -480,9 +475,9 @@ class _LoginScreenState extends State<LoginScreen> {
                                                   height: 22,
                                                   child:
                                                       CircularProgressIndicator(
-                                                    strokeWidth: 2.4,
-                                                    color: Colors.white,
-                                                  ),
+                                                        strokeWidth: 2.4,
+                                                        color: Colors.white,
+                                                      ),
                                                 )
                                               : const Text(
                                                   'Log In',
@@ -511,8 +506,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                                   .textTheme
                                                   .bodySmall
                                                   ?.copyWith(
-                                                    color:
-                                                        AppPalette.textMuted,
+                                                    color: AppPalette.textMuted,
                                                   ),
                                             ),
                                           ),
@@ -533,8 +527,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                             shape: RoundedRectangleBorder(
                                               borderRadius:
                                                   BorderRadius.circular(
-                                                _radius,
-                                              ),
+                                                    _radius,
+                                                  ),
                                             ),
                                             side: const BorderSide(
                                               color: AppPalette.border,
@@ -785,7 +779,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _startOtpFlow({required String purpose}) async {
     _otpDestinationCtrl.clear();
-    _otpType = 'email';
 
     final proceed = await showDialog<bool>(
       context: context,
@@ -801,10 +794,10 @@ class _LoginScreenState extends State<LoginScreen> {
                 children: [
                   TextField(
                     controller: _otpDestinationCtrl,
-                    keyboardType: TextInputType.text,
+                    keyboardType: TextInputType.phone,
                     decoration: const InputDecoration(
-                      labelText: 'Email or phone number',
-                      hintText: 'name@email.com or +85512345678',
+                      labelText: 'Phone number',
+                      hintText: '+85512345678',
                     ),
                   ),
                 ],
@@ -828,18 +821,26 @@ class _LoginScreenState extends State<LoginScreen> {
     if (proceed != true) return;
 
     final destination = _otpDestinationCtrl.text.trim();
-    _otpType = _inferOtpType(destination);
     if (destination.isEmpty) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter destination.')),
+        const SnackBar(content: Text('Please enter your phone number.')),
+      );
+      return;
+    }
+
+    final digits = destination.replaceAll(RegExp(r'\\D'), '');
+    if (digits.length < 7) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Enter a valid phone number.')),
       );
       return;
     }
 
     final request = await ApiService.requestOtp(
       destination: destination,
-      type: _otpType,
+      type: 'phone',
       purpose: purpose,
     );
 
@@ -854,7 +855,7 @@ class _LoginScreenState extends State<LoginScreen> {
       MaterialPageRoute(
         builder: (_) => OtpScreen(
           destination: destination,
-          type: _otpType,
+          type: 'phone',
           purpose: purpose,
         ),
       ),
@@ -862,11 +863,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
     if (!mounted || purpose != 'reset_password' || resetToken == null) return;
     await _showResetPasswordDialog(resetToken);
-  }
-
-  String _inferOtpType(String destination) {
-    final value = destination.trim();
-    return value.contains('@') ? 'email' : 'phone';
   }
 
   Future<void> _showResetPasswordDialog(String resetToken) async {

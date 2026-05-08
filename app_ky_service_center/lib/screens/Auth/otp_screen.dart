@@ -11,7 +11,7 @@ class OtpScreen extends StatefulWidget {
   const OtpScreen({
     super.key,
     required this.destination,
-    this.type = 'email',
+    this.type = 'phone',
     this.purpose = 'signup',
     this.autoRequest = false,
   });

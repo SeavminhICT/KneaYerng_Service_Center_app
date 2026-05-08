@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\AuthOtpController;
+use App\Http\Controllers\AdminNotificationController;
 use App\Http\Controllers\Api\AdminMetricsController;
 use App\Http\Controllers\Api\AdminUserController;
 use App\Http\Controllers\Api\AccessoryController;
@@ -128,6 +129,9 @@ Route::middleware('auth:sanctum')->group(function () {
 Route::post('payments/callback', [PaymentController::class, 'callback']);
 
 Route::middleware('admin')->group(function () {
+    Route::post('admin/notifications/send', [AdminNotificationController::class, 'store']);
+    Route::get('admin/notifications/history', [AdminNotificationController::class, 'history']);
+    Route::get('admin/notifications/recipients', [AdminNotificationController::class, 'recipients']);
     Route::get('admin/metrics', AdminMetricsController::class);
     Route::get('admin/reports/sales', [AdminReportsController::class, 'sales']);
     Route::get('admin/reports/inventory', [AdminReportsController::class, 'inventory']);

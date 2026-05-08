@@ -223,7 +223,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                     controller: _phoneCtrl,
                                     focusNode: _phoneFocus,
                                     nextFocus: _passwordFocus,
-                                    label: 'Phone Number (optional)',
+                                    label: 'Phone Number',
                                     hint: '(+855) 726-0592',
                                     keyboard: TextInputType.phone,
                                     prefixIcon: const SizedBox(
@@ -235,7 +235,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                         ),
                                       ),
                                     ),
-                                    validator: _validatePhoneOptional,
+                                    validator: _validatePhoneRequired,
                                   ),
                                   const SizedBox(height: _fieldSpacing),
                                   _buildTextField(
@@ -443,12 +443,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   String? _validateContact(String? value) {
     final text = value?.trim() ?? '';
-    if (text.isEmpty) {
-      if (_phoneCtrl.text.trim().isEmpty) {
-        return 'Email or phone is required';
-      }
-      return null;
-    }
+    if (text.isEmpty) return null;
 
     final isEmail = RegExp(
       r'^[\w\-\.]+@([\w\-]+\.)+[\w\-]{2,4}$',
@@ -484,14 +479,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
     return null;
   }
 
-  String? _validatePhoneOptional(String? value) {
+  String? _validatePhoneRequired(String? value) {
     final text = value?.trim() ?? '';
-    if (text.isEmpty) {
-      if (_contactCtrl.text.trim().isEmpty) {
-        return 'Email or phone is required';
-      }
-      return null;
-    }
+    if (text.isEmpty) return 'Phone number is required';
     final digits = text.replaceAll(RegExp(r'\D'), '');
     if (digits.length < 7) {
       return 'Enter a valid phone number';
@@ -547,8 +537,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
       return;
     }
 
-    final otpDestination = phone.isNotEmpty ? phone : contact;
-    final otpType = phone.isNotEmpty ? 'phone' : 'email';
+    final otpDestination = phone;
+    if (otpDestination.isEmpty) {
+      setState(() => _loading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Phone number is required for SMS OTP.')),
+      );
+      return;
+    }
+    const otpType = 'phone';
     final request = await ApiService.requestOtp(
       destination: otpDestination,
       type: otpType,

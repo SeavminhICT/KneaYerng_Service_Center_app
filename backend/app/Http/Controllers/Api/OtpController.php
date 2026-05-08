@@ -29,7 +29,7 @@ class OtpController extends Controller
     {
         $validated = $request->validate([
             'destination' => ['required', 'string', 'max:255'],
-            'type' => ['required', 'in:email,phone'],
+            'type' => ['required', 'in:phone'],
             'purpose' => ['required', 'in:signup,login,reset_password,change_phone,change_email'],
             'device_id' => ['nullable', 'string', 'max:191'],
         ]);
@@ -53,19 +53,7 @@ class OtpController extends Controller
             ], 404);
         }
 
-        if ($type === 'phone') {
-            $result = $this->unimatrixOtp->sendOtp($destination, $purpose, $request->ip());
-        } else {
-            $result = $this->otpService->requestOtp(
-                destinationType: $type,
-                destination: $destination,
-                purpose: $purpose,
-                userId: $user?->id,
-                requestIp: $request->ip(),
-                deviceId: $validated['device_id'] ?? null,
-                silentIfUserMissing: true
-            );
-        }
+        $result = $this->unimatrixOtp->sendOtp($destination, $purpose, $request->ip());
 
         return response()->json([
             'message' => $result['message'] ?? 'OTP request processed.',
@@ -78,7 +66,7 @@ class OtpController extends Controller
     {
         $validated = $request->validate([
             'destination' => ['required', 'string', 'max:255'],
-            'type' => ['required', 'in:email,phone'],
+            'type' => ['required', 'in:phone'],
             'purpose' => ['required', 'in:signup,login,reset_password,change_phone,change_email'],
             'otp' => ['required', 'string', 'max:12'],
         ]);
@@ -87,9 +75,7 @@ class OtpController extends Controller
         $destination = $this->otpService->normalizeDestination($type, $validated['destination']);
         $purpose = strtolower($validated['purpose']);
 
-        $verify = $type === 'phone'
-            ? $this->unimatrixOtp->verifyOtp($destination, $validated['otp'])
-            : $this->otpService->verifyOtp($type, $destination, $purpose, $validated['otp']);
+        $verify = $this->unimatrixOtp->verifyOtp($destination, $validated['otp']);
         if (! ($verify['ok'] ?? false)) {
             return response()->json(['message' => $verify['message'] ?? 'OTP verification failed.'], $verify['status'] ?? 422);
         }

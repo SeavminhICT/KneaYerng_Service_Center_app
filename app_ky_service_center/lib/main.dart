@@ -10,11 +10,26 @@ import 'theme/app_theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
+  await _initializeFirebaseSafely();
   await ApiService.initialize();
   await AppNotificationService.instance.initialize();
   await ThemeService.instance.load();
   runApp(const MyApp());
+}
+
+Future<void> _initializeFirebaseSafely() async {
+  try {
+    await Firebase.initializeApp();
+  } on FirebaseException catch (error) {
+    debugPrint(
+      'Firebase startup skipped (${error.code}): ${error.message ?? "unknown error"}',
+    );
+    debugPrint(
+      'To enable Firebase on iOS, add Runner/GoogleService-Info.plist and rebuild.',
+    );
+  } catch (error) {
+    debugPrint('Firebase startup skipped: $error');
+  }
 }
 
 class MyApp extends StatelessWidget {

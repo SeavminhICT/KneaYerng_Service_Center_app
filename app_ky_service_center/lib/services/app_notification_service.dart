@@ -20,7 +20,12 @@ const AndroidNotificationChannel _orderTrackingChannel =
 
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  await Firebase.initializeApp();
+  if (Firebase.apps.isNotEmpty) return;
+  try {
+    await Firebase.initializeApp();
+  } catch (_) {
+    // Firebase is optional during local development without iOS config files.
+  }
 }
 
 class AppNotificationService {
@@ -29,7 +34,7 @@ class AppNotificationService {
   static final AppNotificationService instance = AppNotificationService._();
 
   final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
-  final FirebaseMessaging _messaging = FirebaseMessaging.instance;
+  FirebaseMessaging get _messaging => FirebaseMessaging.instance;
   final FlutterLocalNotificationsPlugin _localNotifications =
       FlutterLocalNotificationsPlugin();
 
@@ -44,6 +49,12 @@ class AppNotificationService {
 
   Future<void> initialize() async {
     if (_didInitialize || !_isSupportedMobilePlatform) return;
+    if (Firebase.apps.isEmpty) {
+      debugPrint(
+        'Skipping push notification setup: Firebase is not configured for this build.',
+      );
+      return;
+    }
     _didInitialize = true;
 
     FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
@@ -76,7 +87,9 @@ class AppNotificationService {
   }
 
   Future<void> _initializeLocalNotifications() async {
-    const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const androidSettings = AndroidInitializationSettings(
+      '@mipmap/ic_launcher',
+    );
     const iosSettings = DarwinInitializationSettings(
       requestAlertPermission: false,
       requestBadgePermission: false,
@@ -109,13 +122,13 @@ class AppNotificationService {
   }
 
   Future<void> syncTokenWithBackend() async {
-    if (!_isSupportedMobilePlatform) return;
+    if (!_isSupportedMobilePlatform || Firebase.apps.isEmpty) return;
     final token = await _messaging.getToken();
     await registerTokenWithBackend(token);
   }
 
   Future<void> registerTokenWithBackend(String? token) async {
-    if (!_isSupportedMobilePlatform) return;
+    if (!_isSupportedMobilePlatform || Firebase.apps.isEmpty) return;
     final normalized = token?.trim();
     if (normalized == null || normalized.isEmpty) return;
 
@@ -126,7 +139,7 @@ class AppNotificationService {
   }
 
   Future<void> unregisterDeviceToken() async {
-    if (!_isSupportedMobilePlatform) return;
+    if (!_isSupportedMobilePlatform || Firebase.apps.isEmpty) return;
     final token = await _messaging.getToken();
     final normalized = token?.trim();
     if (normalized == null || normalized.isEmpty) return;
@@ -149,18 +162,16 @@ class AppNotificationService {
   Future<void> _handleForegroundMessage(RemoteMessage message) async {
     final notification = message.notification;
     final badgeCount = _tryParseInt(message.data['badge']) ?? 1;
-    final title =
-        notification?.title?.trim().isNotEmpty == true
-            ? notification!.title!.trim()
-            : (message.data['title']?.toString().trim().isNotEmpty == true
-                ? message.data['title'].toString().trim()
-                : 'Order Update');
-    final body =
-        notification?.body?.trim().isNotEmpty == true
-            ? notification!.body!.trim()
-            : (message.data['body']?.toString().trim().isNotEmpty == true
-                ? message.data['body'].toString().trim()
-                : 'Your order tracking status was updated.');
+    final title = notification?.title?.trim().isNotEmpty == true
+        ? notification!.title!.trim()
+        : (message.data['title']?.toString().trim().isNotEmpty == true
+              ? message.data['title'].toString().trim()
+              : 'Order Update');
+    final body = notification?.body?.trim().isNotEmpty == true
+        ? notification!.body!.trim()
+        : (message.data['body']?.toString().trim().isNotEmpty == true
+              ? message.data['body'].toString().trim()
+              : 'Your order tracking status was updated.');
 
     final target = _launchTargetFromRemoteMessage(message);
     final payload = target == null ? null : jsonEncode(target.toJson());
@@ -223,7 +234,9 @@ class AppNotificationService {
         data['deeplink']?.toString().trim();
 
     int? orderId = int.tryParse(data['order_id']?.toString() ?? '');
-    if (orderId == null && deepLink != null && deepLink.startsWith('/orders/')) {
+    if (orderId == null &&
+        deepLink != null &&
+        deepLink.startsWith('/orders/')) {
       orderId = int.tryParse(deepLink.split('/').last);
     }
 

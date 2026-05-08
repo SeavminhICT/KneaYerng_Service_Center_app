@@ -19,6 +19,7 @@ import '../models/search_suggestion.dart';
 import '../models/category.dart';
 import '../models/banner_item.dart';
 import '../models/order_tracking_notification.dart';
+import '../models/admin_notification_campaign.dart';
 import '../models/support_chat.dart';
 import '../models/user_profile.dart';
 import '../models/pickup_ticket.dart';
@@ -587,6 +588,11 @@ class ApiService {
 
     final avatarValue = user['avatar_url'] ?? user['avatar'];
     final normalizedAvatar = normalizeMediaUrl(avatarValue);
+    final role = user['role']?.toString();
+    final isAdmin =
+        user['is_admin'] == true ||
+        user['is_admin']?.toString().toLowerCase() == 'true' ||
+        role?.toLowerCase() == 'admin';
     return UserProfile(
       firstName: user['first_name'] ?? fallbackFirstName,
       lastName: user['last_name'] ?? fallbackLastName,
@@ -595,6 +601,8 @@ class ApiService {
       birth: user['birth'] ?? fallbackBirth,
       gender: user['gender'] ?? fallbackGender,
       avatarUrl: normalizedAvatar ?? fallbackAvatarUrl,
+      role: role,
+      isAdmin: isAdmin,
     );
   }
 
@@ -1984,6 +1992,205 @@ class ApiService {
           )
           .timeout(const Duration(seconds: 12));
     } catch (_) {}
+  }
+
+  static Future<List<AdminNotificationCampaignItem>>
+  fetchAdminNotificationHistory({int limit = 30}) async {
+    final token = await getToken();
+    if (token == null || token.isEmpty) {
+      return [];
+    }
+
+    final safeLimit = limit.clamp(5, 100);
+    final uri = Uri.parse(
+      '$baseUrl/admin/notifications/history',
+    ).replace(queryParameters: {'limit': safeLimit.toString()});
+
+    http.Response res;
+    try {
+      res = await http
+          .get(
+            uri,
+            headers: {
+              'Accept': 'application/json',
+              'Authorization': 'Bearer $token',
+            },
+          )
+          .timeout(const Duration(seconds: 18));
+    } catch (_) {
+      return [];
+    }
+
+    if (res.statusCode != 200) {
+      return [];
+    }
+
+    try {
+      final decoded = jsonDecode(res.body);
+      final rawList = decoded is Map ? decoded['data'] : decoded;
+      if (rawList is! List) return [];
+      return rawList
+          .whereType<Map>()
+          .map(
+            (item) => AdminNotificationCampaignItem.fromJson(
+              Map<String, dynamic>.from(item),
+            ),
+          )
+          .toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  static Future<List<AdminNotificationRecipient>>
+  searchAdminNotificationRecipients({String query = '', int limit = 30}) async {
+    final token = await getToken();
+    if (token == null || token.isEmpty) {
+      return [];
+    }
+
+    final safeLimit = limit.clamp(5, 100);
+    final uri = Uri.parse('$baseUrl/admin/notifications/recipients').replace(
+      queryParameters: {
+        if (query.trim().isNotEmpty) 'q': query.trim(),
+        'limit': safeLimit.toString(),
+      },
+    );
+
+    http.Response res;
+    try {
+      res = await http
+          .get(
+            uri,
+            headers: {
+              'Accept': 'application/json',
+              'Authorization': 'Bearer $token',
+            },
+          )
+          .timeout(const Duration(seconds: 18));
+    } catch (_) {
+      return [];
+    }
+
+    if (res.statusCode != 200) {
+      return [];
+    }
+
+    try {
+      final decoded = jsonDecode(res.body);
+      final rawList = decoded is Map ? decoded['data'] : decoded;
+      if (rawList is! List) return [];
+      return rawList
+          .whereType<Map>()
+          .map(
+            (item) => AdminNotificationRecipient.fromJson(
+              Map<String, dynamic>.from(item),
+            ),
+          )
+          .toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  static Future<AdminNotificationSendResult> sendAdminNotification({
+    required String type,
+    required String title,
+    required String message,
+    required String audience,
+    List<int> customUserIds = const [],
+    String? deepLink,
+    String action = 'send_now',
+    DateTime? scheduledFor,
+  }) async {
+    final token = await getToken();
+    if (token == null || token.isEmpty) {
+      return const AdminNotificationSendResult(
+        success: false,
+        message: 'Authentication required.',
+      );
+    }
+
+    http.Response res;
+    try {
+      final body = <String, dynamic>{
+        'type': type.trim(),
+        'title': title.trim(),
+        'message': message.trim(),
+        'audience': audience.trim(),
+        'action': action.trim(),
+        if (deepLink != null && deepLink.trim().isNotEmpty)
+          'deep_link': deepLink.trim(),
+        if (customUserIds.isNotEmpty) 'custom_user_ids': customUserIds,
+        if (scheduledFor != null)
+          'scheduled_for': scheduledFor.toIso8601String(),
+      };
+
+      res = await http
+          .post(
+            Uri.parse('$baseUrl/admin/notifications/send'),
+            headers: {
+              'Accept': 'application/json',
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $token',
+            },
+            body: jsonEncode(body),
+          )
+          .timeout(const Duration(seconds: 20));
+    } catch (_) {
+      return const AdminNotificationSendResult(
+        success: false,
+        message: 'Unable to send notification right now.',
+      );
+    }
+
+    dynamic decoded;
+    try {
+      decoded = jsonDecode(res.body);
+    } catch (_) {}
+
+    final payload = decoded is Map
+        ? Map<String, dynamic>.from(decoded)
+        : const <String, dynamic>{};
+    final summary = AdminNotificationSummary.fromJson(
+      payload['summary'] is Map
+          ? Map<String, dynamic>.from(payload['summary'])
+          : const <String, dynamic>{},
+    );
+    final historyItem = payload['history_item'] is Map<String, dynamic>
+        ? AdminNotificationCampaignItem.fromJson(payload['history_item'])
+        : (payload['history_item'] is Map
+              ? AdminNotificationCampaignItem.fromJson(
+                  Map<String, dynamic>.from(payload['history_item']),
+                )
+              : null);
+
+    final validationErrors = <String, List<String>>{};
+    if (payload['errors'] is Map) {
+      final errorsMap = Map<String, dynamic>.from(payload['errors']);
+      for (final entry in errorsMap.entries) {
+        final value = entry.value;
+        if (value is List) {
+          validationErrors[entry.key] = value.map((e) => '$e').toList();
+        } else if (value != null) {
+          validationErrors[entry.key] = ['$value'];
+        }
+      }
+    }
+
+    final messageText =
+        payload['message']?.toString() ??
+        (res.statusCode >= 200 && res.statusCode < 300
+            ? 'Notification processed.'
+            : 'Unable to process notification.');
+
+    return AdminNotificationSendResult(
+      success: res.statusCode >= 200 && res.statusCode < 300,
+      message: messageText,
+      summary: summary,
+      historyItem: historyItem,
+      validationErrors: validationErrors,
+    );
   }
 
   static Future<void> registerMobileDeviceToken({

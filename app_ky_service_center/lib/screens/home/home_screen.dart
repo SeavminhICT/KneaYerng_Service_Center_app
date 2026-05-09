@@ -257,6 +257,20 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
+  void _pauseBannerAutoSlide() {
+    _bannerTimer?.cancel();
+  }
+
+  void _handleBannerInteractionStart() {
+    _isBannerUserInteracting = true;
+    _pauseBannerAutoSlide();
+  }
+
+  void _handleBannerInteractionEnd() {
+    _isBannerUserInteracting = false;
+    _startBannerAutoSlide();
+  }
+
   Future<void> _advanceBanner() async {
     if (!mounted ||
         _isBannerUserInteracting ||
@@ -295,7 +309,7 @@ class _HomeScreenState extends State<HomeScreen> {
       return;
     }
 
-    _isBannerUserInteracting = true;
+    _handleBannerInteractionStart();
     try {
       await _bannerController.animateToPage(
         index,
@@ -307,7 +321,7 @@ class _HomeScreenState extends State<HomeScreen> {
     } catch (_) {
       // Ignore if the page view is temporarily detached.
     } finally {
-      _isBannerUserInteracting = false;
+      _handleBannerInteractionEnd();
     }
   }
 
@@ -446,12 +460,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       onPageChanged: (index) {
                         setState(() => _bannerIndex = index);
                       },
-                      onInteractionStart: () {
-                        _isBannerUserInteracting = true;
-                      },
-                      onInteractionEnd: () {
-                        _isBannerUserInteracting = false;
-                      },
+                      onInteractionStart: _handleBannerInteractionStart,
+                      onInteractionEnd: _handleBannerInteractionEnd,
                       onIndicatorTap: _goToBanner,
                       products: snapshot.data ?? const [],
                       onShopNow: () {

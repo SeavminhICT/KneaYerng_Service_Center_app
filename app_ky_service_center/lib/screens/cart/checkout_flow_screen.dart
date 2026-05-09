@@ -1065,17 +1065,21 @@ class _CheckoutFlowScreenState extends State<CheckoutFlowScreen> {
     final slot = _options.deliverySlots.isEmpty
         ? null
         : _options.deliverySlots[_selectedSlot];
+    final pinnedLine = _selectedDeliveryLatLng == null
+        ? null
+        : 'Pinned: '
+              '${_selectedDeliveryLatLng!.latitude.toStringAsFixed(6)}, '
+              '${_selectedDeliveryLatLng!.longitude.toStringAsFixed(6)}';
+    final slotLabel = slot?.label.trim();
+    final deliveryNote = _deliveryNoteValue?.trim();
     final deliveryLines = _isPickup
         ? const ['Pickup from Store', 'Collect your order at the shop']
         : [
             _deliveryAddressLine,
-            if (_selectedDeliveryLatLng != null)
-              'Pinned: '
-                  '${_selectedDeliveryLatLng!.latitude.toStringAsFixed(6)}, '
-                  '${_selectedDeliveryLatLng!.longitude.toStringAsFixed(6)}',
-            if (slot != null && slot.label.trim().isNotEmpty) slot.label,
-            if (_deliveryNoteValue != null) _deliveryNoteValue!,
-          ];
+            pinnedLine,
+            (slotLabel?.isNotEmpty ?? false) ? slotLabel : null,
+            (deliveryNote?.isNotEmpty ?? false) ? deliveryNote : null,
+          ].whereType<String>().toList();
 
     return ListView(
       key: const ValueKey(3),
@@ -2385,7 +2389,12 @@ class _BottomTotalBar extends StatelessWidget {
     return SafeArea(
       top: false,
       child: Container(
-        padding: EdgeInsets.fromLTRB(16, compact ? 8 : 10, 16, compact ? 12 : 18),
+        padding: EdgeInsets.fromLTRB(
+          16,
+          compact ? 8 : 10,
+          16,
+          compact ? 12 : 18,
+        ),
         decoration: BoxDecoration(
           color: _checkoutSurface,
           borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),

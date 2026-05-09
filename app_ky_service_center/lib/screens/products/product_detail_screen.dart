@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -13,14 +13,11 @@ import '../../services/favorite_service.dart';
 import '../../widgets/auth_guard.dart';
 import '../../widgets/cart_added_bottom_bar.dart';
 import '../../widgets/page_transitions.dart';
-import '../cart/cart_screen.dart';
 import '../cart/checkout_flow_screen.dart';
 
 Map<String, String>? get _imageHeaders => null;
 
 const _pageBg = Color(0xFFF4F8FC);
-const _heroBg = Color(0xFFE8F1FF);
-const _heroBgSecondary = Color(0xFFDBF0E8);
 const _surface = Color(0xFFFFFFFF);
 const _surfaceSoft = Color(0xFFF2F7FC);
 const _border = Color(0xFFD9E6F2);
@@ -77,11 +74,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
       final loaded = decoded
           .whereType<Map>()
-          .map(
-            (item) => _ReviewEntry.fromMap(
-              Map<String, dynamic>.from(item),
-            ),
-          )
+          .map((item) => _ReviewEntry.fromMap(Map<String, dynamic>.from(item)))
           .toList();
 
       if (!mounted || loaded.isEmpty) return;
@@ -96,7 +89,10 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   Future<void> _persistReviews() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final payload = _reviews.take(60).map((review) => review.toMap()).toList();
+      final payload = _reviews
+          .take(60)
+          .map((review) => review.toMap())
+          .toList();
       await prefs.setString(_reviewsStorageKey, jsonEncode(payload));
     } catch (_) {}
   }
@@ -236,17 +232,32 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       if (matches(variant)) return variant;
     }
     for (final variant in variants) {
-      if (matches(variant, useStorage: true, useColor: true, useCondition: false)) {
+      if (matches(
+        variant,
+        useStorage: true,
+        useColor: true,
+        useCondition: false,
+      )) {
         return variant;
       }
     }
     for (final variant in variants) {
-      if (matches(variant, useStorage: true, useColor: false, useCondition: false)) {
+      if (matches(
+        variant,
+        useStorage: true,
+        useColor: false,
+        useCondition: false,
+      )) {
         return variant;
       }
     }
     for (final variant in variants) {
-      if (matches(variant, useStorage: false, useColor: true, useCondition: false)) {
+      if (matches(
+        variant,
+        useStorage: false,
+        useColor: true,
+        useCondition: false,
+      )) {
         return variant;
       }
     }
@@ -282,12 +293,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     return anchor * costRatio.clamp(0.52, 0.84);
   }
 
-  int _estimatedMonthlyDemand(Product product) {
-    final stock = product.stock ?? 18;
-    final demand = (product.ratingCount * 3) + stock + (product.rating * 8);
-    return demand.round().clamp(12, 260);
-  }
-
   List<String> _featureBullets(Product product) {
     final bullets = <String>[
       if ((product.categoryName?.trim().isNotEmpty ?? false))
@@ -320,27 +325,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     }
 
     return bullets.take(4).toList();
-  }
-
-  String _sellingPoint(Product product) {
-    final description = _cleanValue(product.description);
-    if (description.isNotEmpty) {
-      final sentence = description
-          .split(RegExp(r'[\.\n]'))
-          .map((item) => item.trim())
-          .firstWhere(
-            (item) => item.isNotEmpty,
-            orElse: () => '',
-          );
-      if (sentence.isNotEmpty) return sentence;
-    }
-
-    final category = product.categoryName?.trim();
-    if (category != null && category.isNotEmpty) {
-      return 'A smart $category choice with clear pricing and solid resale logic.';
-    }
-
-    return 'Built for buyers who compare product quality with business value.';
   }
 
   Future<void> _addToCartWithGuard(
@@ -407,6 +391,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     return product.ratingCount + _reviews.length;
   }
 
+  // ignore: unused_element
   Future<void> _openReviewSheet(Product product) async {
     if (_isReviewSheetOpen) return;
     final ok = await ensureLoggedIn(
@@ -434,6 +419,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     await _persistReviews();
   }
 
+  // ignore: unused_element
   Future<void> _openAllReviewsSheet(Product product) async {
     await showModalBottomSheet<void>(
       context: context,
@@ -469,7 +455,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     final selectedStorage = storageOptions.isNotEmpty
         ? storageOptions[_storageIndex]
         : null;
-    final selectedColor = colorOptions.isNotEmpty ? colorOptions[_colorIndex] : null;
+    final selectedColor = colorOptions.isNotEmpty
+        ? colorOptions[_colorIndex]
+        : null;
     final selectedCondition = conditionOptions.isNotEmpty
         ? conditionOptions[_conditionIndex]
         : null;
@@ -497,7 +485,10 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     final imageUrl = gallery.isEmpty ? null : gallery[safeIndex];
 
     final price = selectedVariantEntity?.price ?? product.salePrice;
-    final oldPrice = selectedVariantEntity == null && product.hasDiscount && price < product.price
+    final oldPrice =
+        selectedVariantEntity == null &&
+            product.hasDiscount &&
+            price < product.price
         ? product.price
         : null;
     final brand = (product.brand?.trim().isNotEmpty ?? false)
@@ -509,65 +500,22 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     final categoryText = (product.categoryName?.trim().isNotEmpty ?? false)
         ? product.categoryName!.trim()
         : 'General Product';
-    final rating = _displayRating(product);
-    final ratingCount = _displayRatingCount(product);
     final stock = selectedVariantEntity?.stock ?? product.stock;
     final isOutOfStock = stock != null && stock <= 0;
     final quantity = stock != null && stock > 0
         ? _quantity.clamp(1, stock)
         : _quantity;
-    final availabilityText = stock == null
-        ? 'Check availability'
-        : isOutOfStock
-        ? 'Out of stock'
-        : '$stock in stock';
     final savingsAmount = (oldPrice ?? price) - price;
     final discountPercent = _discountPercent(product);
     final costPrice = _estimatedCostPrice(product);
     final profit = price - costPrice;
     final profitMargin = price <= 0 ? 0.0 : (profit / price) * 100;
-    final monthlyDemand = _estimatedMonthlyDemand(product);
-    final sellingPoint = _sellingPoint(product);
     final featureBullets = _featureBullets(product);
     final economicsBadge = profitMargin >= 28
         ? 'High Margin'
         : profitMargin >= 18
         ? 'Healthy Margin'
         : 'Lean Margin';
-    final selectedRam = _cleanValue(selectedVariantEntity?.ram);
-    final selectedSsd = _cleanValue(selectedVariantEntity?.ssd);
-    final specs = <_SpecItem>[
-      if (_cleanValue(product.display).isNotEmpty)
-        _SpecItem(
-          label: 'Display',
-          value: _cleanValue(product.display),
-          icon: Icons.display_settings_outlined,
-        ),
-      if (_cleanValue(product.cpu).isNotEmpty)
-        _SpecItem(
-          label: 'CPU',
-          value: _cleanValue(product.cpu),
-          icon: Icons.memory_outlined,
-        ),
-      if (selectedRam.isNotEmpty ||
-          product.ramOptions.where((item) => item.trim().isNotEmpty).isNotEmpty)
-        _SpecItem(
-          label: 'RAM',
-          value: selectedRam.isNotEmpty
-              ? selectedRam
-              : product.ramOptions
-                    .map((item) => item.trim())
-                    .where((item) => item.isNotEmpty)
-                    .join(', '),
-          icon: Icons.developer_board_outlined,
-        ),
-      if (selectedSsd.isNotEmpty || _cleanValue(product.ssd).isNotEmpty)
-        _SpecItem(
-          label: 'SSD',
-          value: selectedSsd.isNotEmpty ? selectedSsd : _cleanValue(product.ssd),
-          icon: Icons.storage_outlined,
-        ),
-    ];
 
     return AnimatedBuilder(
       animation: FavoriteService.instance,
@@ -630,7 +578,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                             ),
                             Container(
                               decoration: BoxDecoration(
-                                color: isFavorite ? const Color(0xFFFFF0F0) : _surfaceSoft,
+                                color: isFavorite
+                                    ? const Color(0xFFFFF0F0)
+                                    : _surfaceSoft,
                                 borderRadius: BorderRadius.circular(14),
                               ),
                               child: IconButton(
@@ -663,14 +613,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                           ],
                         ),
                       ),
-                      Container(
-                        height: 2.5,
-                        decoration: const BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [Color(0xFF1E6BFF), Color(0xFF7B52FF), Color(0xFF1E6BFF)],
-                          ),
-                        ),
-                      ),
                     ],
                   ),
                   Expanded(
@@ -679,7 +621,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                       child: LayoutBuilder(
                         builder: (context, constraints) {
                           final wideHero = constraints.maxWidth >= 760;
-                          final twoColumnSections = constraints.maxWidth >= 720;
                           final wideVariantCard = constraints.maxWidth >= 680;
 
                           final mediaPanel = Column(
@@ -693,7 +634,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                 discountLabel: discountPercent > 0
                                     ? '-${discountPercent.round()}%'
                                     : null,
-                                stockLabel: isOutOfStock ? 'Out of Stock' : 'In Stock',
+                                stockLabel: isOutOfStock
+                                    ? 'Out of Stock'
+                                    : 'In Stock',
                               ),
                               if (gallery.length > 1) ...[
                                 const SizedBox(height: 14),
@@ -716,7 +659,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                               border: Border.all(color: _border),
                               boxShadow: [
                                 BoxShadow(
-                                  color: _accent.withAlpha((0.06 * 255).round()),
+                                  color: _accent.withAlpha(
+                                    (0.06 * 255).round(),
+                                  ),
                                   blurRadius: 20,
                                   offset: const Offset(0, 10),
                                 ),
@@ -729,9 +674,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                   name: product.name,
                                   category: categoryText,
                                   brand: brand,
-                                  rating: rating,
-                                  ratingCount: ratingCount,
-                                  sellingPoint: sellingPoint,
                                   currentPrice: price,
                                   oldPrice: oldPrice,
                                   savingsAmount: savingsAmount,
@@ -747,7 +689,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                           final variantCard = _SectionCard(
                             child: LayoutBuilder(
                               builder: (context, innerConstraints) {
-                                final sideBySide = wideVariantCard &&
+                                final sideBySide =
+                                    wideVariantCard &&
                                     innerConstraints.maxWidth >= 640;
 
                                 final optionBlock = Column(
@@ -765,13 +708,15 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                             (index) => _SegmentChip(
                                               label: storageOptions[index],
                                               selected: _storageIndex == index,
-                                              onTap: () =>
-                                                  setState(() => _storageIndex = index),
+                                              onTap: () => setState(
+                                                () => _storageIndex = index,
+                                              ),
                                             ),
                                           ),
                                         ),
                                       ),
-                                      if (colorOptions.isNotEmpty || conditionOptions.isNotEmpty)
+                                      if (colorOptions.isNotEmpty ||
+                                          conditionOptions.isNotEmpty)
                                         const SizedBox(height: 16),
                                     ],
                                     if (colorOptions.isNotEmpty) ...[
@@ -785,10 +730,13 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                             colorOptions.length,
                                             (index) => _ColorSwatch(
                                               label: colorOptions[index],
-                                              color: _colorFromName(colorOptions[index]),
+                                              color: _colorFromName(
+                                                colorOptions[index],
+                                              ),
                                               selected: _colorIndex == index,
-                                              onTap: () =>
-                                                  setState(() => _colorIndex = index),
+                                              onTap: () => setState(
+                                                () => _colorIndex = index,
+                                              ),
                                             ),
                                           ),
                                         ),
@@ -799,7 +747,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                     if (conditionOptions.isNotEmpty)
                                       _OptionSection(
                                         title: 'Condition',
-                                        subtitle: conditionOptions[_conditionIndex],
+                                        subtitle:
+                                            conditionOptions[_conditionIndex],
                                         child: Wrap(
                                           spacing: 10,
                                           runSpacing: 10,
@@ -807,7 +756,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                             conditionOptions.length,
                                             (index) => _SegmentChip(
                                               label: conditionOptions[index],
-                                              selected: _conditionIndex == index,
+                                              selected:
+                                                  _conditionIndex == index,
                                               onTap: () => setState(
                                                 () => _conditionIndex = index,
                                               ),
@@ -839,7 +789,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                           ),
                                           decoration: BoxDecoration(
                                             color: _surfaceSoft,
-                                            borderRadius: BorderRadius.circular(999),
+                                            borderRadius: BorderRadius.circular(
+                                              999,
+                                            ),
                                             border: Border.all(color: _border),
                                           ),
                                           child: Text(
@@ -855,18 +807,26 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                     ),
                                     const SizedBox(height: 12),
                                     Row(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         _QuantityControl(
                                           quantity: quantity,
                                           onMinus: () {
                                             if (quantity <= 1) return;
-                                            setState(() => _quantity = quantity - 1);
+                                            setState(
+                                              () => _quantity = quantity - 1,
+                                            );
                                           },
                                           onPlus: () {
                                             if (isOutOfStock) return;
-                                            if (stock != null && quantity >= stock) return;
-                                            setState(() => _quantity = quantity + 1);
+                                            if (stock != null &&
+                                                quantity >= stock) {
+                                              return;
+                                            }
+                                            setState(
+                                              () => _quantity = quantity + 1,
+                                            );
                                           },
                                         ),
                                         const SizedBox(width: 14),
@@ -878,13 +838,22 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                             ),
                                             decoration: BoxDecoration(
                                               color: isOutOfStock
-                                                  ? _danger.withAlpha((0.08 * 255).round())
-                                                  : _success.withAlpha((0.10 * 255).round()),
-                                              borderRadius: BorderRadius.circular(14),
+                                                  ? _danger.withAlpha(
+                                                      (0.08 * 255).round(),
+                                                    )
+                                                  : _success.withAlpha(
+                                                      (0.10 * 255).round(),
+                                                    ),
+                                              borderRadius:
+                                                  BorderRadius.circular(14),
                                               border: Border.all(
                                                 color: isOutOfStock
-                                                    ? _danger.withAlpha((0.22 * 255).round())
-                                                    : _success.withAlpha((0.26 * 255).round()),
+                                                    ? _danger.withAlpha(
+                                                        (0.22 * 255).round(),
+                                                      )
+                                                    : _success.withAlpha(
+                                                        (0.26 * 255).round(),
+                                                      ),
                                               ),
                                             ),
                                             child: Column(
@@ -893,7 +862,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                               mainAxisSize: MainAxisSize.min,
                                               children: [
                                                 Text(
-                                                  isOutOfStock ? 'Out of Stock' : 'In Stock',
+                                                  isOutOfStock
+                                                      ? 'Out of Stock'
+                                                      : 'In Stock',
                                                   style: TextStyle(
                                                     fontSize: 14,
                                                     fontWeight: FontWeight.w700,
@@ -911,7 +882,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                                     fontSize: 12.2,
                                                     color: isOutOfStock
                                                         ? _danger.withAlpha(
-                                                            (0.72 * 255).round(),
+                                                            (0.72 * 255)
+                                                                .round(),
                                                           )
                                                         : _textSecondary,
                                                   ),
@@ -932,7 +904,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                         ),
                                         decoration: BoxDecoration(
                                           color: _surfaceSoft,
-                                          borderRadius: BorderRadius.circular(14),
+                                          borderRadius: BorderRadius.circular(
+                                            14,
+                                          ),
                                           border: Border.all(color: _border),
                                         ),
                                         child: Row(
@@ -942,7 +916,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                               height: 26,
                                               decoration: BoxDecoration(
                                                 color: _accentSoft,
-                                                borderRadius: BorderRadius.circular(9),
+                                                borderRadius:
+                                                    BorderRadius.circular(9),
                                               ),
                                               child: const Icon(
                                                 Icons.tune_rounded,
@@ -974,7 +949,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                 if (sideBySide) {
                                   return IntrinsicHeight(
                                     child: Row(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         Expanded(child: optionBlock),
                                         Container(
@@ -982,7 +958,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                           margin: const EdgeInsets.symmetric(
                                             horizontal: 16,
                                           ),
-                                          color: _border.withAlpha((0.7 * 255).round()),
+                                          color: _border.withAlpha(
+                                            (0.7 * 255).round(),
+                                          ),
                                         ),
                                         Expanded(child: quantityBlock),
                                       ],
@@ -1008,7 +986,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                               children: [
                                 const _SectionHeader(
                                   title: 'Description',
-                                  subtitle: 'Story, features, and product value',
+                                  subtitle:
+                                      'Story, features, and product value',
                                 ),
                                 const SizedBox(height: 14),
                                 _DescriptionBlock(
@@ -1018,24 +997,14 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                   expanded: _descriptionExpanded,
                                   onToggle: descriptionText.length > 180
                                       ? () => setState(
-                                            () => _descriptionExpanded =
-                                                !_descriptionExpanded,
-                                          )
+                                          () => _descriptionExpanded =
+                                              !_descriptionExpanded,
+                                        )
                                       : null,
                                 ),
                                 const SizedBox(height: 18),
                                 _FeatureBulletList(items: featureBullets),
                               ],
-                            ),
-                          );
-
-                          final reviewsCard = _SectionCard(
-                            child: _ReviewsSection(
-                              averageRating: rating,
-                              ratingCount: ratingCount,
-                              reviews: _reviews,
-                              onSeeAllReviews: () => _openAllReviewsSheet(product),
-                              onWriteReview: () => _openReviewSheet(product),
                             ),
                           );
 
@@ -1059,22 +1028,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                               const SizedBox(height: 14),
                               variantCard,
                               const SizedBox(height: 14),
-                              if (twoColumnSections)
-                                Row(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Expanded(child: descriptionCard),
-                                    const SizedBox(width: 14),
-                                    Expanded(child: reviewsCard),
-                                  ],
-                                )
-                              else ...[
-                                descriptionCard,
-                                const SizedBox(height: 14),
-                                reviewsCard,
-                              ],
-                             
-                              
+                              descriptionCard,
                               const SizedBox(height: 24),
                             ],
                           );
@@ -1112,6 +1066,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   }
 }
 
+// ignore: unused_element
 class _TopBar extends StatelessWidget {
   const _TopBar({
     required this.isFavorite,
@@ -1290,7 +1245,10 @@ class _MediaStage extends StatelessWidget {
                       children: [
                         if (discountLabel != null)
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 7,
+                            ),
                             decoration: BoxDecoration(
                               gradient: const LinearGradient(
                                 colors: [Color(0xFFE53E3E), Color(0xFFDD6B20)],
@@ -1317,11 +1275,16 @@ class _MediaStage extends StatelessWidget {
                           const SizedBox(width: 8),
                         if (stockLabel != null)
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 7,
+                            ),
                             decoration: BoxDecoration(
                               color: _success.withAlpha((0.12 * 255).round()),
                               borderRadius: BorderRadius.circular(999),
-                              border: Border.all(color: _success.withAlpha((0.25 * 255).round())),
+                              border: Border.all(
+                                color: _success.withAlpha((0.25 * 255).round()),
+                              ),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
@@ -1349,7 +1312,10 @@ class _MediaStage extends StatelessWidget {
                         const Spacer(),
                         if (galleryCount > 0)
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 6,
+                            ),
                             decoration: BoxDecoration(
                               color: _surface.withAlpha((0.85 * 255).round()),
                               borderRadius: BorderRadius.circular(999),
@@ -1358,7 +1324,11 @@ class _MediaStage extends StatelessWidget {
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                const Icon(Icons.photo_library_outlined, size: 14, color: _textSecondary),
+                                const Icon(
+                                  Icons.photo_library_outlined,
+                                  size: 14,
+                                  color: _textSecondary,
+                                ),
                                 const SizedBox(width: 5),
                                 Text(
                                   '$galleryCount',
@@ -1388,7 +1358,10 @@ class _MediaStage extends StatelessWidget {
                             return FadeTransition(
                               opacity: animation,
                               child: ScaleTransition(
-                                scale: Tween<double>(begin: 0.92, end: 1.0).animate(animation),
+                                scale: Tween<double>(
+                                  begin: 0.92,
+                                  end: 1.0,
+                                ).animate(animation),
                                 child: child,
                               ),
                             );
@@ -1496,9 +1469,6 @@ class _CommerceSummaryCard extends StatelessWidget {
     required this.name,
     required this.category,
     required this.brand,
-    required this.rating,
-    required this.ratingCount,
-    required this.sellingPoint,
     required this.currentPrice,
     required this.oldPrice,
     required this.savingsAmount,
@@ -1509,9 +1479,6 @@ class _CommerceSummaryCard extends StatelessWidget {
   final String name;
   final String category;
   final String brand;
-  final double rating;
-  final int ratingCount;
-  final String sellingPoint;
   final double currentPrice;
   final double? oldPrice;
   final double savingsAmount;
@@ -1552,33 +1519,7 @@ class _CommerceSummaryCard extends StatelessWidget {
             height: 1.15,
           ),
         ),
-        const SizedBox(height: 10),
-        Row(
-          children: [
-            const Icon(Icons.star_rounded, size: 18, color: _star),
-            const SizedBox(width: 6),
-            Text(
-              ratingCount > 0
-                  ? '${rating.toStringAsFixed(1)} ($ratingCount reviews)'
-                  : 'No reviews yet',
-              style: const TextStyle(
-                fontSize: 13.5,
-                fontWeight: FontWeight.w600,
-                color: _textSecondary,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 10),
-        Text(
-          sellingPoint,
-          style: const TextStyle(
-            fontSize: 14,
-            height: 1.55,
-            color: _textSecondary,
-          ),
-        ),
-        const SizedBox(height: 18),
+        const SizedBox(height: 16),
         Wrap(
           crossAxisAlignment: WrapCrossAlignment.end,
           spacing: 10,
@@ -1608,12 +1549,12 @@ class _CommerceSummaryCard extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 14),
-        
       ],
     );
   }
 }
 
+// ignore: unused_element
 class _MiniMetricTile extends StatelessWidget {
   const _MiniMetricTile({
     required this.icon,
@@ -1714,6 +1655,7 @@ class _ThumbnailRail extends StatelessWidget {
   }
 }
 
+// ignore: unused_element
 class _IntroBlock extends StatelessWidget {
   const _IntroBlock({
     required this.name,
@@ -1843,6 +1785,7 @@ class _IntroBlock extends StatelessWidget {
   }
 }
 
+// ignore: unused_element
 class _PricePanel extends StatelessWidget {
   const _PricePanel({
     required this.price,
@@ -2014,14 +1957,14 @@ class _QuantityButton extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(10),
-        child: Container(
-          width: 34,
-          height: 34,
-          decoration: BoxDecoration(
-            color: _accentSoft,
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Icon(icon, size: 15, color: _textPrimary),
+      child: Container(
+        width: 34,
+        height: 34,
+        decoration: BoxDecoration(
+          color: _accentSoft,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Icon(icon, size: 15, color: _textPrimary),
       ),
     );
   }
@@ -2244,11 +2187,7 @@ class _SectionCard extends StatelessWidget {
             blurRadius: 28,
             offset: const Offset(0, 14),
           ),
-          const BoxShadow(
-            color: _shadow,
-            blurRadius: 10,
-            offset: Offset(0, 4),
-          ),
+          const BoxShadow(color: _shadow, blurRadius: 10, offset: Offset(0, 4)),
         ],
       ),
       child: child,
@@ -2337,6 +2276,7 @@ class _TrustFeatureItem extends StatelessWidget {
   }
 }
 
+// ignore: unused_element
 class _InfoDisclosureRow extends StatelessWidget {
   const _InfoDisclosureRow({
     required this.icon,
@@ -2377,18 +2317,12 @@ class _InfoDisclosureRow extends StatelessWidget {
               const SizedBox(height: 3),
               Text(
                 subtitle,
-                style: const TextStyle(
-                  fontSize: 12.5,
-                  color: _textSecondary,
-                ),
+                style: const TextStyle(fontSize: 12.5, color: _textSecondary),
               ),
             ],
           ),
         ),
-        const Icon(
-          Icons.keyboard_arrow_down_rounded,
-          color: _textSecondary,
-        ),
+        const Icon(Icons.keyboard_arrow_down_rounded, color: _textSecondary),
       ],
     );
   }
@@ -2447,6 +2381,7 @@ class _FeatureBulletList extends StatelessWidget {
   }
 }
 
+// ignore: unused_element
 class _SpecsGrid extends StatelessWidget {
   const _SpecsGrid({required this.specs});
 
@@ -2575,149 +2510,6 @@ class _DescriptionBlock extends StatelessWidget {
   }
 }
 
-class _ReviewsSection extends StatelessWidget {
-  const _ReviewsSection({
-    required this.averageRating,
-    required this.ratingCount,
-    required this.reviews,
-    required this.onSeeAllReviews,
-    required this.onWriteReview,
-  });
-
-  final double averageRating;
-  final int ratingCount;
-  final List<_ReviewEntry> reviews;
-  final VoidCallback onSeeAllReviews;
-  final VoidCallback onWriteReview;
-
-  @override
-  Widget build(BuildContext context) {
-    final previewReviews = reviews.take(3).toList();
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            const Expanded(
-              child: _SectionHeader(
-                title: 'Reviews Preview',
-                subtitle: 'Fast social proof before purchase',
-              ),
-            ),
-            TextButton(
-              onPressed: onSeeAllReviews,
-              child: const Text('See all reviews'),
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(18),
-          decoration: BoxDecoration(
-            color: _surfaceSoft,
-            borderRadius: BorderRadius.circular(22),
-          ),
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final stacked = constraints.maxWidth < 380;
-              final summary = Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    ratingCount > 0 ? averageRating.toStringAsFixed(1) : 'New',
-                    style: GoogleFonts.inter(
-                      fontSize: 34,
-                      fontWeight: FontWeight.w700,
-                      color: _textPrimary,
-                      height: 1,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  _StarRatingRow(rating: averageRating),
-                  const SizedBox(height: 8),
-                  Text(
-                    ratingCount > 0
-                        ? '$ratingCount review${ratingCount == 1 ? '' : 's'}'
-                        : 'No reviews yet',
-                    style: const TextStyle(fontSize: 13, color: _textSecondary),
-                  ),
-                ],
-              );
-
-              final button = SizedBox(
-                width: stacked ? double.infinity : 144,
-                child: ElevatedButton(
-                  onPressed: onWriteReview,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _accent,
-                    foregroundColor: Colors.white,
-                    elevation: 0,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                  ),
-                  child: const Text(
-                    'Write Review',
-                    style: TextStyle(fontWeight: FontWeight.w700),
-                  ),
-                ),
-              );
-
-              if (stacked) {
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [summary, const SizedBox(height: 14), button],
-                );
-              }
-
-              return Row(
-                children: [
-                  Expanded(child: summary),
-                  const SizedBox(width: 16),
-                  button,
-                ],
-              );
-            },
-          ),
-        ),
-        const SizedBox(height: 16),
-        if (previewReviews.isEmpty)
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: _surfaceSoft,
-              borderRadius: BorderRadius.circular(18),
-            ),
-            child: const Text(
-              'No written feedback yet. Be the first to share your experience.',
-              style: TextStyle(
-                fontSize: 13.5,
-                height: 1.6,
-                color: _textSecondary,
-              ),
-            ),
-          )
-        else
-          Column(
-            children: [
-              for (var index = 0; index < previewReviews.length; index++)
-                Padding(
-                  padding: EdgeInsets.only(
-                    bottom: index == previewReviews.length - 1 ? 0 : 12,
-                  ),
-                  child: _ReviewCard(review: previewReviews[index]),
-                ),
-            ],
-          ),
-      ],
-    );
-  }
-}
-
 class _ReviewCard extends StatelessWidget {
   const _ReviewCard({required this.review});
 
@@ -2812,7 +2604,10 @@ class _ReviewCard extends StatelessWidget {
                     const SizedBox(width: 12),
                     Expanded(child: authorDetails),
                     const SizedBox(width: 12),
-                    _StarRatingRow(rating: review.rating.toDouble(), iconSize: 16),
+                    _StarRatingRow(
+                      rating: review.rating.toDouble(),
+                      iconSize: 16,
+                    ),
                   ],
                 ),
               const SizedBox(height: 12),
@@ -2924,16 +2719,6 @@ class _BottomPurchaseBar extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Container(
-            height: 3,
-            margin: const EdgeInsets.only(bottom: 12),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFF1E6BFF), Color(0xFF7B52FF), Color(0xFF1E6BFF)],
-              ),
-              borderRadius: BorderRadius.circular(999),
-            ),
-          ),
           LayoutBuilder(
             builder: (context, constraints) {
               final compact = constraints.maxWidth < 420;
@@ -3147,7 +2932,10 @@ class _AllReviewsSheet extends StatelessWidget {
                     ratingCount > 0
                         ? '$ratingCount review${ratingCount == 1 ? '' : 's'}'
                         : 'No reviews',
-                    style: const TextStyle(fontSize: 12.5, color: _textSecondary),
+                    style: const TextStyle(
+                      fontSize: 12.5,
+                      color: _textSecondary,
+                    ),
                   ),
                 ],
               ),
@@ -3172,7 +2960,8 @@ class _AllReviewsSheet extends StatelessWidget {
                       )
                     : ListView.separated(
                         itemCount: sortedReviews.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: 12),
+                        separatorBuilder: (context, index) =>
+                            const SizedBox(height: 12),
                         itemBuilder: (context, index) {
                           return _ReviewCard(review: sortedReviews[index]);
                         },
@@ -3187,9 +2976,7 @@ class _AllReviewsSheet extends StatelessWidget {
 }
 
 class _ReviewComposerSheet extends StatefulWidget {
-  const _ReviewComposerSheet({
-    required this.productName,
-  });
+  const _ReviewComposerSheet({required this.productName});
 
   final String productName;
 
@@ -3237,7 +3024,9 @@ class _ReviewComposerSheetState extends State<_ReviewComposerSheet> {
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not pick images. Please try again.')),
+        const SnackBar(
+          content: Text('Could not pick images. Please try again.'),
+        ),
       );
     } finally {
       if (mounted) {
@@ -3389,13 +3178,17 @@ class _ReviewComposerSheetState extends State<_ReviewComposerSheet> {
                     ),
                     Text(
                       '${_images.length}/$_maxReviewImages',
-                      style: const TextStyle(fontSize: 12.5, color: _textSecondary),
+                      style: const TextStyle(
+                        fontSize: 12.5,
+                        color: _textSecondary,
+                      ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 10),
                 OutlinedButton.icon(
-                  onPressed: _images.length >= _maxReviewImages || _isPickingImages
+                  onPressed:
+                      _images.length >= _maxReviewImages || _isPickingImages
                       ? null
                       : _pickReviewImages,
                   icon: _isPickingImages
@@ -3405,7 +3198,9 @@ class _ReviewComposerSheetState extends State<_ReviewComposerSheet> {
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
                       : const Icon(Icons.photo_library_outlined),
-                  label: Text(_isPickingImages ? 'Selecting...' : 'Upload Images'),
+                  label: Text(
+                    _isPickingImages ? 'Selecting...' : 'Upload Images',
+                  ),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: _accentDeep,
                     side: const BorderSide(color: _border),
@@ -3432,7 +3227,10 @@ class _ReviewComposerSheetState extends State<_ReviewComposerSheet> {
                             child: SizedBox(
                               width: 86,
                               height: 86,
-                              child: Image.memory(_images[index], fit: BoxFit.cover),
+                              child: Image.memory(
+                                _images[index],
+                                fit: BoxFit.cover,
+                              ),
                             ),
                           ),
                           Positioned(
@@ -3630,10 +3428,9 @@ class _ReviewEntry {
       _ => 5,
     };
     final rawCreatedAt = map['created_at']?.toString();
-    final createdAt =
-        rawCreatedAt == null
-            ? DateTime.now()
-            : DateTime.tryParse(rawCreatedAt) ?? DateTime.now();
+    final createdAt = rawCreatedAt == null
+        ? DateTime.now()
+        : DateTime.tryParse(rawCreatedAt) ?? DateTime.now();
 
     return _ReviewEntry(
       author: map['author']?.toString().trim().isNotEmpty == true

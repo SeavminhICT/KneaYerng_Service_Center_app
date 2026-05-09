@@ -121,9 +121,7 @@ class _SupportChatScreenState extends State<SupportChatScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            error.toString().replaceFirst('Exception: ', ''),
-          ),
+          content: Text(error.toString().replaceFirst('Exception: ', '')),
         ),
       );
     } finally {
@@ -173,10 +171,7 @@ class _SupportChatScreenState extends State<SupportChatScreen> {
                 conversation == null
                     ? 'Reply in a few minutes'
                     : _supportStatusLabel(conversation.status),
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: _supportMuted,
-                ),
+                style: const TextStyle(fontSize: 12, color: _supportMuted),
               ),
             ],
           ),
@@ -320,7 +315,9 @@ class _MessageBubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isCustomer = message.isCustomer;
-    final align = isCustomer ? CrossAxisAlignment.end : CrossAxisAlignment.start;
+    final align = isCustomer
+        ? CrossAxisAlignment.end
+        : CrossAxisAlignment.start;
     final bubbleColor = isCustomer ? _supportPrimary : _supportSurface;
     final textColor = isCustomer ? Colors.white : _supportText;
     final time = message.createdAt == null
@@ -366,10 +363,7 @@ class _MessageBubble extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             isCustomer ? '$time  ${_deliveryLabel(message)}' : time,
-            style: const TextStyle(
-              fontSize: 11.5,
-              color: _supportMuted,
-            ),
+            style: const TextStyle(fontSize: 11.5, color: _supportMuted),
           ),
         ],
       ),
@@ -378,10 +372,7 @@ class _MessageBubble extends StatelessWidget {
 }
 
 class _VoiceMessageTile extends StatelessWidget {
-  const _VoiceMessageTile({
-    required this.message,
-    required this.isCustomer,
-  });
+  const _VoiceMessageTile({required this.message, required this.isCustomer});
 
   final SupportChatMessage message;
   final bool isCustomer;
@@ -441,10 +432,7 @@ class _Composer extends StatelessWidget {
                   ),
                 );
               },
-              icon: const Icon(
-                Icons.mic_none_rounded,
-                color: _supportMuted,
-              ),
+              icon: const Icon(Icons.mic_none_rounded, color: _supportMuted),
               tooltip: 'Voice message',
             ),
             Expanded(
@@ -495,10 +483,7 @@ class _Composer extends StatelessWidget {
                           ),
                         ),
                       )
-                    : const Icon(
-                        Icons.send_rounded,
-                        color: Colors.white,
-                      ),
+                    : const Icon(Icons.send_rounded, color: Colors.white),
               ),
             ),
           ],
@@ -509,10 +494,7 @@ class _Composer extends StatelessWidget {
 }
 
 class _SupportErrorState extends StatelessWidget {
-  const _SupportErrorState({
-    required this.message,
-    required this.onRetry,
-  });
+  const _SupportErrorState({required this.message, required this.onRetry});
 
   final String message;
   final Future<void> Function() onRetry;
@@ -636,5 +618,5 @@ String _formatDuration(int? seconds) {
   final safe = seconds ?? 0;
   final minutes = safe ~/ 60;
   final remainder = safe % 60;
-  return '${minutes}:${remainder.toString().padLeft(2, '0')}';
+  return '$minutes:${remainder.toString().padLeft(2, '0')}';
 }

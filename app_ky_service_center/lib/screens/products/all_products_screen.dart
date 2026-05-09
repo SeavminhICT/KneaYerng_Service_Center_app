@@ -246,7 +246,8 @@ class _AllProductsScreenState extends State<AllProductsScreen> {
                   ),
                 ),
                 Expanded(
-                  child: _searchFocusNode.hasFocus &&
+                  child:
+                      _searchFocusNode.hasFocus &&
                           _searchController.text.trim().isEmpty &&
                           (_recentSearches.isNotEmpty ||
                               _popularSearches.isNotEmpty)
@@ -549,7 +550,9 @@ class _SearchSuggestionPanel extends StatelessWidget {
                                     ),
                                   ),
                                   if (suggestion.subtitle != null &&
-                                      suggestion.subtitle!.trim().isNotEmpty) ...[
+                                      suggestion.subtitle!
+                                          .trim()
+                                          .isNotEmpty) ...[
                                     const SizedBox(height: 2),
                                     Text(
                                       suggestion.subtitle!,
@@ -860,9 +863,7 @@ class _GridProductLayout extends StatelessWidget {
         children: [
           _CardTopRow(product: product),
           const SizedBox(height: 10),
-          Expanded(
-            child: _ProductImage(imageUrl: product.imageUrl),
-          ),
+          Expanded(child: _ProductImage(imageUrl: product.imageUrl)),
           const SizedBox(height: 10),
           _ProductMetaLine(product: product),
           const SizedBox(height: 6),
@@ -975,8 +976,7 @@ class _ProductMetaLine extends StatelessWidget {
   Widget build(BuildContext context) {
     final primary = _firstValue(product.brand, product.categoryName);
     final secondary = product.sku;
-    final text = [if (primary != null) primary, if (secondary != null) secondary]
-        .join(' | ');
+    final text = [primary, secondary].whereType<String>().join(' | ');
 
     if (text.isEmpty) {
       return const SizedBox(height: 0);
@@ -1004,7 +1004,8 @@ class _PriceRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final hasDiscount = product.hasDiscount && product.salePrice < product.price;
+    final hasDiscount =
+        product.hasDiscount && product.salePrice < product.price;
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.end,

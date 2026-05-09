@@ -184,9 +184,11 @@ class Product {
       salePriceOverride: salePriceOverride,
       imageUrl: image ?? thumbnail,
       thumbnailUrl: thumbnail,
-      imageGallery: _normalizeGallery(_toStringList(
-        json['image_gallery'] ?? json['gallery'] ?? json['images'],
-      )),
+      imageGallery: _normalizeGallery(
+        _toStringList(
+          json['image_gallery'] ?? json['gallery'] ?? json['images'],
+        ),
+      ),
       categoryName: resolvedCategoryName,
       categoryId: resolvedCategoryId,
       brand: json['brand']?.toString(),
@@ -195,7 +197,8 @@ class Product {
       discount: _toDoubleOrNull(
         json['discount'] ?? json['discount_amount'] ?? json['discount_value'],
       ),
-      rating: _toDoubleOrNull(
+      rating:
+          _toDoubleOrNull(
             json['rating'] ??
                 json['average_rating'] ??
                 json['avg_rating'] ??
@@ -204,7 +207,8 @@ class Product {
                 json['stars'],
           ) ??
           0,
-      ratingCount: _toIntOrNull(
+      ratingCount:
+          _toIntOrNull(
             json['rating_count'] ??
                 json['ratings_count'] ??
                 json['review_count'] ??
@@ -239,12 +243,6 @@ class Product {
     if (value is int) return value;
     if (value is num) return value.toInt();
     return int.tryParse(value.toString());
-  }
-
-  static double _toDouble(dynamic value) {
-    if (value is double) return value;
-    if (value is num) return value.toDouble();
-    return double.tryParse(value?.toString() ?? '') ?? 0;
   }
 
   static double? _toDoubleOrNull(dynamic value) {
@@ -337,10 +335,7 @@ class Product {
         .toList();
   }
 
-  static String? _pickImageValue(
-    Map<String, dynamic> json,
-    List<String> keys,
-  ) {
+  static String? _pickImageValue(Map<String, dynamic> json, List<String> keys) {
     for (final key in keys) {
       final value = json[key];
       if (value is String) {

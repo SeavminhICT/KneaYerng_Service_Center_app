@@ -49,6 +49,7 @@ Route::prefix('auth')->group(function () {
     Route::post('verify-otp', [AuthOtpController::class, 'verifyOtp']);
     Route::post('register', [AuthController::class, 'register']);
     Route::post('login', [AuthController::class, 'login']);
+    Route::post('google', [AuthController::class, 'googleLogin']);
     Route::post('logout', [AuthController::class, 'logout'])->middleware('auth:sanctum');
     Route::put('user/update', [AuthController::class, 'update'])->middleware('auth:sanctum');
 });

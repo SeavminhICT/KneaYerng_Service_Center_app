@@ -200,7 +200,7 @@ class KhqrPaymentController extends Controller
             $transaction->paid_at = $payment?->paid_at ?? $orderPayment?->paid_at ?? now();
         }
 
-        if ($transaction->status === 'PENDING') {
+        if (in_array($transaction->status, ['PENDING', 'UNAUTHORIZED', 'UNAVAILABLE'], true)) {
             $bakong = app(BakongOpenApiService::class);
             if ($transaction->full_hash) {
                 $verify = $bakong->checkTransactionByHash($transaction->full_hash);
@@ -235,7 +235,9 @@ class KhqrPaymentController extends Controller
             } elseif (($verify['status'] ?? 'PENDING') === 'NOT_FOUND') {
                 $transaction->status = 'PENDING';
             } elseif (($verify['status'] ?? 'PENDING') === 'UNAUTHORIZED') {
-                $transaction->status = 'PENDING';
+                $transaction->status = 'UNAUTHORIZED';
+            } elseif (($verify['status'] ?? 'PENDING') === 'UNAVAILABLE') {
+                $transaction->status = 'UNAVAILABLE';
             }
         }
 
@@ -293,6 +295,28 @@ class KhqrPaymentController extends Controller
             $response = [
                 'status' => 'TIMEOUT',
                 'message' => 'Payment failed: QR expired.',
+            ];
+            if (config('app.debug') && isset($verify)) {
+                $response['debug'] = ['bakong' => $verify];
+            }
+            return response()->json($response);
+        }
+
+        if ($transaction->status === 'UNAUTHORIZED') {
+            $response = [
+                'status' => 'UNAUTHORIZED',
+                'message' => 'Bakong sandbox status check is unauthorized. Check BAKONG_OPEN_TOKEN / BAKONG_TOKEN.',
+            ];
+            if (config('app.debug') && isset($verify)) {
+                $response['debug'] = ['bakong' => $verify];
+            }
+            return response()->json($response);
+        }
+
+        if ($transaction->status === 'UNAVAILABLE') {
+            $response = [
+                'status' => 'UNAVAILABLE',
+                'message' => 'Bakong status checker is not configured. Set BAKONG_OPEN_BASE_URL and BAKONG_OPEN_TOKEN.',
             ];
             if (config('app.debug') && isset($verify)) {
                 $response['debug'] = ['bakong' => $verify];

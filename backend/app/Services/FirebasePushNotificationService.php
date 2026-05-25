@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\MobileDeviceToken;
 use App\Models\OrderTrackingNotification;
 use App\Models\User;
+use Illuminate\Support\Facades\Log;
 use Kreait\Firebase\Contract\Messaging;
 use Kreait\Firebase\Factory;
 use Kreait\Firebase\Messaging\AndroidConfig;
@@ -129,7 +130,8 @@ class FirebasePushNotificationService
 
         foreach ($tokens as $token) {
             try {
-                $message = CloudMessage::withTarget('token', $token)
+                $message = CloudMessage::new()
+                    ->withToken($token)
                     ->withNotification(Notification::create(
                         $notification->title,
                         $notification->body ?? 'Your order tracking status was updated.'
@@ -142,6 +144,12 @@ class FirebasePushNotificationService
                 $summary['delivered']++;
             } catch (Throwable $exception) {
                 $summary['failed']++;
+                Log::warning('Firebase push delivery failed.', [
+                    'user_id' => $user->id,
+                    'notification_id' => $notification->id,
+                    'token_suffix' => substr($token, -12),
+                    'error' => $exception->getMessage(),
+                ]);
                 if ($this->shouldForgetToken($exception)) {
                     MobileDeviceToken::query()->where('token', $token)->delete();
                     $summary['removed_invalid_tokens']++;
@@ -185,7 +193,8 @@ class FirebasePushNotificationService
 
         return str_contains($message, 'requested entity was not found')
             || str_contains($message, 'registration token is not a valid')
-            || str_contains($message, 'not a valid fcm registration token');
+            || str_contains($message, 'not a valid fcm registration token')
+            || str_contains($message, 'registration token is not registered');
     }
 
     private function resolveCredentialsPath(string $credentials): string

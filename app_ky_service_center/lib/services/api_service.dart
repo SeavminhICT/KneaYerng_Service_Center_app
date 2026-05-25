@@ -498,6 +498,72 @@ class ApiService {
     return 'Login failed';
   }
 
+  // ================= GOOGLE LOGIN =================
+  static Future<String?> loginWithGoogle({
+    required String email,
+    required String firstName,
+    required String lastName,
+    String? avatar,
+  }) async {
+    http.Response res;
+    try {
+      res = await http
+          .post(
+            Uri.parse('$baseUrl/auth/google'),
+            headers: const {
+              'Accept': 'application/json',
+              'Content-Type': 'application/json',
+            },
+            body: jsonEncode({
+              'email': email,
+              'first_name': firstName,
+              'last_name': lastName,
+              'avatar': avatar,
+            }),
+          )
+          .timeout(const Duration(seconds: 15));
+    } on TimeoutException {
+      return _buildNetworkErrorMessage();
+    } catch (error) {
+      debugPrint('Google login failed: $error');
+      return _buildNetworkErrorMessage();
+    }
+
+    dynamic data;
+    try {
+      data = jsonDecode(res.body);
+    } catch (_) {}
+
+    if (res.statusCode == 200 || res.statusCode == 201) {
+      final token = data is Map
+          ? (data['token'] ?? data['access_token'])
+          : null;
+      if (token != null) {
+        await _saveToken(token);
+      }
+
+      final profile = _extractUserProfile(
+        data is Map
+            ? Map<String, dynamic>.from(data)
+            : const <String, dynamic>{},
+        fallbackEmail: email,
+        fallbackFirstName: firstName,
+        fallbackLastName: lastName,
+        fallbackAvatarUrl: avatar,
+      );
+
+      if (profile != null) {
+        await _saveUserProfile(profile);
+      }
+      return null;
+    }
+
+    if (data is Map && data['message'] is String) {
+      return data['message'] as String;
+    }
+    return 'Google login failed';
+  }
+
   // ================= TOKEN =================
   static Future<void> _saveToken(String token) async {
     final prefs = await SharedPreferences.getInstance();
@@ -1725,28 +1791,43 @@ class ApiService {
     final rawStatus = map['status']?.toString();
     final message = map['message']?.toString();
     final data = map['data'];
+    String? rawDataStatus;
+    if (data is Map) {
+      rawDataStatus = data['status']?.toString();
+    }
 
     String status;
-    if (success is bool) {
-      status = success ? 'SUCCESS' : 'PENDING';
-      if (!success &&
-          message != null &&
-          message.toLowerCase().contains('expired')) {
-        status = 'EXPIRED';
-      }
-    } else if (rawStatus != null && rawStatus.isNotEmpty) {
+    if (rawStatus != null && rawStatus.isNotEmpty) {
       status = rawStatus;
+    } else if (rawDataStatus != null && rawDataStatus.isNotEmpty) {
+      status = rawDataStatus;
+    } else if (success is bool) {
+      status = success ? 'SUCCESS' : 'PENDING';
+      if (!success && message != null) {
+        final lowerMessage = message.toLowerCase();
+        if (lowerMessage.contains('expired') ||
+            lowerMessage.contains('timeout')) {
+          status = 'EXPIRED';
+        } else if (lowerMessage.contains('failed') ||
+            lowerMessage.contains('fail')) {
+          status = 'FAILED';
+        }
+      }
     } else if (res.statusCode >= 400) {
       status = 'PENDING';
     } else {
       status = 'PENDING';
     }
 
-    final normalized = status.toUpperCase();
+    final normalized = status.toUpperCase().trim();
     if (normalized == 'TIMEOUT') {
       status = 'EXPIRED';
     } else if (normalized == 'NOT_FOUND') {
       status = 'PENDING';
+    } else if (['PAID', 'COMPLETED', 'APPROVED', 'OK'].contains(normalized)) {
+      status = 'SUCCESS';
+    } else if (['CANCELLED', 'CANCELED', 'REJECTED'].contains(normalized)) {
+      status = 'FAILED';
     }
 
     double? amount;
@@ -2193,17 +2274,17 @@ class ApiService {
     );
   }
 
-  static Future<void> registerMobileDeviceToken({
+  static Future<bool> registerMobileDeviceToken({
     required String token,
     required String platform,
   }) async {
     final authToken = await getToken();
     if (authToken == null || authToken.isEmpty || token.trim().isEmpty) {
-      return;
+      return false;
     }
 
     try {
-      await http
+      final response = await http
           .post(
             Uri.parse('$baseUrl/mobile-devices/token'),
             headers: {
@@ -2217,19 +2298,21 @@ class ApiService {
             }),
           )
           .timeout(const Duration(seconds: 12));
+      return response.statusCode >= 200 && response.statusCode < 300;
     } catch (error) {
       debugPrint('Register mobile device token failed: $error');
+      return false;
     }
   }
 
-  static Future<void> unregisterMobileDeviceToken(String token) async {
+  static Future<bool> unregisterMobileDeviceToken(String token) async {
     final authToken = await getToken();
     if (authToken == null || authToken.isEmpty || token.trim().isEmpty) {
-      return;
+      return false;
     }
 
     try {
-      await http
+      final response = await http
           .post(
             Uri.parse('$baseUrl/mobile-devices/token/remove'),
             headers: {
@@ -2240,8 +2323,10 @@ class ApiService {
             body: jsonEncode({'token': token.trim()}),
           )
           .timeout(const Duration(seconds: 12));
+      return response.statusCode >= 200 && response.statusCode < 300;
     } catch (error) {
       debugPrint('Unregister mobile device token failed: $error');
+      return false;
     }
   }
 }

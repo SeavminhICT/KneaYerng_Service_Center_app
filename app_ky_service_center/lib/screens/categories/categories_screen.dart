@@ -6,7 +6,6 @@ import '../../services/api_service.dart';
 import '../orders/orders_screen.dart';
 import '../profile/profile_screen.dart';
 import '../repair/repair_screen.dart';
-import '../tickets/tickets_screen.dart';
 import 'category_products_screen.dart';
 
 const _primary = Color(0xFF4A6CF7);
@@ -96,9 +95,6 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
         destination = const OrdersScreen();
         break;
       case 4:
-        destination = const TicketsScreen();
-        break;
-      case 5:
         destination = const ProfileScreen();
         break;
       default:
@@ -375,22 +371,28 @@ class _BottomNavBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    const brandLight = Color(0xFF45AEDF);
+    const brandDark = Color(0xFF077CB4);
+    final navColor = isDark ? _darkSurface : Colors.white;
+    final borderColor = isDark
+        ? brandDark.withValues(alpha: 0.5)
+        : brandLight.withValues(alpha: 0.24);
+    final shadowColor = isDark
+        ? const Color(0x66000000)
+        : const Color(0x14000000);
     return Container(
       decoration: BoxDecoration(
-        color: isDark ? _darkSurface : Colors.white,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        color: navColor,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(22)),
+        border: Border(top: BorderSide(color: borderColor, width: 1)),
         boxShadow: [
-          BoxShadow(
-            color: isDark ? const Color(0x55000000) : const Color(0x1A0F172A),
-            blurRadius: 18,
-            offset: Offset(0, -4),
-          ),
+          BoxShadow(color: shadowColor, blurRadius: 18, offset: Offset(0, -4)),
         ],
       ),
       child: SafeArea(
         top: false,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(10, 10, 10, 12),
+          padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
           child: Row(
             children: [
               Expanded(
@@ -427,18 +429,10 @@ class _BottomNavBar extends StatelessWidget {
               ),
               Expanded(
                 child: _BottomNavItem(
-                  icon: Icons.confirmation_number_rounded,
-                  label: 'Tickets',
-                  isActive: false,
-                  onTap: () => onTap(4),
-                ),
-              ),
-              Expanded(
-                child: _BottomNavItem(
                   icon: Icons.person_rounded,
                   label: 'Profile',
                   isActive: false,
-                  onTap: () => onTap(5),
+                  onTap: () => onTap(4),
                 ),
               ),
             ],
@@ -472,12 +466,16 @@ class _BottomNavItemState extends State<_BottomNavItem> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final iconColor = widget.isActive
-        ? _primary
-        : (isDark ? _darkTextSecondary : const Color(0xFF888888));
-    final labelColor = widget.isActive
-        ? (isDark ? _darkTextPrimary : _textPrimary)
-        : (isDark ? _darkTextSecondary : const Color(0xFF888888));
+    const brandLight = Color(0xFF45AEDF);
+    const brandDark = Color(0xFF077CB4);
+    final iconColor = widget.isActive ? brandDark : brandLight;
+    final labelColor = widget.isActive ? brandDark : brandLight;
+    final activeBgColor = brandLight.withValues(alpha: isDark ? 0.24 : 0.18);
+    final navIcon = Icon(
+      widget.icon,
+      size: widget.isActive ? 20.5 : 20,
+      color: iconColor,
+    );
 
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
@@ -492,45 +490,62 @@ class _BottomNavItemState extends State<_BottomNavItem> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            AnimatedSlide(
-              offset: widget.isActive
-                  ? const Offset(0, -0.08)
-                  : const Offset(0, 0),
-              duration: const Duration(milliseconds: 200),
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 220),
               curve: Curves.easeOut,
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                curve: Curves.easeOut,
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: widget.isActive
-                      ? (isDark
-                            ? const Color(0xFF22304A)
-                            : const Color(0xFFEAF0FF))
-                      : Colors.transparent,
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: Icon(
-                  widget.icon,
-                  size: widget.isActive ? 23 : 21,
-                  color: iconColor,
-                ),
+              width: 30,
+              height: 30,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: widget.isActive ? activeBgColor : Colors.transparent,
+                shape: BoxShape.circle,
+                boxShadow: widget.isActive
+                    ? [
+                        BoxShadow(
+                          color: brandDark.withValues(alpha: 0.22),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ]
+                    : null,
               ),
+              child: widget.isActive
+                  ? _BrandIconGradient(child: navIcon)
+                  : navIcon,
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 3),
             Text(
               widget.label,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                fontSize: 11,
-                fontWeight: widget.isActive ? FontWeight.w600 : FontWeight.w500,
+                fontSize: 10.5,
+                fontWeight: FontWeight.w600,
                 color: labelColor,
               ),
             ),
           ],
         ),
       ),
+    );
+  }
+}
+
+class _BrandIconGradient extends StatelessWidget {
+  const _BrandIconGradient({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return ShaderMask(
+      blendMode: BlendMode.srcIn,
+      shaderCallback: (bounds) => const LinearGradient(
+        colors: [Color(0xFF45AEDF), Color(0xFF077CB4)],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      ).createShader(bounds),
+      child: child,
     );
   }
 }

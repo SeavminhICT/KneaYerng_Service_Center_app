@@ -1,10 +1,13 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:intl/intl.dart';
 
 import '../../models/user_profile.dart';
 import '../../services/api_service.dart';
 import 'address_management_screen.dart';
-import 'personal_info_screen.dart';
 
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key, required this.profile});
@@ -16,597 +19,241 @@ class EditProfileScreen extends StatefulWidget {
 }
 
 class _EditProfileScreenState extends State<EditProfileScreen> {
-  static const Color _canvas = Color(0xFFF5F7FB);
+  // ── Palette ──────────────────────────────────────────────────────────────
+  static const Color _bg = Color(0xFFF4F6FB);
   static const Color _surface = Colors.white;
-  static const Color _primary = Color(0xFF4A88F7);
-  static const Color _primarySoft = Color(0xFFEAF1FF);
-  static const Color _textPrimary = Color(0xFF111827);
-  static const Color _textMuted = Color(0xFF6B7280);
-  static const Color _border = Color(0xFFE6ECF5);
+  static const Color _primary = Color(0xFF4A6CF7);
+  static const Color _primaryLight = Color(0xFFEEF1FE);
+  static const Color _textPrimary = Color(0xFF0F172A);
+  static const Color _textMuted = Color(0xFF64748B);
+  static const Color _border = Color(0xFFE2E8F0);
+  static const Color _accent = Color(0xFF22C55E);
+  static const Color _danger = Color(0xFFEF4444);
+
+  // ── Form state ────────────────────────────────────────────────────────────
+  final _formKey = GlobalKey<FormState>();
+  late TextEditingController _firstNameCtrl;
+  late TextEditingController _lastNameCtrl;
+  late TextEditingController _birthCtrl;
+  String? _gender;
+  String? _avatarUrl;
 
   late UserProfile _profile;
-  bool _refreshing = false;
+  bool _saving = false;
+  bool _uploadingAvatar = false;
 
   @override
   void initState() {
     super.initState();
     _profile = widget.profile;
+    _firstNameCtrl = TextEditingController(text: _profile.firstName ?? '');
+    _lastNameCtrl = TextEditingController(text: _profile.lastName ?? '');
+    _birthCtrl = TextEditingController(text: _profile.birth ?? '');
+    _gender = _profile.gender;
+    _avatarUrl = _profile.avatarUrl;
   }
 
   @override
+  void dispose() {
+    _firstNameCtrl.dispose();
+    _lastNameCtrl.dispose();
+    _birthCtrl.dispose();
+    super.dispose();
+  }
+
+  // ── Build ─────────────────────────────────────────────────────────────────
+  @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Theme(
-      data: theme.copyWith(
-        textTheme: GoogleFonts.interTextTheme(theme.textTheme),
+      data: Theme.of(context).copyWith(
+        textTheme: GoogleFonts.interTextTheme(Theme.of(context).textTheme),
       ),
       child: Scaffold(
-        backgroundColor: _canvas,
-        appBar: AppBar(
-          automaticallyImplyLeading: false,
-          toolbarHeight: 72,
-          leadingWidth: 72,
-          leading: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 0, 12),
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: _surface,
-                shape: BoxShape.circle,
-                border: Border.all(color: _border),
-              ),
-              child: IconButton(
-                onPressed: () => Navigator.of(context).maybePop(),
-                icon: const Icon(Icons.chevron_left_rounded, size: 22),
-                color: _textPrimary,
+        backgroundColor: _bg,
+        body: CustomScrollView(
+          slivers: [
+            _buildSliverAppBar(),
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 40),
+              sliver: SliverList(
+                delegate: SliverChildListDelegate([
+                  const SizedBox(height: 20),
+                  _buildCompletionCard(),
+                  const SizedBox(height: 28),
+                  _buildSectionLabel('Edit Details'),
+                  const SizedBox(height: 12),
+                  _buildFormCard(),
+                  const SizedBox(height: 24),
+                  _buildSectionLabel('Account'),
+                  const SizedBox(height: 12),
+                  _buildActionCard(),
+                  const SizedBox(height: 32),
+                  _buildSaveButton(),
+                ]),
               ),
             ),
-          ),
-          backgroundColor: _surface,
-          elevation: 0,
-          foregroundColor: _textPrimary,
-          centerTitle: true,
-          title: Text(
-            'Edit Profile',
-            style: GoogleFonts.sora(
-              fontSize: 24,
-              fontWeight: FontWeight.w700,
-              color: _textPrimary,
-            ),
-          ),
-          actions: const [SizedBox(width: 72)],
-          scrolledUnderElevation: 0,
-          surfaceTintColor: Colors.transparent,
+          ],
         ),
-        body: RefreshIndicator(
-          color: _primary,
-          onRefresh: _refreshProfile,
-          child: ListView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
+      ),
+    );
+  }
+
+  // ── Sliver AppBar ────────────────────────────────────────────────────────
+  Widget _buildSliverAppBar() {
+    final name =
+        _profile.displayName.isNotEmpty ? _profile.displayName : 'User';
+    final initials = _initialsFrom(name, _profile.email ?? '');
+
+    return SliverAppBar(
+      expandedHeight: 210,
+      pinned: true,
+      elevation: 0,
+      backgroundColor: _surface,
+      foregroundColor: _textPrimary,
+      surfaceTintColor: Colors.transparent,
+      leading: IconButton(
+        onPressed: () => Navigator.of(context).maybePop(),
+        icon: Container(
+          height: 36,
+          width: 36,
+          decoration: BoxDecoration(
+            color: _bg,
+            shape: BoxShape.circle,
+            border: Border.all(color: _border),
+          ),
+          child: const Icon(Icons.arrow_back_ios_new_rounded, size: 16),
+        ),
+      ),
+      centerTitle: true,
+      title: Text(
+        'Edit Profile',
+        style: GoogleFonts.poppins(
+          fontSize: 17,
+          fontWeight: FontWeight.w700,
+          color: _textPrimary,
+        ),
+      ),
+      flexibleSpace: FlexibleSpaceBar(
+        background: Container(
+          decoration: const BoxDecoration(color: _surface),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.end,
             children: [
-              _animatedEntry(
-                0,
-                Text(
-                  'Review your information, then update any part of your account.',
-                  style: GoogleFonts.inter(
-                    fontSize: 14,
-                    height: 1.5,
-                    color: _textMuted,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 18),
-              _animatedEntry(1, _profileCard()),
-              const SizedBox(height: 24),
-              _animatedEntry(
-                2,
-                _sectionHeader(
-                  title: 'Profile Details',
-                  subtitle: 'A detailed view of your current personal information',
-                ),
-              ),
-              const SizedBox(height: 12),
-              _animatedEntry(3, _detailsCard()),
-              const SizedBox(height: 24),
-              _animatedEntry(
-                4,
-                _sectionHeader(
-                  title: 'Manage Account',
-                  subtitle: 'Update profile details and saved addresses',
-                ),
-              ),
-              const SizedBox(height: 12),
-              _animatedEntry(
-                5,
-                _actionGroup(
+              GestureDetector(
+                onTap: _handleChangePhoto,
+                child: Stack(
+                  alignment: Alignment.bottomRight,
                   children: [
-                    _actionTile(
-                      icon: Icons.person_outline_rounded,
-                      title: 'Personal Information',
-                      subtitle: 'Name, birth date, gender, and profile photo',
-                      onTap: _openPersonalInformation,
+                    Container(
+                      height: 88,
+                      width: 88,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: _primary, width: 2.5),
+                        color: _primaryLight,
+                      ),
+                      child: ClipOval(child: _buildAvatarImage(initials)),
                     ),
-                    _divider(),
-                    _actionTile(
-                      icon: Icons.location_on_outlined,
-                      title: 'Saved Addresses',
-                      subtitle: 'Manage pickup and delivery locations',
-                      onTap: _openAddresses,
+                    Container(
+                      height: 26,
+                      width: 26,
+                      decoration: BoxDecoration(
+                        color: _uploadingAvatar ? _textMuted : _primary,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 2),
+                      ),
+                      child: _uploadingAvatar
+                          ? const Padding(
+                              padding: EdgeInsets.all(5),
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Icon(
+                              Icons.camera_alt_rounded,
+                              size: 13,
+                              color: Colors.white,
+                            ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 24),
-              _animatedEntry(
-                6,
-                _sectionHeader(
-                  title: 'Account Summary',
-                  subtitle: 'A quick status view for your profile setup',
-                ),
-              ),
-              const SizedBox(height: 12),
-              _animatedEntry(7, _overviewCard()),
-              const SizedBox(height: 24),
-              _animatedEntry(
-                8,
-                SizedBox(
-                  height: 54,
-                  child: ElevatedButton(
-                    onPressed: _openPersonalInformation,
-                    style: ElevatedButton.styleFrom(
-                      elevation: 0,
-                      backgroundColor: _primary,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(18),
-                      ),
-                    ),
-                    child: Text(
-                      'Edit Personal Information',
-                      style: GoogleFonts.inter(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _detailsCard() {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: _surface,
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: _border),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x0D0F172A),
-            blurRadius: 18,
-            offset: Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          _detailItem(
-            icon: Icons.badge_outlined,
-            label: 'Full Name',
-            value: _profile.displayName,
-          ),
-          _divider(),
-          _detailItem(
-            icon: Icons.person_outline_rounded,
-            label: 'First Name',
-            value: _displayValue(_profile.firstName, 'Not set'),
-          ),
-          _divider(),
-          _detailItem(
-            icon: Icons.person_2_outlined,
-            label: 'Last Name',
-            value: _displayValue(_profile.lastName, 'Not set'),
-          ),
-          _divider(),
-          _detailItem(
-            icon: Icons.phone_outlined,
-            label: 'Phone Number',
-            value: _displayValue(_profile.phone, 'Not added'),
-          ),
-          _divider(),
-          _detailItem(
-            icon: Icons.mail_outline_rounded,
-            label: 'Email Address',
-            value: _displayValue(_profile.email, 'Not added'),
-          ),
-          _divider(),
-          _detailItem(
-            icon: Icons.calendar_today_outlined,
-            label: 'Birth Date',
-            value: _displayValue(_profile.birth, 'Not set'),
-          ),
-          _divider(),
-          _detailItem(
-            icon: Icons.wc_outlined,
-            label: 'Gender',
-            value: _displayValue(_profile.gender, 'Not set'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _profileCard() {
-    final name = _profile.displayName.isNotEmpty ? _profile.displayName : 'User';
-    final email = _displayValue(_profile.email, 'No email added');
-    final phone = _displayValue(_profile.phone, 'No phone added');
-    final initials = _initialsFrom(name, email);
-
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: _surface,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: _border),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x100F172A),
-            blurRadius: 24,
-            offset: Offset(0, 10),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-                decoration: BoxDecoration(
-                  color: _primarySoft,
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: Text(
-                  'Account',
-                  style: GoogleFonts.inter(
-                    color: _primary,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-              const Spacer(),
+              const SizedBox(height: 10),
               Text(
-                'Profile settings',
+                name,
+                style: GoogleFonts.poppins(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w700,
+                  color: _textPrimary,
+                ),
+              ),
+              const SizedBox(height: 3),
+              Text(
+                _profile.email ?? '',
                 style: GoogleFonts.inter(
+                  fontSize: 13,
                   color: _textMuted,
-                  fontSize: 12,
                   fontWeight: FontWeight.w500,
                 ),
               ),
+              const SizedBox(height: 16),
             ],
           ),
-          const SizedBox(height: 18),
-          Row(
-            children: [
-              Container(
-                height: 72,
-                width: 72,
-                decoration: BoxDecoration(
-                  color: _primarySoft,
-                  shape: BoxShape.circle,
-                ),
-                child: CircleAvatar(
-                  radius: 34,
-                  backgroundColor: _primary,
-                  child: ClipOval(
-                    child: SizedBox.expand(
-                      child: _buildAvatarImage(
-                        avatarUrl: _profile.avatarUrl,
-                        accent: _primary,
-                        fallback: Container(
-                          color: _primary,
-                          alignment: Alignment.center,
-                          child: Text(
-                            initials,
-                            style: GoogleFonts.poppins(
-                              color: Colors.white,
-                              fontSize: 26,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      name,
-                      style: GoogleFonts.poppins(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w700,
-                        color: _textPrimary,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      email,
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        color: _textMuted,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 18),
-          Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF8FAFD),
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: _border),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: _infoBlock(
-                    label: 'Phone',
-                    value: phone,
-                    alignEnd: false,
-                  ),
-                ),
-                Container(
-                  width: 1,
-                  height: 38,
-                  color: _border,
-                ),
-                Expanded(
-                  child: _infoBlock(
-                    label: 'Gender',
-                    value: _displayValue(_profile.gender, 'Not set'),
-                    alignEnd: true,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
 
-  Widget _infoBlock({
-    required String label,
-    required String value,
-    required bool alignEnd,
-  }) {
-    final alignment =
-        alignEnd ? CrossAxisAlignment.end : CrossAxisAlignment.start;
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8),
-      child: Column(
-        crossAxisAlignment: alignment,
-        children: [
-          Text(
-            label,
-            style: GoogleFonts.inter(
-              fontSize: 12,
-              color: _textMuted,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            textAlign: alignEnd ? TextAlign.end : TextAlign.start,
-            style: GoogleFonts.inter(
-              fontSize: 14,
-              color: _textPrimary,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  // ── Completion ring card ──────────────────────────────────────────────────
+  Widget _buildCompletionCard() {
+    final score = _profileScore();
+    final color = score >= 80 ? _accent : score >= 50 ? _primary : _danger;
 
-  Widget _sectionHeader({
-    required String title,
-    required String subtitle,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: GoogleFonts.poppins(
-            fontSize: 18,
-            fontWeight: FontWeight.w700,
-            color: _textPrimary,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          subtitle,
-          style: GoogleFonts.inter(
-            fontSize: 13,
-            color: _textMuted,
-            height: 1.45,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _actionGroup({required List<Widget> children}) {
     return Container(
-      decoration: BoxDecoration(
-        color: _surface,
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: _border),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x0D0F172A),
-            blurRadius: 18,
-            offset: Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Column(children: children),
-    );
-  }
-
-  Widget _actionTile({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required VoidCallback onTap,
-  }) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(22),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-          child: Row(
-            children: [
-              Container(
-                height: 46,
-                width: 46,
-                decoration: BoxDecoration(
-                  color: _primarySoft,
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Icon(icon, color: _primary, size: 22),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: GoogleFonts.inter(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700,
-                        color: _textPrimary,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      subtitle,
-                      style: GoogleFonts.inter(
-                        fontSize: 13,
-                        height: 1.45,
-                        color: _textMuted,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 12),
-              Container(
-                height: 34,
-                width: 34,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF8FAFD),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: _border),
-                ),
-                child: const Icon(
-                  Icons.chevron_right_rounded,
-                  size: 20,
-                  color: _textMuted,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _divider() {
-    return const Divider(height: 1, thickness: 1, color: _border);
-  }
-
-  Widget _overviewCard() {
-    return Row(
-      children: [
-        Expanded(
-          child: _overviewTile(
-            title: 'Birth Date',
-            value: _displayValue(_profile.birth, 'Not set'),
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _overviewTile(
-            title: 'Profile Score',
-            value: '${_profileScore()}%',
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _detailItem({
-    required IconData icon,
-    required String label,
-    required String value,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 14),
+      padding: const EdgeInsets.all(18),
+      decoration: _cardDecoration(),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            height: 40,
-            width: 40,
-            decoration: BoxDecoration(
-              color: _primarySoft,
-              borderRadius: BorderRadius.circular(12),
+          SizedBox(
+            height: 54,
+            width: 54,
+            child: CustomPaint(
+              painter: _RingPainter(progress: score / 100, color: color),
+              child: Center(
+                child: Text(
+                  '$score%',
+                  style: GoogleFonts.poppins(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: color,
+                  ),
+                ),
+              ),
             ),
-            child: Icon(icon, color: _primary, size: 20),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  label,
+                  'Profile Completeness',
                   style: GoogleFonts.inter(
-                    fontSize: 12,
-                    color: _textMuted,
-                    fontWeight: FontWeight.w500,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: _textPrimary,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  value,
+                  score < 100
+                      ? 'Fill the form below to complete your profile.'
+                      : 'Your profile is fully complete!',
                   style: GoogleFonts.inter(
-                    fontSize: 15,
-                    color: _textPrimary,
-                    fontWeight: FontWeight.w700,
-                    height: 1.35,
+                    fontSize: 12,
+                    color: _textMuted,
+                    height: 1.5,
                   ),
                 ),
               ],
@@ -617,67 +264,341 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     );
   }
 
-  Widget _overviewTile({
-    required String title,
-    required String value,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: _surface,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: _border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: GoogleFonts.inter(
-              fontSize: 12,
-              color: _textMuted,
-              fontWeight: FontWeight.w500,
+  // ── Editable form card ────────────────────────────────────────────────────
+  Widget _buildFormCard() {
+    return Form(
+      key: _formKey,
+      child: Container(
+        decoration: _cardDecoration(),
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            _formField(
+              controller: _firstNameCtrl,
+              label: 'First Name',
+              icon: Icons.person_outline_rounded,
+              validator: (v) =>
+                  (v == null || v.trim().isEmpty) ? 'Required' : null,
             ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            value,
-            style: GoogleFonts.inter(
-              fontSize: 14,
-              color: _textPrimary,
-              fontWeight: FontWeight.w700,
+            const SizedBox(height: 14),
+            _formField(
+              controller: _lastNameCtrl,
+              label: 'Last Name',
+              icon: Icons.badge_outlined,
+              validator: (v) =>
+                  (v == null || v.trim().isEmpty) ? 'Required' : null,
             ),
-          ),
-        ],
+            const SizedBox(height: 14),
+            _dateField(),
+            const SizedBox(height: 14),
+            _genderDropdown(),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildAvatarImage({
-    required String? avatarUrl,
-    required Color accent,
-    required Widget fallback,
+  Widget _formField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    String? Function(String?)? validator,
+    TextInputType keyboard = TextInputType.text,
   }) {
-    final normalizedUrl = avatarUrl?.trim();
-    if (normalizedUrl == null || normalizedUrl.isEmpty) {
-      return fallback;
-    }
+    return TextFormField(
+      controller: controller,
+      keyboardType: keyboard,
+      validator: validator,
+      cursorColor: _primary,
+      style: GoogleFonts.inter(
+        fontSize: 14,
+        fontWeight: FontWeight.w600,
+        color: _textPrimary,
+      ),
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: GoogleFonts.inter(fontSize: 13, color: _textMuted),
+        prefixIcon: Icon(icon, color: _primary, size: 20),
+        filled: true,
+        fillColor: _bg,
+        isDense: true,
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 16,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: _border),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: _primary, width: 1.5),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: _danger),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: _danger, width: 1.5),
+        ),
+      ),
+    );
+  }
 
+  Widget _dateField() {
+    return TextFormField(
+      controller: _birthCtrl,
+      readOnly: true,
+      onTap: _selectDate,
+      cursorColor: _primary,
+      style: GoogleFonts.inter(
+        fontSize: 14,
+        fontWeight: FontWeight.w600,
+        color: _textPrimary,
+      ),
+      decoration: InputDecoration(
+        labelText: 'Birth Date',
+        labelStyle: GoogleFonts.inter(fontSize: 13, color: _textMuted),
+        prefixIcon: const Icon(
+          Icons.cake_outlined,
+          color: _primary,
+          size: 20,
+        ),
+        filled: true,
+        fillColor: _bg,
+        isDense: true,
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 16,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: _border),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: _primary, width: 1.5),
+        ),
+      ),
+    );
+  }
+
+  Widget _genderDropdown() {
+    return DropdownButtonFormField<String>(
+      value: _gender,
+      decoration: InputDecoration(
+        labelText: 'Gender',
+        labelStyle: GoogleFonts.inter(fontSize: 13, color: _textMuted),
+        prefixIcon: const Icon(Icons.wc_outlined, color: _primary, size: 20),
+        filled: true,
+        fillColor: _bg,
+        isDense: true,
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 16,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: _border),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: _primary, width: 1.5),
+        ),
+      ),
+      items: const [
+        DropdownMenuItem(value: 'male', child: Text('Male')),
+        DropdownMenuItem(value: 'female', child: Text('Female')),
+        DropdownMenuItem(value: 'other', child: Text('Other')),
+      ],
+      onChanged: (v) => setState(() => _gender = v),
+    );
+  }
+
+  // ── Action card (Addresses only) ──────────────────────────────────────────
+  Widget _buildActionCard() {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(20),
+      child: Material(
+        color: _surface,
+        child: Container(
+          decoration: _cardDecoration(),
+          child: _actionRow(
+            icon: Icons.location_on_outlined,
+            color: const Color(0xFF10B981),
+            title: 'Saved Addresses',
+            subtitle: 'Pickup & delivery locations',
+            onTap: _openAddresses,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _actionRow({
+    required IconData icon,
+    required Color color,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        child: Row(
+          children: [
+            Container(
+              height: 42,
+              width: 42,
+              decoration: BoxDecoration(
+                color: color.withAlpha(24),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: color, size: 21),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: _textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    subtitle,
+                    style: GoogleFonts.inter(fontSize: 12, color: _textMuted),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(
+              Icons.chevron_right_rounded,
+              color: _textMuted,
+              size: 22,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── Save button ───────────────────────────────────────────────────────────
+  Widget _buildSaveButton() {
+    return SizedBox(
+      height: 54,
+      width: double.infinity,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFF4A6CF7), Color(0xFF6A3DE8)],
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
+          ),
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: [
+            BoxShadow(
+              color: _primary.withAlpha(72),
+              blurRadius: 20,
+              offset: const Offset(0, 10),
+            ),
+          ],
+        ),
+        child: ElevatedButton(
+          onPressed: _saving ? null : _save,
+          style: ElevatedButton.styleFrom(
+            elevation: 0,
+            backgroundColor: Colors.transparent,
+            shadowColor: Colors.transparent,
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(18),
+            ),
+          ),
+          child: _saving
+              ? const SizedBox(
+                  height: 20,
+                  width: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                )
+              : Text(
+                  'Save Changes',
+                  style: GoogleFonts.inter(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+        ),
+      ),
+    );
+  }
+
+  // ── Helpers ───────────────────────────────────────────────────────────────
+  Widget _buildSectionLabel(String label) {
+    return Text(
+      label.toUpperCase(),
+      style: GoogleFonts.inter(
+        fontSize: 11,
+        fontWeight: FontWeight.w700,
+        color: _textMuted,
+        letterSpacing: 1.2,
+      ),
+    );
+  }
+
+  BoxDecoration _cardDecoration() {
+    return BoxDecoration(
+      color: _surface,
+      borderRadius: BorderRadius.circular(20),
+      border: Border.all(color: _border),
+      boxShadow: const [
+        BoxShadow(
+          color: Color(0x0A0F172A),
+          blurRadius: 16,
+          offset: Offset(0, 6),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAvatarImage(String initials) {
+    final url = _avatarUrl?.trim();
+    final fallback = Center(
+      child: Text(
+        initials,
+        style: GoogleFonts.poppins(
+          color: _primary,
+          fontSize: 28,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+    if (url == null || url.isEmpty) return fallback;
     return Image.network(
-      normalizedUrl,
+      url,
       fit: BoxFit.cover,
-      errorBuilder: (context, error, stackTrace) => fallback,
-      loadingBuilder: (context, child, progress) {
+      errorBuilder: (_, __, ___) => fallback,
+      loadingBuilder: (_, child, progress) {
         if (progress == null) return child;
         return Container(
-          color: accent,
+          color: _primaryLight,
           alignment: Alignment.center,
           child: const SizedBox(
             height: 18,
             width: 18,
             child: CircularProgressIndicator(
               strokeWidth: 2,
-              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+              valueColor: AlwaysStoppedAnimation<Color>(_primary),
             ),
           ),
         );
@@ -685,26 +606,16 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     );
   }
 
-  bool _hasValue(String? value) => value != null && value.trim().isNotEmpty;
-
-  String _displayValue(String? value, String fallback) {
-    if (!_hasValue(value)) return fallback;
-    return value!.trim();
-  }
+  bool _hasValue(String? v) => v != null && v.trim().isNotEmpty;
 
   String _initialsFrom(String name, String email) {
-    final trimmed = name.trim();
-    if (trimmed.isNotEmpty && trimmed != 'User') {
-      final parts = trimmed.split(RegExp(r'\s+'));
-      if (parts.length == 1) {
-        return parts.first.substring(0, 1).toUpperCase();
-      }
-      return (parts.first.substring(0, 1) + parts.last.substring(0, 1))
-          .toUpperCase();
+    final t = name.trim();
+    if (t.isNotEmpty && t != 'User') {
+      final parts = t.split(RegExp(r'\s+'));
+      if (parts.length == 1) return parts.first[0].toUpperCase();
+      return (parts.first[0] + parts.last[0]).toUpperCase();
     }
-    if (email.isNotEmpty) {
-      return email.substring(0, 1).toUpperCase();
-    }
+    if (email.isNotEmpty) return email[0].toUpperCase();
     return 'U';
   }
 
@@ -721,15 +632,89 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     return ((filled / total) * 100).round();
   }
 
-  Future<void> _openPersonalInformation() async {
-    await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => PersonalInfoScreen(profile: _profile),
+  Future<void> _selectDate() async {
+    DateTime? initial;
+    if (_birthCtrl.text.isNotEmpty) {
+      try {
+        initial = DateTime.parse(_birthCtrl.text);
+      } catch (_) {}
+    }
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: initial ?? DateTime(2000),
+      firstDate: DateTime(1920),
+      lastDate: DateTime.now(),
+      initialDatePickerMode: DatePickerMode.year,
+      builder: (context, child) => Theme(
+        data: Theme.of(context).copyWith(
+          colorScheme: const ColorScheme.light(primary: _primary),
+        ),
+        child: child!,
       ),
     );
-    if (!mounted) return;
-    await _refreshProfile();
+    if (picked != null) {
+      setState(() {
+        _birthCtrl.text = DateFormat('yyyy-MM-dd').format(picked);
+      });
+    }
+  }
+
+  Future<void> _save() async {
+    FocusScope.of(context).unfocus();
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() => _saving = true);
+    try {
+      final error = await ApiService.updateProfile(
+        firstName: _firstNameCtrl.text.trim(),
+        lastName: _lastNameCtrl.text.trim(),
+        email: _profile.email ?? '',
+        birth: _birthCtrl.text,
+        gender: _gender ?? '',
+        avatarPath: null,
+      );
+      if (!mounted) return;
+      setState(() => _saving = false);
+
+      if (error != null) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error)));
+        return;
+      }
+
+      // Refresh profile
+      final updated = await ApiService.getUserProfile();
+      if (!mounted) return;
+      if (updated != null) setState(() => _profile = updated);
+
+      _showSuccessSnackbar();
+    } catch (_) {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  void _showSuccessSnackbar() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        backgroundColor: _accent,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        content: Row(
+          children: [
+            const Icon(Icons.check_circle_rounded, color: Colors.white),
+            const SizedBox(width: 10),
+            Text(
+              'Profile updated successfully!',
+              style: GoogleFonts.inter(
+                fontWeight: FontWeight.w600,
+                color: Colors.white,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Future<void> _openAddresses() async {
@@ -739,38 +724,77 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     );
   }
 
-  Future<void> _refreshProfile() async {
-    if (_refreshing) return;
-    setState(() => _refreshing = true);
+  Future<void> _handleChangePhoto() async {
+    if (_uploadingAvatar) return;
+    final picker = ImagePicker();
+    final file = await picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 85,
+    );
+    if (file == null) return;
+
+    setState(() => _uploadingAvatar = true);
     try {
+      final error = await ApiService.updateProfile(
+        firstName: _firstNameCtrl.text.trim(),
+        lastName: _lastNameCtrl.text.trim(),
+        email: _profile.email ?? '',
+        birth: _birthCtrl.text,
+        gender: _gender ?? '',
+        avatarPath: file.path,
+      );
+      if (!mounted) return;
+      if (error != null) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error)));
+        return;
+      }
       final updated = await ApiService.getUserProfile();
       if (!mounted) return;
-      if (updated != null) {
-        setState(() => _profile = updated);
-      }
+      setState(() => _avatarUrl = updated?.avatarUrl);
     } finally {
-      if (mounted) {
-        setState(() => _refreshing = false);
-      }
+      if (mounted) setState(() => _uploadingAvatar = false);
     }
   }
+}
 
-  Widget _animatedEntry(int index, Widget child) {
-    final duration = Duration(milliseconds: 260 + (index * 70));
-    return TweenAnimationBuilder<double>(
-      tween: Tween(begin: 0, end: 1),
-      duration: duration,
-      curve: Curves.easeOutCubic,
-      builder: (context, value, widget) {
-        return Opacity(
-          opacity: value,
-          child: Transform.translate(
-            offset: Offset(0, (1 - value) * 12),
-            child: widget,
-          ),
-        );
-      },
-      child: child,
+// ── Ring Painter ───────────────────────────────────────────────────────────
+class _RingPainter extends CustomPainter {
+  const _RingPainter({required this.progress, required this.color});
+
+  final double progress;
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = (size.shortestSide / 2) - 4;
+    const strokeWidth = 5.0;
+
+    canvas.drawCircle(
+      center,
+      radius,
+      Paint()
+        ..color = color.withAlpha(30)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = strokeWidth,
+    );
+
+    canvas.drawArc(
+      Rect.fromCircle(center: center, radius: radius),
+      -math.pi / 2,
+      2 * math.pi * progress,
+      false,
+      Paint()
+        ..color = color
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = strokeWidth
+        ..strokeCap = StrokeCap.round,
     );
   }
+
+  @override
+  bool shouldRepaint(_RingPainter old) =>
+      old.progress != progress || old.color != color;
 }

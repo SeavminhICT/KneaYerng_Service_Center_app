@@ -197,21 +197,25 @@ class PickupTicket {
     switch (raw) {
       case 'created':
         return 'Created';
+      case 'pending':
+      case 'pending_confirmation':
       case 'pending_approval':
-        return 'Pending Approval';
+        return 'Pending';
       case 'approved':
         return 'Approved';
+      case 'processing':
+      case 'ready':
       case 'assigned':
-        return 'Assigned';
       case 'in_progress':
-        return 'In Progress';
+        return 'Processing';
+      case 'out_for_delivery':
       case 'on_the_way':
-        return 'On the Way';
       case 'arrived':
-        return 'Arrived';
+        return 'On the Way';
       case 'completed':
+      case 'delivered':
       case 'used':
-        return 'Completed';
+        return 'Complete';
       case 'cancelled':
         return 'Cancelled';
       case 'rejected':
@@ -221,7 +225,7 @@ class PickupTicket {
       case 'active':
         return 'Active';
       default:
-        if (isUsed) return 'Completed';
+        if (isUsed) return 'Complete';
         if (isExpired) return 'Expired';
         return 'Pending';
     }

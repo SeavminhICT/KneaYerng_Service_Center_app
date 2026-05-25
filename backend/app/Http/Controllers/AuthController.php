@@ -270,6 +270,44 @@ class AuthController extends Controller
             'user' => $user,
         ]);
     }
+
+    public function googleLogin(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'email' => ['required', 'string', 'email', 'max:255'],
+            'first_name' => ['required', 'string', 'max:255'],
+            'last_name' => ['required', 'string', 'max:255'],
+            'avatar' => ['nullable', 'string'],
+        ]);
+
+        $user = User::where('email', strtolower($validated['email']))->first();
+
+        if (! $user) {
+            $user = User::create([
+                'first_name' => $validated['first_name'],
+                'last_name' => $validated['last_name'],
+                'email' => strtolower($validated['email']),
+                'password' => Hash::make(bin2hex(random_bytes(16))),
+                'avatar' => $validated['avatar'] ?? null,
+                'otp_verified_at' => now(),
+                'email_verified_at' => now(),
+            ]);
+        } else {
+            if (empty($user->avatar) && !empty($validated['avatar'])) {
+                $user->avatar = $validated['avatar'];
+                $user->save();
+            }
+        }
+
+        $token = $user->createToken('api')->plainTextToken;
+
+        return response()->json([
+            'message' => 'Login successfully via Google',
+            'token' => $token,
+            'user' => $user,
+        ]);
+    }
+
     private function findUserForOtp(?string $email, ?string $phone): ?User
     {
         $emailValue = $email ? strtolower(trim($email)) : null;

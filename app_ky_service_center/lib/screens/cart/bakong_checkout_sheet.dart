@@ -45,7 +45,6 @@ class _BakongCheckoutSheetState extends State<BakongCheckoutSheet> {
   int _checkAttempts = 0;
   int _maxCheckAttempts = 200;
   bool _isOpeningTicket = false;
-  bool _didAutoOpenTicket = false;
 
   final TextEditingController _deliveryAddressController =
       TextEditingController();
@@ -198,7 +197,7 @@ class _BakongCheckoutSheetState extends State<BakongCheckoutSheet> {
       _transactionId = generated.transactionId;
       _expiresAt = _parseExpiresAt(generated.expiresAt);
       _isLoading = false;
-      _statusMessage = 'Waiting for payment confirmation...';
+      _statusMessage = 'Checking payment automatically...';
     });
     _startChecking();
   }
@@ -412,7 +411,7 @@ class _BakongCheckoutSheetState extends State<BakongCheckoutSheet> {
     _checkAttempts = 0;
     _maxCheckAttempts = _deriveMaxAttempts();
     if (mounted) {
-      _setStatusMessage('Waiting for payment confirmation...');
+      _setStatusMessage('Checking payment automatically...');
     }
     _checkStatus(fromTimer: true);
     _checkTimer = Timer.periodic(const Duration(seconds: 3), (_) {
@@ -439,13 +438,16 @@ class _BakongCheckoutSheetState extends State<BakongCheckoutSheet> {
   Future<void> _checkStatus({bool fromTimer = false}) async {
     if (_isChecking || _isSuccess || _isTerminalFailure) return;
     if (_checkAttempts >= _maxCheckAttempts) {
-      _stopChecking();
-      if (mounted) {
-        setState(() {
-          _statusMessage = 'Payment still pending. Auto-check paused.';
-        });
+      if (fromTimer) {
+        _stopChecking();
+        if (mounted) {
+          setState(() {
+            _statusMessage = 'Payment still pending. Auto-check paused.';
+          });
+        }
+        return;
       }
-      return;
+      _checkAttempts = 0;
     }
     if (_isExpired) {
       if (mounted) {
@@ -472,31 +474,28 @@ class _BakongCheckoutSheetState extends State<BakongCheckoutSheet> {
     _isChecking = false;
 
     final normalizedStatus = result.status.toUpperCase();
-    if (normalizedStatus == 'SUCCESS') {
+    if (_isSuccessStatus(normalizedStatus)) {
       _stopChecking();
       setState(() {
         _isSuccess = true;
-        _statusMessage = 'Payment confirmed.';
+        _statusMessage = _orderType == 'pickup'
+            ? 'Payment successful. Tap View Ticket to continue.'
+            : 'Payment successful. Tap Done to continue.';
       });
       CartService.instance.clear();
       _handlePaymentSuccess();
       return;
     }
 
-    if ([
-      'FAILED',
-      'EXPIRED',
-      'TIMEOUT',
-      'INVALID_TRANSACTION',
-    ].contains(normalizedStatus)) {
+    if (_isFailureStatus(normalizedStatus)) {
       _stopChecking();
       if (!mounted) return;
       setState(() {
         _isTerminalFailure = true;
-        _statusMessage =
-            normalizedStatus == 'EXPIRED' || normalizedStatus == 'TIMEOUT'
-            ? 'QR expired. Please generate a new one.'
-            : 'Payment failed. Please try again.';
+        _statusMessage = _failureMessageForStatus(
+          normalizedStatus,
+          result.message,
+        );
       });
       return;
     }
@@ -511,7 +510,7 @@ class _BakongCheckoutSheetState extends State<BakongCheckoutSheet> {
         });
       } else if (fromTimer && mounted) {
         if (_statusMessage == null) {
-          _setStatusMessage('Waiting for payment confirmation...');
+          _setStatusMessage('Checking payment automatically...');
         }
       } else if (!fromTimer) {
         _setStatusMessage(result.message ?? result.status);
@@ -521,17 +520,70 @@ class _BakongCheckoutSheetState extends State<BakongCheckoutSheet> {
 
     if (fromTimer) {
       if (_statusMessage == null) {
-        _setStatusMessage('Waiting for payment confirmation...');
+        _setStatusMessage('Checking payment automatically...');
       }
       return;
     }
     _setStatusMessage(result.message ?? result.status);
   }
 
+  bool _isSuccessStatus(String status) {
+    switch (status.toUpperCase()) {
+      case 'SUCCESS':
+      case 'PAID':
+      case 'COMPLETED':
+      case 'APPROVED':
+      case 'OK':
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  bool _isFailureStatus(String status) {
+    switch (status.toUpperCase()) {
+      case 'FAILED':
+      case 'EXPIRED':
+      case 'TIMEOUT':
+      case 'INVALID_TRANSACTION':
+      case 'UNAUTHORIZED':
+      case 'UNAVAILABLE':
+      case 'CANCELLED':
+      case 'CANCELED':
+      case 'REJECTED':
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  String _failureMessageForStatus(String status, String? message) {
+    final normalized = status.toUpperCase();
+    if (normalized == 'EXPIRED' || normalized == 'TIMEOUT') {
+      return 'QR expired. Please generate a new one.';
+    }
+    if (normalized == 'UNAUTHORIZED') {
+      return message?.trim().isNotEmpty == true
+          ? message!.trim()
+          : 'Bakong sandbox status check is unauthorized. Check the sandbox token.';
+    }
+    if (normalized == 'UNAVAILABLE') {
+      return message?.trim().isNotEmpty == true
+          ? message!.trim()
+          : 'Bakong status checker is not configured.';
+    }
+    return message?.trim().isNotEmpty == true
+        ? message!.trim()
+        : 'Payment failed. Please try again.';
+  }
+
   Future<void> _handlePaymentSuccess() async {
-    if (_orderType != 'pickup' || _didAutoOpenTicket) return;
-    _didAutoOpenTicket = true;
-    await _openTicketDetail(showFeedback: false);
+    if (!mounted) return;
+    _setStatusMessage(
+      _orderType == 'pickup'
+          ? 'Payment successful. Tap View Ticket to continue.'
+          : 'Payment successful. Tap Done to continue.',
+    );
   }
 
   Future<void> _openTicketDetail({bool showFeedback = true}) async {
@@ -631,12 +683,15 @@ class _BakongCheckoutSheetState extends State<BakongCheckoutSheet> {
         ? 'Payment confirmed.'
         : (_isTerminalFailure
               ? (_statusMessage ?? 'Payment failed. Please try again.')
-              : (_statusMessage ?? 'Waiting for payment confirmation...'));
+              : (_statusMessage ?? 'Checking payment automatically...'));
     final statusColor = _isSuccess
         ? const Color(0xFF16A34A)
         : (_isTerminalFailure
               ? const Color(0xFFDC2626)
               : const Color(0xFF6B7280));
+    final statusIcon = _isSuccess
+        ? Icons.check_circle_rounded
+        : (_isTerminalFailure ? Icons.error_rounded : Icons.sync_rounded);
     final showQrCard =
         _orderType == 'pickup' || _isLoading || _isError || _khqrData != null;
 
@@ -671,54 +726,67 @@ class _BakongCheckoutSheetState extends State<BakongCheckoutSheet> {
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 6),
-              Text(
-                'Scan the KHQR with Bakong or any supported banking app.',
-                style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
-              ),
-              const SizedBox(height: 12),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 10,
+              if (_isSuccess) ...[
+                const SizedBox(height: 10),
+                _BakongSuccessPanel(
+                  amount: amount,
+                  orderLabel:
+                      _orderNumber ?? (_orderId == null ? '-' : '#$_orderId'),
+                  reference: _khqrData?.md5Hash ?? '-',
                 ),
-                decoration: BoxDecoration(
-                  color: statusColor.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: statusColor.withValues(alpha: 0.3)),
+              ] else ...[
+                Text(
+                  'Scan the KHQR with Bakong or any supported banking app.',
+                  style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
                 ),
-                child: Row(
-                  children: [
-                    if (!_isSuccess && !_isTerminalFailure)
-                      const SizedBox(
-                        width: 14,
-                        height: 14,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      ),
-                    if (!_isSuccess && !_isTerminalFailure)
-                      const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        statusText,
-                        style: TextStyle(
-                          color: statusColor,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 12,
-                        ),
-                      ),
+                const SizedBox(height: 12),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
+                  decoration: BoxDecoration(
+                    color: statusColor.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: statusColor.withValues(alpha: 0.3),
                     ),
-                    if (_expiresAt != null)
-                      Text(
-                        _expiresCountdown,
-                        style: TextStyle(
-                          color: statusColor,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 12,
+                  ),
+                  child: Row(
+                    children: [
+                      if (!_isSuccess && !_isTerminalFailure && _isChecking)
+                        const SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      else
+                        Icon(statusIcon, color: statusColor, size: 18),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          statusText,
+                          style: TextStyle(
+                            color: statusColor,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 12,
+                          ),
                         ),
                       ),
-                  ],
+                      if (_expiresAt != null)
+                        Text(
+                          _expiresCountdown,
+                          style: TextStyle(
+                            color: statusColor,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 12,
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
-              ),
+              ],
               Row(
                 children: [
                   Expanded(
@@ -770,7 +838,7 @@ class _BakongCheckoutSheetState extends State<BakongCheckoutSheet> {
                   ),
                 ],
               ],
-              if (showQrCard) ...[
+              if (!_isSuccess && showQrCard) ...[
                 const SizedBox(height: 16),
                 LayoutBuilder(
                   builder: (context, constraints) {
@@ -804,70 +872,107 @@ class _BakongCheckoutSheetState extends State<BakongCheckoutSheet> {
                   ),
                 ),
               ],
-              const SizedBox(height: 14),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF9FAFB),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFFE5E7EB)),
+              if (!_isSuccess) ...[
+                const SizedBox(height: 14),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF9FAFB),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFFE5E7EB)),
+                  ),
+                  child: Column(
+                    children: [
+                      _InfoRow(label: 'Total', value: '\$$total'),
+                      if (_orderNumber != null)
+                        _InfoRow(label: 'Order No.', value: _orderNumber!),
+                      if (_orderNumber == null && _orderId != null)
+                        _InfoRow(label: 'Order ID', value: _orderId.toString()),
+                      _InfoRow(
+                        label: 'Bill No.',
+                        value: _billNumber.isEmpty ? '-' : _billNumber,
+                      ),
+                      _InfoRow(
+                        label: 'Reference',
+                        value: _khqrData?.md5Hash ?? '-',
+                        valueStyle: const TextStyle(fontSize: 11),
+                      ),
+                      if (_expiresAt != null)
+                        _InfoRow(label: 'Expires In', value: _expiresCountdown),
+                    ],
+                  ),
                 ),
-                child: Column(
+                const SizedBox(height: 16),
+                Row(
                   children: [
-                    _InfoRow(label: 'Total', value: '\$$total'),
-                    if (_orderNumber != null)
-                      _InfoRow(label: 'Order No.', value: _orderNumber!),
-                    if (_orderNumber == null && _orderId != null)
-                      _InfoRow(label: 'Order ID', value: _orderId.toString()),
-                    _InfoRow(
-                      label: 'Bill No.',
-                      value: _billNumber.isEmpty ? '-' : _billNumber,
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: _khqrData == null ? null : _copyKhqr,
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          side: const BorderSide(color: Color(0xFF0F6BFF)),
+                          foregroundColor: const Color(0xFF0F6BFF),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text('Copy KHQR'),
+                      ),
                     ),
-                    _InfoRow(
-                      label: 'Reference',
-                      value: _khqrData?.md5Hash ?? '-',
-                      valueStyle: const TextStyle(fontSize: 11),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: _khqrData == null ? null : _copyReference,
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          side: const BorderSide(color: Color(0xFFE5E7EB)),
+                          foregroundColor: const Color(0xFF111827),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text('Copy Reference'),
+                      ),
                     ),
-                    if (_expiresAt != null)
-                      _InfoRow(label: 'Expires In', value: _expiresCountdown),
                   ],
                 ),
-              ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: _khqrData == null ? null : _copyKhqr,
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        side: const BorderSide(color: Color(0xFF0F6BFF)),
-                        foregroundColor: const Color(0xFF0F6BFF),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: const Text('Copy KHQR'),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: _khqrData == null ? null : _copyReference,
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        side: const BorderSide(color: Color(0xFFE5E7EB)),
-                        foregroundColor: const Color(0xFF111827),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: const Text('Copy Reference'),
-                    ),
-                  ),
-                ],
-              ),
+              ],
               const SizedBox(height: 12),
+              if (!_isSuccess &&
+                  !_isTerminalFailure &&
+                  !_isLoading &&
+                  !_isError &&
+                  _khqrData != null) ...[
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: _isChecking
+                        ? null
+                        : () => _checkStatus(fromTimer: false),
+                    icon: _isChecking
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.refresh_rounded, size: 18),
+                    label: Text(
+                      _isChecking
+                          ? 'Checking Payment...'
+                          : 'Check Payment Status',
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      side: const BorderSide(color: Color(0xFF0F6BFF)),
+                      foregroundColor: const Color(0xFF0F6BFF),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
               if (_isSuccess && _orderType == 'pickup') ...[
                 SizedBox(
                   width: double.infinity,
@@ -914,6 +1019,162 @@ class _BakongCheckoutSheetState extends State<BakongCheckoutSheet> {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _BakongSuccessPanel extends StatelessWidget {
+  const _BakongSuccessPanel({
+    required this.amount,
+    required this.orderLabel,
+    required this.reference,
+  });
+
+  final double amount;
+  final String orderLabel;
+  final String reference;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(18, 22, 18, 18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: const Color(0xFFE5E7EB)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x140F172A),
+            blurRadius: 22,
+            offset: Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Container(
+            width: 88,
+            height: 88,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: const LinearGradient(
+                colors: [Color(0xFF45AEDF), Color(0xFF077CB4)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF077CB4).withValues(alpha: 0.28),
+                  blurRadius: 24,
+                  offset: const Offset(0, 12),
+                ),
+              ],
+            ),
+            child: const Icon(Icons.check, color: Colors.white, size: 48),
+          ),
+          const SizedBox(height: 22),
+          const Text(
+            'Payment Successful',
+            style: TextStyle(
+              fontSize: 28,
+              color: Color(0xFF0F172A),
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Your payment was successful.',
+            style: TextStyle(
+              fontSize: 14,
+              color: Color(0xFF64748B),
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 18),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                amount.toStringAsFixed(2),
+                style: const TextStyle(
+                  fontSize: 44,
+                  color: Color(0xFF0F172A),
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(width: 6),
+              const Padding(
+                padding: EdgeInsets.only(bottom: 6),
+                child: Text(
+                  'USD',
+                  style: TextStyle(
+                    fontSize: 15,
+                    color: Color(0xFF64748B),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 22),
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8FAFC),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+            ),
+            child: Column(
+              children: [
+                _SuccessReceiptRow(label: 'Order', value: orderLabel),
+                const SizedBox(height: 10),
+                const _SuccessReceiptRow(label: 'Method', value: 'Bakong KHQR'),
+                const SizedBox(height: 10),
+                _SuccessReceiptRow(label: 'Reference', value: reference),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SuccessReceiptRow extends StatelessWidget {
+  const _SuccessReceiptRow({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 12,
+            color: Color(0xFF64748B),
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const Spacer(),
+        Flexible(
+          child: Text(
+            value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.right,
+            style: const TextStyle(
+              fontSize: 12,
+              color: Color(0xFF0F172A),
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

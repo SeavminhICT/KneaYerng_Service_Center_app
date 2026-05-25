@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Events\AdminOrderCreated;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\StoreOrderRequest;
 use App\Http\Requests\Api\UpdateOrderRequest;
@@ -323,7 +324,7 @@ class OrderController extends Controller
             app(OrderTrackingService::class)->bootstrapDeliveryOrder($order, $actor);
         }
 
-        return new OrderResource($order->load([
+        $order = $order->load([
             'items',
             'payments',
             'assignedStaff',
@@ -332,7 +333,18 @@ class OrderController extends Controller
             'canceller',
             'trackingHistories.actor',
             'trackingHistories.assignedStaff',
-        ]));
+        ]);
+
+        try {
+            event(new AdminOrderCreated($order));
+        } catch (\Throwable $exception) {
+            Log::warning('Failed to broadcast admin order event.', [
+                'order_id' => $order->id,
+                'error' => $exception->getMessage(),
+            ]);
+        }
+
+        return new OrderResource($order);
     }
 
     public function show(Request $request, Order $order)

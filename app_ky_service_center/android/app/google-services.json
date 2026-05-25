@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "270800963781",
-    "project_id": "otpappkneayerng",
-    "storage_bucket": "otpappkneayerng.firebasestorage.app"
+    "project_number": "325660432558",
+    "project_id": "authorization-register",
+    "storage_bucket": "authorization-register.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:270800963781:android:7b4f45a6e531c6a5c708ac",
+        "mobilesdk_app_id": "1:325660432558:android:84324d6d1e248d08a0b53f",
         "android_client_info": {
           "package_name": "com.kneayerng.app_ky_service_center"
         }
@@ -15,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyC7I5_c3f8SYQWIgvF6V_wD2j9u_SKavZM"
+          "current_key": "AIzaSyDSYPRhbThcaVjVCuiE9SlowGjFyTxRDDE"
         }
       ],
       "services": {

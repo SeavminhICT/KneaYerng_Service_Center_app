@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Events\AdminOrderCreated;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\CartResource;
 use App\Http\Resources\OrderResource;
@@ -20,6 +21,7 @@ use App\Models\VoucherRedemption;
 use App\Services\VoucherService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 class CartController extends Controller
@@ -357,7 +359,18 @@ class CartController extends Controller
             ]);
         }
 
-        return new OrderResource($order->load(['items', 'payments']));
+        $order = $order->load(['items', 'payments']);
+
+        try {
+            event(new AdminOrderCreated($order));
+        } catch (\Throwable $exception) {
+            Log::warning('Failed to broadcast admin order event.', [
+                'order_id' => $order->id,
+                'error' => $exception->getMessage(),
+            ]);
+        }
+
+        return new OrderResource($order);
     }
 
     private function getOrCreateCart(int $userId): Cart

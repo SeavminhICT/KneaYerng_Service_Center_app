@@ -1,9 +1,13 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../models/pickup_ticket.dart';
 import '../../services/api_service.dart';
+import '../../services/app_notification_service.dart';
 import '../../widgets/page_transitions.dart';
+import '../tickets/ticket_detail_screen.dart';
 import 'delivery_tracking_screen.dart';
 
 bool _isDark(BuildContext context) =>
@@ -27,6 +31,32 @@ Color _textPrimary(BuildContext context) =>
 Color _textMuted(BuildContext context) =>
     _isDark(context) ? const Color(0xFF97A2B5) : const Color(0xFF6B7280);
 
+enum _OrderCardType { delivery, pickup }
+
+class _OrderEntry {
+  const _OrderEntry({required this.type, required this.order});
+
+  final _OrderCardType type;
+  final PickupTicket order;
+
+  bool get isHistory {
+    if (type == _OrderCardType.pickup) {
+      return !order.isActive;
+    }
+
+    switch ((order.orderStatus ?? '').toLowerCase()) {
+      case 'completed':
+      case 'cancelled':
+      case 'rejected':
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  DateTime? get placedAt => order.placedAt;
+}
+
 class OrdersScreen extends StatefulWidget {
   const OrdersScreen({super.key});
 
@@ -35,34 +65,48 @@ class OrdersScreen extends StatefulWidget {
 }
 
 class _OrdersScreenState extends State<OrdersScreen> {
-  late Future<List<PickupTicket>> _ordersFuture;
+  static const _autoRefreshInterval = Duration(seconds: 20);
+
+  late Future<List<_OrderEntry>> _ordersFuture;
+  StreamSubscription<OrderTrackingRealtimeEvent>? _trackingEventsSub;
+  Timer? _autoRefreshTimer;
 
   @override
   void initState() {
     super.initState();
     _ordersFuture = _loadOrders();
+    _subscribeToTrackingEvents();
+    _startAutoRefresh();
   }
 
-  Future<List<PickupTicket>> _loadOrders() async {
-    final orders = await ApiService.fetchUserOrders(orderType: 'delivery');
-    final deliveryOrders = orders.where(_isDeliveryOrder).toList();
-    deliveryOrders.sort((a, b) {
+  @override
+  void dispose() {
+    _trackingEventsSub?.cancel();
+    _autoRefreshTimer?.cancel();
+    super.dispose();
+  }
+
+  Future<List<_OrderEntry>> _loadOrders() async {
+    final results = await Future.wait<List<PickupTicket>>([
+      ApiService.fetchUserOrders(orderType: 'delivery'),
+      ApiService.fetchPickupTickets(),
+    ]);
+
+    final deliveryOrders = results[0]
+        .where((order) => (order.orderType ?? '').toLowerCase() == 'delivery')
+        .map((order) => _OrderEntry(type: _OrderCardType.delivery, order: order));
+
+    final pickupOrders = results[1]
+        .map((order) => _OrderEntry(type: _OrderCardType.pickup, order: order));
+
+    final merged = [...deliveryOrders, ...pickupOrders];
+    merged.sort((a, b) {
       final aTime = a.placedAt ?? DateTime.fromMillisecondsSinceEpoch(0);
       final bTime = b.placedAt ?? DateTime.fromMillisecondsSinceEpoch(0);
       return bTime.compareTo(aTime);
     });
-    return deliveryOrders;
-  }
 
-  bool _isDeliveryOrder(PickupTicket order) {
-    return (order.orderType ?? '').toLowerCase() == 'delivery';
-  }
-
-  bool _isHistoryOrder(PickupTicket order) {
-    final status = (order.orderStatus ?? '').toLowerCase();
-    return status == 'completed' ||
-        status == 'cancelled' ||
-        status == 'rejected';
+    return merged;
   }
 
   Future<void> _refresh() async {
@@ -70,6 +114,29 @@ class _OrdersScreenState extends State<OrdersScreen> {
       _ordersFuture = _loadOrders();
     });
     await _ordersFuture;
+  }
+
+  void _silentRefresh() {
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _ordersFuture = _loadOrders();
+    });
+  }
+
+  void _subscribeToTrackingEvents() {
+    _trackingEventsSub = AppNotificationService.instance.orderTrackingEvents
+        .listen((_) {
+          _silentRefresh();
+        });
+  }
+
+  void _startAutoRefresh() {
+    _autoRefreshTimer?.cancel();
+    _autoRefreshTimer = Timer.periodic(_autoRefreshInterval, (_) {
+      _silentRefresh();
+    });
   }
 
   @override
@@ -96,10 +163,11 @@ class _OrdersScreenState extends State<OrdersScreen> {
             ],
           ),
         ),
-        body: FutureBuilder<List<PickupTicket>>(
+        body: FutureBuilder<List<_OrderEntry>>(
           future: _ordersFuture,
           builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
+            if (snapshot.connectionState == ConnectionState.waiting &&
+                !snapshot.hasData) {
               return const Center(child: CircularProgressIndicator());
             }
 
@@ -112,24 +180,23 @@ class _OrdersScreenState extends State<OrdersScreen> {
             }
 
             final orders = snapshot.data ?? [];
-            final activeOrders = orders
-                .where((order) => !_isHistoryOrder(order))
-                .toList();
-            final historyOrders = orders.where(_isHistoryOrder).toList();
+            final activeOrders = orders.where((entry) => !entry.isHistory).toList();
+            final historyOrders = orders.where((entry) => entry.isHistory).toList();
 
             return TabBarView(
               children: [
                 _OrderList(
                   orders: activeOrders,
-                  emptyTitle: 'No active delivery orders',
+                  emptyTitle: 'No active orders',
                   emptySubtitle:
-                      'Your new delivery orders will appear here for tracking.',
+                      'New pickup and delivery orders will appear here.',
                   onRefresh: _refresh,
                 ),
                 _OrderList(
                   orders: historyOrders,
-                  emptyTitle: 'No delivery history yet',
-                  emptySubtitle: 'Completed delivery orders will appear here.',
+                  emptyTitle: 'No order history yet',
+                  emptySubtitle:
+                      'Completed, cancelled, and used orders will appear here.',
                   onRefresh: _refresh,
                 ),
               ],
@@ -149,7 +216,7 @@ class _OrderList extends StatelessWidget {
     required this.onRefresh,
   });
 
-  final List<PickupTicket> orders;
+  final List<_OrderEntry> orders;
   final String emptyTitle;
   final String emptySubtitle;
   final Future<void> Function() onRefresh;
@@ -171,8 +238,8 @@ class _OrderList extends StatelessWidget {
         itemCount: orders.length,
         separatorBuilder: (context, index) => const SizedBox(height: 12),
         itemBuilder: (context, index) {
-          final order = orders[index];
-          return _OrderCard(order: order);
+          final entry = orders[index];
+          return _OrderCard(entry: entry);
         },
       ),
     );
@@ -180,34 +247,22 @@ class _OrderList extends StatelessWidget {
 }
 
 class _OrderCard extends StatelessWidget {
-  const _OrderCard({required this.order});
+  const _OrderCard({required this.entry});
 
-  final PickupTicket order;
+  final _OrderEntry entry;
 
   @override
   Widget build(BuildContext context) {
+    final order = entry.order;
+    final isDelivery = entry.type == _OrderCardType.delivery;
     final placedAt = order.placedAt;
-    final status = _statusLabel(order.orderStatus);
     final amount = order.totalAmount ?? 0;
 
     return Material(
       color: Colors.transparent,
       child: InkWell(
         borderRadius: BorderRadius.circular(18),
-        onTap: () {
-          Navigator.of(context).push(
-            fadeSlideRoute(
-              DeliveryTrackingScreen(
-                orderId: order.orderId,
-                orderNumber: order.orderNumber,
-                initialStatus: order.orderStatus,
-                initialPlacedAt: order.placedAt,
-                initialDeliveryAddress: order.deliveryAddress,
-                initialTotalAmount: order.totalAmount,
-              ),
-            ),
-          );
-        },
+        onTap: () => _openOrder(context),
         child: Ink(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
@@ -234,9 +289,11 @@ class _OrderCard extends StatelessWidget {
                       color: _surfaceAlt(context),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Icon(
-                      Icons.local_shipping_rounded,
-                      color: Color(0xFF2563EB),
+                    child: Icon(
+                      isDelivery
+                          ? Icons.local_shipping_rounded
+                          : Icons.qr_code_2_rounded,
+                      color: const Color(0xFF2563EB),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -256,22 +313,24 @@ class _OrderCard extends StatelessWidget {
                           placedAt == null
                               ? 'Placed recently'
                               : DateFormat(
-                                  'dd MMM yyyy • hh:mm a',
+                                  'dd MMM yyyy - hh:mm a',
                                 ).format(placedAt),
-                          style: const TextStyle(fontSize: 12),
+                          style: TextStyle(fontSize: 12, color: _textMuted(context)),
                         ),
                       ],
                     ),
                   ),
-                  _StatusBadge(label: status),
+                  _StatusBadge(label: order.statusLabel),
                 ],
               ),
               const SizedBox(height: 14),
               _InfoLine(
-                icon: Icons.place_outlined,
-                text: order.deliveryAddress?.trim().isNotEmpty == true
-                    ? order.deliveryAddress!.trim()
-                    : 'Delivery address not available',
+                icon: isDelivery ? Icons.place_outlined : Icons.storefront_rounded,
+                text: isDelivery
+                    ? (order.deliveryAddress?.trim().isNotEmpty == true
+                          ? order.deliveryAddress!.trim()
+                          : 'Delivery address not available')
+                    : 'Pickup from store counter',
               ),
               const SizedBox(height: 8),
               _InfoLine(
@@ -279,28 +338,18 @@ class _OrderCard extends StatelessWidget {
                 text: NumberFormat.currency(symbol: '\$').format(amount),
               ),
               const SizedBox(height: 14),
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton(
-                  onPressed: () {
-                    Navigator.of(context).push(
-                      fadeSlideRoute(
-                        DeliveryTrackingScreen(
-                          orderId: order.orderId,
-                          orderNumber: order.orderNumber,
-                          initialStatus: order.orderStatus,
-                          initialPlacedAt: order.placedAt,
-                          initialDeliveryAddress: order.deliveryAddress,
-                          initialTotalAmount: order.totalAmount,
-                        ),
-                      ),
-                    );
-                  },
-                  child: const Text(
-                    'View Order',
-                    style: TextStyle(fontWeight: FontWeight.w700),
+              Row(
+                children: [
+                  _TypeBadge(type: entry.type),
+                  const Spacer(),
+                  TextButton(
+                    onPressed: () => _openOrder(context),
+                    child: Text(
+                      isDelivery ? 'Track Order' : 'View Ticket',
+                      style: const TextStyle(fontWeight: FontWeight.w700),
+                    ),
                   ),
-                ),
+                ],
               ),
             ],
           ),
@@ -309,32 +358,49 @@ class _OrderCard extends StatelessWidget {
     );
   }
 
-  String _statusLabel(String? status) {
-    switch ((status ?? '').toLowerCase()) {
-      case 'ready':
-      case 'processing':
-      case 'approved':
-      case 'pending_approval':
-        return 'Pending Approval';
-      case 'assigned':
-        return 'Assigned';
-      case 'in_progress':
-        return 'In Progress';
-      case 'on_the_way':
-        return 'On the Way';
-      case 'arrived':
-        return 'Arrived';
-      case 'completed':
-        return 'Completed';
-      case 'cancelled':
-        return 'Cancelled';
-      case 'rejected':
-        return 'Rejected';
-      case 'created':
-        return 'Created';
-      default:
-        return 'Pending Approval';
+  void _openOrder(BuildContext context) {
+    final order = entry.order;
+    if (entry.type == _OrderCardType.delivery) {
+      Navigator.of(context).push(
+        fadeSlideRoute(
+          DeliveryTrackingScreen(
+            orderId: order.orderId,
+            orderNumber: order.orderNumber,
+            initialStatus: order.orderStatus,
+            initialPlacedAt: order.placedAt,
+            initialDeliveryAddress: order.deliveryAddress,
+            initialTotalAmount: order.totalAmount,
+          ),
+        ),
+      );
+      return;
     }
+
+    Navigator.of(
+      context,
+    ).push(fadeSlideRoute(TicketDetailScreen(ticket: order)));
+  }
+}
+
+class _TypeBadge extends StatelessWidget {
+  const _TypeBadge({required this.type});
+
+  final _OrderCardType type;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDelivery = type == _OrderCardType.delivery;
+    final bg = isDelivery ? const Color(0xFFDBEAFE) : const Color(0xFFE0E7FF);
+    final fg = isDelivery ? const Color(0xFF1D4ED8) : const Color(0xFF4338CA);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(999)),
+      child: Text(
+        isDelivery ? 'Delivery' : 'Pickup',
+        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: fg),
+      ),
+    );
   }
 }
 
@@ -377,16 +443,22 @@ class _StatusBadge extends StatelessWidget {
     final lower = label.toLowerCase();
     Color bg;
     Color fg;
-    if (lower == 'completed') {
+    if (lower == 'complete') {
       bg = const Color(0xFFDCFCE7);
       fg = const Color(0xFF15803D);
-    } else if (lower == 'on the way' || lower == 'arrived') {
+    } else if (lower == 'on the way') {
       bg = const Color(0xFFDBEAFE);
       fg = const Color(0xFF1D4ED8);
-    } else if (lower == 'in progress' || lower == 'assigned') {
+    } else if (lower == 'processing') {
       bg = const Color(0xFFFFEDD5);
       fg = const Color(0xFFEA580C);
-    } else if (lower == 'cancelled' || lower == 'rejected') {
+    } else if (lower == 'approved') {
+      bg = const Color(0xFFE0E7FF);
+      fg = const Color(0xFF4338CA);
+    } else if (lower == 'active') {
+      bg = const Color(0xFFE0EAFF);
+      fg = const Color(0xFF1D4ED8);
+    } else if (lower == 'cancelled' || lower == 'rejected' || lower == 'expired') {
       bg = const Color(0xFFFEE2E2);
       fg = const Color(0xFFB91C1C);
     } else {

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Events\AdminSupportMessageCreated;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\SupportConversationResource;
 use App\Http\Resources\SupportMessageResource;
@@ -11,6 +12,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 
 class SupportChatController extends Controller
@@ -116,6 +118,19 @@ class SupportChatController extends Controller
 
             return $message;
         });
+
+        try {
+            event(new AdminSupportMessageCreated(
+                $conversation->loadMissing('customer'),
+                $message->fresh()
+            ));
+        } catch (\Throwable $exception) {
+            Log::warning('Failed to broadcast admin support event.', [
+                'conversation_id' => $conversation->id,
+                'message_id' => $message->id,
+                'error' => $exception->getMessage(),
+            ]);
+        }
 
         return response()->json([
             'message' => 'Message sent.',

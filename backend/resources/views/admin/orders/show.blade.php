@@ -65,7 +65,7 @@
                         <textarea id="order-action-note" rows="3" placeholder="Reason or admin note" class="mt-3 w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-700 shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200"></textarea>
                     </div>
                     <div class="mt-4">
-                        <label class="block text-xs font-semibold uppercase tracking-widest text-slate-400">Assign staff</label>
+                        <label class="block text-xs font-semibold uppercase tracking-widest text-slate-400">Assign staff (optional)</label>
                         <div class="mt-2 flex flex-wrap items-center gap-3">
                             <select id="assigned-staff-select" class="h-10 min-w-[180px] flex-1 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700 shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200">
                                 <option value="">Select staff</option>
@@ -213,20 +213,20 @@
 
                 var normalized = String(status).toLowerCase();
                 var labels = {
-                    created: 'Created',
-                    pending_approval: 'Pending Approval',
-                    approved: 'Approved',
-                    assigned: 'Assigned',
-                    in_progress: 'In Progress',
-                    on_the_way: 'On the Way',
-                    arrived: 'Arrived',
+                    created: 'Pending',
                     pending: 'Pending',
                     pending_confirmation: 'Pending',
-                    processing: 'Ready',
-                    ready: 'Ready',
-                    out_for_delivery: 'Out for Delivery',
-                    delivered: 'Delivered',
-                    completed: 'Completed',
+                    pending_approval: 'Pending',
+                    approved: 'Approved',
+                    assigned: 'Processing',
+                    in_progress: 'Processing',
+                    processing: 'Processing',
+                    ready: 'Processing',
+                    on_the_way: 'On the Way',
+                    arrived: 'On the Way',
+                    out_for_delivery: 'On the Way',
+                    delivered: 'Complete',
+                    completed: 'Complete',
                     cancelled: 'Cancelled',
                     rejected: 'Rejected'
                 };
@@ -249,49 +249,67 @@
 
                 var normalized = String(status).toLowerCase();
                 if (orderType === 'delivery' && [
-                    'created',
                     'pending_approval',
                     'approved',
-                    'assigned',
                     'in_progress',
                     'on_the_way',
-                    'arrived',
                     'completed',
                     'cancelled',
                     'rejected'
                 ].indexOf(normalized) !== -1) {
                     return normalized;
                 }
+                if (orderType === 'delivery') {
+                    if (['created', 'pending', 'pending_confirmation'].indexOf(normalized) !== -1) {
+                        return 'pending_approval';
+                    }
+                    if (['assigned', 'processing', 'ready'].indexOf(normalized) !== -1) {
+                        return 'in_progress';
+                    }
+                    if (['arrived', 'out_for_delivery'].indexOf(normalized) !== -1) {
+                        return 'on_the_way';
+                    }
+                    if (normalized === 'delivered') {
+                        return 'completed';
+                    }
+                    return normalized;
+                }
+
                 if (normalized === 'pending_confirmation') {
                     return 'pending';
                 }
                 if (normalized === 'processing' || normalized === 'approved') {
-                    return orderType === 'delivery' ? 'ready' : 'ready';
+                    return 'ready';
                 }
                 return normalized;
             };
             var getOrderStatusOptions = function (orderType) {
                 if (orderType === 'delivery') {
                     return [
-                        { value: 'pending', label: 'Pending' },
-                        { value: 'ready', label: 'Ready' },
-                        { value: 'out_for_delivery', label: 'Out for Delivery' },
-                        { value: 'delivered', label: 'Delivered' },
-                        { value: 'completed', label: 'Completed' },
-                        { value: 'cancelled', label: 'Cancelled' }
+                        { value: 'pending_approval', label: 'Pending' },
+                        { value: 'approved', label: 'Approved' },
+                        { value: 'in_progress', label: 'Processing' },
+                        { value: 'on_the_way', label: 'On the Way' },
+                        { value: 'completed', label: 'Complete' },
+                        { value: 'cancelled', label: 'Cancelled' },
+                        { value: 'rejected', label: 'Rejected' }
                     ];
                 }
 
                 return [
                     { value: 'pending', label: 'Pending' },
                     { value: 'ready', label: 'Ready' },
-                    { value: 'completed', label: 'Completed' },
+                    { value: 'completed', label: 'Complete' },
                     { value: 'cancelled', label: 'Cancelled' }
                 ];
             };
             var currentPaymentStatus = 'pending';
             var currentOrderStatus = 'pending';
             var currentOrder = null;
+            var isLoadingOrder = false;
+            var isMutating = false;
+            var autoRefreshTimer = null;
+            var AUTO_REFRESH_MS = 10000;
 
             function setPaymentBadge(status) {
                 var badge = document.getElementById('order-payment');
@@ -318,13 +336,15 @@
 
                 badge.textContent = formatStatusLabel(status);
                 badge.className = 'rounded-full px-3 py-1 text-xs font-semibold ' + (
-                    status === 'completed' || status === 'delivered'
+                    status === 'completed'
                         ? 'bg-success-50 text-success-700 dark:bg-success-500/10 dark:text-success-100'
-                        : status === 'out_for_delivery'
+                        : status === 'on_the_way'
                             ? 'bg-primary-50 text-primary-700 dark:bg-primary-500/10 dark:text-primary-100'
-                            : status === 'cancelled'
+                            : status === 'cancelled' || status === 'rejected'
                                 ? 'bg-danger-50 text-danger-700 dark:bg-danger-500/10 dark:text-danger-100'
-                                : 'bg-warning-50 text-warning-700 dark:bg-warning-500/10 dark:text-warning-100'
+                                : status === 'approved'
+                                    ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-200'
+                                    : 'bg-warning-50 text-warning-700 dark:bg-warning-500/10 dark:text-warning-100'
                 );
             }
 
@@ -343,12 +363,6 @@
                     options = getOrderStatusOptions(orderType);
                 }
 
-                if (orderType === 'delivery' && !order.assigned_staff_id) {
-                    options = options.filter(function (option) {
-                        return option.value !== 'assigned';
-                    });
-                }
-
                 orderStatusSelect.innerHTML = options.map(function (option) {
                     return '<option value="' + option.value + '">' + option.label + '</option>';
                 }).join('');
@@ -360,9 +374,7 @@
                 }
                 orderStatusSave.disabled = true;
                 if (orderType === 'delivery') {
-                    orderStatusNote.textContent = order.assigned_staff_id
-                        ? 'Follow the delivery workflow or use admin override when needed.'
-                        : 'Assign staff first before moving this order to Assigned.';
+                    orderStatusNote.textContent = 'Follow the delivery workflow or use admin override when needed.';
                 } else {
                     orderStatusNote.textContent = 'Update the pickup order progress here.';
                 }
@@ -438,7 +450,7 @@
 
                 var isDelivery = (order.order_type || '').toLowerCase() === 'delivery';
                 var canApprove = isDelivery && currentOrderStatus === 'pending_approval';
-                var canReject = isDelivery && ['pending_approval', 'approved', 'assigned'].indexOf(currentOrderStatus) !== -1;
+                var canReject = isDelivery && ['pending_approval', 'approved'].indexOf(currentOrderStatus) !== -1;
                 orderApprove.disabled = !canApprove;
                 orderReject.disabled = !canReject;
                 orderActionNote.placeholder = currentOrderStatus === 'pending_approval'
@@ -461,14 +473,27 @@
                 document.getElementById('order-items').innerHTML = rows || '<tr><td class="px-4 py-6 text-center text-sm text-slate-500" colspan="4">No items found.</td></tr>';
             }
 
-            async function loadOrder() {
-                await window.adminApi.ensureCsrfCookie();
-                var response = await window.adminApi.request('/api/orders/' + orderId);
-                if (!response.ok) {
+            async function loadOrder(options) {
+                if (isLoadingOrder) {
                     return;
                 }
-                var data = await response.json();
-                renderOrder(data.data);
+
+                isLoadingOrder = true;
+                try {
+                    await window.adminApi.ensureCsrfCookie();
+                    var response = await window.adminApi.request('/api/orders/' + orderId);
+                    if (!response.ok) {
+                        return;
+                    }
+                    var data = await response.json();
+                    renderOrder(data.data);
+                } catch (error) {
+                    if (!options || !options.silent) {
+                        console.error(error);
+                    }
+                } finally {
+                    isLoadingOrder = false;
+                }
             }
 
             async function loadStaffOptions() {
@@ -486,6 +511,29 @@
 
             await loadStaffOptions();
             await loadOrder();
+
+            function hasPendingDraftChanges() {
+                var paymentDirty = paymentStatusSelect && paymentStatusSelect.value !== currentPaymentStatus;
+                var orderDirty = orderStatusSelect && orderStatusSelect.value !== currentOrderStatus;
+                return paymentDirty || orderDirty;
+            }
+
+            function stopAutoRefresh() {
+                if (autoRefreshTimer) {
+                    clearInterval(autoRefreshTimer);
+                    autoRefreshTimer = null;
+                }
+            }
+
+            function startAutoRefresh() {
+                stopAutoRefresh();
+                autoRefreshTimer = setInterval(function () {
+                    if (document.hidden || isMutating || hasPendingDraftChanges()) {
+                        return;
+                    }
+                    loadOrder({ silent: true });
+                }, AUTO_REFRESH_MS);
+            }
 
             paymentStatusSelect.addEventListener('change', function (event) {
                 var newStatus = event.target.value;
@@ -506,6 +554,7 @@
                     return;
                 }
 
+                isMutating = true;
                 try {
                     paymentStatusSave.disabled = true;
                     paymentStatusNote.textContent = 'Saving...';
@@ -530,6 +579,8 @@
                     paymentStatusSave.disabled = false;
                     paymentStatusNote.textContent = 'Save failed.';
                     console.error(error);
+                } finally {
+                    isMutating = false;
                 }
             });
 
@@ -541,12 +592,7 @@
                 }
 
                 var isDelivery = currentOrder && (currentOrder.order_type || '').toLowerCase() === 'delivery';
-                if (isDelivery && newStatus === 'assigned' && !currentOrder.assigned_staff_id) {
-                    orderStatusSave.disabled = false;
-                    orderStatusNote.textContent = 'Select a staff member and use Assign before setting Assigned.';
-                    return;
-                }
-
+                isMutating = true;
                 try {
                     orderStatusSave.disabled = true;
                     orderStatusNote.textContent = 'Saving...';
@@ -575,6 +621,8 @@
                     orderStatusSave.disabled = false;
                     orderStatusNote.textContent = 'Save failed.';
                     console.error(error);
+                } finally {
+                    isMutating = false;
                 }
             });
 
@@ -585,6 +633,7 @@
                     return;
                 }
 
+                isMutating = true;
                 try {
                     assignedStaffSave.disabled = true;
                     assignedStaffNote.textContent = 'Assigning...';
@@ -611,10 +660,13 @@
                     assignedStaffSave.disabled = false;
                     assignedStaffNote.textContent = 'Assignment failed.';
                     console.error(error);
+                } finally {
+                    isMutating = false;
                 }
             });
 
             orderApprove.addEventListener('click', async function () {
+                isMutating = true;
                 try {
                     orderApprove.disabled = true;
                     orderStatusNote.textContent = 'Approving...';
@@ -633,6 +685,8 @@
                     orderApprove.disabled = false;
                     orderStatusNote.textContent = 'Approve failed.';
                     console.error(error);
+                } finally {
+                    isMutating = false;
                 }
             });
 
@@ -642,6 +696,7 @@
                     return;
                 }
 
+                isMutating = true;
                 try {
                     orderReject.disabled = true;
                     orderStatusNote.textContent = 'Rejecting...';
@@ -662,8 +717,19 @@
                     orderReject.disabled = false;
                     orderStatusNote.textContent = 'Reject failed.';
                     console.error(error);
+                } finally {
+                    isMutating = false;
                 }
             });
+
+            document.addEventListener('visibilitychange', function () {
+                if (!document.hidden && !isMutating && !hasPendingDraftChanges()) {
+                    loadOrder({ silent: true });
+                }
+            });
+
+            window.addEventListener('beforeunload', stopAutoRefresh);
+            startAutoRefresh();
         });
     </script>
 @endsection

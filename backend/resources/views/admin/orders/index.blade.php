@@ -705,6 +705,9 @@
                 });
             }
 
+            window.addEventListener('admin:realtime-order-created', function () {
+                refreshListAndSummary();
+            });
 
 
             loadOrders();

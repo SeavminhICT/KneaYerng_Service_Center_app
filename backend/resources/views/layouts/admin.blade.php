@@ -21,7 +21,7 @@
 
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
-    <body class="font-sans antialiased" x-data="{ sidebarOpen: false, theme: (localStorage.getItem('theme') || 'light') }" x-init="document.documentElement.classList.toggle('dark', theme === 'dark')">
+    <body class="font-sans antialiased" data-admin-area="1" x-data="{ sidebarOpen: false, theme: (localStorage.getItem('theme') || 'light') }" x-init="document.documentElement.classList.toggle('dark', theme === 'dark')">
         <div class="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
             <div class="fixed inset-0 z-30 bg-slate-900/40 backdrop-blur-sm lg:hidden" x-show="sidebarOpen" x-transition.opacity x-cloak @click="sidebarOpen = false"></div>
 
@@ -90,6 +90,10 @@
                     var opts = options || {};
                     var type = opts.type || 'success';
                     var duration = typeof opts.duration === 'number' ? opts.duration : 3200;
+                    var hasHref = typeof opts.href === 'string' && opts.href.trim() !== '';
+                    var clickHandler = typeof opts.onClick === 'function'
+                        ? opts.onClick
+                        : (hasHref ? function () { window.location.href = opts.href; } : null);
 
                     var toast = document.createElement('div');
                     var baseClass = 'pointer-events-auto flex w-full items-start gap-3 rounded-xl border px-4 py-3 text-sm shadow-xl backdrop-blur transform transition duration-200 ease-out opacity-0 translate-y-2';
@@ -107,9 +111,27 @@
                     close.type = 'button';
                     close.className = 'text-xs font-semibold uppercase tracking-widest text-slate-500 hover:text-slate-700 dark:text-slate-300 dark:hover:text-slate-100';
                     close.textContent = 'Close';
-                    close.addEventListener('click', function () {
+                    close.addEventListener('click', function (event) {
+                        event.stopPropagation();
                         removeToast(toast, 200);
                     });
+
+                    if (clickHandler) {
+                        toast.classList.add('cursor-pointer');
+                        toast.setAttribute('tabindex', '0');
+                        toast.addEventListener('click', function () {
+                            clickHandler();
+                            removeToast(toast, 200);
+                        });
+                        toast.addEventListener('keydown', function (event) {
+                            if (event.key !== 'Enter' && event.key !== ' ') {
+                                return;
+                            }
+                            event.preventDefault();
+                            clickHandler();
+                            removeToast(toast, 200);
+                        });
+                    }
 
                     toast.appendChild(text);
                     toast.appendChild(close);
@@ -166,6 +188,53 @@
                     return false;
                 };
                 consumeToast();
+            })();
+        </script>
+
+        <script>
+            (function () {
+                function isSupportPage() {
+                    return window.location.pathname.indexOf('/admin/support') === 0;
+                }
+
+                window.addEventListener('admin:realtime-order-created', function (event) {
+                    var payload = event && event.detail ? event.detail : {};
+                    var order = payload.order || {};
+                    var message = order.message || 'New order received.';
+
+                    if (typeof window.adminToast === 'function') {
+                        window.adminToast(message, { type: 'success', duration: 5200 });
+                    }
+                });
+
+                window.addEventListener('admin:realtime-support-message-created', function (event) {
+                    if (isSupportPage()) {
+                        return;
+                    }
+
+                    var payload = event && event.detail ? event.detail : {};
+                    var conversation = payload.conversation || {};
+                    var message = payload.message && payload.message.message
+                        ? payload.message.message
+                        : 'New support message received.';
+                    var supportUrl = '/admin/support';
+
+                    if (conversation.id) {
+                        supportUrl += '?conversation=' + encodeURIComponent(conversation.id);
+                    }
+
+                    if (typeof window.adminRealtimePlaySound === 'function') {
+                        window.adminRealtimePlaySound();
+                    }
+
+                    if (typeof window.adminToast === 'function') {
+                        window.adminToast(message, {
+                            type: 'success',
+                            duration: 5200,
+                            href: supportUrl,
+                        });
+                    }
+                });
             })();
         </script>
 

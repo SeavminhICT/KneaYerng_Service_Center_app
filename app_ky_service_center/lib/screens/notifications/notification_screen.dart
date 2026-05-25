@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 
 import '../../models/order_tracking_notification.dart';
 import '../../services/api_service.dart';
@@ -400,21 +400,32 @@ class _NotificationDetailScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final accent = _categoryColor(item.category);
     final icon = _categoryIcon(item.category);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final detailBackground = isDark ? const Color(0xFF0B1220) : _background;
+    final detailSurface = isDark ? const Color(0xFF111C2E) : _surface;
+    final detailBorder = isDark ? const Color(0xFF22314A) : _border;
+    final detailTitle = isDark ? const Color(0xFFE6EEFF) : _textPrimary;
+    final detailMuted = isDark ? const Color(0xFF9EB0CD) : _textMuted;
+    final detailBody = isDark ? const Color(0xFFD3E0F8) : _textPrimary;
+    final linkBackground = isDark
+        ? const Color(0xFF18263A)
+        : const Color(0xFFF7F9FD);
+    final cardShadow = isDark ? const Color(0x28000000) : _shadow;
 
     return Scaffold(
-      backgroundColor: _background,
+      backgroundColor: detailBackground,
       appBar: AppBar(
-        backgroundColor: _surface,
+        backgroundColor: detailSurface,
         elevation: 0,
         scrolledUnderElevation: 0,
-        foregroundColor: _textPrimary,
+        foregroundColor: detailTitle,
         titleSpacing: 0,
-        title: const Text(
+        title: Text(
           'Notification',
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.w700,
-            color: _textPrimary,
+            color: detailTitle,
           ),
         ),
       ),
@@ -451,21 +462,21 @@ class _NotificationDetailScreen extends StatelessWidget {
             Text(
               item.title,
               textAlign: TextAlign.center,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.w800,
-                color: _textPrimary,
+                color: detailTitle,
                 height: 1.2,
               ),
             ),
             const SizedBox(height: 10),
             Text(
-              '${_categoryLabel(item.category)} • ${_formatTimestamp(item.timestamp)}',
+              '${_categoryLabel(item.category)} - ${_formatTimestamp(item.timestamp)}',
               textAlign: TextAlign.center,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
-                color: _textMuted,
+                color: detailMuted,
               ),
             ),
             const SizedBox(height: 24),
@@ -473,14 +484,14 @@ class _NotificationDetailScreen extends StatelessWidget {
               width: double.infinity,
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: _surface,
+                color: detailSurface,
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: _border),
-                boxShadow: const [
+                border: Border.all(color: detailBorder),
+                boxShadow: [
                   BoxShadow(
-                    color: _shadow,
+                    color: cardShadow,
                     blurRadius: 18,
-                    offset: Offset(0, 10),
+                    offset: const Offset(0, 10),
                   ),
                 ],
               ),
@@ -489,10 +500,10 @@ class _NotificationDetailScreen extends StatelessWidget {
                 children: [
                   Text(
                     item.message,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 15,
                       height: 1.6,
-                      color: _textPrimary,
+                      color: detailBody,
                     ),
                   ),
                   if (item.deepLink != null) ...[
@@ -501,9 +512,9 @@ class _NotificationDetailScreen extends StatelessWidget {
                       width: double.infinity,
                       padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFF7F9FD),
+                        color: linkBackground,
                         borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: _border),
+                        border: Border.all(color: detailBorder),
                       ),
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -517,10 +528,10 @@ class _NotificationDetailScreen extends StatelessWidget {
                           Expanded(
                             child: Text(
                               item.deepLink!,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w600,
-                                color: _textPrimary,
+                                color: detailTitle,
                               ),
                             ),
                           ),
@@ -1319,3 +1330,4 @@ Color _categoryColor(NotificationCategory category) {
     NotificationCategory.update => const Color(0xFF0891B2),
   };
 }
+

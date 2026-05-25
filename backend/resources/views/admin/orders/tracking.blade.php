@@ -17,11 +17,11 @@
             <p id="stat-pending" class="mt-2 text-2xl font-bold text-warning-600 dark:text-warning-400">--</p>
         </div>
         <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-            <p class="text-xs font-semibold uppercase tracking-widest text-slate-400">Out for Delivery</p>
+            <p class="text-xs font-semibold uppercase tracking-widest text-slate-400">On the Way</p>
             <p id="stat-out" class="mt-2 text-2xl font-bold text-primary-600 dark:text-primary-400">--</p>
         </div>
         <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-            <p class="text-xs font-semibold uppercase tracking-widest text-slate-400">Delivered</p>
+            <p class="text-xs font-semibold uppercase tracking-widest text-slate-400">Complete</p>
             <p id="stat-delivered" class="mt-2 text-2xl font-bold text-success-600 dark:text-success-400">--</p>
         </div>
         <div class="col-span-2 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900 md:col-span-1">
@@ -35,13 +35,11 @@
         <div class="flex flex-wrap items-center gap-3">
             <select id="track-status-filter" class="h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-600 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300">
                 <option value="">All Workflow Stages</option>
-                <option value="pending_approval">Pending Approval</option>
+                <option value="pending_approval">Pending</option>
                 <option value="approved">Approved</option>
-                <option value="assigned">Assigned</option>
-                <option value="in_progress">In Progress</option>
-                <option value="out_for_delivery">Out for Delivery</option>
-                <option value="delivered">Delivered</option>
-                <option value="completed">Completed</option>
+                <option value="in_progress">Processing</option>
+                <option value="on_the_way">On the Way</option>
+                <option value="completed">Complete</option>
                 <option value="cancelled">Cancelled</option>
                 <option value="rejected">Rejected</option>
             </select>
@@ -168,6 +166,9 @@ document.addEventListener('DOMContentLoaded', function () {
     var currentPage = 1;
     var currentDrawerOrderId = null;
     var currentDrawerStatus = null;
+    var isLoadingOrders = false;
+    var autoRefreshTimer = null;
+    var AUTO_REFRESH_MS = 10000;
 
     var statusFilter = document.getElementById('track-status-filter');
     var fromDate     = document.getElementById('track-from-date');
@@ -189,28 +190,36 @@ document.addEventListener('DOMContentLoaded', function () {
     var drawerFullLink   = document.getElementById('drawer-full-link');
 
     var WORKFLOW_STEPS = [
-        { value: 'pending_approval', label: 'Pending Approval' },
+        { value: 'pending_approval', label: 'Pending' },
         { value: 'approved',         label: 'Approved' },
-        { value: 'assigned',         label: 'Assigned' },
-        { value: 'in_progress',      label: 'In Progress' },
-        { value: 'out_for_delivery', label: 'Out for Delivery' },
-        { value: 'delivered',        label: 'Delivered' },
-        { value: 'completed',        label: 'Completed' }
+        { value: 'in_progress',      label: 'Processing' },
+        { value: 'on_the_way',       label: 'On the Way' },
+        { value: 'completed',        label: 'Complete' }
     ];
 
     function statusLabel(s) {
         var map = {
-            pending_approval: 'Pending Approval', approved: 'Approved', assigned: 'Assigned',
-            in_progress: 'In Progress', on_the_way: 'On the Way', out_for_delivery: 'Out for Delivery',
-            delivered: 'Delivered', completed: 'Completed', cancelled: 'Cancelled', rejected: 'Rejected',
-            created: 'Created', pending: 'Pending', ready: 'Ready'
+            pending_approval: 'Pending', approved: 'Approved', assigned: 'Processing',
+            in_progress: 'Processing', on_the_way: 'On the Way', arrived: 'On the Way',
+            out_for_delivery: 'On the Way', delivered: 'Complete', completed: 'Complete',
+            cancelled: 'Cancelled', rejected: 'Rejected', created: 'Pending', pending: 'Pending',
+            pending_confirmation: 'Pending', processing: 'Processing', ready: 'Processing'
         };
         return map[s] || (s || '--').replace(/_/g, ' ').replace(/\b\w/g, function(c){return c.toUpperCase();});
     }
 
+    function normalizeWorkflowStatus(status) {
+        var s = (status || '').toLowerCase();
+        if (s === 'created' || s === 'pending' || s === 'pending_confirmation') return 'pending_approval';
+        if (s === 'assigned' || s === 'processing' || s === 'ready') return 'in_progress';
+        if (s === 'out_for_delivery' || s === 'arrived') return 'on_the_way';
+        if (s === 'delivered') return 'completed';
+        return s;
+    }
+
     function statusBadgeClass(s) {
         if (s === 'delivered' || s === 'completed') return 'bg-success-50 text-success-700 dark:bg-success-500/10 dark:text-success-200';
-        if (s === 'out_for_delivery') return 'bg-primary-50 text-primary-700 dark:bg-primary-500/10 dark:text-primary-200';
+        if (s === 'on_the_way' || s === 'out_for_delivery' || s === 'arrived') return 'bg-primary-50 text-primary-700 dark:bg-primary-500/10 dark:text-primary-200';
         if (s === 'cancelled' || s === 'rejected') return 'bg-danger-50 text-danger-700 dark:bg-danger-500/10 dark:text-danger-200';
         if (s === 'assigned' || s === 'in_progress') return 'bg-indigo-50 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-200';
         return 'bg-warning-50 text-warning-700 dark:bg-warning-500/10 dark:text-warning-200';
@@ -225,8 +234,16 @@ document.addEventListener('DOMContentLoaded', function () {
         return q;
     }
 
-    async function loadOrders() {
-        list.innerHTML = '<div class="flex justify-center py-16"><svg class="h-8 w-8 animate-spin text-primary-500" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg></div>';
+    async function loadOrders(options) {
+        if (isLoadingOrders) {
+            return;
+        }
+        isLoadingOrders = true;
+
+        var silent = options && options.silent === true;
+        if (!silent || !list.children.length) {
+            list.innerHTML = '<div class="flex justify-center py-16"><svg class="h-8 w-8 animate-spin text-primary-500" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg></div>';
+        }
         try {
             await window.adminApi.ensureCsrfCookie();
             // Load full stats from all pages (no pagination limit)
@@ -251,16 +268,18 @@ document.addEventListener('DOMContentLoaded', function () {
         } catch (e) {
             list.innerHTML = '<p class="py-10 text-center text-sm text-slate-500">Error loading orders.</p>';
             console.error(e);
+        } finally {
+            isLoadingOrders = false;
         }
     }
 
     function updateStats(orders) {
         var stats = { total: orders.length, pending: 0, out: 0, delivered: 0, cancelled: 0 };
         orders.forEach(function(o) {
-            var s = (o.status || '').toLowerCase();
-            if (s === 'pending_approval' || s === 'pending' || s === 'approved' || s === 'assigned' || s === 'in_progress') stats.pending++;
-            else if (s === 'out_for_delivery') stats.out++;
-            else if (s === 'delivered' || s === 'completed') stats.delivered++;
+            var s = normalizeWorkflowStatus(o.status);
+            if (s === 'pending_approval' || s === 'approved' || s === 'in_progress') stats.pending++;
+            else if (s === 'on_the_way') stats.out++;
+            else if (s === 'completed') stats.delivered++;
             else if (s === 'cancelled' || s === 'rejected') stats.cancelled++;
         });
         document.getElementById('stat-total').textContent = stats.total;
@@ -276,7 +295,7 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
         list.innerHTML = orders.map(function(o) {
-            var s = (o.status || '').toLowerCase();
+            var s = normalizeWorkflowStatus(o.status);
             var badgeCls = statusBadgeClass(s);
             var date = (o.placed_at || o.created_at) ? new Date(o.placed_at || o.created_at).toLocaleDateString() : '--';
             return [
@@ -356,7 +375,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function renderDrawer(order) {
-        currentDrawerStatus = (order.status || '').toLowerCase();
+        currentDrawerStatus = normalizeWorkflowStatus(order.status);
         drawerFullLink.href = '/admin/orders/' + order.id;
 
         document.getElementById('drawer-order-number').textContent = order.order_number || 'Order';
@@ -407,13 +426,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
         // Status update dropdown
         var statusOptions = [
-            { value: 'pending_approval', label: 'Pending Approval' },
+            { value: 'pending_approval', label: 'Pending' },
             { value: 'approved',         label: 'Approved' },
-            { value: 'assigned',         label: 'Assigned' },
-            { value: 'in_progress',      label: 'In Progress' },
-            { value: 'out_for_delivery', label: 'Out for Delivery' },
-            { value: 'delivered',        label: 'Delivered' },
-            { value: 'completed',        label: 'Completed' },
+            { value: 'in_progress',      label: 'Processing' },
+            { value: 'on_the_way',       label: 'On the Way' },
+            { value: 'completed',        label: 'Complete' },
             { value: 'cancelled',        label: 'Cancelled' }
         ];
         drawerStatusSel.innerHTML = statusOptions.map(function(opt) {
@@ -453,6 +470,23 @@ document.addEventListener('DOMContentLoaded', function () {
         currentDrawerOrderId = null;
     }
 
+    function stopAutoRefresh() {
+        if (autoRefreshTimer) {
+            clearInterval(autoRefreshTimer);
+            autoRefreshTimer = null;
+        }
+    }
+
+    function startAutoRefresh() {
+        stopAutoRefresh();
+        autoRefreshTimer = setInterval(function () {
+            if (document.hidden || currentDrawerOrderId) {
+                return;
+            }
+            loadOrders({ silent: true });
+        }, AUTO_REFRESH_MS);
+    }
+
     drawerClose.addEventListener('click', closeDrawer);
     backdrop.addEventListener('click', closeDrawer);
 
@@ -465,8 +499,15 @@ document.addEventListener('DOMContentLoaded', function () {
     refreshBtn.addEventListener('click', function() { loadOrders(); });
     prevBtn.addEventListener('click', function() { if (currentPage > 1) { currentPage--; loadOrders(); } });
     nextBtn.addEventListener('click', function() { currentPage++; loadOrders(); });
+    document.addEventListener('visibilitychange', function () {
+        if (!document.hidden && !currentDrawerOrderId) {
+            loadOrders({ silent: true });
+        }
+    });
+    window.addEventListener('beforeunload', stopAutoRefresh);
 
     loadOrders();
+    startAutoRefresh();
 });
 </script>
 @endsection

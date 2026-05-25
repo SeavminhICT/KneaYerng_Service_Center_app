@@ -29,13 +29,10 @@ class OrderTrackingService
     public static function deliveryStatuses(): array
     {
         return [
-            self::STATUS_CREATED,
             self::STATUS_PENDING_APPROVAL,
             self::STATUS_APPROVED,
-            self::STATUS_ASSIGNED,
             self::STATUS_IN_PROGRESS,
             self::STATUS_ON_THE_WAY,
-            self::STATUS_ARRIVED,
             self::STATUS_COMPLETED,
             self::STATUS_CANCELLED,
             self::STATUS_REJECTED,
@@ -45,13 +42,10 @@ class OrderTrackingService
     public static function timelineStatuses(): array
     {
         return [
-            self::STATUS_CREATED,
             self::STATUS_PENDING_APPROVAL,
             self::STATUS_APPROVED,
-            self::STATUS_ASSIGNED,
             self::STATUS_IN_PROGRESS,
             self::STATUS_ON_THE_WAY,
-            self::STATUS_ARRIVED,
             self::STATUS_COMPLETED,
         ];
     }
@@ -60,13 +54,13 @@ class OrderTrackingService
     {
         return [
             self::STATUS_CREATED => 'Created',
-            self::STATUS_PENDING_APPROVAL => 'Pending Approval',
+            self::STATUS_PENDING_APPROVAL => 'Pending',
             self::STATUS_APPROVED => 'Approved',
-            self::STATUS_ASSIGNED => 'Assigned',
-            self::STATUS_IN_PROGRESS => 'In Progress',
+            self::STATUS_ASSIGNED => 'Processing',
+            self::STATUS_IN_PROGRESS => 'Processing',
             self::STATUS_ON_THE_WAY => 'On the Way',
-            self::STATUS_ARRIVED => 'Arrived',
-            self::STATUS_COMPLETED => 'Completed',
+            self::STATUS_ARRIVED => 'On the Way',
+            self::STATUS_COMPLETED => 'Complete',
             self::STATUS_CANCELLED => 'Cancelled',
             self::STATUS_REJECTED => 'Rejected',
         ];
@@ -78,10 +72,10 @@ class OrderTrackingService
             self::STATUS_CREATED => 'Request was created in the app.',
             self::STATUS_PENDING_APPROVAL => 'Waiting for admin approval.',
             self::STATUS_APPROVED => 'Admin approved the request.',
-            self::STATUS_ASSIGNED => 'Task assigned to staff.',
-            self::STATUS_IN_PROGRESS => 'Staff accepted and started the task.',
+            self::STATUS_ASSIGNED => 'Order is being processed.',
+            self::STATUS_IN_PROGRESS => 'Order is being processed.',
             self::STATUS_ON_THE_WAY => 'Staff is on the way.',
-            self::STATUS_ARRIVED => 'Staff arrived at the destination.',
+            self::STATUS_ARRIVED => 'Staff is on the way.',
             self::STATUS_COMPLETED => 'Request completed successfully.',
             self::STATUS_CANCELLED => 'Request was cancelled.',
             self::STATUS_REJECTED => 'Request was rejected by admin.',
@@ -114,8 +108,8 @@ class OrderTrackingService
 
     public function transition(Order $order, string $toStatus, ?User $actor = null, array $options = []): Order
     {
-        $toStatus = strtolower(trim($toStatus));
-        $fromStatus = strtolower((string) $order->status);
+        $toStatus = $this->normalizeStatusForWorkflow($toStatus);
+        $fromStatus = $this->normalizeStatusForWorkflow((string) $order->status);
         $override = (bool) ($options['override'] ?? false);
         $note = $options['note'] ?? null;
         $assignedStaff = $options['assigned_staff'] ?? null;
@@ -126,15 +120,19 @@ class OrderTrackingService
             ]);
         }
 
+        if ($toStatus === $fromStatus) {
+            if ($order->status !== $toStatus) {
+                $order->status = $toStatus;
+                $order->current_status_at = $order->current_status_at ?? now();
+                $order->save();
+            }
+
+            return $order;
+        }
+
         if (! $override && ! $this->canTransition($fromStatus, $toStatus)) {
             throw ValidationException::withMessages([
                 'status' => ['Invalid status transition.'],
-            ]);
-        }
-
-        if ($toStatus === self::STATUS_ASSIGNED && ! ($assignedStaff instanceof User) && ! $order->assigned_staff_id) {
-            throw ValidationException::withMessages([
-                'assigned_staff_id' => ['Assign a staff member before moving to Assigned.'],
             ]);
         }
 
@@ -195,23 +193,20 @@ class OrderTrackingService
         $order->assigned_staff_id = $staff->id;
         $order->save();
 
-        return $this->transition($order, self::STATUS_ASSIGNED, $actor, [
-            'assigned_staff' => $staff,
-            'note' => $note ?: 'Task assigned to '.$staff->name.'.',
-            'override' => $override,
-        ]);
+        return $order;
     }
 
     public function canTransition(?string $fromStatus, string $toStatus): bool
     {
+        $fromStatus = $this->normalizeStatusForWorkflow($fromStatus);
+        $toStatus = $this->normalizeStatusForWorkflow($toStatus);
+
         $map = [
             self::STATUS_CREATED => [self::STATUS_PENDING_APPROVAL],
             self::STATUS_PENDING_APPROVAL => [self::STATUS_APPROVED, self::STATUS_REJECTED, self::STATUS_CANCELLED],
-            self::STATUS_APPROVED => [self::STATUS_ASSIGNED, self::STATUS_CANCELLED],
-            self::STATUS_ASSIGNED => [self::STATUS_IN_PROGRESS, self::STATUS_CANCELLED],
+            self::STATUS_APPROVED => [self::STATUS_IN_PROGRESS, self::STATUS_REJECTED, self::STATUS_CANCELLED],
             self::STATUS_IN_PROGRESS => [self::STATUS_ON_THE_WAY, self::STATUS_CANCELLED],
-            self::STATUS_ON_THE_WAY => [self::STATUS_ARRIVED, self::STATUS_CANCELLED],
-            self::STATUS_ARRIVED => [self::STATUS_COMPLETED, self::STATUS_CANCELLED],
+            self::STATUS_ON_THE_WAY => [self::STATUS_COMPLETED, self::STATUS_CANCELLED],
             self::STATUS_COMPLETED => [],
             self::STATUS_CANCELLED => [],
             self::STATUS_REJECTED => [],
@@ -226,7 +221,7 @@ class OrderTrackingService
             return [];
         }
 
-        $current = strtolower((string) $order->status);
+        $current = $this->normalizeStatusForWorkflow((string) $order->status);
         $options = [];
         foreach (self::deliveryStatuses() as $status) {
             if ($this->canTransition($current, $status)) {
@@ -258,8 +253,12 @@ class OrderTrackingService
 
     public function buildTimeline(Order $order): array
     {
-        $historyByStatus = $order->trackingHistories->keyBy('to_status');
-        $current = strtolower((string) $order->status);
+        $historyByStatus = $order->trackingHistories
+            ->sortBy('created_at')
+            ->mapWithKeys(fn (OrderTrackingHistory $history) => [
+                $this->normalizeStatusForWorkflow($history->to_status) => $history,
+            ]);
+        $current = $this->normalizeStatusForWorkflow((string) $order->status);
         $currentIndex = array_search($current, self::timelineStatuses(), true);
         $currentIndex = $currentIndex === false ? 0 : $currentIndex;
 
@@ -362,5 +361,23 @@ class OrderTrackingService
         }
 
         return 'user';
+    }
+
+    private function normalizeStatusForWorkflow(?string $status): string
+    {
+        $normalized = strtolower(trim((string) $status));
+
+        return match ($normalized) {
+            'pending', 'pending_confirmation' => self::STATUS_PENDING_APPROVAL,
+            self::STATUS_ASSIGNED, self::STATUS_IN_PROGRESS, 'processing', 'ready' => self::STATUS_IN_PROGRESS,
+            self::STATUS_ARRIVED, self::STATUS_ON_THE_WAY, 'out_for_delivery' => self::STATUS_ON_THE_WAY,
+            'delivered', self::STATUS_COMPLETED => self::STATUS_COMPLETED,
+            self::STATUS_PENDING_APPROVAL => self::STATUS_PENDING_APPROVAL,
+            self::STATUS_APPROVED => self::STATUS_APPROVED,
+            self::STATUS_CANCELLED => self::STATUS_CANCELLED,
+            self::STATUS_REJECTED => self::STATUS_REJECTED,
+            self::STATUS_CREATED => self::STATUS_CREATED,
+            default => $normalized,
+        };
     }
 }

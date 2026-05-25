@@ -199,7 +199,7 @@ class OrderTrackingController extends Controller
         $this->ensureTrackedDelivery($order);
 
         $validated = $request->validate([
-            'status' => ['required', 'in:in_progress,on_the_way,arrived,completed'],
+            'status' => ['required', 'in:in_progress,on_the_way,completed'],
             'note' => ['nullable', 'string', 'max:1000'],
         ]);
 

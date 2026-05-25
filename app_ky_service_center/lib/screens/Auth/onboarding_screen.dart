@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lottie/lottie.dart';
-import 'login_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
 import '../main_navigation_screen.dart';
+import 'login_screen.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -12,11 +14,15 @@ class OnboardingScreen extends StatefulWidget {
 }
 
 class _OnboardingScreenState extends State<OnboardingScreen> {
+  static const _languagePreferenceKey = 'app_language_code';
+
   final PageController _controller = PageController();
   int _currentPage = 0;
+  String? _selectedLanguageCode;
+  bool _savingLanguage = false;
 
   final List<_OnboardPageData> _pages = const [
-    _OnboardPageData(
+    _OnboardPageData.feature(
       title: 'Find the exact tech you want',
       subtitle:
           'Browse curated devices, compare specs, and spot deals in seconds.',
@@ -25,7 +31,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       glow: Color(0xFF67E8F9),
       gradient: [Color(0xFF0F172A), Color(0xFF164E63)],
     ),
-    _OnboardPageData(
+    _OnboardPageData.feature(
       title: 'Save more with smart promotions',
       subtitle:
           'Unlock exclusive offers and seasonal discounts tailored for you.',
@@ -34,14 +40,20 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       glow: Color(0xFFFBBF24),
       gradient: [Color(0xFF1E293B), Color(0xFF7C2D12)],
     ),
-    _OnboardPageData(
+    _OnboardPageData.feature(
       title: 'Checkout with total confidence',
-      subtitle:
-          'Secure payments, trusted gateways, and instant confirmation.',
+      subtitle: 'Secure payments, trusted gateways, and instant confirmation.',
       lottieAsset: 'assets/lottie/payment.json',
       accent: Color(0xFF22C55E),
       glow: Color(0xFFA7F3D0),
       gradient: [Color(0xFF0F172A), Color(0xFF064E3B)],
+    ),
+    _OnboardPageData.language(
+      title: 'Choose language',
+      subtitle: 'You can edit it later in your profile',
+      accent: Color(0xFF077CB4),
+      glow: Color(0xFF45AEDF),
+      gradient: [Color(0xFFF8FCFF), Color(0xFFEEF6FD)],
     ),
   ];
 
@@ -54,6 +66,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   void _goNext() {
+    if (_currentPage >= _lastPage) return;
+
     _controller.nextPage(
       duration: const Duration(milliseconds: 320),
       curve: Curves.easeOutCubic,
@@ -61,6 +75,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   void _goBack() {
+    if (_currentPage == 0) return;
+
     _controller.previousPage(
       duration: const Duration(milliseconds: 320),
       curve: Curves.easeOutCubic,
@@ -75,9 +91,58 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     );
   }
 
+  void _selectLanguage(String code) {
+    setState(() => _selectedLanguageCode = code);
+  }
+
+  Future<void> _persistLanguageSelection() async {
+    final prefs = await SharedPreferences.getInstance();
+    final languageCode = _selectedLanguageCode ?? 'en';
+    await prefs.setString(_languagePreferenceKey, languageCode);
+  }
+
+  Future<void> _completeOnboarding() async {
+    if (_selectedLanguageCode == null || _savingLanguage) return;
+
+    setState(() => _savingLanguage = true);
+    try {
+      await _persistLanguageSelection();
+      if (!mounted) return;
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const LoginScreen()),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _savingLanguage = false);
+      }
+    }
+  }
+
+  Future<void> _skipToHome() async {
+    if (_savingLanguage) return;
+
+    setState(() => _savingLanguage = true);
+    try {
+      await _persistLanguageSelection();
+      if (!mounted) return;
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const MainNavigationScreen()),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _savingLanguage = false);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final page = _pages[_currentPage];
+    final isLanguagePage = page.isLanguage;
 
     return Scaffold(
       body: AnimatedContainer(
@@ -93,16 +158,45 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         child: SafeArea(
           child: Stack(
             children: [
-              Positioned(
-                top: -80,
-                right: -60,
-                child: _GlowOrb(color: page.glow, size: 180),
-              ),
-              Positioned(
-                bottom: -100,
-                left: -40,
-                child: _GlowOrb(color: page.accent, size: 220),
-              ),
+              if (isLanguagePage) ...[
+                const Positioned(
+                  top: -48,
+                  right: -36,
+                  child: _LanguageBackdropPattern(
+                    size: 170,
+                    color: Color(0xFFC2D4E9),
+                  ),
+                ),
+                const Positioned(
+                  bottom: 130,
+                  left: -44,
+                  child: _LanguageBackdropPattern(
+                    size: 150,
+                    color: Color(0xFFD5E2EF),
+                    turns: 0.7,
+                  ),
+                ),
+                const Positioned(
+                  bottom: -28,
+                  right: -24,
+                  child: _LanguageBackdropPattern(
+                    size: 130,
+                    color: Color(0xFFE1D5F0),
+                    turns: -0.35,
+                  ),
+                ),
+              ] else ...[
+                Positioned(
+                  top: -80,
+                  right: -60,
+                  child: _GlowOrb(color: page.glow, size: 180),
+                ),
+                Positioned(
+                  bottom: -100,
+                  left: -40,
+                  child: _GlowOrb(color: page.accent, size: 220),
+                ),
+              ],
               Column(
                 children: [
                   Padding(
@@ -113,6 +207,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                             ? _RoundIconButton(
                                 icon: Icons.arrow_back_rounded,
                                 onTap: _goBack,
+                                light: isLanguagePage,
                               )
                             : const SizedBox(width: 44),
                         const Spacer(),
@@ -133,7 +228,16 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         setState(() => _currentPage = index);
                       },
                       itemBuilder: (context, index) {
-                        return _OnboardPageView(data: _pages[index]);
+                        final item = _pages[index];
+                        if (item.isLanguage) {
+                          return _LanguageChoicePageView(
+                            data: item,
+                            selectedLanguageCode: _selectedLanguageCode,
+                            onSelect: _selectLanguage,
+                          );
+                        }
+
+                        return _OnboardPageView(data: item);
                       },
                     ),
                   ),
@@ -141,42 +245,36 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     count: _pages.length,
                     currentIndex: _currentPage,
                     activeColor: page.accent,
+                    inactiveColor: isLanguagePage
+                        ? const Color(0xFFB7CADB)
+                        : Colors.white.withValues(alpha: 0.35),
                   ),
                   const SizedBox(height: 18),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 20),
                     child: _currentPage == _lastPage
-                        ? Row(
+                        ? Column(
                             children: [
-                              Expanded(
-                                child: _SecondaryButton(
-                                  text: 'Login',
-                                  color: page.accent,
-                                  onTap: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) => const LoginScreen(),
-                                      ),
-                                    );
-                                  },
+                              _PrimaryButton(
+                                text: _savingLanguage
+                                    ? 'Saving...'
+                                    : 'Continue',
+                                gradient: [page.accent, page.glow],
+                                onTap:
+                                    _selectedLanguageCode == null ||
+                                        _savingLanguage
+                                    ? null
+                                    : _completeOnboarding,
+                                trailing: const Icon(
+                                  Icons.keyboard_double_arrow_right_rounded,
+                                  color: Colors.white,
+                                  size: 18,
                                 ),
                               ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: _PrimaryButton(
-                                  text: 'Get Started',
-                                  gradient: [page.accent, page.glow],
-                                  onTap: () {
-                                    Navigator.pushReplacement(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) =>
-                                            const MainNavigationScreen(),
-                                      ),
-                                    );
-                                  },
-                                ),
+                              const SizedBox(height: 10),
+                              _SecondaryActionButton(
+                                text: 'Skip to Home',
+                                onTap: _savingLanguage ? null : _skipToHome,
                               ),
                             ],
                           )
@@ -197,22 +295,36 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 }
 
+enum _OnboardPageKind { feature, language }
+
 class _OnboardPageData {
-  const _OnboardPageData({
+  const _OnboardPageData.feature({
     required this.title,
     required this.subtitle,
     required this.lottieAsset,
     required this.accent,
     required this.glow,
     required this.gradient,
-  });
+  }) : kind = _OnboardPageKind.feature;
 
+  const _OnboardPageData.language({
+    required this.title,
+    required this.subtitle,
+    required this.accent,
+    required this.glow,
+    required this.gradient,
+  }) : kind = _OnboardPageKind.language,
+       lottieAsset = null;
+
+  final _OnboardPageKind kind;
   final String title;
   final String subtitle;
-  final String lottieAsset;
+  final String? lottieAsset;
   final Color accent;
   final Color glow;
   final List<Color> gradient;
+
+  bool get isLanguage => kind == _OnboardPageKind.language;
 }
 
 class _OnboardPageView extends StatelessWidget {
@@ -222,8 +334,9 @@ class _OnboardPageView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final visualSize =
-        (MediaQuery.of(context).size.width * 0.72).clamp(220.0, 320.0).toDouble();
+    final visualSize = (MediaQuery.of(context).size.width * 0.72)
+        .clamp(220.0, 320.0)
+        .toDouble();
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -261,7 +374,7 @@ class _OnboardPageView extends StatelessWidget {
                   ),
                 ),
                 Lottie.asset(
-                  data.lottieAsset,
+                  data.lottieAsset!,
                   width: visualSize * 0.68,
                   height: visualSize * 0.68,
                   fit: BoxFit.contain,
@@ -323,39 +436,243 @@ class _OnboardPageView extends StatelessWidget {
   }
 }
 
+class _LanguageChoicePageView extends StatelessWidget {
+  const _LanguageChoicePageView({
+    required this.data,
+    required this.selectedLanguageCode,
+    required this.onSelect,
+  });
+
+  static const List<_LanguageOption> _options = [
+    _LanguageOption(code: 'km', label: 'ខ្មែរ', flagEmoji: '🇰🇭'),
+    _LanguageOption(code: 'en', label: 'English', flagEmoji: '🇺🇸'),
+  ];
+
+  final _OnboardPageData data;
+  final String? selectedLanguageCode;
+  final ValueChanged<String> onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(26, 26, 26, 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            data.title,
+            style: GoogleFonts.sora(
+              fontSize: 39,
+              height: 1.15,
+              fontWeight: FontWeight.w700,
+              color: const Color(0xFF1A739E),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            data.subtitle,
+            style: GoogleFonts.sora(
+              fontSize: 15,
+              fontWeight: FontWeight.w500,
+              color: const Color(0xFF617285),
+            ),
+          ),
+          const SizedBox(height: 26),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
+            decoration: BoxDecoration(
+              color: const Color(0xFF007DB3),
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF007DB3).withValues(alpha: 0.25),
+                  blurRadius: 24,
+                  offset: const Offset(0, 14),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Language',
+                  style: GoogleFonts.sora(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white.withValues(alpha: 0.85),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                for (int index = 0; index < _options.length; index++) ...[
+                  _LanguageTile(
+                    option: _options[index],
+                    selected: selectedLanguageCode == _options[index].code,
+                    onTap: () => onSelect(_options[index].code),
+                  ),
+                  if (index != _options.length - 1)
+                    Divider(
+                      color: Colors.white.withValues(alpha: 0.24),
+                      thickness: 1,
+                      height: 2,
+                    ),
+                ],
+              ],
+            ),
+          ),
+          const Spacer(),
+        ],
+      ),
+    );
+  }
+}
+
+class _LanguageTile extends StatelessWidget {
+  const _LanguageTile({
+    required this.option,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final _LanguageOption option;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          child: Row(
+            children: [
+              Container(
+                width: 38,
+                height: 38,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.85),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.12),
+                      blurRadius: 8,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
+                ),
+                child: Text(
+                  option.flagEmoji,
+                  style: const TextStyle(fontSize: 21),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  option.label,
+                  style: GoogleFonts.sora(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+              _LanguageRadio(selected: selected),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _LanguageRadio extends StatelessWidget {
+  const _LanguageRadio({required this.selected});
+
+  final bool selected;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      width: 25,
+      height: 25,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: selected
+            ? Colors.white.withValues(alpha: 0.16)
+            : Colors.transparent,
+        border: Border.all(
+          color: Colors.white.withValues(alpha: selected ? 0.95 : 0.78),
+          width: 2,
+        ),
+      ),
+      child: AnimatedOpacity(
+        duration: const Duration(milliseconds: 180),
+        opacity: selected ? 1 : 0,
+        child: Center(
+          child: Container(
+            width: 10,
+            height: 10,
+            decoration: const BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.white,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _LanguageOption {
+  const _LanguageOption({
+    required this.code,
+    required this.label,
+    required this.flagEmoji,
+  });
+
+  final String code;
+  final String label;
+  final String flagEmoji;
+}
+
 class _DotsRow extends StatelessWidget {
   const _DotsRow({
     required this.count,
     required this.currentIndex,
     required this.activeColor,
+    required this.inactiveColor,
   });
 
   final int count;
   final int currentIndex;
   final Color activeColor;
+  final Color inactiveColor;
 
   @override
   Widget build(BuildContext context) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
-      children: List.generate(
-        count,
-        (index) {
-          final active = index == currentIndex;
-          return AnimatedContainer(
-            duration: const Duration(milliseconds: 260),
-            margin: const EdgeInsets.symmetric(horizontal: 4),
-            width: active ? 20 : 7,
-            height: 7,
-            decoration: BoxDecoration(
-              color: active
-                  ? activeColor
-                  : Colors.white.withValues(alpha: 0.35),
-              borderRadius: BorderRadius.circular(999),
-            ),
-          );
-        },
-      ),
+      children: List.generate(count, (index) {
+        final active = index == currentIndex;
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 260),
+          margin: const EdgeInsets.symmetric(horizontal: 4),
+          width: active ? 20 : 7,
+          height: 7,
+          decoration: BoxDecoration(
+            color: active ? activeColor : inactiveColor,
+            borderRadius: BorderRadius.circular(999),
+          ),
+        );
+      }),
     );
   }
 }
@@ -365,20 +682,27 @@ class _PrimaryButton extends StatelessWidget {
     required this.text,
     required this.gradient,
     required this.onTap,
+    this.trailing,
   });
 
   final String text;
   final List<Color> gradient;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
+  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
+    final enabled = onTap != null;
+    final colors = enabled
+        ? gradient
+        : const [Color(0xFFAAC3D3), Color(0xFFAAC3D3)];
+
     return SizedBox(
       height: 52,
       width: double.infinity,
       child: DecoratedBox(
         decoration: BoxDecoration(
-          gradient: LinearGradient(colors: gradient),
+          gradient: LinearGradient(colors: colors),
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
@@ -394,13 +718,22 @@ class _PrimaryButton extends StatelessWidget {
             borderRadius: BorderRadius.circular(16),
             onTap: onTap,
             child: Center(
-              child: Text(
-                text,
-                style: GoogleFonts.sora(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.white,
-                ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    text,
+                    style: GoogleFonts.sora(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white.withValues(alpha: enabled ? 1 : 0.72),
+                    ),
+                  ),
+                  if (trailing != null) ...[
+                    const SizedBox(width: 8),
+                    trailing!,
+                  ],
+                ],
               ),
             ),
           ),
@@ -410,35 +743,35 @@ class _PrimaryButton extends StatelessWidget {
   }
 }
 
-class _SecondaryButton extends StatelessWidget {
-  const _SecondaryButton({
-    required this.text,
-    required this.color,
-    required this.onTap,
-  });
+class _SecondaryActionButton extends StatelessWidget {
+  const _SecondaryActionButton({required this.text, required this.onTap});
 
   final String text;
-  final Color color;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 52,
+      width: double.infinity,
+      height: 46,
       child: OutlinedButton(
         onPressed: onTap,
         style: OutlinedButton.styleFrom(
-          foregroundColor: Colors.white,
-          side: BorderSide(color: Colors.white.withValues(alpha: 0.7), width: 1.2),
-          backgroundColor: Colors.white.withValues(alpha: 0.12),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          side: BorderSide(
+            color: const Color(0xFF007DB3).withValues(alpha: 0.38),
+            width: 1.2,
+          ),
+          backgroundColor: Colors.white.withValues(alpha: 0.76),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
         ),
         child: Text(
           text,
           style: GoogleFonts.sora(
-            fontSize: 15,
-            fontWeight: FontWeight.w700,
-            color: color,
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: const Color(0xFF0E638A),
           ),
         ),
       ),
@@ -447,10 +780,15 @@ class _SecondaryButton extends StatelessWidget {
 }
 
 class _RoundIconButton extends StatelessWidget {
-  const _RoundIconButton({required this.icon, required this.onTap});
+  const _RoundIconButton({
+    required this.icon,
+    required this.onTap,
+    this.light = false,
+  });
 
   final IconData icon;
   final VoidCallback onTap;
+  final bool light;
 
   @override
   Widget build(BuildContext context) {
@@ -461,11 +799,18 @@ class _RoundIconButton extends StatelessWidget {
         height: 42,
         width: 42,
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.18),
+          color: light ? Colors.white : Colors.white.withValues(alpha: 0.18),
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.4)),
+          border: Border.all(
+            color: light
+                ? const Color(0xFFD3E4F2)
+                : Colors.white.withValues(alpha: 0.4),
+          ),
         ),
-        child: Icon(icon, color: Colors.white),
+        child: Icon(
+          icon,
+          color: light ? const Color(0xFF2A6685) : Colors.white,
+        ),
       ),
     );
   }
@@ -526,5 +871,96 @@ class _GlowOrb extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+class _LanguageBackdropPattern extends StatelessWidget {
+  const _LanguageBackdropPattern({
+    required this.size,
+    required this.color,
+    this.turns = 0,
+  });
+
+  final double size;
+  final Color color;
+  final double turns;
+
+  @override
+  Widget build(BuildContext context) {
+    return Transform.rotate(
+      angle: turns,
+      child: SizedBox(
+        width: size,
+        height: size,
+        child: CustomPaint(
+          painter: _LanguageBackdropPainter(
+            color: color.withValues(alpha: 0.55),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _LanguageBackdropPainter extends CustomPainter {
+  const _LanguageBackdropPainter({required this.color});
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final linePaint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 4
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+
+    final nodePaint = Paint()
+      ..color = color.withValues(alpha: 0.34)
+      ..style = PaintingStyle.fill;
+
+    final width = size.width;
+    final height = size.height;
+    final networkPath = Path()
+      ..moveTo(width * 0.16, height * 0.16)
+      ..lineTo(width * 0.16, height * 0.78)
+      ..lineTo(width * 0.52, height * 0.78)
+      ..lineTo(width * 0.52, height * 0.34)
+      ..lineTo(width * 0.84, height * 0.34);
+
+    final boltPath = Path()
+      ..moveTo(width * 0.28, height * 0.92)
+      ..lineTo(width * 0.44, height * 0.62)
+      ..lineTo(width * 0.34, height * 0.62)
+      ..lineTo(width * 0.5, height * 0.43);
+
+    canvas.drawPath(networkPath, linePaint);
+    canvas.drawCircle(
+      Offset(width * 0.16, height * 0.16),
+      width * 0.055,
+      linePaint,
+    );
+    canvas.drawCircle(
+      Offset(width * 0.52, height * 0.34),
+      width * 0.055,
+      linePaint,
+    );
+    canvas.drawCircle(
+      Offset(width * 0.84, height * 0.34),
+      width * 0.055,
+      linePaint,
+    );
+    canvas.drawCircle(
+      Offset(width * 0.52, height * 0.78),
+      width * 0.05,
+      nodePaint,
+    );
+    canvas.drawPath(boltPath, linePaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _LanguageBackdropPainter oldDelegate) {
+    return oldDelegate.color != color;
   }
 }

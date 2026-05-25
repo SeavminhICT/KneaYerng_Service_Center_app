@@ -2633,7 +2633,6 @@ class _KhqrPaymentSheetState extends State<_KhqrPaymentSheet> {
   bool _isTerminalFailure = false;
   bool _autoCheckStopped = false;
   bool _isOpeningTicket = false;
-  bool _didAutoOpenTicket = false;
   int _checkAttempts = 0;
   int _maxCheckAttempts = 200;
   String? _lastStatus;
@@ -2661,6 +2660,8 @@ class _KhqrPaymentSheetState extends State<_KhqrPaymentSheet> {
       case 'INVALID_TRANSACTION':
       case 'EXPIRED':
       case 'TIMEOUT':
+      case 'UNAUTHORIZED':
+      case 'UNAVAILABLE':
       case 'CANCELLED':
       case 'CANCELED':
       case 'REJECTED':
@@ -2710,7 +2711,7 @@ class _KhqrPaymentSheetState extends State<_KhqrPaymentSheet> {
     super.initState();
     _expiresAt = _parseExpiresAt(widget.expiresAtIso);
     _maxCheckAttempts = _deriveMaxAttempts();
-    _statusMessage = 'Waiting for payment confirmation...';
+    _statusMessage = 'Checking payment automatically...';
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         _startChecking();
@@ -2856,11 +2857,12 @@ class _KhqrPaymentSheetState extends State<_KhqrPaymentSheet> {
   }
 
   Future<void> _handlePaymentSuccess() async {
-    if (!_shouldOfferPickupTicket || _didAutoOpenTicket) return;
-    _didAutoOpenTicket = true;
-    await Future<void>.delayed(const Duration(milliseconds: 350));
     if (!mounted) return;
-    await _openTicketDetail(showFeedback: false);
+    _setStatusMessage(
+      _shouldOfferPickupTicket
+          ? 'Payment successful. Tap View Pickup Ticket or Done.'
+          : 'Payment successful. Tap Done to continue.',
+    );
   }
 
   Future<void> _checkStatus({bool fromTimer = false}) async {
@@ -2938,11 +2940,10 @@ class _KhqrPaymentSheetState extends State<_KhqrPaymentSheet> {
       if (!mounted) return;
       setState(() {
         _isTerminalFailure = true;
-        _statusMessage =
-            result.status.toUpperCase() == 'EXPIRED' ||
-                result.status.toUpperCase() == 'TIMEOUT'
-            ? 'QR expired. Please generate a new one.'
-            : 'Payment failed. Please try again.';
+        _statusMessage = _failureMessageForStatus(
+          result.status,
+          result.message,
+        );
       });
       return;
     }
@@ -2958,7 +2959,7 @@ class _KhqrPaymentSheetState extends State<_KhqrPaymentSheet> {
         });
       } else if (fromTimer && mounted) {
         if (_statusMessage == null) {
-          _setStatusMessage('Waiting for payment confirmation...');
+          _setStatusMessage('Checking payment automatically...');
         }
       } else if (!fromTimer) {
         _setStatusMessage(result.message ?? result.status);
@@ -2968,17 +2969,48 @@ class _KhqrPaymentSheetState extends State<_KhqrPaymentSheet> {
 
     if (fromTimer) {
       if (_statusMessage == null) {
-        _setStatusMessage('Waiting for payment confirmation...');
+        _setStatusMessage('Checking payment automatically...');
       }
       return;
     }
     _setStatusMessage(result.message ?? result.status);
   }
 
+  String _failureMessageForStatus(String status, String? message) {
+    final normalized = status.toUpperCase();
+    if (normalized == 'EXPIRED' || normalized == 'TIMEOUT') {
+      return 'QR expired. Please generate a new one.';
+    }
+    if (normalized == 'UNAUTHORIZED') {
+      return message?.trim().isNotEmpty == true
+          ? message!.trim()
+          : 'Bakong sandbox status check is unauthorized. Check the sandbox token.';
+    }
+    if (normalized == 'UNAVAILABLE') {
+      return message?.trim().isNotEmpty == true
+          ? message!.trim()
+          : 'Bakong status checker is not configured.';
+    }
+    return message?.trim().isNotEmpty == true
+        ? message!.trim()
+        : 'Payment failed. Please try again.';
+  }
+
+  Future<void> _checkStatusManually() async {
+    if (_isChecking || _isSuccess || _isTerminalFailure) return;
+    if (_autoCheckStopped) {
+      setState(() {
+        _autoCheckStopped = false;
+      });
+    }
+    await _checkStatus(fromTimer: false);
+  }
+
   @override
   Widget build(BuildContext context) {
     final bottomInset = 16 + MediaQuery.of(context).padding.bottom;
-    final showQr = !_isSuccess && !_isScanned;
+    final showFailure = _isTerminalFailure;
+    final showQr = !_isSuccess && !_isScanned && !showFailure;
     final showScanned = !_isSuccess && _isScanned;
 
     return SafeArea(
@@ -3029,7 +3061,9 @@ class _KhqrPaymentSheetState extends State<_KhqrPaymentSheet> {
               const SizedBox(height: 16),
               AnimatedSwitcher(
                 duration: const Duration(milliseconds: 260),
-                child: showQr
+                child: showFailure
+                    ? _buildFailedStep()
+                    : showQr
                     ? _buildQrStep()
                     : showScanned
                     ? _buildScannedStep()
@@ -3308,9 +3342,17 @@ class _KhqrPaymentSheetState extends State<_KhqrPaymentSheet> {
     );
   }
 
-  Widget _buildPaidStep() {
+  Widget _buildFailedStep() {
+    final message = _statusMessage ?? 'Payment failed. Please try again.';
+    final isExpired =
+        message.toLowerCase().contains('expired') ||
+        _lastStatus == 'EXPIRED' ||
+        _lastStatus == 'TIMEOUT';
+    final isCheckError =
+        _lastStatus == 'UNAUTHORIZED' || _lastStatus == 'UNAVAILABLE';
+
     return Container(
-      key: const ValueKey('paid-step'),
+      key: const ValueKey('failed-step'),
       padding: const EdgeInsets.only(top: 24, bottom: 16),
       child: Column(
         children: [
@@ -3319,20 +3361,114 @@ class _KhqrPaymentSheetState extends State<_KhqrPaymentSheet> {
             height: 84,
             decoration: const BoxDecoration(
               shape: BoxShape.circle,
-              color: Color(0xFF06B6D4),
+              color: Color(0xFFFEE2E2),
             ),
-            child: const Icon(Icons.check, color: Colors.white, size: 48),
+            child: const Icon(
+              Icons.error_rounded,
+              color: Color(0xFFDC2626),
+              size: 48,
+            ),
           ),
           const SizedBox(height: 18),
-          const Text(
-            'Payment Successful',
-            style: TextStyle(
+          Text(
+            isCheckError
+                ? 'Bakong Check Error'
+                : (isExpired ? 'Payment Expired' : 'Payment Failed'),
+            style: const TextStyle(
               fontSize: 30,
               color: Color(0xFF0F172A),
               fontWeight: FontWeight.w700,
             ),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 8),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 18),
+            child: Text(
+              message,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 14,
+                color: Color(0xFFB91C1C),
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          const SizedBox(height: 18),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: const Color(0xFFE5E7EB)),
+            ),
+            child: Column(
+              children: [
+                _qrMetaRow(
+                  'Amount',
+                  '\$${widget.amount.toStringAsFixed(2)} USD',
+                ),
+                const SizedBox(height: 6),
+                _qrMetaRow(
+                  'Reference',
+                  '#${widget.transactionId.substring(0, 8)}',
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPaidStep() {
+    return Container(
+      key: const ValueKey('paid-step'),
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(18, 22, 18, 18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: const Color(0xFFE5E7EB)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x140F172A),
+            blurRadius: 22,
+            offset: Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Container(
+            width: 88,
+            height: 88,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: const LinearGradient(
+                colors: [Color(0xFF45AEDF), Color(0xFF077CB4)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF077CB4).withValues(alpha: 0.28),
+                  blurRadius: 24,
+                  offset: const Offset(0, 12),
+                ),
+              ],
+            ),
+            child: const Icon(Icons.check, color: Colors.white, size: 48),
+          ),
+          const SizedBox(height: 22),
+          const Text(
+            'Payment Successful',
+            style: TextStyle(
+              fontSize: 28,
+              color: Color(0xFF0F172A),
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 8),
           const Text(
             'Your payment was successful.',
             style: TextStyle(
@@ -3341,7 +3477,7 @@ class _KhqrPaymentSheetState extends State<_KhqrPaymentSheet> {
               fontWeight: FontWeight.w600,
             ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 18),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.end,
@@ -3349,9 +3485,9 @@ class _KhqrPaymentSheetState extends State<_KhqrPaymentSheet> {
               Text(
                 widget.amount.toStringAsFixed(2),
                 style: const TextStyle(
-                  fontSize: 41,
-                  color: Color(0xFF334155),
-                  fontWeight: FontWeight.w700,
+                  fontSize: 44,
+                  color: Color(0xFF0F172A),
+                  fontWeight: FontWeight.w800,
                 ),
               ),
               const SizedBox(width: 6),
@@ -3368,13 +3504,42 @@ class _KhqrPaymentSheetState extends State<_KhqrPaymentSheet> {
               ),
             ],
           ),
-          const SizedBox(height: 18),
-          TextButton.icon(
+          const SizedBox(height: 22),
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8FAFC),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+            ),
+            child: Column(
+              children: [
+                _SuccessReceiptRow(
+                  label: 'Order',
+                  value: widget.orderNumber ?? '#${widget.orderId}',
+                ),
+                const SizedBox(height: 10),
+                _SuccessReceiptRow(label: 'Method', value: 'Bakong KHQR'),
+                const SizedBox(height: 10),
+                _SuccessReceiptRow(
+                  label: 'Reference',
+                  value: '#${widget.transactionId.substring(0, 8)}',
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          OutlinedButton.icon(
             onPressed: null,
-            icon: const Icon(Icons.picture_as_pdf_outlined),
-            label: const Text('Get PDF Receipt'),
-            style: TextButton.styleFrom(
-              foregroundColor: const Color(0xFF06B6D4),
+            icon: const Icon(Icons.picture_as_pdf_outlined, size: 18),
+            label: const Text('PDF Receipt Coming Soon'),
+            style: OutlinedButton.styleFrom(
+              disabledForegroundColor: const Color(0xFF94A3B8),
+              side: const BorderSide(color: Color(0xFFE2E8F0)),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
               textStyle: const TextStyle(fontWeight: FontWeight.w700),
             ),
           ),
@@ -3452,6 +3617,64 @@ class _KhqrPaymentSheetState extends State<_KhqrPaymentSheet> {
         ),
       );
     }
-    return const SizedBox.shrink();
+    return SizedBox(
+      width: double.infinity,
+      child: OutlinedButton.icon(
+        onPressed: _isChecking ? null : _checkStatusManually,
+        icon: _isChecking
+            ? const SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : const Icon(Icons.refresh_rounded, size: 18),
+        label: Text(
+          _isChecking ? 'Checking Payment...' : 'Check Payment Status',
+        ),
+        style: OutlinedButton.styleFrom(
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          side: const BorderSide(color: Color(0xFF0F6BFF)),
+          foregroundColor: const Color(0xFF0F6BFF),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        ),
+      ),
+    );
+  }
+}
+
+class _SuccessReceiptRow extends StatelessWidget {
+  const _SuccessReceiptRow({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 12,
+            color: Color(0xFF64748B),
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const Spacer(),
+        Flexible(
+          child: Text(
+            value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.right,
+            style: const TextStyle(
+              fontSize: 12,
+              color: Color(0xFF0F172A),
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ),
+      ],
+    );
   }
 }

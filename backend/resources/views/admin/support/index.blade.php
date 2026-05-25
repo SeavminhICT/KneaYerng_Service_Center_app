@@ -26,6 +26,12 @@
                     <button onclick="window.setFilter('waiting_for_support')" class="filter-tab px-3 py-1.5 text-xs font-semibold rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 whitespace-nowrap" data-filter="waiting_for_support">Waiting</button>
                     <button onclick="window.setFilter('resolved')" class="filter-tab px-3 py-1.5 text-xs font-semibold rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 whitespace-nowrap" data-filter="resolved">Done</button>
                 </div>
+                <div class="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 dark:border-slate-800 dark:bg-slate-900/60">
+                    <p class="text-[11px] font-semibold text-slate-500">Browser alerts + sound</p>
+                    <button id="enable-browser-alerts-btn" type="button" class="rounded-lg bg-primary-600 px-2.5 py-1 text-[11px] font-semibold text-white transition hover:bg-primary-700">
+                        Enable
+                    </button>
+                </div>
             </div>
             
             <!-- Scrollable Conversation List Area -->
@@ -114,6 +120,10 @@ document.addEventListener('DOMContentLoaded', function() {
     let isFetchingList = false;
     let isFetchingChat = false;
     let currentFilter = 'all';
+    const initialConversationFromUrl = Number(new URLSearchParams(window.location.search).get('conversation') || 0);
+    let initialConversationOpened = false;
+    let conversationSnapshotReady = false;
+    const latestCustomerMessageSnapshot = new Map();
 
     const convList = document.getElementById('conversation-list');
     const chatArea = document.getElementById('chat-area');
@@ -124,6 +134,251 @@ document.addEventListener('DOMContentLoaded', function() {
     const messageInput = document.getElementById('message-input');
     const statusSelect = document.getElementById('chat-status-select');
     const searchInput = document.getElementById('chat-search');
+    const enableBrowserAlertsBtn = document.getElementById('enable-browser-alerts-btn');
+    let soundUnlocked = false;
+
+    function updateAlertButtonState() {
+        if (!enableBrowserAlertsBtn) {
+            return;
+        }
+
+        if (!('Notification' in window)) {
+            enableBrowserAlertsBtn.textContent = 'Unsupported';
+            enableBrowserAlertsBtn.disabled = true;
+            enableBrowserAlertsBtn.classList.add('cursor-not-allowed', 'opacity-60');
+            return;
+        }
+
+        if (Notification.permission === 'granted') {
+            enableBrowserAlertsBtn.textContent = 'Test Alert';
+            enableBrowserAlertsBtn.disabled = false;
+            enableBrowserAlertsBtn.classList.remove('cursor-not-allowed', 'opacity-60');
+            return;
+        }
+
+        if (Notification.permission === 'denied') {
+            enableBrowserAlertsBtn.textContent = 'Fix Browser';
+            enableBrowserAlertsBtn.disabled = false;
+            enableBrowserAlertsBtn.classList.remove('cursor-not-allowed', 'opacity-60');
+            return;
+        }
+
+        enableBrowserAlertsBtn.textContent = 'Enable';
+        enableBrowserAlertsBtn.disabled = false;
+        enableBrowserAlertsBtn.classList.remove('cursor-not-allowed', 'opacity-60');
+    }
+
+    function sendTestBrowserNotification() {
+        if (!('Notification' in window) || Notification.permission !== 'granted') {
+            return false;
+        }
+
+        const testNote = new Notification('Support Alerts Active', {
+            body: 'You will receive new support messages here.',
+            tag: 'support-test-alert',
+            renotify: true,
+        });
+
+        setTimeout(() => {
+            testNote.close();
+        }, 4500);
+
+        return true;
+    }
+
+    function showNotificationPermissionHelp() {
+        if (window.Swal) {
+            window.Swal.fire({
+                icon: 'warning',
+                title: 'Notifications Are Blocked',
+                html: '1. Click the lock icon in the address bar.<br>2. Set Notifications to Allow.<br>3. Reload this page.',
+                confirmButtonColor: '#2563eb',
+            });
+            return;
+        }
+
+        if (typeof window.adminToast === 'function') {
+            window.adminToast('Notifications blocked. Set site permission to Allow, then reload page.', {
+                type: 'error',
+                duration: 6200
+            });
+        }
+    }
+
+    async function requestBrowserNotificationPermission() {
+        await unlockNotificationSound();
+
+        if (!('Notification' in window)) {
+            updateAlertButtonState();
+            return 'unsupported';
+        }
+
+        if (Notification.permission !== 'default') {
+            updateAlertButtonState();
+            return Notification.permission;
+        }
+
+        try {
+            const permission = await Notification.requestPermission();
+            if (permission === 'granted' && typeof window.adminToast === 'function') {
+                window.adminToast('Browser notifications enabled for support chat.', { type: 'success' });
+                playIncomingNotificationSound();
+                sendTestBrowserNotification();
+            } else if (permission === 'denied' && typeof window.adminToast === 'function') {
+                window.adminToast('Browser notifications were blocked by this browser.', { type: 'error' });
+            }
+            return permission;
+        } catch (err) {
+            console.error('Unable to request notification permission:', err);
+            return 'error';
+        } finally {
+            updateAlertButtonState();
+        }
+    }
+
+    async function promptNotificationPermissionOnOpen() {
+        if (!('Notification' in window) || Notification.permission !== 'default') {
+            return;
+        }
+
+        if (!window.Swal) {
+            if (typeof window.adminToast === 'function') {
+                window.adminToast('Click Enable to allow browser notifications for support messages.', {
+                    type: 'success',
+                    duration: 5200
+                });
+            }
+            return;
+        }
+
+        const result = await window.Swal.fire({
+            icon: 'info',
+            title: 'Enable Support Alerts',
+            text: 'Allow browser notifications and sound for new customer messages.',
+            showCancelButton: true,
+            confirmButtonText: 'Enable Now',
+            cancelButtonText: 'Not Now',
+            confirmButtonColor: '#2563eb',
+            cancelButtonColor: '#64748b',
+        });
+
+        if (result.isConfirmed) {
+            await requestBrowserNotificationPermission();
+        }
+    }
+
+    async function unlockNotificationSound() {
+        soundUnlocked = true;
+    }
+
+    function playIncomingNotificationSound() {
+        if (!soundUnlocked) {
+            return;
+        }
+
+        if (typeof window.adminRealtimePlaySound === 'function') {
+            window.adminRealtimePlaySound();
+        }
+    }
+
+    function getMessagePreview(message, fallback) {
+        if (!message) {
+            return fallback || 'New support message';
+        }
+
+        if (message.message_type === 'voice') {
+            return 'Sent a voice message';
+        }
+
+        if ((message.body || '').trim() !== '') {
+            return message.body;
+        }
+
+        return fallback || 'Sent a message';
+    }
+
+    function maybeShowBrowserNotification(conversation, latestMessage) {
+        if (!('Notification' in window) || Notification.permission !== 'granted') {
+            return;
+        }
+
+        const customerName = conversation.customer?.name || 'Customer';
+        const preview = getMessagePreview(latestMessage, conversation.subject || 'New support request');
+        const browserNote = new Notification('New Support Message', {
+            body: `${customerName}: ${preview}`,
+            tag: `support-${conversation.id}`,
+            renotify: true,
+        });
+
+        browserNote.onclick = () => {
+            window.focus();
+            if (typeof window.selectConversation === 'function') {
+                window.selectConversation(conversation.id);
+            }
+            browserNote.close();
+        };
+    }
+
+    function notifyIncomingCustomerMessage(conversation, latestMessage) {
+        const customerName = conversation.customer?.name || 'Customer';
+        const preview = getMessagePreview(latestMessage, conversation.subject || 'New support request');
+        const isViewingSameConversation = activeConversationId === conversation.id && document.visibilityState === 'visible';
+
+        if (!isViewingSameConversation && typeof window.adminToast === 'function') {
+            window.adminToast(`New support message from ${customerName}: ${preview}`, {
+                type: 'success',
+                duration: 5200
+            });
+        }
+
+        playIncomingNotificationSound();
+        maybeShowBrowserNotification(conversation, latestMessage);
+    }
+
+    function trackIncomingCustomerMessages(nextConversations) {
+        const seenConversationIds = new Set();
+
+        nextConversations.forEach(conversation => {
+            seenConversationIds.add(conversation.id);
+
+            const latestMessage = conversation.latest_message;
+            if (!latestMessage || latestMessage.sender_type !== 'customer') {
+                latestCustomerMessageSnapshot.delete(conversation.id);
+                return;
+            }
+
+            const currentSignature = String(
+                latestMessage.id || latestMessage.created_at || `${conversation.id}:${latestMessage.body || ''}`
+            );
+            const previousSignature = latestCustomerMessageSnapshot.get(conversation.id);
+
+            if (conversationSnapshotReady && currentSignature !== previousSignature) {
+                notifyIncomingCustomerMessage(conversation, latestMessage);
+            }
+
+            latestCustomerMessageSnapshot.set(conversation.id, currentSignature);
+        });
+
+        Array.from(latestCustomerMessageSnapshot.keys()).forEach(conversationId => {
+            if (!seenConversationIds.has(conversationId)) {
+                latestCustomerMessageSnapshot.delete(conversationId);
+            }
+        });
+
+        if (!conversationSnapshotReady) {
+            conversationSnapshotReady = true;
+        }
+    }
+
+    function buildMessageSignature(conversationId, message) {
+        if (!message) {
+            return null;
+        }
+
+        return String(
+            message.id || message.created_at || `${conversationId}:${message.body || ''}`
+        );
+    }
 
     async function fetchConversations() {
         if (isFetchingList) return;
@@ -134,7 +389,16 @@ document.addEventListener('DOMContentLoaded', function() {
             if (response.ok) {
                 const result = await response.json();
                 conversations = result.data;
+                trackIncomingCustomerMessages(conversations);
                 renderConversationList();
+
+                if (!initialConversationOpened && initialConversationFromUrl > 0) {
+                    const matchedConversation = conversations.find(c => Number(c.id) === initialConversationFromUrl);
+                    if (matchedConversation && typeof window.selectConversation === 'function') {
+                        initialConversationOpened = true;
+                        window.selectConversation(initialConversationFromUrl);
+                    }
+                }
             }
         } catch (err) {
             console.error('Failed to fetch conversations:', err);
@@ -369,6 +633,73 @@ document.addEventListener('DOMContentLoaded', function() {
         renderConversationList();
     });
 
+    window.addEventListener('admin:realtime-support-message-created', function (event) {
+        const payload = event && event.detail ? event.detail : {};
+        const conversation = payload.conversation || {};
+        const latestMessage = payload.message || {};
+        const conversationId = conversation.id;
+
+        if (!conversationId) {
+            return;
+        }
+
+        const signature = buildMessageSignature(conversationId, latestMessage);
+        if (signature) {
+            latestCustomerMessageSnapshot.set(conversationId, signature);
+            conversationSnapshotReady = true;
+        }
+
+        notifyIncomingCustomerMessage({
+            id: conversationId,
+            customer: conversation.customer || {},
+            subject: conversation.subject || 'Support request',
+        }, latestMessage);
+
+        fetchConversations();
+
+        if (activeConversationId === conversationId) {
+            fetchChatMessages(conversationId, true);
+        }
+    });
+
+    document.addEventListener('click', unlockNotificationSound, { once: true });
+    document.addEventListener('keydown', unlockNotificationSound, { once: true });
+
+    if (enableBrowserAlertsBtn) {
+        enableBrowserAlertsBtn.addEventListener('click', async () => {
+            await unlockNotificationSound();
+
+            if (!('Notification' in window)) {
+                updateAlertButtonState();
+                return;
+            }
+
+            if (Notification.permission === 'granted') {
+                playIncomingNotificationSound();
+                if (sendTestBrowserNotification() && typeof window.adminToast === 'function') {
+                    window.adminToast('Test browser notification sent.', { type: 'success' });
+                }
+                updateAlertButtonState();
+                return;
+            }
+
+            if (Notification.permission === 'denied') {
+                showNotificationPermissionHelp();
+                updateAlertButtonState();
+                return;
+            }
+
+            await requestBrowserNotificationPermission();
+        });
+    }
+
+    if ('Notification' in window && Notification.permission === 'default') {
+        setTimeout(() => {
+            promptNotificationPermissionOnOpen();
+        });
+    }
+
+    updateAlertButtonState();
     fetchConversations();
     listPollInterval = setInterval(fetchConversations, 5000);
 

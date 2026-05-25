@@ -18,7 +18,7 @@ class FavoriteScreen extends StatelessWidget {
           backgroundColor: const Color(0xFFF6F7FB),
           appBar: AppBar(
             title: const Text(
-              'Favorites',
+              'Favorite',
               style: TextStyle(fontWeight: FontWeight.w700),
             ),
             backgroundColor: Colors.white,
@@ -88,8 +88,10 @@ class _FavoriteCard extends StatelessWidget {
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(12),
                 child: imageUrl == null || imageUrl.isEmpty
-                    ? const Icon(Icons.image_not_supported,
-                        color: Color(0xFF9CA3AF))
+                    ? const Icon(
+                        Icons.image_not_supported,
+                        color: Color(0xFF9CA3AF),
+                      )
                     : Image.network(
                         imageUrl,
                         fit: BoxFit.cover,
@@ -162,5 +164,3 @@ class _EmptyState extends StatelessWidget {
     );
   }
 }
-
-

@@ -376,7 +376,7 @@ class _HomeScreenState extends State<HomeScreen> {
               physics: const BouncingScrollPhysics(
                 parent: AlwaysScrollableScrollPhysics(),
               ),
-              padding: const EdgeInsets.fromLTRB(18, 16, 18, 34),
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 34),
               children: [
                 FutureBuilder<UserProfile?>(
                   future: _profileFuture,
@@ -384,7 +384,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     final name = snapshot.data?.displayName.trim() ?? 'User';
                     final safeName = name.isNotEmpty ? name : 'User';
                     return _HomeHeader(
-                      title: 'Kneayerng',
+                      title: 'KY-App',
                       welcomeName: safeName,
                       onMenuTap: () {
                         Navigator.of(context).push(
@@ -409,7 +409,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     );
                   },
                 ),
-                const SizedBox(height: 18),
+                const SizedBox(height: 14),
                 _SearchInput(
                   controller: _searchController,
                   focusNode: _searchFocusNode,
@@ -444,7 +444,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     },
                   ),
                 ],
-                const SizedBox(height: 18),
+                const SizedBox(height: 14),
                 FutureBuilder<List<Product>>(
                   future: _productsFuture,
                   builder: (context, snapshot) {
@@ -491,6 +491,19 @@ class _HomeScreenState extends State<HomeScreen> {
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        _HomeSectionHeader(
+                          title: 'Categories',
+                          actionLabel: 'View all',
+                          onTap: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    const CategoriesScreen(showBottomNav: true),
+                              ),
+                            );
+                          },
+                        ),
+                        const SizedBox(height: 14),
                         _CategoryShowcaseStrip(
                           categories: categories,
                           iconFor: _iconForCategory,
@@ -637,11 +650,13 @@ class _HomeHeader extends StatelessWidget {
     final greeting = welcomeName == 'User'
         ? 'Buy. Repair. Trust.'
         : 'Hi, $welcomeName';
+    final firstLetter = title.isNotEmpty ? title[0] : '';
+    final remainingTitle = title.length > 1 ? title.substring(1) : '';
 
     return Row(
       children: [
         _IconCircleButton(icon: Icons.menu_rounded, onTap: onMenuTap),
-        const SizedBox(width: 14),
+        const SizedBox(width: 12),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -650,17 +665,17 @@ class _HomeHeader extends StatelessWidget {
                 text: TextSpan(
                   children: [
                     TextSpan(
-                      text: 'i',
+                      text: firstLetter,
                       style: GoogleFonts.sora(
-                        fontSize: 22,
+                        fontSize: 20,
                         fontWeight: FontWeight.w700,
                         color: _primary,
                       ),
                     ),
                     TextSpan(
-                      text: title.substring(1),
+                      text: remainingTitle,
                       style: GoogleFonts.sora(
-                        fontSize: 22,
+                        fontSize: 20,
                         fontWeight: FontWeight.w700,
                         color: _textPrimary(context),
                       ),
@@ -668,14 +683,13 @@ class _HomeHeader extends StatelessWidget {
                   ],
                 ),
               ),
-              const SizedBox(height: 2),
               Text(
                 greeting,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: GoogleFonts.manrope(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w500,
                   color: _textMuted(context),
                 ),
               ),
@@ -687,7 +701,7 @@ class _HomeHeader extends StatelessWidget {
           onTap: onNotificationTap,
           badgeCount: 1,
         ),
-        const SizedBox(width: 8),
+        const SizedBox(width: 6),
         _CartIconButton(onTap: onCartTap),
       ],
     );
@@ -714,10 +728,10 @@ class _SearchInput extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: _surface(context),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(color: _cardBorder(context)),
         boxShadow: const [
-          BoxShadow(color: _shadow, blurRadius: 10, offset: Offset(0, 4)),
+          BoxShadow(color: _shadow, blurRadius: 6, offset: Offset(0, 2)),
         ],
       ),
       child: TextField(
@@ -731,26 +745,28 @@ class _SearchInput extends StatelessWidget {
         textInputAction: TextInputAction.search,
         maxLength: 80,
         style: GoogleFonts.manrope(
-          fontSize: 14.5,
-          fontWeight: FontWeight.w700,
+          fontSize: 14,
+          fontWeight: FontWeight.w600,
           color: _textPrimary(context),
         ),
         decoration: InputDecoration(
           hintText: hintText,
           hintStyle: GoogleFonts.manrope(
+            fontSize: 14,
             color: _textMuted(context),
-            fontWeight: FontWeight.w600,
+            fontWeight: FontWeight.w500,
           ),
           counterText: '',
           prefixIcon: Icon(
             Icons.search_rounded,
             color: _textMuted(context),
-            size: 28,
+            size: 22,
           ),
           suffixIcon: controller.text.isEmpty
-              ? Icon(Icons.tune_rounded, color: _textMuted(context))
+              ? Icon(Icons.tune_rounded, color: _textMuted(context), size: 20)
               : IconButton(
-                  icon: Icon(Icons.close_rounded, color: _textMuted(context)),
+                  icon: Icon(Icons.close_rounded,
+                      color: _textMuted(context), size: 20),
                   onPressed: () {
                     controller.clear();
                     onChanged?.call('');
@@ -759,19 +775,19 @@ class _SearchInput extends StatelessWidget {
           filled: true,
           fillColor: _surface(context),
           contentPadding: const EdgeInsets.symmetric(
-            horizontal: 18,
-            vertical: 20,
+            horizontal: 16,
+            vertical: 14,
           ),
           border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(14),
             borderSide: BorderSide.none,
           ),
           enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(14),
             borderSide: BorderSide.none,
           ),
           focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(14),
             borderSide: const BorderSide(color: _primary, width: 1.2),
           ),
         ),
@@ -797,26 +813,33 @@ class _HomeSectionHeader extends StatelessWidget {
       children: [
         Text(
           title,
-          style: GoogleFonts.sora(
-            fontSize: 24,
+          style: GoogleFonts.manrope(
+            fontSize: 16,
             fontWeight: FontWeight.w700,
             color: _textPrimary(context),
           ),
         ),
         const Spacer(),
-        TextButton(
-          onPressed: onTap,
-          style: TextButton.styleFrom(
-            foregroundColor: _primary,
-            padding: EdgeInsets.zero,
-            minimumSize: const Size(40, 24),
-          ),
-          child: Text(
-            actionLabel,
-            style: GoogleFonts.manrope(
-              fontSize: 14,
-              fontWeight: FontWeight.w800,
-            ),
+        GestureDetector(
+          onTap: onTap,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                actionLabel,
+                style: GoogleFonts.manrope(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: _primary,
+                ),
+              ),
+              const SizedBox(width: 2),
+              const Icon(
+                Icons.arrow_forward_ios_rounded,
+                size: 11,
+                color: _primary,
+              ),
+            ],
           ),
         ),
       ],
@@ -861,13 +884,13 @@ class _HeroShowcase extends StatelessWidget {
           return Container(
             height: bannerHeight,
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(24),
+              borderRadius: BorderRadius.circular(18),
               boxShadow: const [
                 BoxShadow(color: _shadow, blurRadius: 18, offset: Offset(0, 8)),
               ],
             ),
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(24),
+              borderRadius: BorderRadius.circular(18),
               child: Stack(
                 children: [
                   NotificationListener<ScrollNotification>(
@@ -966,14 +989,14 @@ class _HeroShowcase extends StatelessWidget {
           height: heroHeight,
           decoration: BoxDecoration(
             color: _heroLight,
-            borderRadius: BorderRadius.circular(28),
+            borderRadius: BorderRadius.circular(18),
             border: Border.all(color: _cardBorder(context)),
             boxShadow: const [
               BoxShadow(color: _shadow, blurRadius: 18, offset: Offset(0, 8)),
             ],
           ),
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(28),
+            borderRadius: BorderRadius.circular(18),
             child: Stack(
               clipBehavior: Clip.hardEdge,
               children: [
@@ -1373,13 +1396,13 @@ class _HeroDeviceImage extends StatelessWidget {
       width: width,
       height: height,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(isPhone ? 22 : 24),
+        borderRadius: BorderRadius.circular(isPhone ? 16 : 18),
         boxShadow: [
           BoxShadow(color: _shadow, blurRadius: 12, offset: const Offset(0, 8)),
         ],
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(isPhone ? 22 : 24),
+        borderRadius: BorderRadius.circular(isPhone ? 16 : 18),
         child: DecoratedBox(
           decoration: BoxDecoration(
             gradient: LinearGradient(
@@ -1430,220 +1453,240 @@ class _CategoryShowcaseStrip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cards = categories.take(3).toList();
+    final cards = categories.take(6).toList();
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final columns = constraints.maxWidth >= 300 ? 3 : 2;
-        return GridView.builder(
-          itemCount: cards.length,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: columns,
-            mainAxisSpacing: 12,
-            crossAxisSpacing: 12,
-            childAspectRatio: columns == 3 ? 0.84 : 1.42,
-          ),
-          itemBuilder: (context, index) {
-            final category = cards[index];
-            final isRepair =
-                category.name.toLowerCase().contains('repair') ||
-                category.name.toLowerCase().contains('service');
-            return _CategorySpotlightCard(
-              category: category,
-              icon: iconFor(category.name),
-              accent: index == 0
-                  ? const Color(0xFF4B78FF)
-                  : index == 1
-                  ? const Color(0xFF6D62FF)
-                  : const Color(0xFF3B63FF),
-              onTap: () {
-                if (isRepair) {
-                  onRepairTap();
-                  return;
-                }
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => CategoryProductsScreen(
-                      categoryId: category.id,
-                      categoryName: category.name,
-                      title: category.name,
-                    ),
-                  ),
-                );
-              },
-              ctaLabel: isRepair ? 'Book Now' : 'Shop Now',
-            );
-          },
-        );
-      },
+    return SizedBox(
+      height: 160,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          return SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            physics: const BouncingScrollPhysics(),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                minWidth: constraints.maxWidth,
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.max,
+                children: List.generate(
+                  cards.length * 2 - 1,
+                  (index) {
+                    if (index.isOdd) {
+                      return const SizedBox(width: 12);
+                    }
+                    final itemIndex = index ~/ 2;
+                    final category = cards[itemIndex];
+                    final isRepair =
+                        category.name.toLowerCase().contains('repair') ||
+                        category.name.toLowerCase().contains('service');
+                    return _CategorySpotlightCard(
+                      category: category,
+                      icon: iconFor(category.name),
+                      onTap: () {
+                        if (isRepair) {
+                          onRepairTap();
+                          return;
+                        }
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => CategoryProductsScreen(
+                              categoryId: category.id,
+                              categoryName: category.name,
+                              title: category.name,
+                            ),
+                          ),
+                        );
+                      },
+                      ctaLabel: isRepair ? 'Book Now' : 'Shop Now →',
+                    );
+                  },
+                ),
+              ),
+            ),
+          );
+        },
+      ),
     );
   }
 }
 
-class _CategorySpotlightCard extends StatelessWidget {
+class _CategorySpotlightCard extends StatefulWidget {
   const _CategorySpotlightCard({
     required this.category,
     required this.icon,
-    required this.accent,
     required this.onTap,
     required this.ctaLabel,
   });
 
-  final Category category;
-  final IconData icon;
-  final Color accent;
+  final Category     category;
+  final IconData     icon;
   final VoidCallback onTap;
-  final String ctaLabel;
+  final String       ctaLabel;
+
+  @override
+  State<_CategorySpotlightCard> createState() => _CategorySpotlightCardState();
+}
+
+class _CategorySpotlightCardState extends State<_CategorySpotlightCard>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<double>   _scaleAnim;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 130),
+      lowerBound: 0.0,
+      upperBound: 1.0,
+    );
+    _scaleAnim = Tween<double>(begin: 1.0, end: 0.95).animate(
+      CurvedAnimation(parent: _ctrl, curve: Curves.easeOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final imageUrl = category.imageUrl;
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(24),
-        child: Ink(
-          decoration: BoxDecoration(
-            color: _surface(context),
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: _cardBorder(context)),
-            boxShadow: const [
-              BoxShadow(color: _shadow, blurRadius: 12, offset: Offset(0, 6)),
-            ],
-          ),
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final compact = constraints.maxWidth < 130;
-              final imageSize = compact ? 46.0 : 74.0;
-              final iconSize = compact ? 22.0 : 30.0;
-              final compactActionLabel = ctaLabel.toLowerCase().contains('book')
-                  ? 'Book'
-                  : 'Shop';
-              final actionLabel = compact ? compactActionLabel : ctaLabel;
-              final visual = Container(
-                width: imageSize,
-                height: imageSize,
-                decoration: BoxDecoration(
-                  color: _surfaceAlt(context),
-                  borderRadius: BorderRadius.circular(compact ? 14 : 16),
-                ),
-                padding: EdgeInsets.all(compact ? 6 : 8),
-                child: imageUrl == null || imageUrl.isEmpty
-                    ? Icon(icon, color: accent, size: iconSize)
-                    : Image.network(
-                        imageUrl,
-                        fit: BoxFit.contain,
-                        headers: _imageHeaders,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Icon(icon, color: accent, size: iconSize);
-                        },
-                      ),
-              );
+    final isDark   = _isDark(context);
+    final imageUrl = widget.category.imageUrl;
 
-              if (compact) {
-                return Padding(
-                  padding: const EdgeInsets.all(10),
-                  child: Column(
+    // Premium background gradient
+    final bgGradient = isDark
+        ? LinearGradient(
+            colors: [
+              _surface(context),
+              const Color(0xFF1B2230),
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          )
+        : LinearGradient(
+            colors: [
+              _surface(context),
+              const Color(0xFFF5F7FF),
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          );
+
+    return GestureDetector(
+      onTapDown:   (_) => _ctrl.forward(),
+      onTapUp:     (_) { _ctrl.reverse(); widget.onTap(); },
+      onTapCancel: ()  => _ctrl.reverse(),
+      child: ScaleTransition(
+        scale: _scaleAnim,
+        child: SizedBox(
+          width: 108,
+          height: 144,
+          child: Container(
+            decoration: BoxDecoration(
+              gradient:     bgGradient,
+              borderRadius: BorderRadius.circular(20),
+              border:       Border.all(
+                color: isDark ? const Color(0xFF2D3545) : const Color(0xFFDFE4F2),
+                width: 1,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color:      isDark
+                      ? const Color(0x1F000000)
+                      : const Color(0x0A233380),
+                  blurRadius: 10,
+                  offset:     const Offset(0, 4),
+                ),
+              ],
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // ── Icon / Image (No circular background) ────────────────
+                SizedBox(
+                  width:  50,
+                  height: 50,
+                  child: Center(
+                    child: imageUrl == null || imageUrl.isEmpty
+                        ? Icon(widget.icon, color: _primary, size: 30)
+                        : Image.network(
+                            imageUrl,
+                            fit:     BoxFit.contain,
+                            headers: _imageHeaders,
+                            errorBuilder: (context, error, stackTrace) =>
+                                Icon(widget.icon, color: _primary, size: 30),
+                          ),
+                  ),
+                ),
+
+                const SizedBox(height: 6),
+
+                // ── Name (Fixed height to align layout) ─────────────────
+                SizedBox(
+                  height: 36,
+                  child: Center(
+                    child: Text(
+                      widget.category.name,
+                      maxLines:  2,
+                      overflow:  TextOverflow.ellipsis,
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.manrope(
+                        fontSize:   12.5,
+                        fontWeight: FontWeight.w800,
+                        color:      _textPrimary(context),
+                        height:     1.2,
+                      ),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 6),
+
+                // ── CTA link (Premium pill badge with Chevron) ──────────
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? _primary.withValues(alpha: 0.18)
+                        : const Color(0xFFF0F4FF),
+                    borderRadius: BorderRadius.circular(30),
+                    border: Border.all(
+                      color: _primary.withValues(alpha: isDark ? 0.15 : 0.08),
+                      width: 1,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      visual,
-                      const SizedBox(height: 8),
                       Text(
-                        category.name,
+                        widget.ctaLabel.replaceAll(' →', ''),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        textAlign: TextAlign.center,
-                        style: GoogleFonts.sora(
-                          fontSize: 12.5,
-                          height: 1.15,
-                          fontWeight: FontWeight.w700,
-                          color: _textPrimary(context),
+                        style: GoogleFonts.manrope(
+                          fontSize:   9,
+                          fontWeight: FontWeight.w800,
+                          color:      isDark ? const Color(0xFF7E9BFF) : _primary,
+                          letterSpacing: 0.3,
                         ),
                       ),
-                      const SizedBox(height: 6),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Flexible(
-                            child: Text(
-                              actionLabel,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: GoogleFonts.manrope(
-                                fontSize: 11.5,
-                                fontWeight: FontWeight.w800,
-                                color: accent,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 4),
-                          Icon(
-                            Icons.arrow_forward_rounded,
-                            color: accent,
-                            size: 14,
-                          ),
-                        ],
+                      const SizedBox(width: 3),
+                      Icon(
+                        Icons.chevron_right_rounded,
+                        size: 11,
+                        color: isDark ? const Color(0xFF7E9BFF) : _primary,
                       ),
                     ],
                   ),
-                );
-              }
-
-              return Padding(
-                padding: const EdgeInsets.all(14),
-                child: Row(
-                  children: [
-                    visual,
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            category.name,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: GoogleFonts.sora(
-                              fontSize: 14,
-                              height: 1.15,
-                              fontWeight: FontWeight.w700,
-                              color: _textPrimary(context),
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Row(
-                            children: [
-                              Flexible(
-                                child: Text(
-                                  actionLabel,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: GoogleFonts.manrope(
-                                    fontSize: 12.5,
-                                    fontWeight: FontWeight.w800,
-                                    color: accent,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 6),
-                              Icon(
-                                Icons.arrow_forward_rounded,
-                                color: accent,
-                                size: 16,
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
                 ),
-              );
-            },
+              ],
+            ),
           ),
         ),
       ),
@@ -1651,158 +1694,268 @@ class _CategorySpotlightCard extends StatelessWidget {
   }
 }
 
-class _ValueHighlights extends StatelessWidget {
+
+// ── Value Highlights – clean auto-scrolling marquee ───────────────────────
+
+class _ValueHighlights extends StatefulWidget {
   const _ValueHighlights();
 
   @override
+  State<_ValueHighlights> createState() => _ValueHighlightsState();
+}
+
+class _ValueHighlightsState extends State<_ValueHighlights>
+    with SingleTickerProviderStateMixin {
+  static const _items = [
+    (
+      icon:     Icons.verified_user_outlined,
+      title:    '100% Original',
+      subtitle: 'Genuine Apple products',
+    ),
+    (
+      icon:     Icons.workspace_premium_outlined,
+      title:    'Warranty',
+      subtitle: 'Official product support',
+    ),
+    (
+      icon:     Icons.local_shipping_outlined,
+      title:    'Fast Delivery',
+      subtitle: 'Quick and safe shipping',
+    ),
+    (
+      icon:     Icons.headset_mic_outlined,
+      title:    'Expert Support',
+      subtitle: 'Service team ready to help',
+    ),
+    (
+      icon:     Icons.local_offer_outlined,
+      title:    'Best Prices',
+      subtitle: 'Unbeatable deals daily',
+    ),
+    (
+      icon:     Icons.lock_outline_rounded,
+      title:    'Secure Pay',
+      subtitle: 'Safe & encrypted checkout',
+    ),
+  ];
+
+  static const int    _repeat    = 5;
+  static const double _cardWidth = 148;
+  static const double _gap       = 10;
+  static const double _scrollPx  = 0.55;
+  static const Duration _tick    = Duration(milliseconds: 16);
+
+  late final ScrollController   _scrollCtrl;
+  late final AnimationController _dotCtrl;
+  late final Animation<double>   _dotAnim;
+  double _singleSetWidth = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollCtrl = ScrollController();
+    _dotCtrl = AnimationController(
+      vsync:    this,
+      duration: const Duration(milliseconds: 1000),
+    )..repeat(reverse: true);
+    _dotAnim = CurvedAnimation(parent: _dotCtrl, curve: Curves.easeInOut);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _startMarquee());
+  }
+
+  void _startMarquee() {
+    if (!mounted) return;
+    _singleSetWidth = (_cardWidth + _gap) * _items.length;
+    Future.doWhile(() async {
+      await Future.delayed(_tick);
+      if (!mounted || !_scrollCtrl.hasClients) return false;
+      final pos    = _scrollCtrl.offset + _scrollPx;
+      final maxPos = _scrollCtrl.position.maxScrollExtent;
+      if (pos >= _singleSetWidth) {
+        _scrollCtrl.jumpTo(pos - _singleSetWidth);
+      } else if (pos >= maxPos) {
+        _scrollCtrl.jumpTo(0);
+      } else {
+        _scrollCtrl.jumpTo(pos);
+      }
+      return true;
+    });
+  }
+
+  @override
+  void dispose() {
+    _scrollCtrl.dispose();
+    _dotCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    const items = [
-      (
-        icon: Icons.verified_user_outlined,
-        title: '100% Original',
-        subtitle: 'Genuine Apple products',
-        color: Color(0xFF406BFF),
-      ),
-      (
-        icon: Icons.workspace_premium_outlined,
-        title: 'Warranty',
-        subtitle: 'Official product support',
-        color: Color(0xFF7B52FF),
-      ),
-      (
-        icon: Icons.local_shipping_outlined,
-        title: 'Fast Delivery',
-        subtitle: 'Quick and safe shipping',
-        color: Color(0xFF12A150),
-      ),
-      (
-        icon: Icons.headset_mic_outlined,
-        title: 'Expert Support',
-        subtitle: 'Service team ready to help',
-        color: Color(0xFFFF6A1A),
-      ),
-    ];
+    final isDark   = _isDark(context);
+    final allItems = List.generate(
+      _items.length * _repeat,
+      (i) => _items[i % _items.length],
+    );
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 18),
-      decoration: BoxDecoration(
-        color: _surface(context),
-        borderRadius: BorderRadius.circular(30),
-        border: Border.all(color: _cardBorder(context)),
-        boxShadow: const [
-          BoxShadow(color: _shadow, blurRadius: 14, offset: Offset(0, 8)),
-        ],
-      ),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          if (constraints.maxWidth < 390) {
-            return GridView.builder(
-              itemCount: items.length,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                mainAxisSpacing: 16,
-                crossAxisSpacing: 16,
-                childAspectRatio: 1.2,
-              ),
-              itemBuilder: (context, index) {
-                final item = items[index];
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Container(
-                      width: 52,
-                      height: 52,
-                      decoration: BoxDecoration(
-                        color: item.color.withValues(alpha: 0.10),
-                        borderRadius: BorderRadius.circular(18),
-                      ),
-                      child: Icon(item.icon, color: item.color),
-                    ),
-                    const SizedBox(height: 10),
-                    Text(
-                      item.title,
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.manrope(
-                        fontSize: 13.5,
-                        fontWeight: FontWeight.w800,
-                        color: _textPrimary(context),
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      item.subtitle,
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.manrope(
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.w600,
-                        color: _textMuted(context),
-                        height: 1.45,
-                      ),
-                    ),
-                  ],
-                );
-              },
-            );
-          }
-
-          return Row(
-            children: List.generate(items.length * 2 - 1, (index) {
-              if (index.isOdd) {
-                return Container(
-                  width: 1,
-                  height: 112,
-                  color: _cardBorder(context),
-                  margin: const EdgeInsets.symmetric(horizontal: 8),
-                );
-              }
-
-              final item = items[index ~/ 2];
-              return Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Container(
-                      width: 52,
-                      height: 52,
-                      decoration: BoxDecoration(
-                        color: item.color.withValues(alpha: 0.10),
-                        borderRadius: BorderRadius.circular(18),
-                      ),
-                      child: Icon(item.icon, color: item.color),
-                    ),
-                    const SizedBox(height: 10),
-                    Text(
-                      item.title,
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.manrope(
-                        fontSize: 13.5,
-                        fontWeight: FontWeight.w800,
-                        color: _textPrimary(context),
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      item.subtitle,
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.manrope(
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.w600,
-                        color: _textMuted(context),
-                        height: 1.45,
-                      ),
-                    ),
-                  ],
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // ── Section header ─────────────────────────────────────────────
+        Padding(
+          padding: const EdgeInsets.only(left: 2, bottom: 12),
+          child: Row(
+            children: [
+              FadeTransition(
+                opacity: _dotAnim,
+                child: Container(
+                  width:  7,
+                  height: 7,
+                  decoration: const BoxDecoration(
+                    color: _primary,
+                    shape: BoxShape.circle,
+                  ),
                 ),
-              );
-            }),
-          );
-        },
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Why Choose Us',
+                style: GoogleFonts.manrope(
+                  fontSize:   14.5,
+                  fontWeight: FontWeight.w700,
+                  color:      _textPrimary(context),
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        // ── Marquee strip ───────────────────────────────────────────────
+        Container(
+          decoration: BoxDecoration(
+            color:        _surface(context),
+            borderRadius: BorderRadius.circular(20),
+            border:       Border.all(color: _cardBorder(context)),
+            boxShadow: [
+              BoxShadow(
+                color:      Colors.black.withValues(alpha: isDark ? 0.14 : 0.05),
+                blurRadius: 10,
+                offset:     const Offset(0, 3),
+              ),
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(20),
+            child: ShaderMask(
+              shaderCallback: (bounds) => const LinearGradient(
+                colors: [
+                  Colors.transparent,
+                  Colors.white,
+                  Colors.white,
+                  Colors.transparent,
+                ],
+                stops: [0.0, 0.07, 0.93, 1.0],
+              ).createShader(bounds),
+              blendMode: BlendMode.dstIn,
+              child: SizedBox(
+                height: 142,
+                child: ListView.separated(
+                  controller:      _scrollCtrl,
+                  scrollDirection: Axis.horizontal,
+                  physics:         const NeverScrollableScrollPhysics(),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 12),
+                  itemCount:        allItems.length,
+                  separatorBuilder: (context, index) =>
+                      SizedBox(width: _gap),
+                  itemBuilder: (context, index) {
+                    final item = allItems[index];
+                    return SizedBox(
+                      width: _cardWidth,
+                      child: _HighlightCard(
+                        icon:    item.icon,
+                        title:   item.title,
+                        subtitle: item.subtitle,
+                        isDark:  isDark,
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ── Highlight card – clean minimal ────────────────────────────────────────
+class _HighlightCard extends StatelessWidget {
+  const _HighlightCard({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.isDark,
+  });
+
+  final IconData icon;
+  final String   title;
+  final String   subtitle;
+  final bool     isDark;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color:        _surfaceAlt(context),
+        borderRadius: BorderRadius.circular(16),
+        border:       Border.all(color: _cardBorder(context)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Icon box – single accent tint, no gradient
+          Container(
+            width:  38,
+            height: 38,
+            decoration: BoxDecoration(
+              color:        _primary.withValues(alpha: isDark ? 0.18 : 0.09),
+              borderRadius: BorderRadius.circular(11),
+            ),
+            child: Icon(icon, size: 20, color: _primary),
+          ),
+          const Spacer(),
+          // Title
+          Text(
+            title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: GoogleFonts.manrope(
+              fontSize:   12.5,
+              fontWeight: FontWeight.w700,
+              color:      _textPrimary(context),
+              height:     1.2,
+            ),
+          ),
+          const SizedBox(height: 2),
+          // Subtitle
+          Text(
+            subtitle,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: GoogleFonts.manrope(
+              fontSize:   10.5,
+              fontWeight: FontWeight.w500,
+              color:      _textMuted(context),
+              height:     1.35,
+            ),
+          ),
+        ],
       ),
     );
   }
 }
+
 
 class _RepairCallout extends StatelessWidget {
   const _RepairCallout({required this.onBookRepair});
@@ -1904,7 +2057,7 @@ class _RepairCallout extends StatelessWidget {
                       height: 92,
                       decoration: BoxDecoration(
                         color: Colors.white,
-                        borderRadius: BorderRadius.circular(24),
+                        borderRadius: BorderRadius.circular(14),
                         boxShadow: const [
                           BoxShadow(
                             color: _shadow,
@@ -1931,7 +2084,7 @@ class _RepairCallout extends StatelessWidget {
                       height: 64,
                       decoration: BoxDecoration(
                         color: _primary,
-                        borderRadius: BorderRadius.circular(24),
+                        borderRadius: BorderRadius.circular(14),
                         boxShadow: [
                           BoxShadow(
                             color: _primary.withValues(alpha: 0.24),
@@ -1956,7 +2109,7 @@ class _RepairCallout extends StatelessWidget {
         return Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(32),
+            borderRadius: BorderRadius.circular(18),
             gradient: const LinearGradient(
               colors: [Color(0xFFEFF4FF), Color(0xFFE6EEFF), Color(0xFFF5F8FF)],
               begin: Alignment.topLeft,
@@ -2320,14 +2473,14 @@ class _FlashProductCard extends StatelessWidget {
 
     return Material(
       color: _surface(context),
-      borderRadius: BorderRadius.circular(22),
+      borderRadius: BorderRadius.circular(16),
       child: InkWell(
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(16),
         onTap: onOpen,
         child: Container(
           padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(22),
+            borderRadius: BorderRadius.circular(16),
             color: _surface(context),
             border: Border.all(color: _cardBorder(context)),
             boxShadow: const [
@@ -2711,29 +2864,69 @@ class _CategorySkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 84,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        itemCount: 5,
-        separatorBuilder: (context, index) => const SizedBox(width: 10),
-        itemBuilder: (context, index) {
-          return Column(
-            children: [
-              Container(
-                height: 48,
-                width: 48,
-                decoration: BoxDecoration(
-                  color: _surfaceAlt(context),
-                  borderRadius: BorderRadius.circular(14),
-                ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // skeleton for the section header
+        Row(
+          children: [
+            Container(
+              width: 90,
+              height: 14,
+              decoration: BoxDecoration(
+                color: _surfaceAlt(context),
+                borderRadius: BorderRadius.circular(7),
               ),
-              const SizedBox(height: 8),
-              Container(width: 50, height: 8, color: _surfaceAlt(context)),
-            ],
-          );
-        },
-      ),
+            ),
+            const Spacer(),
+            Container(
+              width: 52,
+              height: 12,
+              decoration: BoxDecoration(
+                color: _surfaceAlt(context),
+                borderRadius: BorderRadius.circular(6),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 14),
+        SizedBox(
+          height: 160,
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              return SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                physics: const NeverScrollableScrollPhysics(),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    minWidth: constraints.maxWidth,
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.max,
+                    children: List.generate(
+                      4 * 2 - 1,
+                      (index) {
+                        if (index.isOdd) {
+                          return const SizedBox(width: 12);
+                        }
+                        return Container(
+                          width: 108,
+                          height: 144,
+                          decoration: BoxDecoration(
+                            color: _surfaceAlt(context),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 }

@@ -100,8 +100,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   // ── Sliver AppBar ────────────────────────────────────────────────────────
   Widget _buildSliverAppBar() {
-    final name =
-        _profile.displayName.isNotEmpty ? _profile.displayName : 'User';
+    final name = _profile.displayName.isNotEmpty
+        ? _profile.displayName
+        : 'User';
     final initials = _initialsFrom(name, _profile.email ?? '');
 
     return SliverAppBar(
@@ -208,7 +209,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   // ── Completion ring card ──────────────────────────────────────────────────
   Widget _buildCompletionCard() {
     final score = _profileScore();
-    final color = score >= 80 ? _accent : score >= 50 ? _primary : _danger;
+    final color = score >= 80
+        ? _accent
+        : score >= 50
+        ? _primary
+        : _danger;
 
     return Container(
       padding: const EdgeInsets.all(18),
@@ -360,11 +365,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       decoration: InputDecoration(
         labelText: 'Birth Date',
         labelStyle: GoogleFonts.inter(fontSize: 13, color: _textMuted),
-        prefixIcon: const Icon(
-          Icons.cake_outlined,
-          color: _primary,
-          size: 20,
-        ),
+        prefixIcon: const Icon(Icons.cake_outlined, color: _primary, size: 20),
         filled: true,
         fillColor: _bg,
         isDense: true,
@@ -386,7 +387,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   Widget _genderDropdown() {
     return DropdownButtonFormField<String>(
-      value: _gender,
+      initialValue: _gender,
       decoration: InputDecoration(
         labelText: 'Gender',
         labelStyle: GoogleFonts.inter(fontSize: 13, color: _textMuted),
@@ -587,7 +588,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     return Image.network(
       url,
       fit: BoxFit.cover,
-      errorBuilder: (_, __, ___) => fallback,
+      errorBuilder: (context, error, stackTrace) => fallback,
       loadingBuilder: (_, child, progress) {
         if (progress == null) return child;
         return Container(
@@ -646,9 +647,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       lastDate: DateTime.now(),
       initialDatePickerMode: DatePickerMode.year,
       builder: (context, child) => Theme(
-        data: Theme.of(context).copyWith(
-          colorScheme: const ColorScheme.light(primary: _primary),
-        ),
+        data: Theme.of(
+          context,
+        ).copyWith(colorScheme: const ColorScheme.light(primary: _primary)),
         child: child!,
       ),
     );

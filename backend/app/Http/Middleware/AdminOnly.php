@@ -13,10 +13,12 @@ class AdminOnly
      */
     public function handle(Request $request, Closure $next): Response
     {
-        $user = $request->user() ?? $request->user('sanctum');
+        $user = $request->user()
+            ?? $request->user('sanctum')
+            ?? auth('web')->user();
 
         if (! $user) {
-            return $this->forbidden($request);
+            return $this->unauthenticated($request);
         }
 
         if (! $user->isAdmin()) {
@@ -33,5 +35,14 @@ class AdminOnly
         }
 
         abort(403);
+    }
+
+    private function unauthenticated(Request $request): Response
+    {
+        if ($request->expectsJson()) {
+            return response()->json(['message' => 'Unauthenticated.'], 401);
+        }
+
+        abort(401);
     }
 }

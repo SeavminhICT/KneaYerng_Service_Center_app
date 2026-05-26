@@ -19,13 +19,13 @@ import '../profile/address_form_screen.dart';
 
 const _checkoutPrimary = Color(0xFF4A88F7);
 const _checkoutAccent = Color(0xFF111827);
-const _checkoutBg = Color(0xFFF8FAFC);
+const _checkoutBg = Color(0xFFF4F7FC);
 const _checkoutSurface = Color(0xFFFFFFFF);
 const _checkoutSurfaceAlt = Color(0xFFF3F4F6);
-const _checkoutBorder = Color(0xFFE5E7EB);
+const _checkoutBorder = Color(0xFFE7ECF4);
 const _checkoutInk = Color(0xFF111827);
 const _checkoutMuted = Color(0xFF6B7280);
-const _checkoutShadow = Color(0x0F111827);
+const _checkoutShadow = Color(0x0A111827);
 const _checkoutSuccess = Color(0xFF15803D);
 
 class CheckoutFlowScreen extends StatefulWidget {
@@ -765,7 +765,7 @@ class _CheckoutFlowScreenState extends State<CheckoutFlowScreen> {
           title: Text(
             'Checkout',
             style: GoogleFonts.sora(
-              fontSize: 22,
+              fontSize: 24,
               fontWeight: FontWeight.w700,
               color: _checkoutInk,
             ),
@@ -943,6 +943,17 @@ class _CheckoutFlowScreenState extends State<CheckoutFlowScreen> {
                     onPressed: _addSavedAddress,
                     icon: const Icon(Icons.add_location_alt_outlined, size: 16),
                     label: const Text('Add'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: _checkoutPrimary,
+                      textStyle: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13,
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 8,
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -962,9 +973,22 @@ class _CheckoutFlowScreenState extends State<CheckoutFlowScreen> {
                     color: _checkoutSurfaceAlt,
                     borderRadius: BorderRadius.circular(16),
                   ),
-                  child: const Text(
-                    'No saved maps yet. Pick a location on the map, then tap Add to save it for later.',
-                    style: TextStyle(color: _checkoutMuted, height: 1.45),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: const [
+                      Icon(
+                        Icons.bookmark_add_outlined,
+                        size: 18,
+                        color: _checkoutMuted,
+                      ),
+                      SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          'No saved maps yet. Pick a location on the map, then tap Add to save it for later.',
+                          style: TextStyle(color: _checkoutMuted, height: 1.45),
+                        ),
+                      ),
+                    ],
                   ),
                 )
               else
@@ -1147,9 +1171,9 @@ class _StepHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final current = steps[currentStep];
     return Container(
-      padding: const EdgeInsets.fromLTRB(16, 6, 16, 10),
+      padding: const EdgeInsets.fromLTRB(18, 8, 18, 10),
       decoration: BoxDecoration(
-        color: _checkoutSurface,
+        color: _checkoutBg,
         border: Border(
           top: BorderSide(color: _checkoutBorder.withValues(alpha: 0.65)),
           bottom: BorderSide(color: _checkoutBorder.withValues(alpha: 0.85)),
@@ -1166,7 +1190,7 @@ class _StepHeader extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: GoogleFonts.sora(
-                    fontSize: 13,
+                    fontSize: 14,
                     fontWeight: FontWeight.w700,
                     color: accent,
                   ),
@@ -1184,13 +1208,13 @@ class _StepHeader extends StatelessWidget {
                   style: TextStyle(
                     color: primary,
                     fontWeight: FontWeight.w700,
-                    fontSize: 10,
+                    fontSize: 11,
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
           Row(
             children: List.generate(steps.length, (index) {
               final isCurrent = index == currentStep;
@@ -1209,8 +1233,8 @@ class _StepHeader extends StatelessWidget {
                             children: [
                               AnimatedContainer(
                                 duration: const Duration(milliseconds: 220),
-                                width: 26,
-                                height: 26,
+                                width: 28,
+                                height: 28,
                                 decoration: BoxDecoration(
                                   color: active
                                       ? primary.withValues(
@@ -1226,8 +1250,8 @@ class _StepHeader extends StatelessWidget {
                                   child: isDone
                                       ? Icon(
                                           Icons.check_rounded,
-                                          size: 14,
-                                          color: primary,
+                                          size: 15,
+                                          color: Colors.white,
                                         )
                                       : Text(
                                           '${index + 1}',
@@ -1238,12 +1262,12 @@ class _StepHeader extends StatelessWidget {
                                                 ? primary
                                                 : _checkoutMuted,
                                             fontWeight: FontWeight.w700,
-                                            fontSize: 11,
+                                            fontSize: 12,
                                           ),
                                         ),
                                 ),
                               ),
-                              const SizedBox(height: 5),
+                              const SizedBox(height: 6),
                               Text(
                                 steps[index].label,
                                 maxLines: 1,
@@ -1254,7 +1278,7 @@ class _StepHeader extends StatelessWidget {
                                   fontWeight: active
                                       ? FontWeight.w700
                                       : FontWeight.w600,
-                                  fontSize: 10,
+                                  fontSize: 11,
                                 ),
                               ),
                             ],
@@ -1265,8 +1289,8 @@ class _StepHeader extends StatelessWidget {
                     if (index != steps.length - 1)
                       Expanded(
                         child: Container(
-                          margin: const EdgeInsets.only(bottom: 16),
-                          height: 2,
+                          margin: const EdgeInsets.only(bottom: 18),
+                          height: 1.5,
                           color: active
                               ? primary.withValues(alpha: 0.26)
                               : _checkoutBorder,
@@ -1330,6 +1354,10 @@ class _AddressPreviewCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final hasContent = addressLine.isNotEmpty;
+    final iconColor = hasContent ? _checkoutPrimary : _checkoutInk;
+    final actionBg = hasContent
+        ? _checkoutPrimary.withValues(alpha: 0.06)
+        : _checkoutSurfaceAlt;
 
     return _SurfaceCard(
       padding: const EdgeInsets.all(18),
@@ -1377,13 +1405,11 @@ class _AddressPreviewCard extends StatelessWidget {
               width: double.infinity,
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: hasContent
-                    ? _checkoutPrimary.withValues(alpha: 0.06)
-                    : _checkoutSurfaceAlt,
+                color: actionBg,
                 borderRadius: BorderRadius.circular(18),
                 border: Border.all(
                   color: hasContent
-                      ? _checkoutPrimary.withValues(alpha: 0.22)
+                      ? _checkoutPrimary.withValues(alpha: 0.2)
                       : _checkoutBorder,
                 ),
               ),
@@ -1396,14 +1422,14 @@ class _AddressPreviewCard extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: hasContent
                           ? _checkoutPrimary.withValues(alpha: 0.14)
-                          : Colors.white,
+                          : _checkoutSurface,
                       borderRadius: BorderRadius.circular(16),
                     ),
                     child: Icon(
                       hasContent
                           ? Icons.location_on_rounded
                           : Icons.map_outlined,
-                      color: hasContent ? _checkoutPrimary : _checkoutInk,
+                      color: iconColor,
                     ),
                   ),
                   const SizedBox(width: 14),
@@ -1426,9 +1452,7 @@ class _AddressPreviewCard extends StatelessWidget {
                               ? addressLine
                               : 'Tap here to open the map and pin the customer location.',
                           style: TextStyle(
-                            color: hasContent
-                                ? _checkoutInk
-                                : const Color(0xFF6B7280),
+                            color: hasContent ? _checkoutInk : _checkoutMuted,
                             height: 1.45,
                           ),
                         ),
@@ -1465,7 +1489,7 @@ class _AddressPreviewCard extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: ElevatedButton.icon(
+                child: FilledButton.icon(
                   onPressed: onPick,
                   icon: Icon(
                     hasContent
@@ -1474,10 +1498,13 @@ class _AddressPreviewCard extends StatelessWidget {
                     size: 18,
                   ),
                   label: Text(hasContent ? 'Update Pin' : 'Open Map'),
-                  style: ElevatedButton.styleFrom(
+                  style: FilledButton.styleFrom(
                     backgroundColor: _checkoutPrimary,
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 13),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
                   ),
                 ),
               ),
@@ -1508,24 +1535,24 @@ class _SavedMapCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onSelect,
-      borderRadius: BorderRadius.circular(20),
+      borderRadius: BorderRadius.circular(18),
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: selected
               ? _checkoutPrimary.withValues(alpha: 0.06)
               : _checkoutSurface,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(18),
           border: Border.all(
             color: selected ? _checkoutPrimary : _checkoutBorder,
-            width: selected ? 1.4 : 1,
+            width: selected ? 1.3 : 1,
           ),
           boxShadow: selected
               ? [
                   BoxShadow(
                     color: _checkoutPrimary.withValues(alpha: 0.08),
-                    blurRadius: 16,
-                    offset: const Offset(0, 8),
+                    blurRadius: 12,
+                    offset: const Offset(0, 6),
                   ),
                 ]
               : const [],
@@ -1590,6 +1617,12 @@ class _SavedMapCard extends StatelessWidget {
                                 ),
                               ),
                             ),
+                          if (!selected)
+                            Icon(
+                              Icons.radio_button_unchecked_rounded,
+                              size: 18,
+                              color: _checkoutMuted.withValues(alpha: 0.85),
+                            ),
                         ],
                       ),
                       const SizedBox(height: 6),
@@ -1631,15 +1664,18 @@ class _SavedMapCard extends StatelessWidget {
             Row(
               children: [
                 Expanded(
-                  child: ElevatedButton(
+                  child: FilledButton(
                     onPressed: onSelect,
-                    style: ElevatedButton.styleFrom(
+                    style: FilledButton.styleFrom(
                       backgroundColor: selected
                           ? _checkoutInk
                           : _checkoutPrimary,
                       foregroundColor: Colors.white,
                       elevation: 0,
                       padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
                     child: Text(selected ? 'Using This Map' : 'Use This Map'),
                   ),
@@ -2391,19 +2427,19 @@ class _BottomTotalBar extends StatelessWidget {
       child: Container(
         padding: EdgeInsets.fromLTRB(
           16,
-          compact ? 8 : 10,
+          compact ? 8 : 12,
           16,
-          compact ? 12 : 18,
+          compact ? 12 : 16,
         ),
         decoration: BoxDecoration(
           color: _checkoutSurface,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
           border: const Border(top: BorderSide(color: _checkoutBorder)),
           boxShadow: const [
             BoxShadow(
               color: _checkoutShadow,
-              blurRadius: 12,
-              offset: Offset(0, -2),
+              blurRadius: 18,
+              offset: Offset(0, -4),
             ),
           ],
         ),
@@ -2423,7 +2459,7 @@ class _BottomTotalBar extends StatelessWidget {
                       Text(
                         stepLabel,
                         style: GoogleFonts.sora(
-                          fontSize: 12,
+                          fontSize: 13,
                           fontWeight: FontWeight.w700,
                           color: _checkoutPrimary,
                         ),
@@ -2437,7 +2473,7 @@ class _BottomTotalBar extends StatelessWidget {
                           style: TextStyle(
                             color: _checkoutMuted,
                             height: compact ? 1.25 : 1.4,
-                            fontSize: compact ? 13 : 14,
+                            fontSize: compact ? 12 : 13,
                           ),
                         ),
                       ],
@@ -2447,12 +2483,12 @@ class _BottomTotalBar extends StatelessWidget {
                 const SizedBox(width: 12),
                 Container(
                   padding: EdgeInsets.symmetric(
-                    horizontal: compact ? 11 : 12,
-                    vertical: compact ? 8 : 10,
+                    horizontal: compact ? 12 : 14,
+                    vertical: compact ? 8 : 9,
                   ),
                   decoration: BoxDecoration(
-                    color: _checkoutSurfaceAlt,
-                    borderRadius: BorderRadius.circular(14),
+                    color: _checkoutSurfaceAlt.withValues(alpha: 0.82),
+                    borderRadius: BorderRadius.circular(13),
                     border: Border.all(color: _checkoutBorder),
                   ),
                   child: Column(
@@ -2472,7 +2508,7 @@ class _BottomTotalBar extends StatelessWidget {
                         '\$${total.toStringAsFixed(2)}',
                         style: GoogleFonts.sora(
                           fontWeight: FontWeight.w800,
-                          fontSize: compact ? 16 : 18,
+                          fontSize: compact ? 16 : 20,
                           color: _checkoutInk,
                         ),
                       ),
@@ -2489,9 +2525,9 @@ class _BottomTotalBar extends StatelessWidget {
                 style: FilledButton.styleFrom(
                   backgroundColor: primary,
                   foregroundColor: Colors.white,
-                  padding: EdgeInsets.symmetric(vertical: compact ? 14 : 16),
+                  padding: EdgeInsets.symmetric(vertical: compact ? 14 : 15),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(14),
                   ),
                   elevation: 0,
                 ),
@@ -2554,13 +2590,13 @@ class _SurfaceCard extends StatelessWidget {
       padding: padding,
       decoration: BoxDecoration(
         color: _checkoutSurface,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(color: _checkoutBorder),
         boxShadow: const [
           BoxShadow(
             color: _checkoutShadow,
-            blurRadius: 10,
-            offset: Offset(0, 4),
+            blurRadius: 14,
+            offset: Offset(0, 6),
           ),
         ],
       ),

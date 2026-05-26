@@ -80,9 +80,7 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _loading = true);
 
     try {
-      final googleSignIn = GoogleSignIn(
-        scopes: ['email', 'profile'],
-      );
+      final googleSignIn = GoogleSignIn(scopes: ['email', 'profile']);
       final account = await googleSignIn.signIn();
       if (account == null) {
         setState(() => _loading = false);
@@ -129,7 +127,9 @@ class _LoginScreenState extends State<LoginScreen> {
         return;
       }
 
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error)));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error)));
     } catch (error) {
       debugPrint('Google Sign-In Error: $error');
       if (mounted) {
@@ -443,9 +443,7 @@ class _LoginScreenState extends State<LoginScreen> {
             onPressed: () {
               Navigator.pushReplacement(
                 context,
-                MaterialPageRoute(
-                  builder: (_) => const MainNavigationScreen(),
-                ),
+                MaterialPageRoute(builder: (_) => const MainNavigationScreen()),
               );
             },
             style: TextButton.styleFrom(
@@ -743,7 +741,8 @@ class _LoginScreenState extends State<LoginScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
-                    'Enter your backend host or domain. The app adds /api automatically. On desktop, the default server now uses your local LAN IP when available.',
+                    'Enter your backend host or domain. The app adds /api automatically. '
+                    'For a real phone, run Laravel with --host=0.0.0.0 and use your computer LAN IP.',
                   ),
                   const SizedBox(height: 12),
                   TextField(

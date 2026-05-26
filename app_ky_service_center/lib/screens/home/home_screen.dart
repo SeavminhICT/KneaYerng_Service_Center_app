@@ -108,8 +108,8 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    _categoriesFuture = ApiService.fetchCategories();
-    _productsFuture = _loadProducts();
+    _categoriesFuture = _loadCategoriesSafe();
+    _productsFuture = _loadProductsSafe();
     _loadBanners();
     _loadRecentSearches();
     _searchFocusNode.addListener(() {
@@ -152,8 +152,8 @@ class _HomeScreenState extends State<HomeScreen> {
     await _clearImageCache();
     _loadBanners();
     setState(() {
-      _categoriesFuture = ApiService.fetchCategories();
-      _productsFuture = _loadProducts();
+      _categoriesFuture = _loadCategoriesSafe();
+      _productsFuture = _loadProductsSafe();
       _profileFuture = ApiService.getUserProfile();
     });
     await Future.wait([_categoriesFuture, _productsFuture]);
@@ -165,9 +165,22 @@ class _HomeScreenState extends State<HomeScreen> {
     cache.clearLiveImages();
   }
 
-  Future<List<Product>> _loadProducts() async {
-    final items = await ApiService.fetchProducts();
-    return items;
+  Future<List<Category>> _loadCategoriesSafe() async {
+    try {
+      return await ApiService.fetchCategories();
+    } catch (error) {
+      debugPrint('[HomeScreen] categories load failed: $error');
+      return const [];
+    }
+  }
+
+  Future<List<Product>> _loadProductsSafe() async {
+    try {
+      return await ApiService.fetchProducts();
+    } catch (error) {
+      debugPrint('[HomeScreen] products load failed: $error');
+      rethrow;
+    }
   }
 
   Future<void> _loadRecentSearches() async {
@@ -765,8 +778,11 @@ class _SearchInput extends StatelessWidget {
           suffixIcon: controller.text.isEmpty
               ? Icon(Icons.tune_rounded, color: _textMuted(context), size: 20)
               : IconButton(
-                  icon: Icon(Icons.close_rounded,
-                      color: _textMuted(context), size: 20),
+                  icon: Icon(
+                    Icons.close_rounded,
+                    color: _textMuted(context),
+                    size: 20,
+                  ),
                   onPressed: () {
                     controller.clear();
                     onChanged?.call('');
@@ -1463,45 +1479,40 @@ class _CategoryShowcaseStrip extends StatelessWidget {
             scrollDirection: Axis.horizontal,
             physics: const BouncingScrollPhysics(),
             child: ConstrainedBox(
-              constraints: BoxConstraints(
-                minWidth: constraints.maxWidth,
-              ),
+              constraints: BoxConstraints(minWidth: constraints.maxWidth),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 mainAxisSize: MainAxisSize.max,
-                children: List.generate(
-                  cards.length * 2 - 1,
-                  (index) {
-                    if (index.isOdd) {
-                      return const SizedBox(width: 12);
-                    }
-                    final itemIndex = index ~/ 2;
-                    final category = cards[itemIndex];
-                    final isRepair =
-                        category.name.toLowerCase().contains('repair') ||
-                        category.name.toLowerCase().contains('service');
-                    return _CategorySpotlightCard(
-                      category: category,
-                      icon: iconFor(category.name),
-                      onTap: () {
-                        if (isRepair) {
-                          onRepairTap();
-                          return;
-                        }
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => CategoryProductsScreen(
-                              categoryId: category.id,
-                              categoryName: category.name,
-                              title: category.name,
-                            ),
+                children: List.generate(cards.length * 2 - 1, (index) {
+                  if (index.isOdd) {
+                    return const SizedBox(width: 12);
+                  }
+                  final itemIndex = index ~/ 2;
+                  final category = cards[itemIndex];
+                  final isRepair =
+                      category.name.toLowerCase().contains('repair') ||
+                      category.name.toLowerCase().contains('service');
+                  return _CategorySpotlightCard(
+                    category: category,
+                    icon: iconFor(category.name),
+                    onTap: () {
+                      if (isRepair) {
+                        onRepairTap();
+                        return;
+                      }
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => CategoryProductsScreen(
+                            categoryId: category.id,
+                            categoryName: category.name,
+                            title: category.name,
                           ),
-                        );
-                      },
-                      ctaLabel: isRepair ? 'Book Now' : 'Shop Now →',
-                    );
-                  },
-                ),
+                        ),
+                      );
+                    },
+                    ctaLabel: isRepair ? 'Book Now' : 'Shop Now →',
+                  );
+                }),
               ),
             ),
           );
@@ -1519,10 +1530,10 @@ class _CategorySpotlightCard extends StatefulWidget {
     required this.ctaLabel,
   });
 
-  final Category     category;
-  final IconData     icon;
+  final Category category;
+  final IconData icon;
   final VoidCallback onTap;
-  final String       ctaLabel;
+  final String ctaLabel;
 
   @override
   State<_CategorySpotlightCard> createState() => _CategorySpotlightCardState();
@@ -1531,7 +1542,7 @@ class _CategorySpotlightCard extends StatefulWidget {
 class _CategorySpotlightCardState extends State<_CategorySpotlightCard>
     with SingleTickerProviderStateMixin {
   late final AnimationController _ctrl;
-  late final Animation<double>   _scaleAnim;
+  late final Animation<double> _scaleAnim;
 
   @override
   void initState() {
@@ -1542,9 +1553,10 @@ class _CategorySpotlightCardState extends State<_CategorySpotlightCard>
       lowerBound: 0.0,
       upperBound: 1.0,
     );
-    _scaleAnim = Tween<double>(begin: 1.0, end: 0.95).animate(
-      CurvedAnimation(parent: _ctrl, curve: Curves.easeOut),
-    );
+    _scaleAnim = Tween<double>(
+      begin: 1.0,
+      end: 0.95,
+    ).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOut));
   }
 
   @override
@@ -1555,32 +1567,29 @@ class _CategorySpotlightCardState extends State<_CategorySpotlightCard>
 
   @override
   Widget build(BuildContext context) {
-    final isDark   = _isDark(context);
+    final isDark = _isDark(context);
     final imageUrl = widget.category.imageUrl;
 
     // Premium background gradient
     final bgGradient = isDark
         ? LinearGradient(
-            colors: [
-              _surface(context),
-              const Color(0xFF1B2230),
-            ],
+            colors: [_surface(context), const Color(0xFF1B2230)],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           )
         : LinearGradient(
-            colors: [
-              _surface(context),
-              const Color(0xFFF5F7FF),
-            ],
+            colors: [_surface(context), const Color(0xFFF5F7FF)],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           );
 
     return GestureDetector(
-      onTapDown:   (_) => _ctrl.forward(),
-      onTapUp:     (_) { _ctrl.reverse(); widget.onTap(); },
-      onTapCancel: ()  => _ctrl.reverse(),
+      onTapDown: (_) => _ctrl.forward(),
+      onTapUp: (_) {
+        _ctrl.reverse();
+        widget.onTap();
+      },
+      onTapCancel: () => _ctrl.reverse(),
       child: ScaleTransition(
         scale: _scaleAnim,
         child: SizedBox(
@@ -1588,19 +1597,21 @@ class _CategorySpotlightCardState extends State<_CategorySpotlightCard>
           height: 144,
           child: Container(
             decoration: BoxDecoration(
-              gradient:     bgGradient,
+              gradient: bgGradient,
               borderRadius: BorderRadius.circular(20),
-              border:       Border.all(
-                color: isDark ? const Color(0xFF2D3545) : const Color(0xFFDFE4F2),
+              border: Border.all(
+                color: isDark
+                    ? const Color(0xFF2D3545)
+                    : const Color(0xFFDFE4F2),
                 width: 1,
               ),
               boxShadow: [
                 BoxShadow(
-                  color:      isDark
+                  color: isDark
                       ? const Color(0x1F000000)
                       : const Color(0x0A233380),
                   blurRadius: 10,
-                  offset:     const Offset(0, 4),
+                  offset: const Offset(0, 4),
                 ),
               ],
             ),
@@ -1610,14 +1621,14 @@ class _CategorySpotlightCardState extends State<_CategorySpotlightCard>
               children: [
                 // ── Icon / Image (No circular background) ────────────────
                 SizedBox(
-                  width:  50,
+                  width: 50,
                   height: 50,
                   child: Center(
                     child: imageUrl == null || imageUrl.isEmpty
                         ? Icon(widget.icon, color: _primary, size: 30)
                         : Image.network(
                             imageUrl,
-                            fit:     BoxFit.contain,
+                            fit: BoxFit.contain,
                             headers: _imageHeaders,
                             errorBuilder: (context, error, stackTrace) =>
                                 Icon(widget.icon, color: _primary, size: 30),
@@ -1633,14 +1644,14 @@ class _CategorySpotlightCardState extends State<_CategorySpotlightCard>
                   child: Center(
                     child: Text(
                       widget.category.name,
-                      maxLines:  2,
-                      overflow:  TextOverflow.ellipsis,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                       textAlign: TextAlign.center,
                       style: GoogleFonts.manrope(
-                        fontSize:   12.5,
+                        fontSize: 12.5,
                         fontWeight: FontWeight.w800,
-                        color:      _textPrimary(context),
-                        height:     1.2,
+                        color: _textPrimary(context),
+                        height: 1.2,
                       ),
                     ),
                   ),
@@ -1650,7 +1661,10 @@ class _CategorySpotlightCardState extends State<_CategorySpotlightCard>
 
                 // ── CTA link (Premium pill badge with Chevron) ──────────
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: isDark
                         ? _primary.withValues(alpha: 0.18)
@@ -1670,9 +1684,9 @@ class _CategorySpotlightCardState extends State<_CategorySpotlightCard>
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: GoogleFonts.manrope(
-                          fontSize:   9,
+                          fontSize: 9,
                           fontWeight: FontWeight.w800,
-                          color:      isDark ? const Color(0xFF7E9BFF) : _primary,
+                          color: isDark ? const Color(0xFF7E9BFF) : _primary,
                           letterSpacing: 0.3,
                         ),
                       ),
@@ -1694,7 +1708,6 @@ class _CategorySpotlightCardState extends State<_CategorySpotlightCard>
   }
 }
 
-
 // ── Value Highlights – clean auto-scrolling marquee ───────────────────────
 
 class _ValueHighlights extends StatefulWidget {
@@ -1708,46 +1721,46 @@ class _ValueHighlightsState extends State<_ValueHighlights>
     with SingleTickerProviderStateMixin {
   static const _items = [
     (
-      icon:     Icons.verified_user_outlined,
-      title:    '100% Original',
+      icon: Icons.verified_user_outlined,
+      title: '100% Original',
       subtitle: 'Genuine Apple products',
     ),
     (
-      icon:     Icons.workspace_premium_outlined,
-      title:    'Warranty',
+      icon: Icons.workspace_premium_outlined,
+      title: 'Warranty',
       subtitle: 'Official product support',
     ),
     (
-      icon:     Icons.local_shipping_outlined,
-      title:    'Fast Delivery',
+      icon: Icons.local_shipping_outlined,
+      title: 'Fast Delivery',
       subtitle: 'Quick and safe shipping',
     ),
     (
-      icon:     Icons.headset_mic_outlined,
-      title:    'Expert Support',
+      icon: Icons.headset_mic_outlined,
+      title: 'Expert Support',
       subtitle: 'Service team ready to help',
     ),
     (
-      icon:     Icons.local_offer_outlined,
-      title:    'Best Prices',
+      icon: Icons.local_offer_outlined,
+      title: 'Best Prices',
       subtitle: 'Unbeatable deals daily',
     ),
     (
-      icon:     Icons.lock_outline_rounded,
-      title:    'Secure Pay',
+      icon: Icons.lock_outline_rounded,
+      title: 'Secure Pay',
       subtitle: 'Safe & encrypted checkout',
     ),
   ];
 
-  static const int    _repeat    = 5;
+  static const int _repeat = 5;
   static const double _cardWidth = 148;
-  static const double _gap       = 10;
-  static const double _scrollPx  = 0.55;
-  static const Duration _tick    = Duration(milliseconds: 16);
+  static const double _gap = 10;
+  static const double _scrollPx = 0.55;
+  static const Duration _tick = Duration(milliseconds: 16);
 
-  late final ScrollController   _scrollCtrl;
+  late final ScrollController _scrollCtrl;
   late final AnimationController _dotCtrl;
-  late final Animation<double>   _dotAnim;
+  late final Animation<double> _dotAnim;
   double _singleSetWidth = 0;
 
   @override
@@ -1755,7 +1768,7 @@ class _ValueHighlightsState extends State<_ValueHighlights>
     super.initState();
     _scrollCtrl = ScrollController();
     _dotCtrl = AnimationController(
-      vsync:    this,
+      vsync: this,
       duration: const Duration(milliseconds: 1000),
     )..repeat(reverse: true);
     _dotAnim = CurvedAnimation(parent: _dotCtrl, curve: Curves.easeInOut);
@@ -1768,7 +1781,7 @@ class _ValueHighlightsState extends State<_ValueHighlights>
     Future.doWhile(() async {
       await Future.delayed(_tick);
       if (!mounted || !_scrollCtrl.hasClients) return false;
-      final pos    = _scrollCtrl.offset + _scrollPx;
+      final pos = _scrollCtrl.offset + _scrollPx;
       final maxPos = _scrollCtrl.position.maxScrollExtent;
       if (pos >= _singleSetWidth) {
         _scrollCtrl.jumpTo(pos - _singleSetWidth);
@@ -1790,7 +1803,7 @@ class _ValueHighlightsState extends State<_ValueHighlights>
 
   @override
   Widget build(BuildContext context) {
-    final isDark   = _isDark(context);
+    final isDark = _isDark(context);
     final allItems = List.generate(
       _items.length * _repeat,
       (i) => _items[i % _items.length],
@@ -1807,7 +1820,7 @@ class _ValueHighlightsState extends State<_ValueHighlights>
               FadeTransition(
                 opacity: _dotAnim,
                 child: Container(
-                  width:  7,
+                  width: 7,
                   height: 7,
                   decoration: const BoxDecoration(
                     color: _primary,
@@ -1819,9 +1832,9 @@ class _ValueHighlightsState extends State<_ValueHighlights>
               Text(
                 'Why Choose Us',
                 style: GoogleFonts.manrope(
-                  fontSize:   14.5,
+                  fontSize: 14.5,
                   fontWeight: FontWeight.w700,
-                  color:      _textPrimary(context),
+                  color: _textPrimary(context),
                 ),
               ),
             ],
@@ -1831,14 +1844,14 @@ class _ValueHighlightsState extends State<_ValueHighlights>
         // ── Marquee strip ───────────────────────────────────────────────
         Container(
           decoration: BoxDecoration(
-            color:        _surface(context),
+            color: _surface(context),
             borderRadius: BorderRadius.circular(20),
-            border:       Border.all(color: _cardBorder(context)),
+            border: Border.all(color: _cardBorder(context)),
             boxShadow: [
               BoxShadow(
-                color:      Colors.black.withValues(alpha: isDark ? 0.14 : 0.05),
+                color: Colors.black.withValues(alpha: isDark ? 0.14 : 0.05),
                 blurRadius: 10,
-                offset:     const Offset(0, 3),
+                offset: const Offset(0, 3),
               ),
             ],
           ),
@@ -1858,23 +1871,24 @@ class _ValueHighlightsState extends State<_ValueHighlights>
               child: SizedBox(
                 height: 142,
                 child: ListView.separated(
-                  controller:      _scrollCtrl,
+                  controller: _scrollCtrl,
                   scrollDirection: Axis.horizontal,
-                  physics:         const NeverScrollableScrollPhysics(),
+                  physics: const NeverScrollableScrollPhysics(),
                   padding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 12),
-                  itemCount:        allItems.length,
-                  separatorBuilder: (context, index) =>
-                      SizedBox(width: _gap),
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
+                  itemCount: allItems.length,
+                  separatorBuilder: (context, index) => SizedBox(width: _gap),
                   itemBuilder: (context, index) {
                     final item = allItems[index];
                     return SizedBox(
                       width: _cardWidth,
                       child: _HighlightCard(
-                        icon:    item.icon,
-                        title:   item.title,
+                        icon: item.icon,
+                        title: item.title,
                         subtitle: item.subtitle,
-                        isDark:  isDark,
+                        isDark: isDark,
                       ),
                     );
                   },
@@ -1898,28 +1912,28 @@ class _HighlightCard extends StatelessWidget {
   });
 
   final IconData icon;
-  final String   title;
-  final String   subtitle;
-  final bool     isDark;
+  final String title;
+  final String subtitle;
+  final bool isDark;
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color:        _surfaceAlt(context),
+        color: _surfaceAlt(context),
         borderRadius: BorderRadius.circular(16),
-        border:       Border.all(color: _cardBorder(context)),
+        border: Border.all(color: _cardBorder(context)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Icon box – single accent tint, no gradient
           Container(
-            width:  38,
+            width: 38,
             height: 38,
             decoration: BoxDecoration(
-              color:        _primary.withValues(alpha: isDark ? 0.18 : 0.09),
+              color: _primary.withValues(alpha: isDark ? 0.18 : 0.09),
               borderRadius: BorderRadius.circular(11),
             ),
             child: Icon(icon, size: 20, color: _primary),
@@ -1931,10 +1945,10 @@ class _HighlightCard extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: GoogleFonts.manrope(
-              fontSize:   12.5,
+              fontSize: 12.5,
               fontWeight: FontWeight.w700,
-              color:      _textPrimary(context),
-              height:     1.2,
+              color: _textPrimary(context),
+              height: 1.2,
             ),
           ),
           const SizedBox(height: 2),
@@ -1944,10 +1958,10 @@ class _HighlightCard extends StatelessWidget {
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             style: GoogleFonts.manrope(
-              fontSize:   10.5,
+              fontSize: 10.5,
               fontWeight: FontWeight.w500,
-              color:      _textMuted(context),
-              height:     1.35,
+              color: _textMuted(context),
+              height: 1.35,
             ),
           ),
         ],
@@ -1955,7 +1969,6 @@ class _HighlightCard extends StatelessWidget {
     );
   }
 }
-
 
 class _RepairCallout extends StatelessWidget {
   const _RepairCallout({required this.onBookRepair});
@@ -2898,28 +2911,23 @@ class _CategorySkeleton extends StatelessWidget {
                 scrollDirection: Axis.horizontal,
                 physics: const NeverScrollableScrollPhysics(),
                 child: ConstrainedBox(
-                  constraints: BoxConstraints(
-                    minWidth: constraints.maxWidth,
-                  ),
+                  constraints: BoxConstraints(minWidth: constraints.maxWidth),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     mainAxisSize: MainAxisSize.max,
-                    children: List.generate(
-                      4 * 2 - 1,
-                      (index) {
-                        if (index.isOdd) {
-                          return const SizedBox(width: 12);
-                        }
-                        return Container(
-                          width: 108,
-                          height: 144,
-                          decoration: BoxDecoration(
-                            color: _surfaceAlt(context),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                        );
-                      },
-                    ),
+                    children: List.generate(4 * 2 - 1, (index) {
+                      if (index.isOdd) {
+                        return const SizedBox(width: 12);
+                      }
+                      return Container(
+                        width: 108,
+                        height: 144,
+                        decoration: BoxDecoration(
+                          color: _surfaceAlt(context),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                      );
+                    }),
                   ),
                 ),
               );

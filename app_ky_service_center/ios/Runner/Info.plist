@@ -46,6 +46,8 @@
 	</dict>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Allow access to your location to select a delivery address.</string>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Allow access to your local network to connect to your development server.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

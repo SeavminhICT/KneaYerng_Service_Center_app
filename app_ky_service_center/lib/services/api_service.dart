@@ -33,11 +33,18 @@ class ApiService {
     'API_BASE_URL',
     defaultValue: '',
   );
+  static const String _hostedBaseUrlOverride = String.fromEnvironment(
+    'API_HOSTED_BASE_URL',
+    defaultValue: '',
+  );
   static const String _baseUrlPreferenceKey = 'api_base_url';
+  static const String _baseUrlHistoryPreferenceKey = 'api_base_url_history';
+  static const int _maxBaseUrlHistoryEntries = 8;
   static const String _loopbackApi = 'http://127.0.0.1:8000/api';
   static const String _androidEmulatorApi = 'http://10.0.2.2:8000/api';
   static String? _runtimeBaseUrl;
   static String? _autoDetectedBaseUrl;
+  static String? _resolvedBaseUrl;
 
   static Future<void> initialize() async {
     final prefs = await SharedPreferences.getInstance();
@@ -48,16 +55,33 @@ class ApiService {
       _runtimeBaseUrl = _normalizeBaseUrl(stored);
     }
 
-    _autoDetectedBaseUrl = await _resolveAutoDetectedBaseUrl();
+    final history = _readBaseUrlHistoryFromPrefs(prefs);
+    _autoDetectedBaseUrl = await _resolveAutoDetectedBaseUrl(history: history);
+    _resolvedBaseUrl = _autoDetectedBaseUrl;
+
+    if (_resolvedBaseUrl == null || _resolvedBaseUrl!.isEmpty) {
+      _resolvedBaseUrl = _runtimeBaseUrl;
+    }
+    if (_resolvedBaseUrl != null && _resolvedBaseUrl!.isNotEmpty) {
+      await _rememberBaseUrlInHistory(_resolvedBaseUrl!, prefs: prefs);
+    }
   }
 
   static String get baseUrl {
+    if (_resolvedBaseUrl != null && _resolvedBaseUrl!.isNotEmpty) {
+      return _resolvedBaseUrl!;
+    }
+
     if (_runtimeBaseUrl != null && _runtimeBaseUrl!.isNotEmpty) {
       return _runtimeBaseUrl!;
     }
 
     if (_baseUrlOverride.isNotEmpty) {
       return _normalizeBaseUrl(_baseUrlOverride);
+    }
+
+    if (_autoDetectedBaseUrl != null && _autoDetectedBaseUrl!.isNotEmpty) {
+      return _autoDetectedBaseUrl!;
     }
 
     if (kIsWeb) {
@@ -73,14 +97,6 @@ class ApiService {
         return inferred.toString();
       }
       return _loopbackApi;
-    }
-
-    if (defaultTargetPlatform == TargetPlatform.android) {
-      return _androidEmulatorApi;
-    }
-
-    if (_autoDetectedBaseUrl != null && _autoDetectedBaseUrl!.isNotEmpty) {
-      return _autoDetectedBaseUrl!;
     }
 
     return _loopbackApi;
@@ -123,6 +139,8 @@ class ApiService {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_baseUrlPreferenceKey, normalized);
     _runtimeBaseUrl = normalized;
+    _resolvedBaseUrl = normalized;
+    await _rememberBaseUrlInHistory(normalized, prefs: prefs);
     return null;
   }
 
@@ -130,6 +148,9 @@ class ApiService {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_baseUrlPreferenceKey);
     _runtimeBaseUrl = null;
+    final history = _readBaseUrlHistoryFromPrefs(prefs);
+    _autoDetectedBaseUrl = await _resolveAutoDetectedBaseUrl(history: history);
+    _resolvedBaseUrl = _autoDetectedBaseUrl;
   }
 
   static Future<String?> testBaseUrl(String raw) async {
@@ -145,7 +166,7 @@ class ApiService {
           .get(probeUri, headers: const {'Accept': 'application/json'})
           .timeout(const Duration(seconds: 8));
 
-      if (response.statusCode >= 200 && response.statusCode < 300) {
+      if (_looksLikeBackendApiResponse(response)) {
         return null;
       }
 
@@ -795,17 +816,171 @@ class ApiService {
     return value;
   }
 
-  static Future<String?> _resolveAutoDetectedBaseUrl() async {
+  static Future<String?> _resolveAutoDetectedBaseUrl({
+    List<String> history = const [],
+  }) async {
     if (kIsWeb) {
       return null;
     }
 
-    if (defaultTargetPlatform == TargetPlatform.android ||
-        defaultTargetPlatform == TargetPlatform.iOS) {
-      return null;
+    final candidates = <String>[];
+
+    void addCandidate(String? raw) {
+      if (raw == null || raw.trim().isEmpty) return;
+      final normalized = _normalizeBaseUrl(raw);
+      if (normalized.isEmpty || candidates.contains(normalized)) return;
+      candidates.add(normalized);
     }
 
-    return local_host_resolver.detectLocalServerBaseUrl();
+    addCandidate(_runtimeBaseUrl);
+    addCandidate(_baseUrlOverride);
+    addCandidate(_hostedBaseUrlOverride);
+    for (final raw in history) {
+      addCandidate(raw);
+    }
+
+    if (defaultTargetPlatform != TargetPlatform.android &&
+        defaultTargetPlatform != TargetPlatform.iOS) {
+      addCandidate(await local_host_resolver.detectLocalServerBaseUrl());
+    }
+
+    final isMobileDevice =
+        defaultTargetPlatform == TargetPlatform.android ||
+        defaultTargetPlatform == TargetPlatform.iOS;
+    if (isMobileDevice) {
+      final guessed = await local_host_resolver.guessLanApiBaseUrls();
+      for (final raw in guessed.take(24)) {
+        addCandidate(raw);
+      }
+    }
+
+    if (defaultTargetPlatform == TargetPlatform.android) {
+      addCandidate(_androidEmulatorApi);
+    }
+
+    addCandidate(_loopbackApi);
+
+    const batchSize = 8;
+    for (var start = 0; start < candidates.length; start += batchSize) {
+      final end = (start + batchSize < candidates.length)
+          ? start + batchSize
+          : candidates.length;
+      final batch = candidates.sublist(start, end);
+      final results = await Future.wait(
+        batch.map((candidate) async {
+          final isReachable = await _isBaseUrlReachable(candidate);
+          return isReachable ? candidate : null;
+        }),
+      );
+      for (final candidate in results) {
+        if (candidate != null) {
+          return candidate;
+        }
+      }
+    }
+
+    final fallbackCandidates = <String>[
+      ?_runtimeBaseUrl,
+      _baseUrlOverride,
+      _hostedBaseUrlOverride,
+      ...history,
+    ];
+    for (final raw in fallbackCandidates) {
+      final normalized = _normalizeBaseUrl(raw);
+      if (normalized.isEmpty) continue;
+      if (!_isLocalOnlyBaseUrl(normalized)) {
+        return normalized;
+      }
+    }
+
+    if (defaultTargetPlatform == TargetPlatform.android &&
+        candidates.contains(_androidEmulatorApi)) {
+      return _androidEmulatorApi;
+    }
+
+    return null;
+  }
+
+  static Future<bool> _isBaseUrlReachable(String raw) async {
+    final normalized = _normalizeBaseUrl(raw);
+    if (normalized.isEmpty) {
+      return false;
+    }
+
+    final probeUri = Uri.parse(
+      '$normalized/categories',
+    ).replace(queryParameters: const {'per_page': '1', 'status': 'active'});
+
+    try {
+      final response = await http
+          .get(probeUri, headers: const {'Accept': 'application/json'})
+          .timeout(const Duration(milliseconds: 2200));
+      return _looksLikeBackendApiResponse(response);
+    } catch (_) {
+      return false;
+    }
+  }
+
+  static bool _looksLikeBackendApiResponse(http.Response response) {
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      return false;
+    }
+
+    final contentType = response.headers['content-type']?.toLowerCase() ?? '';
+    if (!contentType.contains('application/json')) {
+      return false;
+    }
+
+    try {
+      final decoded = jsonDecode(response.body);
+      if (decoded is List) {
+        return true;
+      }
+      if (decoded is Map<String, dynamic>) {
+        if (decoded.containsKey('data') ||
+            decoded.containsKey('links') ||
+            decoded.containsKey('meta')) {
+          return true;
+        }
+      }
+    } catch (_) {
+      return false;
+    }
+
+    return false;
+  }
+
+  static List<String> _readBaseUrlHistoryFromPrefs(SharedPreferences prefs) {
+    final rawItems =
+        prefs.getStringList(_baseUrlHistoryPreferenceKey) ?? const [];
+    final normalized = <String>[];
+    for (final raw in rawItems) {
+      final value = _normalizeBaseUrl(raw);
+      if (value.isEmpty || normalized.contains(value)) {
+        continue;
+      }
+      normalized.add(value);
+    }
+    return normalized;
+  }
+
+  static Future<void> _rememberBaseUrlInHistory(
+    String raw, {
+    SharedPreferences? prefs,
+  }) async {
+    final normalized = _normalizeBaseUrl(raw);
+    if (normalized.isEmpty) {
+      return;
+    }
+
+    final localPrefs = prefs ?? await SharedPreferences.getInstance();
+    final list = _readBaseUrlHistoryFromPrefs(localPrefs);
+    list.removeWhere((item) => item == normalized);
+    list.insert(0, normalized);
+    if (list.length > _maxBaseUrlHistoryEntries) {
+      list.removeRange(_maxBaseUrlHistoryEntries, list.length);
+    }
+    await localPrefs.setStringList(_baseUrlHistoryPreferenceKey, list);
   }
 
   static String _normalizeBaseUrl(String raw) {
@@ -843,6 +1018,11 @@ class ApiService {
       return true;
     }
 
+    final explicitPort = _extractPort(raw);
+    if (explicitPort != null && explicitPort != 443 && explicitPort != 8443) {
+      return true;
+    }
+
     final parts = host.split('.');
     if (parts.length == 4) {
       final octets = parts.map(int.tryParse).toList();
@@ -858,6 +1038,31 @@ class ApiService {
       }
     }
 
+    return false;
+  }
+
+  static bool _isLocalOnlyBaseUrl(String raw) {
+    final uri = Uri.tryParse(raw.trim());
+    final host = (uri?.host ?? _extractHost(raw)).toLowerCase();
+    return host == 'localhost' || host == '127.0.0.1' || host == '10.0.2.2';
+  }
+
+  static bool _isPrivateLanHost(String host) {
+    final parts = host.split('.');
+    if (parts.length != 4) {
+      return false;
+    }
+
+    final octets = parts.map(int.tryParse).toList();
+    if (octets.any((octet) => octet == null)) {
+      return false;
+    }
+
+    final first = octets[0]!;
+    final second = octets[1]!;
+    if (first == 10) return true;
+    if (first == 172 && second >= 16 && second <= 31) return true;
+    if (first == 192 && second == 168) return true;
     return false;
   }
 
@@ -890,6 +1095,44 @@ class ApiService {
     }
 
     return value.toLowerCase();
+  }
+
+  static int? _extractPort(String raw) {
+    final value = raw.trim();
+    if (value.isEmpty) {
+      return null;
+    }
+
+    if (value.contains('://')) {
+      final uri = Uri.tryParse(value);
+      if (uri == null || !uri.hasPort) {
+        return null;
+      }
+      return uri.port;
+    }
+
+    var hostPort = value;
+    final slashIndex = hostPort.indexOf('/');
+    if (slashIndex >= 0) {
+      hostPort = hostPort.substring(0, slashIndex);
+    }
+
+    if (hostPort.startsWith('[')) {
+      final closing = hostPort.indexOf(']');
+      if (closing > 0 && closing + 1 < hostPort.length) {
+        if (hostPort[closing + 1] == ':') {
+          return int.tryParse(hostPort.substring(closing + 2));
+        }
+      }
+      return null;
+    }
+
+    final lastColon = hostPort.lastIndexOf(':');
+    if (lastColon <= 0 || hostPort.indexOf(':') != lastColon) {
+      return null;
+    }
+
+    return int.tryParse(hostPort.substring(lastColon + 1));
   }
 
   static int? _parseInt(dynamic value) {
@@ -1278,10 +1521,21 @@ class ApiService {
       return [];
     }
 
+    if (decoded is Map && decoded['success'] == false) {
+      final message = decoded['message']?.toString().trim();
+      throw Exception(
+        (message != null && message.isNotEmpty)
+            ? message
+            : 'Invalid products response',
+      );
+    }
+
     final rawList = decoded is Map
         ? decoded['data'] ?? decoded['products'] ?? decoded['items']
         : decoded;
-    if (rawList is! List) return [];
+    if (rawList is! List) {
+      throw Exception('Invalid products response');
+    }
 
     final products = rawList
         .whereType<Map>()
@@ -1867,11 +2121,26 @@ class ApiService {
 
   static String _buildNetworkErrorMessage() {
     final currentBase = baseUrl;
-    if (defaultTargetPlatform == TargetPlatform.android &&
-        currentBase.contains('10.0.2.2')) {
-      return 'Cannot reach the server. If you are on a real device, set '
-          'API_BASE_URL to your computer IP (example: http://192.168.1.10:8000/api) '
-          'or use adb reverse to expose your local server.';
+    final uri = Uri.tryParse(currentBase);
+    final host = uri?.host.toLowerCase() ?? '';
+    final onMobile =
+        !kIsWeb &&
+        (defaultTargetPlatform == TargetPlatform.android ||
+            defaultTargetPlatform == TargetPlatform.iOS);
+    final usingLocalOnlyHost =
+        host == '127.0.0.1' || host == 'localhost' || host == '10.0.2.2';
+    final usingPrivateLanHost = _isPrivateLanHost(host);
+
+    if (onMobile && usingLocalOnlyHost) {
+      return 'Cannot reach the server from a real device while using $host. '
+          'Start Laravel with --host=0.0.0.0 and set the app server to your computer IP '
+          '(example: http://192.168.1.10:8000/api).';
+    }
+    if (onMobile && usingPrivateLanHost) {
+      return 'Cannot reach the server at $currentBase. '
+          'Your computer LAN IP may have changed. '
+          'Run Laravel with --host=0.0.0.0 and update Server Settings '
+          '(example: http://192.168.1.10:8000/api).';
     }
     return 'Cannot reach the server at $currentBase. Please check your '
         'connection, server URL, or switch the app server in login settings.';

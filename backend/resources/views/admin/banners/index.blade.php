@@ -68,6 +68,48 @@
             var prevButton = document.getElementById('banner-prev');
             var nextButton = document.getElementById('banner-next');
 
+            function firstValidationError(errors) {
+                if (!errors || typeof errors !== 'object') {
+                    return '';
+                }
+                var groups = Object.values(errors);
+                for (var i = 0; i < groups.length; i += 1) {
+                    var group = groups[i];
+                    if (Array.isArray(group) && group.length && typeof group[0] === 'string') {
+                        return group[0];
+                    }
+                }
+                return '';
+            }
+
+            async function resolveApiError(response, fallbackMessage) {
+                if (response.status === 419) {
+                    return 'Session expired. Refresh this page and sign in again.';
+                }
+                if (response.status === 401 || response.status === 403) {
+                    return 'You are not authorized to perform this action.';
+                }
+                if (response.status === 413) {
+                    return 'The selected image is too large.';
+                }
+
+                try {
+                    var data = await response.clone().json();
+                    var validationMessage = firstValidationError(data.errors);
+                    if (validationMessage) {
+                        return validationMessage;
+                    }
+                    if (data && typeof data.message === 'string' && data.message.trim() !== '') {
+                        return data.message.trim();
+                    }
+                } catch (_) {}
+
+                if (response.status >= 400) {
+                    return fallbackMessage + ' (HTTP ' + response.status + ')';
+                }
+                return fallbackMessage;
+            }
+
             function resolveImage(path) {
                 if (!path) {
                     return '';
@@ -82,40 +124,50 @@
             }
 
             async function loadBanners() {
-                await window.adminApi.ensureCsrfCookie();
-                var response = await window.adminApi.request('/api/admin/banners?page=' + currentPage);
-                if (!response.ok) {
-                    grid.innerHTML = '<div class="text-sm text-slate-500">Unable to load banners.</div>';
-                    info.textContent = 'Unable to load banners.';
-                    return;
+                try {
+                    await window.adminApi.ensureCsrfCookie();
+                    var response = await window.adminApi.request('/api/admin/banners?page=' + currentPage);
+                    if (!response.ok) {
+                        var apiError = await resolveApiError(response, 'Unable to load banners.');
+                        grid.innerHTML = '<div class="text-sm text-slate-500">' + apiError + '</div>';
+                        info.textContent = apiError;
+                        prevButton.disabled = true;
+                        nextButton.disabled = true;
+                        return;
+                    }
+
+                    var data = await response.json();
+                    var list = Array.isArray(data.data) ? data.data : [];
+
+                    grid.innerHTML = list.map(function (banner) {
+                        var imageUrl = resolveImage(banner.image);
+                        return `
+                            <div class="rounded-2xl border border-slate-200 p-4 shadow-sm dark:border-slate-800">
+                                <div class="aspect-[16/7] overflow-hidden rounded-xl bg-slate-100 dark:bg-slate-800">
+                                    ${imageUrl ? `<img src="${imageUrl}" alt="Banner ${banner.id}" class="h-full w-full object-cover" />` : ''}
+                                </div>
+                                <div class="mt-3 flex items-center justify-between text-xs text-slate-500">
+                                    <span>ID: ${banner.id}</span>
+                                    <button data-banner-delete="${banner.id}" class="text-xs font-semibold text-danger-600">Delete</button>
+                                </div>
+                                <div class="mt-2 space-y-1">
+                                    ${banner.badge_label ? `<p class="text-[11px] font-semibold uppercase tracking-wide text-primary-600">${banner.badge_label}</p>` : ''}
+                                    ${banner.title ? `<p class="text-sm font-semibold text-slate-900 dark:text-white">${banner.title}</p>` : ''}
+                                    ${banner.subtitle ? `<p class="text-xs text-slate-500">${banner.subtitle}</p>` : ''}
+                                </div>
+                            </div>
+                        `;
+                    }).join('') || '<div class="text-sm text-slate-500">No banners yet.</div>';
+
+                    info.textContent = 'Showing ' + list.length + ' banners';
+                    prevButton.disabled = !data.links?.prev;
+                    nextButton.disabled = !data.links?.next;
+                } catch (_) {
+                    grid.innerHTML = '<div class="text-sm text-slate-500">Network error. Please try again.</div>';
+                    info.textContent = 'Network error. Please try again.';
+                    prevButton.disabled = true;
+                    nextButton.disabled = true;
                 }
-
-                var data = await response.json();
-                var list = data.data || [];
-
-                grid.innerHTML = list.map(function (banner) {
-                    var imageUrl = resolveImage(banner.image);
-                    return `
-                        <div class="rounded-2xl border border-slate-200 p-4 shadow-sm dark:border-slate-800">
-                            <div class="aspect-[16/7] overflow-hidden rounded-xl bg-slate-100 dark:bg-slate-800">
-                                ${imageUrl ? `<img src="${imageUrl}" alt="Banner ${banner.id}" class="h-full w-full object-cover" />` : ''}
-                            </div>
-                            <div class="mt-3 flex items-center justify-between text-xs text-slate-500">
-                                <span>ID: ${banner.id}</span>
-                                <button data-banner-delete="${banner.id}" class="text-xs font-semibold text-danger-600">Delete</button>
-                            </div>
-                            <div class="mt-2 space-y-1">
-                                ${banner.badge_label ? `<p class="text-[11px] font-semibold uppercase tracking-wide text-primary-600">${banner.badge_label}</p>` : ''}
-                                ${banner.title ? `<p class="text-sm font-semibold text-slate-900 dark:text-white">${banner.title}</p>` : ''}
-                                ${banner.subtitle ? `<p class="text-xs text-slate-500">${banner.subtitle}</p>` : ''}
-                            </div>
-                        </div>
-                    `;
-                }).join('') || '<div class="text-sm text-slate-500">No banners yet.</div>';
-
-                info.textContent = 'Showing ' + list.length + ' banners';
-                prevButton.disabled = !data.links?.prev;
-                nextButton.disabled = !data.links?.next;
             }
 
             form.addEventListener('submit', async function (event) {
@@ -136,19 +188,31 @@
                 formData.append('subtitle', subtitleInput.value || '');
                 formData.append('cta_label', ctaInput.value || '');
 
-                formMessage.textContent = 'Uploading...';
-                await window.adminApi.ensureCsrfCookie();
-                var response = await window.adminApi.request('/api/admin/banners', {
-                    method: 'POST',
-                    body: formData
-                });
+                var response;
+                try {
+                    formMessage.textContent = 'Uploading...';
+                    await window.adminApi.ensureCsrfCookie();
+                    response = await window.adminApi.request('/api/admin/banners', {
+                        method: 'POST',
+                        body: formData
+                    });
+                } catch (_) {
+                    formMessage.textContent = 'Network error. Please check your connection and try again.';
+                    if (window.adminSwalError) {
+                        window.adminSwalError('Upload failed', 'Network error. Please check your connection and try again.');
+                    } else if (window.adminToast) {
+                        window.adminToast('Network error. Please check your connection and try again.', { type: 'error' });
+                    }
+                    return;
+                }
 
                 if (!response.ok) {
-                    formMessage.textContent = 'Upload failed. Please try again.';
+                    var errorMessage = await resolveApiError(response, 'Upload failed. Please try again.');
+                    formMessage.textContent = errorMessage;
                     if (window.adminSwalError) {
-                        window.adminSwalError('Upload failed', 'Please try again.');
+                        window.adminSwalError('Upload failed', errorMessage);
                     } else if (window.adminToast) {
-                        window.adminToast('Upload failed. Please try again.', { type: 'error' });
+                        window.adminToast(errorMessage, { type: 'error' });
                     }
                     return;
                 }
@@ -218,17 +282,29 @@
                 if (!confirmed) {
                     return;
                 }
-                await window.adminApi.ensureCsrfCookie();
-                var response = await window.adminApi.request('/api/admin/banners/' + bannerId, {
-                    method: 'DELETE'
-                });
+                var response;
+                try {
+                    await window.adminApi.ensureCsrfCookie();
+                    response = await window.adminApi.request('/api/admin/banners/' + bannerId, {
+                        method: 'DELETE'
+                    });
+                } catch (_) {
+                    formMessage.textContent = 'Network error. Please check your connection and try again.';
+                    if (window.adminSwalError) {
+                        window.adminSwalError('Delete failed', 'Network error. Please check your connection and try again.');
+                    } else if (window.adminToast) {
+                        window.adminToast('Network error. Please check your connection and try again.', { type: 'error' });
+                    }
+                    return;
+                }
 
                 if (!response.ok) {
-                    formMessage.textContent = 'Delete failed. Please try again.';
+                    var errorMessage = await resolveApiError(response, 'Delete failed. Please try again.');
+                    formMessage.textContent = errorMessage;
                     if (window.adminSwalError) {
-                        window.adminSwalError('Delete failed', 'Please try again.');
+                        window.adminSwalError('Delete failed', errorMessage);
                     } else if (window.adminToast) {
-                        window.adminToast('Delete failed. Please try again.', { type: 'error' });
+                        window.adminToast(errorMessage, { type: 'error' });
                     }
                     return;
                 }

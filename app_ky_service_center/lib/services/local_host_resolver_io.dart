@@ -11,12 +11,13 @@ Future<String?> detectLocalServerBaseUrl({
       includeLinkLocal: false,
     );
 
-    final hosts = interfaces
-        .expand((interface) => interface.addresses)
-        .map((address) => address.address)
-        .where(_isPrivateLanHost)
-        .toList()
-      ..sort(_compareHosts);
+    final hosts =
+        interfaces
+            .expand((interface) => interface.addresses)
+            .map((address) => address.address)
+            .where(_isPrivateLanHost)
+            .toList()
+          ..sort(_compareHosts);
 
     if (hosts.isEmpty) {
       return null;
@@ -30,6 +31,111 @@ Future<String?> detectLocalServerBaseUrl({
     ).toString().replaceFirst(RegExp(r'/$'), '');
   } catch (_) {
     return null;
+  }
+}
+
+Future<List<String>> guessLanApiBaseUrls({
+  int port = 8000,
+  String apiPath = 'api',
+}) async {
+  try {
+    final interfaces = await NetworkInterface.list(
+      type: InternetAddressType.IPv4,
+      includeLoopback: false,
+      includeLinkLocal: false,
+    );
+
+    final localHosts =
+        interfaces
+            .expand((interface) => interface.addresses)
+            .map((address) => address.address)
+            .where(_isPrivateLanHost)
+            .toList()
+          ..sort(_compareHosts);
+    if (localHosts.isEmpty) {
+      return const [];
+    }
+
+    final guessedHosts = <String>{};
+    for (final localHost in localHosts) {
+      final parts = localHost.split('.');
+      if (parts.length != 4) {
+        continue;
+      }
+
+      final first = int.tryParse(parts[0]);
+      final second = int.tryParse(parts[1]);
+      final third = int.tryParse(parts[2]);
+      final ownSuffix = int.tryParse(parts[3]);
+      if (first == null ||
+          second == null ||
+          third == null ||
+          ownSuffix == null) {
+        continue;
+      }
+
+      final orderedSuffixes = <int>[];
+      for (var delta = 1; delta <= 24; delta++) {
+        orderedSuffixes.add(ownSuffix - delta);
+        orderedSuffixes.add(ownSuffix + delta);
+      }
+      orderedSuffixes.addAll(const [
+        1,
+        2,
+        3,
+        4,
+        5,
+        8,
+        10,
+        20,
+        30,
+        40,
+        50,
+        60,
+        70,
+        80,
+        90,
+        98,
+        99,
+        100,
+        101,
+        110,
+        120,
+        130,
+        140,
+        150,
+        160,
+        170,
+        180,
+        190,
+        200,
+        210,
+        220,
+        230,
+        240,
+        250,
+      ]);
+
+      for (final suffix in orderedSuffixes) {
+        if (suffix <= 0 || suffix >= 255 || suffix == ownSuffix) {
+          continue;
+        }
+        guessedHosts.add('$first.$second.$third.$suffix');
+      }
+    }
+
+    return guessedHosts
+        .map(
+          (host) => Uri(
+            scheme: 'http',
+            host: host,
+            port: port,
+            path: apiPath,
+          ).toString().replaceFirst(RegExp(r'/$'), ''),
+        )
+        .toList(growable: false);
+  } catch (_) {
+    return const [];
   }
 }
 

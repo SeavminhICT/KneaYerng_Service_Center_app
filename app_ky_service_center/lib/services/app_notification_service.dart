@@ -704,7 +704,7 @@ class AppNotificationService {
 String _defaultMessageForType(String? type) {
   final normalized = type?.trim().toLowerCase() ?? '';
   if (normalized.contains('admin')) {
-    return 'You have a new message from admin.';
+    return 'You have a new message from KY-Service Center.';
   }
   return _fallbackNotificationBody;
 }

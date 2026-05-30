@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../../models/product.dart';
 import '../../services/api_service.dart';
+import '../../services/cart_service.dart';
 import '../products/product_detail_screen.dart';
+import '../cart/cart_screen.dart';
+import 'package:skeletonizer/skeletonizer.dart';
 
-const _pageBg = Color(0xFFF8F9FB);
 const _surface = Colors.white;
 const _surfaceAlt = Color(0xFFF2F5FB);
 const _border = Color(0xFFE7ECF5);
@@ -15,7 +18,6 @@ const _primary = Color(0xFF4A6CF7);
 const _danger = Color(0xFFDC2626);
 const _success = Color(0xFF16A34A);
 const _shadow = Color(0x140F172A);
-const _darkPageBg = Color(0xFF0D1117);
 const _darkSurface = Color(0xFF161B22);
 const _darkSurfaceAlt = Color(0xFF1D2635);
 const _darkBorder = Color(0xFF2B3442);
@@ -76,17 +78,18 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final title = widget.title ?? widget.categoryName;
 
     return Theme(
       data: Theme.of(context).copyWith(
-        textTheme: GoogleFonts.interTextTheme(Theme.of(context).textTheme),
+        textTheme: GoogleFonts.soraTextTheme(Theme.of(context).textTheme),
       ),
       child: Scaffold(
-        backgroundColor: isDark ? _darkPageBg : _pageBg,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         appBar: AppBar(
-          backgroundColor: isDark ? _darkPageBg : _pageBg,
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
           surfaceTintColor: Colors.transparent,
           elevation: 0,
           centerTitle: false,
@@ -113,8 +116,15 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
             ],
           ),
           actions: [
+            _CartIconButton(
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const CartScreen()),
+                );
+              },
+            ),
             IconButton(
-              tooltip: 'Refresh',
+              tooltip: l.retry,
               onPressed: _refresh,
               icon: const Icon(Icons.refresh_rounded, color: _primary),
             ),
@@ -132,14 +142,42 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
                   builder: (context, constraints) {
                     final columns = _columnsForWidth(constraints.maxWidth);
                     final aspect = _aspectForColumns(columns);
-                    return ListView(
-                      physics: const AlwaysScrollableScrollPhysics(
-                        parent: BouncingScrollPhysics(),
+                    final mockProducts = List.generate(
+                      8,
+                      (index) => Product(
+                        id: index,
+                        name: 'Loading Product Name',
+                        price: 100.0,
+                        salePriceOverride: 100.0,
+                        stock: 10,
                       ),
-                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                      children: [
-                        _LoadingGrid(columns: columns, aspectRatio: aspect),
-                      ],
+                    );
+                    return Skeletonizer(
+                      enabled: true,
+                      child: ListView(
+                        physics: const AlwaysScrollableScrollPhysics(
+                          parent: BouncingScrollPhysics(),
+                        ),
+                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                        children: [
+                          _ResultHeader(count: mockProducts.length),
+                          const SizedBox(height: 12),
+                          GridView.builder(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: mockProducts.length,
+                            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: columns,
+                              crossAxisSpacing: 12,
+                              mainAxisSpacing: 12,
+                              childAspectRatio: aspect,
+                            ),
+                            itemBuilder: (context, index) {
+                              return _ProductCard(product: mockProducts[index]);
+                            },
+                          ),
+                        ],
+                      ),
                     );
                   },
                 );
@@ -156,7 +194,7 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
                       icon: Icons.wifi_off_rounded,
                       title: 'Unable to load products',
                       message: 'Check connection and try refreshing again.',
-                      actionLabel: 'Try again',
+                      actionLabel: l.retry,
                       onTap: _refresh,
                     ),
                   ],
@@ -175,7 +213,7 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
                       icon: Icons.inventory_2_outlined,
                       title: 'No products available',
                       message: 'This category does not have products yet.',
-                      actionLabel: 'Refresh',
+                      actionLabel: l.retry,
                       onTap: _refresh,
                     ),
                   ],
@@ -228,6 +266,7 @@ class _ResultHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -240,7 +279,7 @@ class _ResultHeader extends StatelessWidget {
         children: [
           Expanded(
             child: Text(
-              'All Products',
+              l.allProducts,
               style: TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w700,
@@ -515,6 +554,7 @@ class _StockChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final inStock = stock > 0;
     return Container(
@@ -526,7 +566,7 @@ class _StockChip extends StatelessWidget {
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
-        inStock ? '$stock left' : 'Out',
+        inStock ? '$stock left' : l.outOfStock,
         style: TextStyle(
           fontSize: 10,
           fontWeight: FontWeight.w700,
@@ -624,106 +664,7 @@ class _ImageFallback extends StatelessWidget {
   }
 }
 
-class _LoadingGrid extends StatelessWidget {
-  const _LoadingGrid({required this.columns, required this.aspectRatio});
 
-  final int columns;
-  final double aspectRatio;
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return GridView.builder(
-      itemCount: columns * 4,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: columns,
-        crossAxisSpacing: 12,
-        mainAxisSpacing: 12,
-        childAspectRatio: aspectRatio,
-      ),
-      itemBuilder: (context, index) {
-        return Container(
-          decoration: BoxDecoration(
-            color: isDark ? _darkSurface : _surface,
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: isDark ? _darkBorder : _border),
-            boxShadow: [
-              BoxShadow(
-                color: isDark ? const Color(0x44000000) : _shadow,
-                blurRadius: 12,
-                offset: Offset(0, 6),
-              ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: const [
-              Expanded(
-                child: Padding(
-                  padding: EdgeInsets.fromLTRB(10, 10, 10, 0),
-                  child: _SkeletonBlock(radius: 14),
-                ),
-              ),
-              Padding(
-                padding: EdgeInsets.fromLTRB(12, 12, 12, 12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _SkeletonLine(width: 1),
-                    SizedBox(height: 8),
-                    _SkeletonLine(width: 0.5),
-                    SizedBox(height: 10),
-                    _SkeletonLine(width: 0.7),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-}
-
-class _SkeletonBlock extends StatelessWidget {
-  const _SkeletonBlock({required this.radius});
-
-  final double radius;
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Container(
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1D2635) : const Color(0xFFF1F4FA),
-        borderRadius: BorderRadius.circular(radius),
-      ),
-    );
-  }
-}
-
-class _SkeletonLine extends StatelessWidget {
-  const _SkeletonLine({required this.width});
-
-  final double width;
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return FractionallySizedBox(
-      widthFactor: width,
-      child: Container(
-        height: 12,
-        decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF1D2635) : const Color(0xFFF1F4FA),
-          borderRadius: BorderRadius.circular(999),
-        ),
-      ),
-    );
-  }
-}
 
 String? _formatTag(String? raw) {
   if (raw == null || raw.trim().isEmpty) return null;
@@ -736,4 +677,63 @@ String? _formatTag(String? raw) {
         (word) => '${word[0].toUpperCase()}${word.substring(1).toLowerCase()}',
       )
       .join(' ');
+}
+
+class _CartIconButton extends StatelessWidget {
+  const _CartIconButton({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: CartService.instance,
+      builder: (context, _) {
+        final count = CartService.instance.totalItems;
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        final color = isDark ? _darkTextPrimary : _textPrimary;
+        return Stack(
+          clipBehavior: Clip.none,
+          alignment: Alignment.center,
+          children: [
+            IconButton(
+              icon: Icon(Icons.shopping_cart_outlined, color: color),
+              onPressed: onTap,
+            ),
+            if (count > 0)
+              Positioned(
+                top: 4,
+                right: 4,
+                child: IgnorePointer(
+                  child: Container(
+                    constraints: const BoxConstraints(
+                      minWidth: 16,
+                      minHeight: 16,
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    decoration: BoxDecoration(
+                      color: _primary,
+                      borderRadius: BorderRadius.circular(999),
+                      border: Border.all(
+                        color: Theme.of(context).scaffoldBackgroundColor,
+                        width: 1.5,
+                      ),
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      '$count',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 8,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
 }

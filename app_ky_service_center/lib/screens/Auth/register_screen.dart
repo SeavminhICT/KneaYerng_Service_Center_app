@@ -1,10 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../../services/api_service.dart';
-import '../../services/app_notification_service.dart';
 import '../../theme/app_palette.dart';
-import '../main_navigation_screen.dart';
 import 'otp_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -15,13 +16,12 @@ class RegisterScreen extends StatefulWidget {
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
-  static const double _fieldRadius = 22;
+  static const double _fieldRadius = 14;
   static const double _buttonRadius = 24;
   static const double _fieldSpacing = 14;
 
   static const Color _brandBlue = Color(0xFF5A67F8);
   static const Color _brandBlueDark = Color(0xFF4C5EF1);
-  static const Color _background = Color(0xFFFAFBFF);
   static const Color _surface = Colors.white;
   static const Color _surfaceAlt = Color(0xFFFDFDFF);
   static const Color _border = Color(0xFFE4E0E4);
@@ -75,212 +75,226 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final mediaQuery = MediaQuery.of(context);
-    final bottomInset = mediaQuery.viewInsets.bottom;
-    final viewportHeight =
-        mediaQuery.size.height - mediaQuery.padding.vertical - bottomInset - 28;
+    final l = AppLocalizations.of(context);
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
 
     return Scaffold(
-      backgroundColor: _background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       resizeToAvoidBottomInset: true,
       body: GestureDetector(
         onTap: () => FocusScope.of(context).unfocus(),
-        child: Stack(
+        child: Column(
           children: [
-            Positioned.fill(
-              child: DecoratedBox(
-                decoration: const BoxDecoration(color: _background),
-              ),
-            ),
-            Positioned(
-              top: -80,
-              right: -30,
-              child: IgnorePointer(
-                child: _buildGlow(
-                  size: 220,
-                  colors: const [
-                    Color(0x16FFD9CF),
-                    Color(0x0CFFFFFF),
-                    Colors.transparent,
-                  ],
+            // ── Gradient Header ──
+            Container(
+              width: double.infinity,
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Color(0xFF3B63FF), Color(0xFF7C3AED)],
+                ),
+                borderRadius: BorderRadius.vertical(
+                  bottom: Radius.circular(36),
                 ),
               ),
-            ),
-            Positioned(
-              left: -70,
-              bottom: 20,
-              child: IgnorePointer(
-                child: _buildGlow(
-                  size: 250,
-                  colors: const [
-                    Color(0x185A67F8),
-                    Color(0x0CF3F6FF),
-                    Colors.transparent,
-                  ],
-                ),
-              ),
-            ),
-            SafeArea(
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  final isCompact = constraints.maxHeight < 760;
-
-                  final isKeyboardOpen = bottomInset > 0;
-                  return SingleChildScrollView(
-                    physics: isKeyboardOpen
-                        ? const ClampingScrollPhysics()
-                        : const NeverScrollableScrollPhysics(),
-                    keyboardDismissBehavior:
-                        ScrollViewKeyboardDismissBehavior.onDrag,
-                    padding: EdgeInsets.fromLTRB(20, 8, 20, bottomInset + 20),
-                    child: ConstrainedBox(
-                      constraints: BoxConstraints(
-                        minHeight: viewportHeight.clamp(0.0, double.infinity),
-                      ),
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 390),
-                        child: Form(
-                          key: _formKey,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            mainAxisAlignment: MainAxisAlignment.start,
-                            children: [
-                              _buildBackButton(),
-                              SizedBox(height: isCompact ? 14 : 24),
-                              const Text(
-                                'Sign up',
-                                style: TextStyle(
-                                  fontSize: 30,
-                                  fontWeight: FontWeight.w700,
-                                  color: _textPrimary,
-                                  letterSpacing: -0.8,
-                                ),
-                              ),
-                              SizedBox(height: isCompact ? 22 : 28),
-                              _buildTextField(
-                                controller: _fullNameCtrl,
-                                focusNode: _fullNameFocus,
-                                nextFocus: _emailFocus,
-                                hint: 'Full name',
-                                keyboard: TextInputType.name,
-                                textCapitalization: TextCapitalization.words,
-                                prefixIcon: const Icon(
-                                  Icons.person_outline_rounded,
-                                  size: 24,
-                                  color: _iconMuted,
-                                ),
-                                validator: (value) {
-                                  if (value == null || value.trim().isEmpty) {
-                                    return 'Full name is required';
-                                  }
-                                  return null;
-                                },
-                              ),
-                              const SizedBox(height: _fieldSpacing),
-                              _buildTextField(
-                                controller: _emailCtrl,
-                                focusNode: _emailFocus,
-                                nextFocus: _phoneFocus,
-                                hint: 'Email (Optional)',
-                                keyboard: TextInputType.emailAddress,
-                                prefixIcon: const Icon(
-                                  Icons.mail_outline_rounded,
-                                  size: 24,
-                                  color: _iconMuted,
-                                ),
-                                validator: _validateEmail,
-                              ),
-                              const SizedBox(height: _fieldSpacing),
-                              _buildTextField(
-                                controller: _phoneCtrl,
-                                focusNode: _phoneFocus,
-                                nextFocus: _passwordFocus,
-                                hint: '+855 xx xxx xxx',
-                                keyboard: TextInputType.phone,
-                                prefixIcon: const Icon(
-                                  Icons.phone_outlined,
-                                  size: 24,
-                                  color: _iconMuted,
-                                ),
-                                validator: _validatePhone,
-                              ),
-                              const SizedBox(height: _fieldSpacing),
-                              _buildTextField(
-                                controller: _passwordCtrl,
-                                focusNode: _passwordFocus,
-                                nextFocus: _confirmPasswordFocus,
-                                hint: 'Your password',
-                                obscure: _obscurePassword,
-                                enableSuggestions: false,
-                                autoCorrect: false,
-                                prefixIcon: const Icon(
-                                  Icons.lock_outline_rounded,
-                                  size: 24,
-                                  color: _iconMuted,
-                                ),
-                                suffixIcon: IconButton(
-                                  onPressed: () {
-                                    setState(() {
-                                      _obscurePassword = !_obscurePassword;
-                                    });
-                                  },
-                                  icon: Icon(
-                                    _obscurePassword
-                                        ? Icons.visibility_off_outlined
-                                        : Icons.visibility_outlined,
-                                    size: 24,
-                                    color: const Color(0xFFD4D0D1),
-                                  ),
-                                ),
-                                validator: _validatePassword,
-                              ),
-                              const SizedBox(height: _fieldSpacing),
-                              _buildTextField(
-                                controller: _confirmPasswordCtrl,
-                                focusNode: _confirmPasswordFocus,
-                                hint: 'Confirm password',
-                                obscure: _obscureConfirm,
-                                enableSuggestions: false,
-                                autoCorrect: false,
-                                textInputAction: TextInputAction.done,
-                                onSubmitted: _submit,
-                                prefixIcon: const Icon(
-                                  Icons.lock_outline_rounded,
-                                  size: 24,
-                                  color: _iconMuted,
-                                ),
-                                suffixIcon: IconButton(
-                                  onPressed: () {
-                                    setState(() {
-                                      _obscureConfirm = !_obscureConfirm;
-                                    });
-                                  },
-                                  icon: Icon(
-                                    _obscureConfirm
-                                        ? Icons.visibility_off_outlined
-                                        : Icons.visibility_outlined,
-                                    size: 24,
-                                    color: const Color(0xFFD4D0D1),
-                                  ),
-                                ),
-                                validator: _validateConfirmPassword,
-                              ),
-                              SizedBox(height: isCompact ? 24 : 32),
-                              _buildSignUpButton(),
-                              SizedBox(height: isCompact ? 20 : 24),
-                              _buildOrDivider(),
-                              const SizedBox(height: 18),
-                              _buildGoogleButton(),
-                              const SizedBox(height: 22),
-                              _buildLoginPrompt(),
-                              const SizedBox(height: 8),
-                            ],
-                          ),
+              child: SafeArea(
+                bottom: false,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Back button
+                      IconButton(
+                        onPressed: () {
+                          if (Navigator.canPop(context)) Navigator.pop(context);
+                        },
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+                        icon: const Icon(
+                          Icons.arrow_back_ios_new_rounded,
+                          color: Colors.white,
+                          size: 22,
                         ),
                       ),
-                    ),
-                  );
-                },
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Container(
+                            width: 52,
+                            height: 52,
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.18),
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: Colors.white.withValues(alpha: 0.3),
+                              ),
+                            ),
+                            child: Image.asset(
+                              'assets/images/Logo_KYSC.png',
+                              fit: BoxFit.contain,
+                            ),
+                          ),
+                          const SizedBox(width: 14),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                l.createAccount,
+                                style: const TextStyle(
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.w800,
+                                  color: Colors.white,
+                                  letterSpacing: -0.5,
+                                ),
+                              ),
+                              Text(
+                                'Join KY Service Center today',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: Colors.white.withValues(alpha: 0.8),
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+
+            // ── Form ──
+            Expanded(
+              child: SingleChildScrollView(
+                physics: const ClampingScrollPhysics(),
+                keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+                padding: EdgeInsets.fromLTRB(20, 24, 20, bottomInset + 24),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _buildTextField(
+                        controller: _fullNameCtrl,
+                        focusNode: _fullNameFocus,
+                        nextFocus: _emailFocus,
+                        hint: l.fullName,
+                        keyboard: TextInputType.name,
+                        textCapitalization: TextCapitalization.words,
+                        prefixIcon: const Icon(
+                          Icons.person_outline_rounded,
+                          size: 22,
+                          color: _iconMuted,
+                        ),
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return l.requiredField;
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: _fieldSpacing),
+                      _buildTextField(
+                        controller: _emailCtrl,
+                        focusNode: _emailFocus,
+                        nextFocus: _phoneFocus,
+                        hint: 'Email (Optional)',
+                        keyboard: TextInputType.emailAddress,
+                        prefixIcon: const Icon(
+                          Icons.mail_outline_rounded,
+                          size: 22,
+                          color: _iconMuted,
+                        ),
+                        validator: _validateEmail,
+                      ),
+                      const SizedBox(height: _fieldSpacing),
+                      _buildTextField(
+                        controller: _phoneCtrl,
+                        focusNode: _phoneFocus,
+                        nextFocus: _passwordFocus,
+                        hint: '+855 xx xxx xxx',
+                        keyboard: TextInputType.phone,
+                        prefixIcon: const Icon(
+                          Icons.phone_outlined,
+                          size: 22,
+                          color: _iconMuted,
+                        ),
+                        validator: _validatePhone,
+                      ),
+                      const SizedBox(height: _fieldSpacing),
+                      _buildTextField(
+                        controller: _passwordCtrl,
+                        focusNode: _passwordFocus,
+                        nextFocus: _confirmPasswordFocus,
+                        hint: l.password,
+                        obscure: _obscurePassword,
+                        enableSuggestions: false,
+                        autoCorrect: false,
+                        prefixIcon: const Icon(
+                          Icons.lock_outline_rounded,
+                          size: 22,
+                          color: _iconMuted,
+                        ),
+                        suffixIcon: IconButton(
+                          onPressed: () => setState(
+                            () => _obscurePassword = !_obscurePassword,
+                          ),
+                          icon: Icon(
+                            _obscurePassword
+                                ? Icons.visibility_off_outlined
+                                : Icons.visibility_outlined,
+                            size: 22,
+                            color: _iconMuted,
+                          ),
+                        ),
+                        validator: _validatePassword,
+                      ),
+                      const SizedBox(height: _fieldSpacing),
+                      _buildTextField(
+                        controller: _confirmPasswordCtrl,
+                        focusNode: _confirmPasswordFocus,
+                        hint: l.confirmPassword,
+                        obscure: _obscureConfirm,
+                        enableSuggestions: false,
+                        autoCorrect: false,
+                        textInputAction: TextInputAction.done,
+                        onSubmitted: _submit,
+                        prefixIcon: const Icon(
+                          Icons.lock_outline_rounded,
+                          size: 22,
+                          color: _iconMuted,
+                        ),
+                        suffixIcon: IconButton(
+                          onPressed: () => setState(
+                            () => _obscureConfirm = !_obscureConfirm,
+                          ),
+                          icon: Icon(
+                            _obscureConfirm
+                                ? Icons.visibility_off_outlined
+                                : Icons.visibility_outlined,
+                            size: 22,
+                            color: _iconMuted,
+                          ),
+                        ),
+                        validator: _validateConfirmPassword,
+                      ),
+                      const SizedBox(height: 28),
+                      _buildSignUpButton(l),
+                      const SizedBox(height: 22),
+                      _buildOrDivider(),
+                      const SizedBox(height: 18),
+                      _buildGoogleButton(),
+                      const SizedBox(height: 24),
+                      _buildLoginPrompt(l),
+                      const SizedBox(height: 8),
+                    ],
+                  ),
+                ),
               ),
             ),
           ],
@@ -289,39 +303,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
-  Widget _buildGlow({required double size, required List<Color> colors}) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        gradient: RadialGradient(radius: 0.72, colors: colors),
-      ),
-    );
-  }
-
-  Widget _buildBackButton() {
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: IconButton(
-        onPressed: () {
-          if (Navigator.canPop(context)) {
-            Navigator.pop(context);
-          }
-        },
-        padding: const EdgeInsets.all(8.0),
-        alignment: Alignment.centerLeft,
-        constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
-        splashRadius: 24,
-        icon: const Icon(
-          Icons.arrow_back_ios_new_rounded,
-          color: _textPrimary,
-          size: 24,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSignUpButton() {
+  Widget _buildSignUpButton(AppLocalizations l) {
     return SizedBox(
       height: 64,
       child: DecoratedBox(
@@ -370,10 +352,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     key: const ValueKey('ready'),
                     alignment: Alignment.center,
                     children: [
-                      const Center(
+                      Center(
                         child: Text(
-                          'SIGN UP',
-                          style: TextStyle(
+                          l.signUp.toUpperCase(),
+                          style: const TextStyle(
                             color: Colors.white,
                             fontSize: 16,
                             fontWeight: FontWeight.w700,
@@ -468,14 +450,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
-  Widget _buildLoginPrompt() {
+  Widget _buildLoginPrompt(AppLocalizations l) {
     return Center(
       child: Wrap(
         crossAxisAlignment: WrapCrossAlignment.center,
         children: [
-          const Text(
-            'Already have an account? ',
-            style: TextStyle(
+          Text(
+            '${l.alreadyHaveAccount} ',
+            style: const TextStyle(
               color: _textPrimary,
               fontSize: 15,
               fontWeight: FontWeight.w500,
@@ -489,9 +471,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
               minimumSize: const Size(0, 0),
               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
             ),
-            child: const Text(
-              'Sign in',
-              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+            child: Text(
+              l.signIn,
+              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
             ),
           ),
         ],
@@ -535,27 +517,27 @@ class _RegisterScreenState extends State<RegisterScreen> {
       validator: validator,
       style: const TextStyle(
         color: _textPrimary,
-        fontSize: 15,
+        fontSize: 14,
         fontWeight: FontWeight.w500,
       ),
       decoration: InputDecoration(
         hintText: hint,
         hintStyle: const TextStyle(
           color: _textMuted,
-          fontSize: 15,
-          fontWeight: FontWeight.w500,
+          fontSize: 14,
+          fontWeight: FontWeight.w400,
         ),
         errorStyle: const TextStyle(color: AppPalette.error, fontSize: 12),
         prefixIcon: prefixIcon,
-        prefixIconConstraints: const BoxConstraints(minWidth: 56),
+        prefixIconConstraints: const BoxConstraints(minWidth: 48),
         suffixIcon: suffixIcon,
-        suffixIconConstraints: const BoxConstraints(minWidth: 56),
+        suffixIconConstraints: const BoxConstraints(minWidth: 48),
         filled: true,
         fillColor: _surfaceAlt,
         isDense: true,
         contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 20,
+          horizontal: 14,
+          vertical: 14,
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(_fieldRadius),
@@ -586,14 +568,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
     ).hasMatch(text);
 
     if (!isEmail) {
-      return 'Enter a valid email address';
+      return AppLocalizations.of(context).invalidEmail;
     }
     return null;
   }
 
   String? _validatePhone(String? value) {
     final text = value?.trim() ?? '';
-    if (text.isEmpty) return 'Phone number is required';
+    if (text.isEmpty) return AppLocalizations.of(context).requiredField;
     final digits = text.replaceAll(RegExp(r'[^\d]'), '');
     if (digits.length < 7) {
       return 'Enter a valid phone number';
@@ -603,7 +585,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   String? _validatePassword(String? value) {
     final password = value ?? '';
-    if (password.isEmpty) return 'Password is required';
+    if (password.isEmpty) return AppLocalizations.of(context).requiredField;
     if (password.length < 8) {
       return 'Password must be at least 8 characters';
     }
@@ -618,9 +600,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   String? _validateConfirmPassword(String? value) {
     final confirm = value ?? '';
-    if (confirm.isEmpty) return 'Confirm your password';
+    if (confirm.isEmpty) return AppLocalizations.of(context).requiredField;
     if (confirm != _passwordCtrl.text) {
-      return 'Passwords do not match';
+      return AppLocalizations.of(context).passwordsDoNotMatch;
     }
     return null;
   }
@@ -685,9 +667,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     setState(() => _loading = true);
 
     try {
-      final googleSignIn = GoogleSignIn(
-        scopes: ['email', 'profile'],
-      );
+      final googleSignIn = GoogleSignIn(scopes: ['email', 'profile']);
       final account = await googleSignIn.signIn();
       if (account == null) {
         setState(() => _loading = false);
@@ -725,16 +705,30 @@ class _RegisterScreenState extends State<RegisterScreen> {
       setState(() => _loading = false);
 
       if (error == null) {
-        await AppNotificationService.instance.syncTokenWithBackend(force: true);
-        if (!mounted) return;
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const MainNavigationScreen()),
+        // Request OTP to Gmail for verification
+        final otpResult = await ApiService.requestOtp(
+          destination: email,
+          type: 'email',
+          purpose: 'signup',
         );
+        if (!mounted) return;
+        setState(() => _loading = false);
+
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(otpResult.message)));
+
+        if (otpResult.ok) {
+          Navigator.push(
+            context,
+            _buildOtpRoute(email, 'email'),
+          );
+        }
         return;
       }
 
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error)));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error)));
     } catch (error) {
       debugPrint('Google Sign-In Error: $error');
       if (mounted) {

@@ -2,7 +2,9 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:skeletonizer/skeletonizer.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../../models/pickup_ticket.dart';
 import '../../services/api_service.dart';
 import '../../services/app_notification_service.dart';
@@ -14,7 +16,7 @@ bool _isDark(BuildContext context) =>
     Theme.of(context).brightness == Brightness.dark;
 
 Color _screenBg(BuildContext context) =>
-    _isDark(context) ? const Color(0xFF0D1117) : const Color(0xFFF6F7FB);
+    Theme.of(context).scaffoldBackgroundColor;
 
 Color _surface(BuildContext context) =>
     _isDark(context) ? const Color(0xFF161B22) : Colors.white;
@@ -141,14 +143,15 @@ class _OrdersScreenState extends State<OrdersScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return DefaultTabController(
       length: 2,
       child: Scaffold(
         backgroundColor: _screenBg(context),
         appBar: AppBar(
-          title: const Text(
-            'My Orders',
-            style: TextStyle(fontWeight: FontWeight.w700),
+          title: Text(
+            l.myOrders,
+            style: const TextStyle(fontWeight: FontWeight.w700),
           ),
           backgroundColor: _surface(context),
           foregroundColor: _textPrimary(context),
@@ -168,13 +171,45 @@ class _OrdersScreenState extends State<OrdersScreen> {
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting &&
                 !snapshot.hasData) {
-              return const Center(child: CircularProgressIndicator());
+              final mockOrders = List.generate(
+                3,
+                (index) => const _OrderEntry(
+                  type: _OrderCardType.delivery,
+                  order: PickupTicket(
+                    orderId: 0,
+                    customerName: 'Loading Name',
+                    items: [],
+                    orderNumber: 'ORD-XXXX',
+                    orderStatus: 'Loading',
+                    totalAmount: 100.0,
+                  ),
+                ),
+              );
+              return Skeletonizer(
+                enabled: true,
+                child: TabBarView(
+                  children: [
+                    _OrderList(
+                      orders: mockOrders,
+                      emptyTitle: '',
+                      emptySubtitle: '',
+                      onRefresh: _refresh,
+                    ),
+                    _OrderList(
+                      orders: mockOrders,
+                      emptyTitle: '',
+                      emptySubtitle: '',
+                      onRefresh: _refresh,
+                    ),
+                  ],
+                ),
+              );
             }
 
             if (snapshot.hasError) {
               return _EmptyState(
-                title: 'Unable to load orders',
-                subtitle: 'Please try again in a moment.',
+                title: l.somethingWentWrong,
+                subtitle: l.retry,
                 onRetry: _refresh,
               );
             }
@@ -187,14 +222,14 @@ class _OrdersScreenState extends State<OrdersScreen> {
               children: [
                 _OrderList(
                   orders: activeOrders,
-                  emptyTitle: 'No active orders',
+                  emptyTitle: l.noOrders,
                   emptySubtitle:
                       'New pickup and delivery orders will appear here.',
                   onRefresh: _refresh,
                 ),
                 _OrderList(
                   orders: historyOrders,
-                  emptyTitle: 'No order history yet',
+                  emptyTitle: l.orderHistory,
                   emptySubtitle:
                       'Completed, cancelled, and used orders will appear here.',
                   onRefresh: _refresh,
@@ -253,6 +288,7 @@ class _OrderCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final order = entry.order;
     final isDelivery = entry.type == _OrderCardType.delivery;
     final placedAt = order.placedAt;
@@ -345,7 +381,7 @@ class _OrderCard extends StatelessWidget {
                   TextButton(
                     onPressed: () => _openOrder(context),
                     child: Text(
-                      isDelivery ? 'Track Order' : 'View Ticket',
+                      isDelivery ? l.trackOrder : 'View Ticket',
                       style: const TextStyle(fontWeight: FontWeight.w700),
                     ),
                   ),
@@ -493,6 +529,7 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
@@ -523,9 +560,9 @@ class _EmptyState extends StatelessWidget {
             const SizedBox(height: 16),
             OutlinedButton(
               onPressed: () => onRetry(),
-              child: const Text(
-                'Refresh',
-                style: TextStyle(fontWeight: FontWeight.w700),
+              child: Text(
+                l.retry,
+                style: const TextStyle(fontWeight: FontWeight.w700),
               ),
             ),
           ],

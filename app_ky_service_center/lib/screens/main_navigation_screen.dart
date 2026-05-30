@@ -1,7 +1,9 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
+import '../l10n/app_localizations.dart';
 import '../models/pickup_ticket.dart';
 import '../services/app_notification_service.dart';
 import '../widgets/page_transitions.dart';
@@ -11,6 +13,7 @@ import 'orders/delivery_tracking_screen.dart';
 import 'orders/orders_screen.dart';
 import 'profile/profile_screen.dart';
 import 'repair/repair_screen.dart';
+import 'support/support_chat_screen.dart';
 import 'tickets/ticket_detail_screen.dart';
 
 class MainNavigationScreen extends StatefulWidget {
@@ -51,38 +54,18 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
 
   final List<Widget> _screens = const [
     HomeScreen(),
-    FavoriteScreen(),
     RepairScreen(),
     OrdersScreen(),
+    FavoriteScreen(),
     ProfileScreen(),
   ];
 
-  static const List<_NavItemData> _navItems = [
-    _NavItemData(
-      label: 'Home',
-      icon: Icons.home_outlined,
-      activeIcon: Icons.home_rounded,
-    ),
-    _NavItemData(
-      label: 'Favorite',
-      icon: Icons.favorite_border_rounded,
-      activeIcon: Icons.favorite_rounded,
-    ),
-    _NavItemData(
-      label: 'Repair',
-      icon: Icons.build_outlined,
-      activeIcon: Icons.build_rounded,
-    ),
-    _NavItemData(
-      label: 'Order',
-      icon: Icons.receipt_long_outlined,
-      activeIcon: Icons.receipt_long_rounded,
-    ),
-    _NavItemData(
-      label: 'Profile',
-      icon: Icons.person_outline_rounded,
-      activeIcon: Icons.person_rounded,
-    ),
+  List<_NavItemData> _navItems(AppLocalizations l) => [
+    _NavItemData(label: l.home,      icon: Icons.home_outlined,          activeIcon: Icons.home_rounded),
+    _NavItemData(label: l.repair,    icon: Icons.build_outlined,         activeIcon: Icons.build_rounded),
+    _NavItemData(label: l.orders,    icon: Icons.receipt_long_outlined,  activeIcon: Icons.receipt_long_rounded),
+    _NavItemData(label: l.favorites, icon: Icons.favorite_border_rounded,activeIcon: Icons.favorite_rounded),
+    _NavItemData(label: l.profile,   icon: Icons.person_outline_rounded, activeIcon: Icons.person_rounded),
   ];
 
   @override
@@ -171,6 +154,36 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+      floatingActionButton: _currentIndex != 4
+          ? Padding(
+              padding: const EdgeInsets.only(bottom: 82),
+              child: FloatingActionButton.extended(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const SupportChatScreen(
+                      contextType: 'general',
+                      subject: 'Customer Support',
+                    ),
+                  ),
+                ),
+                backgroundColor: const Color.fromARGB(255, 39, 93, 240),
+                foregroundColor: Colors.white,
+                elevation: 6,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                icon: const Icon(Icons.headset_mic_rounded, size: 20),
+                label: Text(
+                  AppLocalizations.of(context).support,
+                  style: GoogleFonts.sora(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            )
+          : null,
       body: AnimatedBuilder(
         animation: _tabTransition,
         builder: (context, _) {
@@ -183,7 +196,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
         },
       ),
       bottomNavigationBar: _AnimatedBottomNavBar(
-        items: _navItems,
+        items: _navItems(AppLocalizations.of(context)),
         activeIndex: _currentIndex,
         pressedIndex: _pressedNavIndex,
         onTapDown: (index) {
@@ -307,62 +320,75 @@ class _AnimatedBottomNavBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bottomInset = MediaQuery.of(context).viewPadding.bottom;
+
     const brandLight = Color(0xFF45AEDF);
     const brandDark = Color(0xFF077CB4);
-    final navColor = isDark ? const Color(0xFF151A20) : Colors.white;
-    final borderColor = isDark
-        ? brandDark.withValues(alpha: 0.5)
-        : brandLight.withValues(alpha: 0.24);
+    final navColor = isDark ? const Color(0xFF1A2230) : Colors.white;
     final shadowColor = isDark
-        ? const Color(0x66000000)
-        : const Color(0x14000000);
+        ? const Color(0xAA000000)
+        : const Color(0x223B63FF);
     const activeColor = brandDark;
-    final activeBgColor = brandLight.withValues(alpha: isDark ? 0.24 : 0.18);
-    const inactiveColor = brandLight;
+    final activeBgColor = brandLight.withValues(alpha: isDark ? 0.22 : 0.14);
+    final inactiveColor = isDark
+        ? const Color(0xFF4A6070)
+        : const Color(0xFFB0C4D0);
     const activeLabelColor = brandDark;
-    const inactiveLabelColor = brandLight;
+    final inactiveLabelColor = isDark
+        ? const Color(0xFF4A6070)
+        : const Color(0xFFB0C4D0);
 
-    return SafeArea(
-      top: false,
-      child: Container(
-        height: 82,
-        padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
-        decoration: BoxDecoration(
-          color: navColor,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(22)),
-          border: Border(top: BorderSide(color: borderColor, width: 1)),
-          boxShadow: [
+    return Container(
+      margin: EdgeInsets.fromLTRB(
+        16,
+        0,
+        16,
+        bottomInset > 0 ? bottomInset + 8 : 14,
+      ),
+      height: 68,
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
+      decoration: BoxDecoration(
+        color: navColor,
+        borderRadius: BorderRadius.circular(30),
+        boxShadow: [
+          BoxShadow(
+            color: shadowColor,
+            blurRadius: 32,
+            spreadRadius: 0,
+            offset: const Offset(0, 8),
+          ),
+          if (!isDark)
             BoxShadow(
-              color: shadowColor,
-              blurRadius: 18,
-              offset: const Offset(0, -4),
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 0,
+              spreadRadius: 1,
+              offset: Offset.zero,
             ),
-          ],
-        ),
-        child: Row(
-          children: List.generate(items.length, (index) {
-            final item = items[index];
-            final active = index == activeIndex;
-            final pressed = index == pressedIndex;
-            return Expanded(
-              child: _BottomNavItem(
-                label: item.label,
-                icon: item.icon,
-                activeIcon: item.activeIcon,
-                active: active,
-                pressed: pressed,
-                activeColor: activeColor,
-                activeBgColor: activeBgColor,
-                inactiveColor: inactiveColor,
-                activeLabelColor: activeLabelColor,
-                inactiveLabelColor: inactiveLabelColor,
-                onTapDown: () => onTapDown(index),
-                onTapCancel: onTapCancel,
-                onTap: () => onTap(index),
-              ),
-            );
-          }),
-        ),
+        ],
+      ),
+      child: Row(
+        children: List.generate(items.length, (index) {
+          final item = items[index];
+          final active = index == activeIndex;
+          final pressed = index == pressedIndex;
+          return Expanded(
+            child: _BottomNavItem(
+              label: item.label,
+              icon: item.icon,
+              activeIcon: item.activeIcon,
+              active: active,
+              pressed: pressed,
+              activeColor: activeColor,
+              activeBgColor: activeBgColor,
+              inactiveColor: inactiveColor,
+              activeLabelColor: activeLabelColor,
+              inactiveLabelColor: inactiveLabelColor,
+              onTapDown: () => onTapDown(index),
+              onTapCancel: onTapCancel,
+              onTap: () => onTap(index),
+            ),
+          );
+        }),
       ),
     );
   }
@@ -401,67 +427,69 @@ class _BottomNavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final iconColor = active ? activeColor : inactiveColor;
-    final labelColor = active ? activeLabelColor : inactiveLabelColor;
-    final targetScale = pressed ? 0.92 : 1.0;
-    final navIcon = Icon(
-      active ? activeIcon : icon,
-      color: iconColor,
-      size: active ? 20.5 : 20,
-    );
-
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTapDown: (_) => onTapDown(),
       onTapCancel: onTapCancel,
       onTapUp: (_) => onTapCancel(),
       onTap: onTap,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          AnimatedScale(
-            duration: const Duration(milliseconds: 160),
-            curve: Curves.easeOut,
-            scale: targetScale,
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 220),
-              width: 30,
-              height: 30,
+      child: AnimatedScale(
+        duration: const Duration(milliseconds: 150),
+        curve: Curves.easeOut,
+        scale: pressed ? 0.88 : 1.0,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeInOut,
+              width: active ? 58 : 38,
+              height: 36,
               alignment: Alignment.center,
               decoration: BoxDecoration(
                 color: active ? activeBgColor : Colors.transparent,
-                shape: BoxShape.circle,
+                borderRadius: BorderRadius.circular(18),
                 boxShadow: active
                     ? [
                         BoxShadow(
                           color: activeColor.withValues(alpha: 0.22),
-                          blurRadius: 10,
+                          blurRadius: 14,
+                          spreadRadius: 0,
                           offset: const Offset(0, 4),
                         ),
                       ]
                     : null,
               ),
-              child: active ? _BrandIconGradient(child: navIcon) : navIcon,
+              child: active
+                  ? _BrandIconGradient(
+                      child: Icon(activeIcon, size: 22),
+                    )
+                  : Icon(icon, color: inactiveColor, size: 22),
             ),
-          ),
-          const SizedBox(height: 3),
-          AnimatedDefaultTextStyle(
-            duration: const Duration(milliseconds: 220),
-            curve: Curves.easeOut,
-            style: TextStyle(
-              color: labelColor,
-              fontSize: 10.5,
-              fontWeight: FontWeight.w600,
-              height: 1.1,
-            ),
-            child: AnimatedOpacity(
-              duration: const Duration(milliseconds: 220),
+            const SizedBox(height: 4),
+            AnimatedDefaultTextStyle(
+              duration: const Duration(milliseconds: 250),
               curve: Curves.easeOut,
-              opacity: active ? 1 : 0.95,
-              child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
+              style: TextStyle(
+                color: active ? activeLabelColor : inactiveLabelColor,
+                fontSize: active ? 10.5 : 10,
+                fontWeight: active ? FontWeight.w700 : FontWeight.w500,
+                letterSpacing: active ? 0.3 : 0.1,
+                height: 1,
+              ),
+              child: AnimatedOpacity(
+                duration: const Duration(milliseconds: 250),
+                opacity: active ? 1.0 : 0.6,
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

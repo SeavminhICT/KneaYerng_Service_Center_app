@@ -77,6 +77,7 @@ Route::prefix('admin')->name('admin.')->middleware(['admin'])->group(function ()
     })->name('products.create');
     Route::get('/products/{product}/edit', function (\App\Models\Product $product) {
         return view('admin.products.edit', [
+            'product' => $product,
             'productId' => $product->id,
             'categories' => \App\Models\Category::query()
                 ->orderBy('sort_order')

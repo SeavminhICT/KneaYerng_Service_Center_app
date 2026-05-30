@@ -7,6 +7,8 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
 
+import '../../l10n/app_localizations.dart';
+
 const String _osmUserAgent = 'KYServiceCenterApp/1.0 (support@kneyerng.app)';
 const String _streetTileUrl = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
 const String _satelliteTileUrl =
@@ -321,13 +323,14 @@ class _DeliveryLocationPickerState extends State<DeliveryLocationPicker> {
 
   @override
   Widget build(BuildContext context) {
-    final infoText = _isGeocoding ? 'Finding address...' : _selectedAddress;
+    final l = AppLocalizations.of(context);
+    final infoText = _isGeocoding ? l.loading : _selectedAddress;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Select Location'),
+        title: Text(l.selectAddress),
         actions: [
-          TextButton(onPressed: _confirmSelection, child: const Text('Use')),
+          TextButton(onPressed: _confirmSelection, child: Text(l.ok)),
         ],
       ),
       body: Stack(
@@ -442,12 +445,13 @@ class _DeliveryLocationPickerState extends State<DeliveryLocationPicker> {
             right: 16,
             bottom: 16,
             child: _BottomSheetCard(
-              title: 'Delivery Location',
+              title: l.deliveryAddress,
               subtitle: infoText,
               helper:
                   'Drag the map, tap to drop a pin, or use your current location.',
               errorMessage: _errorMessage,
               onConfirm: _confirmSelection,
+              confirmLabel: l.confirm,
             ),
           ),
         ],
@@ -493,6 +497,7 @@ class _BottomSheetCard extends StatelessWidget {
     required this.subtitle,
     required this.helper,
     required this.onConfirm,
+    required this.confirmLabel,
     this.errorMessage,
   });
 
@@ -501,6 +506,7 @@ class _BottomSheetCard extends StatelessWidget {
   final String helper;
   final String? errorMessage;
   final VoidCallback onConfirm;
+  final String confirmLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -549,7 +555,7 @@ class _BottomSheetCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(10),
                 ),
               ),
-              child: const Text('Use this location'),
+              child: Text(confirmLabel),
             ),
           ),
         ],

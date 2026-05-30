@@ -12,7 +12,12 @@
           "package_name": "com.kneayerng.app_ky_service_center"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "325660432558-38vc5uai6ohl1t8om25nv5s3tuqo14eo.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyDSYPRhbThcaVjVCuiE9SlowGjFyTxRDDE"
@@ -20,7 +25,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "325660432558-38vc5uai6ohl1t8om25nv5s3tuqo14eo.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "325660432558-kfktrpitp5p2die7l56b6lceqmpj4n75.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "GoogleService-Info.plist"
+              }
+            }
+          ]
         }
       }
     }

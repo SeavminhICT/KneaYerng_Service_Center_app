@@ -1,21 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:skeletonizer/skeletonizer.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../../models/category.dart';
 import '../../services/api_service.dart';
-import '../orders/orders_screen.dart';
-import '../profile/profile_screen.dart';
-import '../repair/repair_screen.dart';
 import 'category_products_screen.dart';
 
 const _primary = Color(0xFF4A6CF7);
-const _background = Color(0xFFF8F9FB);
 const _textPrimary = Color(0xFF1A1A1A);
 const _textSecondary = Color(0xFF888888);
 const _cardShadow = Color(0x14000000);
 const _cardPressed = Color(0xFFEAF0FF);
 const _cardBorder = Color(0xFFE8EDF5);
-const _darkBackground = Color(0xFF0D1117);
 const _darkSurface = Color(0xFF161B22);
 const _darkSurfaceSoft = Color(0xFF1D2635);
 const _darkBorder = Color(0xFF2B3442);
@@ -23,9 +20,7 @@ const _darkTextPrimary = Color(0xFFE6EDF7);
 const _darkTextSecondary = Color(0xFF97A2B5);
 
 class CategoriesScreen extends StatefulWidget {
-  const CategoriesScreen({super.key, this.showBottomNav = false});
-
-  final bool showBottomNav;
+  const CategoriesScreen({super.key});
 
   @override
   State<CategoriesScreen> createState() => _CategoriesScreenState();
@@ -42,14 +37,14 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
     _loadCategories();
   }
 
-  Future<void> _loadCategories() async {
+  Future<void> _loadCategories({bool forceRefresh = false}) async {
     setState(() {
       _isLoading = true;
       _errorMessage = null;
     });
 
     try {
-      final categories = await ApiService.fetchCategories();
+      final categories = await ApiService.fetchCategories(forceRefresh: forceRefresh);
       if (!mounted) return;
       setState(() {
         _categories = categories;
@@ -76,53 +71,31 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
     );
   }
 
-  void _onBottomNavTap(int index) {
-    if (index == 1) return;
-
-    if (index == 0) {
-      if (Navigator.of(context).canPop()) {
-        Navigator.of(context).pop();
-      }
-      return;
-    }
-
-    Widget destination;
-    switch (index) {
-      case 2:
-        destination = const RepairScreen();
-        break;
-      case 3:
-        destination = const OrdersScreen();
-        break;
-      case 4:
-        destination = const ProfileScreen();
-        break;
-      default:
-        return;
-    }
-
-    Navigator.of(
-      context,
-    ).pushReplacement(MaterialPageRoute(builder: (_) => destination));
-  }
-
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Theme(
       data: Theme.of(context).copyWith(
-        textTheme: GoogleFonts.interTextTheme(Theme.of(context).textTheme),
+        textTheme: GoogleFonts.soraTextTheme(Theme.of(context).textTheme),
       ),
       child: Scaffold(
-        backgroundColor: isDark ? _darkBackground : _background,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         appBar: AppBar(
           automaticallyImplyLeading: false,
-          backgroundColor: isDark ? _darkBackground : _background,
+          leading: Navigator.of(context).canPop()
+              ? IconButton(
+                  icon: const Icon(Icons.arrow_back_ios_new_rounded),
+                  color: isDark ? _darkTextPrimary : _textPrimary,
+                  onPressed: () => Navigator.of(context).maybePop(),
+                )
+              : null,
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
           surfaceTintColor: Colors.transparent,
           elevation: 0,
           centerTitle: false,
           title: Text(
-            'Categories',
+            l.categories,
             style: TextStyle(
               fontSize: 28,
               fontWeight: FontWeight.w700,
@@ -132,19 +105,50 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
         ),
         body: RefreshIndicator(
           color: _primary,
-          onRefresh: _loadCategories,
-          child: _buildBody(),
+          onRefresh: () => _loadCategories(forceRefresh: true),
+          child: _buildBody(l),
         ),
-        bottomNavigationBar: widget.showBottomNav
-            ? _BottomNavBar(onTap: _onBottomNavTap)
-            : null,
       ),
     );
   }
 
-  Widget _buildBody() {
+  Widget _buildBody(AppLocalizations l) {
     if (_isLoading) {
-      return const Center(child: CircularProgressIndicator(color: _primary));
+      final mockCategories = List.generate(
+        6,
+        (index) => Category(
+          id: index,
+          name: 'Category $index',
+          imageUrl: '',
+          productsCount: 0,
+        ),
+      );
+      return Skeletonizer(
+        enabled: true,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final columns = constraints.maxWidth >= 760 ? 3 : 2;
+            return GridView.builder(
+              physics: const NeverScrollableScrollPhysics(),
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+              itemCount: mockCategories.length,
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: columns,
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 12,
+                childAspectRatio: 0.84,
+              ),
+              itemBuilder: (context, index) {
+                final category = mockCategories[index];
+                return _CategoryCard(
+                  category: category,
+                  onTap: () async {},
+                );
+              },
+            );
+          },
+        ),
+      );
     }
 
     if (_errorMessage != null) {
@@ -157,7 +161,7 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
             icon: Icons.wifi_off_rounded,
             title: 'Connection issue',
             message: _errorMessage!,
-            actionLabel: 'Try again',
+            actionLabel: l.retry,
             onTap: _loadCategories,
           ),
         ],
@@ -174,7 +178,7 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
             icon: Icons.grid_view_rounded,
             title: 'No categories yet',
             message: 'Categories will appear here once available.',
-            actionLabel: 'Refresh',
+            actionLabel: l.retry,
             onTap: _loadCategories,
           ),
         ],
@@ -188,11 +192,11 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
           physics: const BouncingScrollPhysics(
             parent: AlwaysScrollableScrollPhysics(),
           ),
-          padding: EdgeInsets.fromLTRB(
+          padding: const EdgeInsets.fromLTRB(
             16,
             8,
             16,
-            widget.showBottomNav ? 108 : 24,
+            24,
           ),
           itemCount: _categories.length,
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
@@ -297,27 +301,27 @@ class _CategoryCardState extends State<_CategoryCard> {
                       child: Container(
                         width: imageBoxSize,
                         height: imageBoxSize,
-                        decoration: BoxDecoration(
-                          color: isDark
-                              ? const Color(0xFF22304A)
-                              : const Color(0xFFEAF0FF),
-                          borderRadius: BorderRadius.circular(imageRadius),
+                        decoration: const BoxDecoration(
+                          color: Colors.transparent,
                         ),
                         child: imageUrl != null && imageUrl.isNotEmpty
                             ? ClipRRect(
                                 borderRadius: BorderRadius.circular(
                                   imageRadius,
                                 ),
-                                child: Image.network(
-                                  imageUrl,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (context, error, stackTrace) {
-                                    return Icon(
-                                      _iconForCategory(category.name),
-                                      size: iconSize,
-                                      color: _primary,
-                                    );
-                                  },
+                                child: Padding(
+                                  padding: const EdgeInsets.all(10),
+                                  child: Image.network(
+                                    imageUrl,
+                                    fit: BoxFit.contain,
+                                    errorBuilder: (context, error, stackTrace) {
+                                      return Icon(
+                                        _iconForCategory(category.name),
+                                        size: iconSize,
+                                        color: _primary,
+                                      );
+                                    },
+                                  ),
                                 ),
                               )
                             : Icon(
@@ -363,192 +367,7 @@ class _CategoryCardState extends State<_CategoryCard> {
   }
 }
 
-class _BottomNavBar extends StatelessWidget {
-  const _BottomNavBar({required this.onTap});
 
-  final ValueChanged<int> onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    const brandLight = Color(0xFF45AEDF);
-    const brandDark = Color(0xFF077CB4);
-    final navColor = isDark ? _darkSurface : Colors.white;
-    final borderColor = isDark
-        ? brandDark.withValues(alpha: 0.5)
-        : brandLight.withValues(alpha: 0.24);
-    final shadowColor = isDark
-        ? const Color(0x66000000)
-        : const Color(0x14000000);
-    return Container(
-      decoration: BoxDecoration(
-        color: navColor,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(22)),
-        border: Border(top: BorderSide(color: borderColor, width: 1)),
-        boxShadow: [
-          BoxShadow(color: shadowColor, blurRadius: 18, offset: Offset(0, -4)),
-        ],
-      ),
-      child: SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
-          child: Row(
-            children: [
-              Expanded(
-                child: _BottomNavItem(
-                  icon: Icons.home_rounded,
-                  label: 'Home',
-                  isActive: false,
-                  onTap: () => onTap(0),
-                ),
-              ),
-              Expanded(
-                child: _BottomNavItem(
-                  icon: Icons.grid_view_rounded,
-                  label: 'Categories',
-                  isActive: true,
-                  onTap: () => onTap(1),
-                ),
-              ),
-              Expanded(
-                child: _BottomNavItem(
-                  icon: Icons.build_rounded,
-                  label: 'Repair',
-                  isActive: false,
-                  onTap: () => onTap(2),
-                ),
-              ),
-              Expanded(
-                child: _BottomNavItem(
-                  icon: Icons.receipt_long_rounded,
-                  label: 'Orders',
-                  isActive: false,
-                  onTap: () => onTap(3),
-                ),
-              ),
-              Expanded(
-                child: _BottomNavItem(
-                  icon: Icons.person_rounded,
-                  label: 'Profile',
-                  isActive: false,
-                  onTap: () => onTap(4),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _BottomNavItem extends StatefulWidget {
-  const _BottomNavItem({
-    required this.icon,
-    required this.label,
-    required this.isActive,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String label;
-  final bool isActive;
-  final VoidCallback onTap;
-
-  @override
-  State<_BottomNavItem> createState() => _BottomNavItemState();
-}
-
-class _BottomNavItemState extends State<_BottomNavItem> {
-  bool _pressed = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    const brandLight = Color(0xFF45AEDF);
-    const brandDark = Color(0xFF077CB4);
-    final iconColor = widget.isActive ? brandDark : brandLight;
-    final labelColor = widget.isActive ? brandDark : brandLight;
-    final activeBgColor = brandLight.withValues(alpha: isDark ? 0.24 : 0.18);
-    final navIcon = Icon(
-      widget.icon,
-      size: widget.isActive ? 20.5 : 20,
-      color: iconColor,
-    );
-
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTapDown: (_) => setState(() => _pressed = true),
-      onTapCancel: () => setState(() => _pressed = false),
-      onTapUp: (_) => setState(() => _pressed = false),
-      onTap: widget.onTap,
-      child: AnimatedScale(
-        scale: _pressed ? 0.95 : 1,
-        duration: const Duration(milliseconds: 120),
-        curve: Curves.easeOut,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 220),
-              curve: Curves.easeOut,
-              width: 30,
-              height: 30,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: widget.isActive ? activeBgColor : Colors.transparent,
-                shape: BoxShape.circle,
-                boxShadow: widget.isActive
-                    ? [
-                        BoxShadow(
-                          color: brandDark.withValues(alpha: 0.22),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
-                        ),
-                      ]
-                    : null,
-              ),
-              child: widget.isActive
-                  ? _BrandIconGradient(child: navIcon)
-                  : navIcon,
-            ),
-            const SizedBox(height: 3),
-            Text(
-              widget.label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 10.5,
-                fontWeight: FontWeight.w600,
-                color: labelColor,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _BrandIconGradient extends StatelessWidget {
-  const _BrandIconGradient({required this.child});
-
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return ShaderMask(
-      blendMode: BlendMode.srcIn,
-      shaderCallback: (bounds) => const LinearGradient(
-        colors: [Color(0xFF45AEDF), Color(0xFF077CB4)],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      ).createShader(bounds),
-      child: child,
-    );
-  }
-}
 
 class _InfoState extends StatelessWidget {
   const _InfoState({

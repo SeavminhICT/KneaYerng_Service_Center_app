@@ -7,16 +7,35 @@ use Illuminate\Support\Facades\Mail;
 
 class OtpDeliveryService
 {
+    public function __construct(private UnimatrixOtpService $unimatrix)
+    {
+    }
+
     public function send(string $destinationType, string $destination, string $message, array $context = []): bool
     {
-        if ($destinationType !== 'email') {
-            Log::warning('OTP delivery is configured for email only.', [
-                'type' => $destinationType,
-            ]);
-            return false;
+        if ($destinationType === 'email') {
+            return $this->sendEmail($destination, $message, $context);
         }
 
-        return $this->sendEmail($destination, $message, $context);
+        if ($destinationType === 'phone') {
+            $code = (string) ($context['code'] ?? '');
+            if ($code !== '') {
+                return $this->unimatrix->sendOtpCode(
+                    phone: $destination,
+                    code: $code,
+                    ttlSeconds: (int) ($context['ttl_seconds'] ?? config('otp.ttl_seconds', 300)),
+                    purpose: (string) ($context['purpose'] ?? 'otp')
+                );
+            }
+
+            return $this->unimatrix->sendSms($destination, $message);
+        }
+
+        Log::warning('Unsupported OTP destination type.', [
+            'type' => $destinationType,
+        ]);
+
+        return false;
     }
 
     public function sendEmail(string $email, string $message, array $context = []): bool

@@ -9,6 +9,9 @@ class CartItemResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
+        $product = $this->relationLoaded('product') ? $this->product : null;
+        $variant = $this->relationLoaded('productVariant') ? $this->productVariant : null;
+
         return [
             'id' => $this->id,
             'product_id' => $this->product_id,
@@ -20,6 +23,27 @@ class CartItemResource extends JsonResource
             'unit_price' => $this->unit_price,
             'quantity' => $this->quantity,
             'line_total' => $this->line_total,
+            'product' => $product
+                ? (new ProductResource($product))->toArray($request)
+                : [
+                    'id' => $this->item_id ?? $this->product_id,
+                    'name' => $this->product_name,
+                    'price' => $this->unit_price,
+                ],
+            'product_variant' => $variant ? [
+                'id' => $variant->id,
+                'storage_capacity' => $variant->storage_capacity,
+                'color' => $variant->color,
+                'condition' => $variant->condition,
+                'ram' => $variant->ram,
+                'ssd' => $variant->ssd,
+                'price' => (float) $variant->price,
+                'stock' => (int) $variant->stock,
+                'sku' => $variant->sku,
+                'image' => $variant->image,
+                'is_active' => (bool) $variant->is_active,
+                'label' => $variant->label(),
+            ] : null,
         ];
     }
 }

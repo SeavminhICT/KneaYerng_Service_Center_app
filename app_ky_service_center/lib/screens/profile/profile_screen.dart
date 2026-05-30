@@ -2,17 +2,22 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
+import 'package:skeletonizer/skeletonizer.dart';
 
 import '../../models/pickup_ticket.dart';
 import '../../models/user_profile.dart';
+import '../../l10n/app_localizations.dart';
 import '../../services/api_service.dart';
 import '../../services/app_notification_service.dart';
+import '../../services/language_service.dart';
 import '../../services/theme_service.dart';
 import '../Auth/login_screen.dart';
 import '../notifications/admin_notification_panel_screen.dart';
 import '../notifications/notification_screen.dart';
 import 'edit_profile_screen.dart';
 import 'reviews_preview_screen.dart';
+import '../../widgets/auth_guard.dart';
+import '../support/support_chat_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -24,8 +29,6 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   static const Color _brandBlue = Color(0xFF4A88F7);
   static const Color _brandPeach = Color(0xFFEAF1FF);
-  static const Color _canvasLight = Color(0xFFF5F7FB);
-  static const Color _canvasDark = Color(0xFF0D1117);
   static const Color _surfaceLight = Colors.white;
   static const Color _surfaceDark = Color(0xFF161B22);
   static const Color _surfaceAltLight = Color(0xFFF6F9FF);
@@ -46,7 +49,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool _uploadingAvatar = false;
 
   bool get _isDarkMode => ThemeService.instance.isDark(context);
-  Color get _canvas => _isDarkMode ? _canvasDark : _canvasLight;
   Color get _surface => _isDarkMode ? _surfaceDark : _surfaceLight;
   Color get _surfaceAlt => _isDarkMode ? _surfaceAltDark : _surfaceAltLight;
   Color get _border => _isDarkMode ? _borderDark : _borderLight;
@@ -65,10 +67,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final isDark = ThemeService.instance.isDark(context);
     return Theme(
       data: theme.copyWith(
-        textTheme: GoogleFonts.interTextTheme(theme.textTheme),
+        textTheme: GoogleFonts.soraTextTheme(theme.textTheme),
       ),
       child: Scaffold(
-        backgroundColor: isDark ? const Color(0xFF0D1117) : _canvas,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         body: Stack(
           children: [
             _backgroundDecorations(isDark: isDark),
@@ -77,8 +79,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 future: _profileFuture,
                 builder: (context, snapshot) {
                   if (snapshot.connectionState != ConnectionState.done) {
-                    return const Center(
-                      child: CircularProgressIndicator(color: _brandBlue),
+                    return Skeletonizer(
+                      enabled: true,
+                      child: _profileView(const UserProfile(
+                        firstName: 'Loading',
+                        lastName: 'User',
+                        email: 'loading@example.com',
+                        phone: '+1 234 567 8900',
+                      )),
                     );
                   }
 
@@ -123,12 +131,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget _backgroundDecorations({required bool isDark}) {
     return Container(
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF0D1117) : _canvas,
+        color: Theme.of(context).scaffoldBackgroundColor,
       ),
     );
   }
 
   Widget _profileView(UserProfile profile) {
+    final completion = _completionPercent(profile);
+    final isNewUser = completion < 40;
     return RefreshIndicator(
       color: _brandBlue,
       onRefresh: _refreshProfile,
@@ -137,43 +147,163 @@ class _ProfileScreenState extends State<ProfileScreen> {
         physics: const AlwaysScrollableScrollPhysics(),
         children: [
           _animatedEntry(0, _heroCard(profile)),
+          // Setup banner for new/incomplete profiles
+          if (isNewUser)
+            _animatedEntry(
+              1,
+              Padding(
+                padding: const EdgeInsets.only(top: 14),
+                child: _setupBanner(profile),
+              ),
+            ),
           _animatedEntry(
-            1,
+            isNewUser ? 2 : 1,
             Padding(
               padding: const EdgeInsets.only(top: 18),
               child: _informationCard(profile),
             ),
           ),
           _animatedEntry(
-            2,
+            isNewUser ? 3 : 2,
             Padding(
               padding: const EdgeInsets.only(top: 24, bottom: 12),
               child: _sectionHeader(
                 title: 'Quick Actions',
-                subtitle: 'Shortcuts for your most-used account tools',
+                subtitle: AppLocalizations.of(context).isKhmer
+                    ? 'ផ្លូវកាត់សម្រាប់ឧបករណ៍គណនីដែលប្រើញឹកញាប់'
+                    : 'Shortcuts for your most-used account tools',
               ),
             ),
           ),
-          _animatedEntry(3, _quickActions()),
+          _animatedEntry(isNewUser ? 4 : 3, _quickActions()),
           _animatedEntry(
-            4,
+            isNewUser ? 5 : 4,
             Padding(
               padding: const EdgeInsets.only(top: 24, bottom: 12),
               child: _sectionHeader(
-                title: 'Settings',
-                subtitle: 'Manage profile preferences and account options',
+                title: AppLocalizations.of(context).settings,
+                subtitle: AppLocalizations.of(context).isKhmer
+                    ? 'គ្រប់គ្រងការកំណត់ប្រវត្តិរូប និងជម្រើសគណនី'
+                    : 'Manage profile preferences and account options',
               ),
             ),
           ),
-          _animatedEntry(5, _settingsList(profile)),
+          _animatedEntry(isNewUser ? 6 : 5, _settingsList(profile)),
           _animatedEntry(
-            6,
+            isNewUser ? 7 : 6,
             Padding(
               padding: const EdgeInsets.only(top: 24),
               child: _logoutCard(),
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _setupBanner(UserProfile profile) {
+    final completion = _completionPercent(profile);
+    final missing = <String>[];
+    if (!_hasValue(profile.phone)) missing.add('Phone');
+    if (!_hasValue(profile.avatarUrl)) missing.add('Photo');
+    if (!_hasValue(profile.birth)) missing.add('Birthday');
+    if (!_hasValue(profile.gender)) missing.add('Gender');
+
+    return GestureDetector(
+      onTap: () => _openEditProfile(profile),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFF5198F5), Color(0xFF7EB8FF)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x335198F5),
+              blurRadius: 18,
+              offset: Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: const Icon(
+                Icons.person_add_alt_1_rounded,
+                color: Colors.white,
+                size: 24,
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Complete Your Profile',
+                    style: GoogleFonts.sora(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    missing.isNotEmpty
+                        ? 'Add ${missing.take(3).join(', ')} to unlock all features'
+                        : 'Tap to update your profile details',
+                    style: GoogleFonts.inter(
+                      color: Colors.white.withValues(alpha: 0.85),
+                      fontSize: 12,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(99),
+                    child: LinearProgressIndicator(
+                      value: completion / 100,
+                      minHeight: 5,
+                      backgroundColor: Colors.white.withValues(alpha: 0.25),
+                      valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '$completion% complete',
+                    style: GoogleFonts.inter(
+                      color: Colors.white.withValues(alpha: 0.8),
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.2),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.arrow_forward_ios_rounded,
+                color: Colors.white,
+                size: 14,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -334,6 +464,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Widget _informationCard(UserProfile profile) {
     final completion = _completionPercent(profile);
+    final hasPhone = _hasValue(profile.phone);
+    final profileId = _profileId(profile);
+    final hasId = profileId != null;
+    final location = _profileLocation(profile);
+    final hasLocation = location != null;
+
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -352,25 +488,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
           _detailRow(
             icon: Icons.phone_iphone_outlined,
             title: 'Phone Number',
-            value: _displayValue(profile.phone, 'Not available'),
+            value: hasPhone ? profile.phone! : '+ Add phone number',
+            isEmpty: !hasPhone,
           ),
           const SizedBox(height: 16),
           _detailRow(
             icon: Icons.badge_outlined,
             title: 'ID Number',
-            value: _displayValue(_profileId(profile), 'Not available'),
+            value: hasId ? profileId : 'Not assigned yet',
+            isEmpty: !hasId,
           ),
           const SizedBox(height: 16),
           _detailRow(
             icon: Icons.military_tech_outlined,
             title: 'Rank',
             value: _profileRank(completion),
+            isEmpty: false,
           ),
           const SizedBox(height: 16),
           _detailRow(
             icon: Icons.location_on_outlined,
             title: 'Location',
-            value: _displayValue(_profileLocation(profile), 'Not available'),
+            value: hasLocation ? location : '+ Add location',
+            isEmpty: !hasLocation,
           ),
         ],
       ),
@@ -381,6 +521,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     required IconData icon,
     required String title,
     required String value,
+    bool isEmpty = false,
   }) {
     return Row(
       children: [
@@ -388,10 +529,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
           height: 42,
           width: 42,
           decoration: BoxDecoration(
-            color: _surfaceAlt,
+            color: isEmpty ? const Color(0xFFF0F5FF) : _surfaceAlt,
             borderRadius: BorderRadius.circular(12),
           ),
-          child: Icon(icon, color: _brandBlue, size: 20),
+          child: Icon(
+            icon,
+            color: isEmpty ? _brandBlue.withValues(alpha: 0.5) : _brandBlue,
+            size: 20,
+          ),
         ),
         const SizedBox(width: 12),
         Expanded(
@@ -410,14 +555,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
               Text(
                 value,
                 style: GoogleFonts.inter(
-                  color: _textPrimary,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
+                  color: isEmpty ? _brandBlue.withValues(alpha: 0.7) : _textPrimary,
+                  fontSize: isEmpty ? 13 : 15,
+                  fontWeight: isEmpty ? FontWeight.w500 : FontWeight.w600,
+                  fontStyle: isEmpty ? FontStyle.normal : FontStyle.normal,
                 ),
               ),
             ],
           ),
         ),
+        if (isEmpty)
+          Icon(
+            Icons.chevron_right_rounded,
+            color: _brandBlue.withValues(alpha: 0.4),
+            size: 18,
+          ),
       ],
     );
   }
@@ -587,6 +739,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _settingsList(UserProfile profile) {
+    final l = AppLocalizations.of(context);
     return Container(
       decoration: BoxDecoration(
         color: _surface,
@@ -603,13 +756,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
         children: [
           _settingsRow(
             icon: Icons.person_outline_rounded,
-            title: 'Edit Profile',
+            title: l.editProfile,
             onTap: () => _openEditProfile(profile),
           ),
           _settingsDivider(),
           _settingsRow(
             icon: Icons.notifications_none_rounded,
-            title: 'Notifications',
+            title: l.notifications,
             onTap: () {
               Navigator.of(context).push(
                 MaterialPageRoute(builder: (_) => const NotificationScreen()),
@@ -620,7 +773,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             _settingsDivider(),
             _settingsRow(
               icon: Icons.campaign_rounded,
-              title: 'Admin Push Center',
+              title: l.adminPanel,
               onTap: () {
                 Navigator.of(context).push(
                   MaterialPageRoute(
@@ -633,22 +786,161 @@ class _ProfileScreenState extends State<ProfileScreen> {
           _settingsDivider(),
           _settingsRow(
             icon: Icons.language_rounded,
-            title: 'Language',
-            onTap: () => _showFeatureComingSoon('Language'),
+            title: l.language,
+            subtitle: LanguageService.instance.isKhmer ? 'ខ្មែរ' : 'English',
+            onTap: () => _showLanguagePicker(l),
           ),
           _settingsDivider(),
           _settingsRow(
             icon: Icons.lock_outline_rounded,
-            title: 'Privacy',
-            onTap: () => _showFeatureComingSoon('Privacy'),
+            title: l.privacy,
+            onTap: () => _showFeatureComingSoon(l.privacy),
+          ),
+          _settingsDivider(),
+          _settingsRow(
+            icon: Icons.chat_bubble_outline_rounded,
+            title: l.supportChat,
+            onTap: () async {
+              final ok = await ensureLoggedIn(
+                context,
+                message: l.isKhmer
+                    ? 'សូមចូលគណនី ដើម្បីជជែកជំនួយ។'
+                    : 'Please login or register to chat with support.',
+              );
+              if (!ok || !mounted) return;
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const SupportChatScreen()),
+              );
+            },
           ),
           _settingsDivider(),
           _settingsRow(
             icon: Icons.help_outline_rounded,
-            title: 'Help Center',
-            onTap: () => _showFeatureComingSoon('Help Center'),
+            title: l.helpCenter,
+            onTap: () => _showFeatureComingSoon(l.helpCenter),
           ),
         ],
+      ),
+    );
+  }
+
+  void _showLanguagePicker(AppLocalizations l) {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: _surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setSheetState) {
+            final current = LanguageService.instance.locale.languageCode;
+            return Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 40, height: 4,
+                    decoration: BoxDecoration(
+                      color: _border,
+                      borderRadius: BorderRadius.circular(99),
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  Text(
+                    l.selectLanguage,
+                    style: GoogleFonts.poppins(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w700,
+                      color: _textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  _langOption(
+                    flag: '🇺🇸',
+                    name: l.english,
+                    code: 'en',
+                    selected: current == 'en',
+                    onTap: () async {
+                      final nav = Navigator.of(ctx);
+                      await LanguageService.instance.setLanguage('en');
+                      nav.pop();
+                      if (mounted) {
+                        setState(() {});
+                        final newL = AppLocalizations.of(context);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text(newL.languageSaved)),
+                        );
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 10),
+                  _langOption(
+                    flag: '🇰🇭',
+                    name: l.khmer,
+                    code: 'km',
+                    selected: current == 'km',
+                    onTap: () async {
+                      final nav = Navigator.of(ctx);
+                      await LanguageService.instance.setLanguage('km');
+                      nav.pop();
+                      if (mounted) {
+                        setState(() {});
+                        final newL = AppLocalizations.of(context);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text(newL.languageSaved)),
+                        );
+                      }
+                    },
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _langOption({
+    required String flag,
+    required String name,
+    required String code,
+    required bool selected,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: selected ? _brandBlue.withValues(alpha: 0.10) : _surfaceAlt,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: selected ? _brandBlue : _border,
+            width: selected ? 2 : 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            Text(flag, style: const TextStyle(fontSize: 24)),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Text(
+                name,
+                style: GoogleFonts.inter(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  color: _textPrimary,
+                ),
+              ),
+            ),
+            if (selected)
+              Icon(Icons.check_circle_rounded, color: _brandBlue, size: 22),
+          ],
+        ),
       ),
     );
   }
@@ -656,6 +948,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget _settingsRow({
     required IconData icon,
     required String title,
+    String? subtitle,
     required VoidCallback onTap,
   }) {
     return Material(
@@ -678,13 +971,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
               const SizedBox(width: 14),
               Expanded(
-                child: Text(
-                  title,
-                  style: GoogleFonts.inter(
-                    color: _textPrimary,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: GoogleFonts.inter(
+                        color: _textPrimary,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    if (subtitle != null)
+                      Text(
+                        subtitle,
+                        style: GoogleFonts.inter(
+                          color: _textMuted,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w400,
+                        ),
+                      ),
+                  ],
                 ),
               ),
               Icon(
@@ -722,7 +1029,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               )
             : const Icon(Icons.logout_rounded),
         label: Text(
-          _loggingOut ? 'Logging out...' : 'Logout',
+          _loggingOut ? AppLocalizations.of(context).loading : AppLocalizations.of(context).logout,
           style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w600),
         ),
         style: ElevatedButton.styleFrom(
@@ -1015,21 +1322,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
       normalizedUrl,
       fit: BoxFit.cover,
       errorBuilder: (context, error, stackTrace) => fallback,
-      loadingBuilder: (context, child, progress) {
-        if (progress == null) return child;
-        return Container(
-          color: Colors.white,
-          alignment: Alignment.center,
-          child: SizedBox(
-            height: 22,
-            width: 22,
-            child: CircularProgressIndicator(
-              strokeWidth: 2,
-              valueColor: AlwaysStoppedAnimation<Color>(loadingColor),
-            ),
-          ),
-        );
-      },
     );
   }
 
@@ -1113,14 +1405,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                 ),
                 const SizedBox(height: 18),
-                const Text(
-                  'Are you sure to logout?',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w800,
-                    color: Colors.black87,
-                  ),
+                Builder(
+                  builder: (context) {
+                    final l = AppLocalizations.of(context);
+                    return Text(
+                      l.logoutConfirm,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.black87,
+                      ),
+                    );
+                  },
                 ),
                 const SizedBox(height: 8),
                 const Text(
@@ -1151,10 +1448,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             (0.75 * 255).round(),
                           ),
                         ),
-                        child: const Text(
-                          'Cancel',
-                          style: TextStyle(fontWeight: FontWeight.w700),
-                        ),
+                        child: Builder(builder: (context) {
+                          final l = AppLocalizations.of(context);
+                          return Text(l.cancel, style: const TextStyle(fontWeight: FontWeight.w700));
+                        }),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -1170,10 +1467,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             borderRadius: BorderRadius.circular(16),
                           ),
                         ),
-                        child: const Text(
-                          'Yes',
-                          style: TextStyle(fontWeight: FontWeight.w700),
-                        ),
+                        child: Builder(builder: (context) {
+                          final l = AppLocalizations.of(context);
+                          return Text(l.yes, style: const TextStyle(fontWeight: FontWeight.w700));
+                        }),
                       ),
                     ),
                   ],
@@ -1271,13 +1568,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         borderRadius: BorderRadius.circular(16),
                       ),
                     ),
-                    child: Text(
-                      'OK',
-                      style: GoogleFonts.inter(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
+                    child: Builder(builder: (context) {
+                      final l = AppLocalizations.of(context);
+                      return Text(l.ok, style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w700));
+                    }),
                   ),
                 ),
               ],
@@ -1476,10 +1770,10 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF6F7FB),
       appBar: AppBar(
-        title: const Text(
-          'Order History',
-          style: TextStyle(fontWeight: FontWeight.w700),
-        ),
+        title: Builder(builder: (context) {
+          final l = AppLocalizations.of(context);
+          return Text(l.orderHistory, style: const TextStyle(fontWeight: FontWeight.w700));
+        }),
         backgroundColor: Colors.white,
         foregroundColor: const Color(0xFF111827),
         elevation: 0,
@@ -1487,9 +1781,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
       body: FutureBuilder<List<PickupTicket>>(
         future: _historyFuture,
         builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
+          final isLoading = snapshot.connectionState == ConnectionState.waiting;
 
           if (snapshot.hasError) {
             return _OrderHistoryEmptyState(
@@ -1499,8 +1791,22 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
             );
           }
 
-          final history = snapshot.data ?? [];
-          if (history.isEmpty) {
+          final history = isLoading
+              ? List.generate(
+                  4,
+                  (index) => PickupTicket(
+                    orderId: index,
+                    orderNumber: 'Order #0000000$index',
+                    customerName: 'Customer Name',
+                    placedAt: DateTime.now(),
+                    totalAmount: 99.99,
+                    orderStatus: 'completed',
+                    items: const [],
+                  ),
+                )
+              : (snapshot.data ?? []);
+
+          if (!isLoading && history.isEmpty) {
             return _OrderHistoryEmptyState(
               title: 'No completed orders yet',
               subtitle: 'Verified or expired pickup tickets will appear here.',
@@ -1508,16 +1814,19 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
             );
           }
 
-          return RefreshIndicator(
-            onRefresh: _refresh,
-            child: ListView.separated(
-              padding: const EdgeInsets.all(16),
-              itemCount: history.length,
-              separatorBuilder: (_, _) => const SizedBox(height: 12),
-              itemBuilder: (context, index) {
-                final ticket = history[index];
-                return _OrderHistoryCard(ticket: ticket);
-              },
+          return Skeletonizer(
+            enabled: isLoading,
+            child: RefreshIndicator(
+              onRefresh: _refresh,
+              child: ListView.separated(
+                padding: const EdgeInsets.all(16),
+                itemCount: history.length,
+                separatorBuilder: (_, _) => const SizedBox(height: 12),
+                itemBuilder: (context, index) {
+                  final ticket = history[index];
+                  return _OrderHistoryCard(ticket: ticket);
+                },
+              ),
             ),
           );
         },
@@ -1747,7 +2056,10 @@ class _OrderHistoryEmptyState extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
-              child: const Text('Refresh'),
+              child: Builder(builder: (context) {
+                final l = AppLocalizations.of(context);
+                return Text(l.retry);
+              }),
             ),
           ],
         ),

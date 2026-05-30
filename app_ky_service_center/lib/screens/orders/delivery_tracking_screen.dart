@@ -2,7 +2,9 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:skeletonizer/skeletonizer.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../../models/pickup_ticket.dart';
 import '../../services/api_service.dart';
 import '../../services/app_notification_service.dart';
@@ -271,6 +273,7 @@ class _DeliveryTrackingScreenState extends State<DeliveryTrackingScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final money = NumberFormat.currency(symbol: r'$');
     final totalAmountLabel = _totalAmount == null
         ? '--'
@@ -281,14 +284,14 @@ class _DeliveryTrackingScreenState extends State<DeliveryTrackingScreen> {
         : '$_completedStepsCount / ${_timeline.length}';
 
     return Scaffold(
-      backgroundColor: _TrackingUiColors.pageBg,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        title: const Text(
-          'Delivery Tracking',
-          style: TextStyle(fontWeight: FontWeight.w800),
+        title: Text(
+          l.deliveryTracking,
+          style: const TextStyle(fontWeight: FontWeight.w800),
         ),
         foregroundColor: _TrackingUiColors.ink,
-        backgroundColor: _TrackingUiColors.pageBg,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         elevation: 0,
         actions: [
           IconButton(
@@ -304,25 +307,25 @@ class _DeliveryTrackingScreenState extends State<DeliveryTrackingScreen> {
           ),
         ],
       ),
-      body: _isLoading && _order == null
-          ? const _TrackingLoadingState()
-          : RefreshIndicator(
-              onRefresh: _handleRefresh,
-              color: _TrackingUiColors.primary,
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
-                physics: const AlwaysScrollableScrollPhysics(),
-                children: [
-                  _HeroTrackingCard(
-                    orderLabel: _orderLabel,
-                    statusLabel: _statusLabel,
-                    placedAt: _placedAt,
-                    lastSyncedAt: _lastSyncedAt,
-                    activeStageLabel: _activeStageLabel,
-                    progressRatio: _progressRatio,
-                    isAlert: _isCancelledLike,
-                    isTerminal: _isTerminal,
-                  ),
+      body: Skeletonizer(
+        enabled: _isLoading && _order == null,
+        child: RefreshIndicator(
+          onRefresh: _handleRefresh,
+          color: _TrackingUiColors.primary,
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
+            physics: const AlwaysScrollableScrollPhysics(),
+            children: [
+              _HeroTrackingCard(
+                orderLabel: (_isLoading && _order == null) ? 'Order #00000000' : _orderLabel,
+                statusLabel: (_isLoading && _order == null) ? 'Processing' : _statusLabel,
+                placedAt: (_isLoading && _order == null) ? DateTime.now() : _placedAt,
+                lastSyncedAt: (_isLoading && _order == null) ? DateTime.now() : _lastSyncedAt,
+                activeStageLabel: (_isLoading && _order == null) ? 'Processing stage' : _activeStageLabel,
+                progressRatio: (_isLoading && _order == null) ? 0.25 : _progressRatio,
+                isAlert: (_isLoading && _order == null) ? false : _isCancelledLike,
+                isTerminal: (_isLoading && _order == null) ? false : _isTerminal,
+              ),
                   const SizedBox(height: 12),
                   _MetricsGrid(
                     children: [
@@ -338,7 +341,7 @@ class _DeliveryTrackingScreenState extends State<DeliveryTrackingScreen> {
                       ),
                       _MetricTile(
                         icon: Icons.payments_rounded,
-                        label: 'Amount',
+                        label: l.payment,
                         value: totalAmountLabel,
                       ),
                       _MetricTile(
@@ -355,13 +358,13 @@ class _DeliveryTrackingScreenState extends State<DeliveryTrackingScreen> {
                     subtitle: 'Latest destination and order details.',
                     child: Column(
                       children: [
-                        _DetailLine(label: 'Address', value: _deliveryAddress),
+                        _DetailLine(label: l.deliveryAddress, value: _deliveryAddress),
                         if (_deliveryPhone != null)
                           _DetailLine(label: 'Phone', value: _deliveryPhone!),
                         if (_deliveryNote != null)
                           _DetailLine(label: 'Note', value: _deliveryNote!),
                         _DetailLine(
-                          label: 'Payment',
+                          label: l.payment,
                           value: _paymentLabel(_order?.paymentMethod),
                         ),
                         _DetailLine(label: 'Last Sync', value: _syncLabel),
@@ -380,13 +383,13 @@ class _DeliveryTrackingScreenState extends State<DeliveryTrackingScreen> {
                       child: Column(
                         children: [
                           _PriceLine(
-                            label: 'Subtotal',
+                            label: l.subtotal,
                             value: _order!.subtotal == null
                                 ? '--'
                                 : money.format(_order!.subtotal),
                           ),
                           _PriceLine(
-                            label: 'Delivery Fee',
+                            label: l.deliveryFee,
                             value: _order!.deliveryFee == null
                                 ? '--'
                                 : money.format(_order!.deliveryFee),
@@ -400,7 +403,7 @@ class _DeliveryTrackingScreenState extends State<DeliveryTrackingScreen> {
                           ),
                           const SizedBox(height: 8),
                           _PriceLine(
-                            label: 'Total',
+                            label: l.total,
                             value: totalAmountLabel,
                             isStrong: true,
                           ),
@@ -479,9 +482,9 @@ class _DeliveryTrackingScreenState extends State<DeliveryTrackingScreen> {
                         child: ElevatedButton.icon(
                           onPressed: () => Navigator.of(context).pop(),
                           icon: const Icon(Icons.arrow_back_rounded),
-                          label: const Text(
-                            'Back',
-                            style: TextStyle(fontWeight: FontWeight.w700),
+                          label: Text(
+                            l.back,
+                            style: const TextStyle(fontWeight: FontWeight.w700),
                           ),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: _TrackingUiColors.primary,
@@ -496,9 +499,10 @@ class _DeliveryTrackingScreenState extends State<DeliveryTrackingScreen> {
                     ],
                   ),
                 ],
-              ),
             ),
-    );
+          ),
+        ),
+      );
   }
 
   String _formatDateTime(DateTime date) {
@@ -538,7 +542,6 @@ class _DeliveryTrackingScreenState extends State<DeliveryTrackingScreen> {
 }
 
 class _TrackingUiColors {
-  static const pageBg = Color(0xFFF1F5FF);
   static const panel = Colors.white;
   static const panelBorder = Color(0xFFDDE5FB);
   static const ink = Color(0xFF0F1D3A);
@@ -550,29 +553,7 @@ class _TrackingUiColors {
   static const success = Color(0xFF0D8F5A);
 }
 
-class _TrackingLoadingState extends StatelessWidget {
-  const _TrackingLoadingState();
 
-  @override
-  Widget build(BuildContext context) {
-    return const Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          CircularProgressIndicator(),
-          SizedBox(height: 14),
-          Text(
-            'Loading delivery tracking...',
-            style: TextStyle(
-              color: _TrackingUiColors.muted,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
 
 class _HeroTrackingCard extends StatelessWidget {
   const _HeroTrackingCard({

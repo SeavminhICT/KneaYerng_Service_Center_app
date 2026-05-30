@@ -9,6 +9,52 @@ use Illuminate\Support\Str;
 
 class UnimatrixOtpService
 {
+    public function sendOtpCode(string $phone, string $code, int $ttlSeconds, string $purpose = 'otp'): bool
+    {
+        $normalizedPhone = $this->normalizePhone($phone);
+        $code = trim($code);
+
+        if ($normalizedPhone === null || ! preg_match('/^\d{4,8}$/', $code)) {
+            Log::warning('UniMTX OTP send skipped because phone or code is invalid.');
+
+            return false;
+        }
+
+        $response = $this->post('otp.send', [
+            'to' => $normalizedPhone,
+            'channel' => (string) config('services.unimatrix.channel', 'sms'),
+            'code' => $code,
+            'ttl' => min(1800, max(60, $ttlSeconds)),
+            'intent' => substr(strtolower(trim($purpose)), 0, 36),
+        ]);
+
+        return (bool) ($response['ok'] ?? false);
+    }
+
+    public function sendSms(string $phone, string $message): bool
+    {
+        $normalizedPhone = $this->normalizePhone($phone);
+        if ($normalizedPhone === null) {
+            Log::warning('UniMTX SMS send skipped because phone is invalid.');
+
+            return false;
+        }
+
+        $payload = [
+            'to' => $normalizedPhone,
+            'text' => $message,
+        ];
+
+        $signature = trim((string) config('services.unimatrix.signature', ''));
+        if ($signature !== '') {
+            $payload['signature'] = $signature;
+        }
+
+        $response = $this->post('sms.message.send', $payload);
+
+        return (bool) ($response['ok'] ?? false);
+    }
+
     public function sendOtp(string $phone, string $purpose, ?string $requestIp = null): array
     {
         $normalizedPhone = $this->normalizePhone($phone);
@@ -210,14 +256,19 @@ class UnimatrixOtpService
             : 'OTP request failed.';
         $code = is_array($body) ? ($body['code'] ?? null) : null;
 
-        if ($response->successful() && ($code === 0 || $code === '0' || $code === null)) {
+        if ($response->successful() && is_array($body) && ($code === 0 || $code === '0')) {
             $data = is_array($body['data'] ?? null) ? $body['data'] : [];
+
+            // For verification actions, require the API to explicitly state it is valid
+            $isValid = ($action === 'otp.verify')
+                ? (bool) ($data['valid'] ?? false)
+                : true;
 
             return [
                 'ok' => true,
                 'status' => 200,
                 'message' => $message,
-                'valid' => (bool) ($data['valid'] ?? true),
+                'valid' => $isValid,
             ];
         }
 

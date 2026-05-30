@@ -1,4 +1,5 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
+import '../../l10n/app_localizations.dart';
 import '../../theme/app_palette.dart';
 import '../../widgets/page_transitions.dart';
 import '../main_navigation_screen.dart';
@@ -9,8 +10,10 @@ class RegistrationSuccessScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+
     return Scaffold(
-      backgroundColor: AppPalette.background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: Stack(
           children: [
@@ -22,8 +25,8 @@ class RegistrationSuccessScreen extends StatelessWidget {
                     end: Alignment.bottomRight,
                     colors: [
                       AppPalette.primarySoft,
-                      AppPalette.background,
-                      AppPalette.background,
+                      Theme.of(context).scaffoldBackgroundColor,
+                      Theme.of(context).scaffoldBackgroundColor,
                     ],
                     stops: const [0, 0.45, 1],
                   ),
@@ -86,7 +89,7 @@ class RegistrationSuccessScreen extends StatelessWidget {
                             ),
                             child: IconButton(
                               icon: const Icon(Icons.close),
-                              tooltip: 'Close',
+                              tooltip: l.cancel,
                               onPressed: () {
                                 Navigator.pushReplacement(
                                   context,
@@ -146,7 +149,7 @@ class RegistrationSuccessScreen extends StatelessWidget {
                         ),
                         const SizedBox(height: 18),
                         Text(
-                          'Registration successful',
+                          l.registrationSuccess,
                           textAlign: TextAlign.center,
                           style: Theme.of(context)
                               .textTheme
@@ -186,9 +189,9 @@ class RegistrationSuccessScreen extends StatelessWidget {
                                 fadeSlideRoute(const MainNavigationScreen()),
                               );
                             },
-                            child: const Text(
-                              'Continue',
-                              style: TextStyle(
+                            child: Text(
+                              l.continueText,
+                              style: const TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
                               ),
@@ -203,9 +206,9 @@ class RegistrationSuccessScreen extends StatelessWidget {
                               fadeSlideRoute(const LoginScreen()),
                             );
                           },
-                          child: const Text(
-                            'Back to login',
-                            style: TextStyle(color: AppPalette.textMuted),
+                          child: Text(
+                            l.back,
+                            style: const TextStyle(color: AppPalette.textMuted),
                           ),
                         ),
                       ],

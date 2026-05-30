@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../../services/api_service.dart';
 import '../../theme/app_palette.dart';
 import 'login_screen.dart';
 
 class ResetPasswordScreen extends StatefulWidget {
-  const ResetPasswordScreen({
-    super.key,
-    required this.resetToken,
-  });
+  const ResetPasswordScreen({super.key, required this.resetToken});
 
   final String resetToken;
 
@@ -22,7 +20,6 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
 
   static const Color _brandBlue = Color(0xFF5A67F8);
   static const Color _brandBlueDark = Color(0xFF4C5EF1);
-  static const Color _background = Color(0xFFFAFBFF);
   static const Color _surfaceAlt = Color(0xFFFDFDFF);
   static const Color _border = Color(0xFFE4E0E4);
   static const Color _textPrimary = Color(0xFF1B1738);
@@ -57,8 +54,9 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   }
 
   String? _validatePassword(String? value) {
+    final l = AppLocalizations.of(context);
     final password = value ?? '';
-    if (password.isEmpty) return 'Password is required';
+    if (password.isEmpty) return l.requiredField;
     if (password.length < 8) {
       return 'Password must be at least 8 characters';
     }
@@ -72,10 +70,11 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   }
 
   String? _validateConfirmPassword(String? value) {
+    final l = AppLocalizations.of(context);
     final confirm = value ?? '';
-    if (confirm.isEmpty) return 'Confirm your password';
+    if (confirm.isEmpty) return l.requiredField;
     if (confirm != _passwordCtrl.text) {
-      return 'Passwords do not match';
+      return l.passwordsDoNotMatch;
     }
     return null;
   }
@@ -104,7 +103,9 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
     }
 
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Password updated successfully! Please sign in.')),
+      const SnackBar(
+        content: Text('Password reset successfully. Please login.'),
+      ),
     );
 
     // Navigate back to the login screen (clearing navigation history)
@@ -118,13 +119,14 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final mediaQuery = MediaQuery.of(context);
     final bottomInset = mediaQuery.viewInsets.bottom;
     final viewportHeight =
         mediaQuery.size.height - mediaQuery.padding.vertical - bottomInset - 36;
 
     return Scaffold(
-      backgroundColor: _background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       resizeToAvoidBottomInset: true,
       body: GestureDetector(
         onTap: () => FocusScope.of(context).unfocus(),
@@ -132,7 +134,9 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
           children: [
             Positioned.fill(
               child: DecoratedBox(
-                decoration: const BoxDecoration(color: _background),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).scaffoldBackgroundColor,
+                ),
               ),
             ),
             Positioned(
@@ -209,9 +213,9 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                                   ),
                                 ),
                                 SizedBox(height: isCompact ? 16 : 24),
-                                const Text(
-                                  'Set New Password',
-                                  style: TextStyle(
+                                Text(
+                                  l.resetPassword,
+                                  style: const TextStyle(
                                     fontSize: 30,
                                     fontWeight: FontWeight.w700,
                                     color: _textPrimary,
@@ -232,7 +236,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                                   controller: _passwordCtrl,
                                   focusNode: _passwordFocus,
                                   nextFocus: _confirmPasswordFocus,
-                                  hint: 'New password',
+                                  hint: l.newPassword,
                                   obscure: _obscurePassword,
                                   enableSuggestions: false,
                                   autoCorrect: false,
@@ -261,7 +265,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                                 _buildTextField(
                                   controller: _confirmPasswordCtrl,
                                   focusNode: _confirmPasswordFocus,
-                                  hint: 'Confirm password',
+                                  hint: l.confirmPassword,
                                   obscure: _obscureConfirm,
                                   enableSuggestions: false,
                                   autoCorrect: false,
@@ -289,7 +293,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                                   validator: _validateConfirmPassword,
                                 ),
                                 SizedBox(height: isCompact ? 32 : 40),
-                                _buildSubmitButton(),
+                                _buildSubmitButton(l),
                                 const SizedBox(height: 8),
                               ],
                             ),
@@ -391,7 +395,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
     );
   }
 
-  Widget _buildSubmitButton() {
+  Widget _buildSubmitButton(AppLocalizations l) {
     return SizedBox(
       height: 64,
       child: DecoratedBox(
@@ -440,10 +444,10 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                     key: const ValueKey('ready'),
                     alignment: Alignment.center,
                     children: [
-                      const Center(
+                      Center(
                         child: Text(
-                          'RESET PASSWORD',
-                          style: TextStyle(
+                          l.resetPassword.toUpperCase(),
+                          style: const TextStyle(
                             color: Colors.white,
                             fontSize: 16,
                             fontWeight: FontWeight.w700,

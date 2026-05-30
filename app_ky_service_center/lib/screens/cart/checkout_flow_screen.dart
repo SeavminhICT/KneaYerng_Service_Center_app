@@ -5,7 +5,9 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:khqr_sdk/khqr_sdk.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:skeletonizer/skeletonizer.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../../models/cart_item.dart';
 import '../../models/pickup_ticket.dart';
 import '../../models/saved_address.dart';
@@ -19,7 +21,6 @@ import '../profile/address_form_screen.dart';
 
 const _checkoutPrimary = Color(0xFF4A88F7);
 const _checkoutAccent = Color(0xFF111827);
-const _checkoutBg = Color(0xFFF4F7FC);
 const _checkoutSurface = Color(0xFFFFFFFF);
 const _checkoutSurfaceAlt = Color(0xFFF3F4F6);
 const _checkoutBorder = Color(0xFFE7ECF4);
@@ -49,7 +50,6 @@ class CheckoutFlowScreen extends StatefulWidget {
 class _CheckoutFlowScreenState extends State<CheckoutFlowScreen> {
   static const Color _primary = _checkoutPrimary;
   static const Color _accent = _checkoutAccent;
-  static const Color _bg = _checkoutBg;
   static const List<_StepMeta> _stepMetas = [
     _StepMeta(
       label: 'Delivery',
@@ -320,6 +320,7 @@ class _CheckoutFlowScreenState extends State<CheckoutFlowScreen> {
   }
 
   Future<void> _deleteSavedAddress(SavedAddress address) async {
+    final l = AppLocalizations.of(context);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -328,11 +329,11 @@ class _CheckoutFlowScreenState extends State<CheckoutFlowScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
+            child: Text(l.cancel),
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Delete'),
+            child: Text(l.delete),
           ),
         ],
       ),
@@ -497,6 +498,7 @@ class _CheckoutFlowScreenState extends State<CheckoutFlowScreen> {
     final token = await ApiService.getToken();
     if (token == null || token.isEmpty) {
       if (!mounted) return;
+      final l = AppLocalizations.of(context);
       final shouldLogin = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
@@ -505,7 +507,7 @@ class _CheckoutFlowScreenState extends State<CheckoutFlowScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Cancel'),
+              child: Text(l.cancel),
             ),
             TextButton(
               onPressed: () => Navigator.of(context).pop(true),
@@ -682,6 +684,7 @@ class _CheckoutFlowScreenState extends State<CheckoutFlowScreen> {
       return;
     }
 
+    final l = AppLocalizations.of(context);
     await showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
@@ -694,7 +697,7 @@ class _CheckoutFlowScreenState extends State<CheckoutFlowScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('OK'),
+            child: Text(l.ok),
           ),
         ],
       ),
@@ -718,7 +721,7 @@ class _CheckoutFlowScreenState extends State<CheckoutFlowScreen> {
     await Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
       MaterialPageRoute(
         builder: (_) => MainNavigationScreen(
-          initialIndex: 3,
+          initialIndex: 2,
           initialDeliveryOrderId: orderId,
           initialDeliveryOrderNumber: orderNumber,
           initialDeliveryStatus: result.orderStatus ?? 'pending',
@@ -736,6 +739,7 @@ class _CheckoutFlowScreenState extends State<CheckoutFlowScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return PopScope(
       canPop: _step == 0,
       onPopInvokedWithResult: (didPop, result) async {
@@ -743,7 +747,7 @@ class _CheckoutFlowScreenState extends State<CheckoutFlowScreen> {
         await _handleBackNavigation();
       },
       child: Scaffold(
-        backgroundColor: _bg,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         appBar: AppBar(
           automaticallyImplyLeading: false,
           toolbarHeight: 64,
@@ -763,7 +767,7 @@ class _CheckoutFlowScreenState extends State<CheckoutFlowScreen> {
             ),
           ),
           title: Text(
-            'Checkout',
+            l.checkout,
             style: GoogleFonts.sora(
               fontSize: 24,
               fontWeight: FontWeight.w700,
@@ -788,43 +792,44 @@ class _CheckoutFlowScreenState extends State<CheckoutFlowScreen> {
             ),
           ),
         ),
-        body: _loadingOptions
-            ? Center(child: CircularProgressIndicator(color: _primary))
-            : Column(
-                children: [
-                  Expanded(
-                    child: AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 280),
-                      transitionBuilder: (child, animation) {
-                        return FadeTransition(
-                          opacity: animation,
-                          child: SlideTransition(
-                            position: Tween<Offset>(
-                              begin: const Offset(0.05, 0),
-                              end: Offset.zero,
-                            ).animate(animation),
-                            child: child,
-                          ),
-                        );
-                      },
-                      child: _buildStepBody(),
-                    ),
-                  ),
-                  _BottomTotalBar(
-                    total: _grandTotal,
-                    buttonText: _stepButtonText,
-                    onPressed: _placingOrder ? null : _continueStep,
-                    primary: _primary,
-                    stepLabel: _currentStepMeta.label,
-                    compact: _step == 2,
-                    stepHint: _step == 3
-                        ? 'Review is complete. Submit when you are ready.'
-                        : _step == 2
-                        ? 'Select a payment method to continue.'
-                        : _currentStepMeta.subtitle,
-                  ),
-                ],
+        body: Skeletonizer(
+          enabled: _loadingOptions,
+          child: Column(
+            children: [
+              Expanded(
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 280),
+                  transitionBuilder: (child, animation) {
+                    return FadeTransition(
+                      opacity: animation,
+                      child: SlideTransition(
+                        position: Tween<Offset>(
+                          begin: const Offset(0.05, 0),
+                          end: Offset.zero,
+                        ).animate(animation),
+                        child: child,
+                      ),
+                    );
+                  },
+                  child: _buildStepBody(),
+                ),
               ),
+              _BottomTotalBar(
+                total: _grandTotal,
+                buttonText: _stepButtonText,
+                onPressed: _placingOrder ? null : _continueStep,
+                primary: _primary,
+                stepLabel: _currentStepMeta.label,
+                compact: _step == 2,
+                stepHint: _step == 3
+                    ? 'Review is complete. Submit when you are ready.'
+                    : _step == 2
+                    ? 'Select a payment method to continue.'
+                    : _currentStepMeta.subtitle,
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -893,6 +898,7 @@ class _CheckoutFlowScreenState extends State<CheckoutFlowScreen> {
   }
 
   Widget _buildAddressStep() {
+    final l = AppLocalizations.of(context);
     final coordinatesText = _selectedDeliveryLatLng == null
         ? null
         : 'Pinned: '
@@ -904,7 +910,7 @@ class _CheckoutFlowScreenState extends State<CheckoutFlowScreen> {
       padding: const EdgeInsets.fromLTRB(20, 18, 20, 28),
       children: [
         Text(
-          'Delivery Address',
+          l.deliveryAddress,
           style: GoogleFonts.sora(
             fontSize: 18,
             fontWeight: FontWeight.w700,
@@ -942,7 +948,7 @@ class _CheckoutFlowScreenState extends State<CheckoutFlowScreen> {
                   TextButton.icon(
                     onPressed: _addSavedAddress,
                     icon: const Icon(Icons.add_location_alt_outlined, size: 16),
-                    label: const Text('Add'),
+                    label: Text(l.add),
                     style: TextButton.styleFrom(
                       foregroundColor: _checkoutPrimary,
                       textStyle: const TextStyle(
@@ -964,7 +970,30 @@ class _CheckoutFlowScreenState extends State<CheckoutFlowScreen> {
               ),
               const SizedBox(height: 14),
               if (_loadingSavedAddresses)
-                const Center(child: CircularProgressIndicator())
+                Skeletonizer(
+                  enabled: true,
+                  child: Column(
+                    children: List.generate(
+                      2,
+                      (index) => _SavedMapCard(
+                        address: SavedAddress(
+                          id: 'mock-$index',
+                          name: 'Home Address',
+                          phone: '012 345 678',
+                          addressLine: '123 St, Phnom Penh, Cambodia',
+                          note: 'Near Central Market',
+                          lat: 0,
+                          lng: 0,
+                          createdAt: DateTime.now(),
+                        ),
+                        selected: false,
+                        onSelect: () {},
+                        onEdit: () {},
+                        onDelete: () {},
+                      ),
+                    ),
+                  ),
+                )
               else if (_savedAddresses.isEmpty)
                 Container(
                   width: double.infinity,
@@ -1173,7 +1202,7 @@ class _StepHeader extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.fromLTRB(18, 8, 18, 10),
       decoration: BoxDecoration(
-        color: _checkoutBg,
+        color: Theme.of(context).scaffoldBackgroundColor,
         border: Border(
           top: BorderSide(color: _checkoutBorder.withValues(alpha: 0.65)),
           bottom: BorderSide(color: _checkoutBorder.withValues(alpha: 0.85)),
@@ -1533,6 +1562,7 @@ class _SavedMapCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return InkWell(
       onTap: onSelect,
       borderRadius: BorderRadius.circular(18),
@@ -1684,12 +1714,12 @@ class _SavedMapCard extends StatelessWidget {
                 IconButton(
                   onPressed: onEdit,
                   icon: const Icon(Icons.edit_outlined, size: 20),
-                  tooltip: 'Edit',
+                  tooltip: l.edit,
                 ),
                 IconButton(
                   onPressed: onDelete,
                   icon: const Icon(Icons.delete_outline, size: 20),
-                  tooltip: 'Delete',
+                  tooltip: l.delete,
                 ),
               ],
             ),
@@ -2035,6 +2065,7 @@ class _SummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return _SurfaceCard(
       padding: const EdgeInsets.all(18),
       child: Column(
@@ -2044,7 +2075,7 @@ class _SummaryCard extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  'Payment summary',
+                  l.orderSummary,
                   style: GoogleFonts.sora(
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
@@ -2081,8 +2112,8 @@ class _SummaryCard extends StatelessWidget {
             ),
             child: Column(
               children: [
-                _SummaryRow(label: 'Subtotal', value: subtotal),
-                _SummaryRow(label: 'Shipping Fee', value: shipping),
+                _SummaryRow(label: l.subtotal, value: subtotal),
+                _SummaryRow(label: l.deliveryFee, value: shipping),
                 _SummaryRow(label: 'Tax', value: tax),
                 if (discount > 0)
                   _SummaryRow(
@@ -2108,7 +2139,7 @@ class _SummaryCard extends StatelessWidget {
               border: Border.all(color: primary.withValues(alpha: 0.16)),
             ),
             child: _SummaryRow(
-              label: 'Grand Total',
+              label: l.total,
               value: total,
               bold: true,
               color: primary,
@@ -2178,6 +2209,7 @@ class _ReviewMetaCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return _SurfaceCard(
       padding: const EdgeInsets.all(16),
       child: Row(
@@ -2188,7 +2220,7 @@ class _ReviewMetaCard extends StatelessWidget {
           Container(width: 1, height: 38, color: _checkoutBorder),
           Expanded(
             child: _ReviewMetaItem(
-              label: 'Payment',
+              label: l.payment,
               value: paymentLabel,
               alignEnd: true,
             ),
@@ -2196,7 +2228,7 @@ class _ReviewMetaCard extends StatelessWidget {
           Container(width: 1, height: 38, color: _checkoutBorder),
           Expanded(
             child: _ReviewMetaItem(
-              label: 'Total',
+              label: l.total,
               value: '\$${total.toStringAsFixed(2)}',
               valueColor: primary,
               alignEnd: true,
@@ -2275,6 +2307,7 @@ class _ReviewTotalsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return _SurfaceCard(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -2289,7 +2322,7 @@ class _ReviewTotalsCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
-          _SummaryRow(label: 'Subtotal', value: subtotal),
+          _SummaryRow(label: l.subtotal, value: subtotal),
           _SummaryRow(label: 'Shipping', value: shipping),
           _SummaryRow(label: 'Tax', value: tax),
           if (discount > 0)
@@ -2302,7 +2335,7 @@ class _ReviewTotalsCard extends StatelessWidget {
             padding: EdgeInsets.symmetric(vertical: 10),
             child: Divider(height: 1, color: _checkoutBorder),
           ),
-          _SummaryRow(label: 'Total', value: total, bold: true, color: primary),
+          _SummaryRow(label: l.total, value: total, bold: true, color: primary),
         ],
       ),
     );
@@ -2422,6 +2455,7 @@ class _BottomTotalBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return SafeArea(
       top: false,
       child: Container(
@@ -2495,9 +2529,9 @@ class _BottomTotalBar extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.end,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Text(
-                        'Total',
-                        style: TextStyle(
+                      Text(
+                        l.total,
+                        style: const TextStyle(
                           color: _checkoutMuted,
                           fontWeight: FontWeight.w600,
                           fontSize: 11,
@@ -3044,6 +3078,7 @@ class _KhqrPaymentSheetState extends State<_KhqrPaymentSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final bottomInset = 16 + MediaQuery.of(context).padding.bottom;
     final showFailure = _isTerminalFailure;
     final showQr = !_isSuccess && !_isScanned && !showFailure;
@@ -3106,7 +3141,7 @@ class _KhqrPaymentSheetState extends State<_KhqrPaymentSheet> {
                     : _buildPaidStep(),
               ),
               const SizedBox(height: 18),
-              _buildActionButtons(),
+              _buildActionButtons(l),
             ],
           ),
         ),
@@ -3584,7 +3619,7 @@ class _KhqrPaymentSheetState extends State<_KhqrPaymentSheet> {
     );
   }
 
-  Widget _buildActionButtons() {
+  Widget _buildActionButtons(AppLocalizations l) {
     if (_isSuccess) {
       return Column(
         children: [
@@ -3623,9 +3658,9 @@ class _KhqrPaymentSheetState extends State<_KhqrPaymentSheet> {
                   borderRadius: BorderRadius.circular(8),
                 ),
               ),
-              child: const Text(
-                'Done',
-                style: TextStyle(fontWeight: FontWeight.w700),
+              child: Text(
+                l.done,
+                style: const TextStyle(fontWeight: FontWeight.w700),
               ),
             ),
           ),
@@ -3646,9 +3681,9 @@ class _KhqrPaymentSheetState extends State<_KhqrPaymentSheet> {
               borderRadius: BorderRadius.circular(8),
             ),
           ),
-          child: const Text(
-            'Close',
-            style: TextStyle(fontWeight: FontWeight.w700),
+          child: Text(
+            l.close,
+            style: const TextStyle(fontWeight: FontWeight.w700),
           ),
         ),
       );

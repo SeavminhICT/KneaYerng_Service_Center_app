@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:skeletonizer/skeletonizer.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../../models/pickup_ticket.dart';
 import '../../services/api_service.dart';
 
@@ -41,51 +43,71 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textPrimary = isDark ? const Color(0xFFE6EDF7) : const Color(0xFF111827);
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF6F7FB),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        title: const Text(
-          'Order History',
-          style: TextStyle(fontWeight: FontWeight.w700),
+        title: Text(
+          l.orderHistory,
+          style: const TextStyle(fontWeight: FontWeight.w700),
         ),
-        backgroundColor: Colors.white,
-        foregroundColor: const Color(0xFF111827),
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        foregroundColor: textPrimary,
         elevation: 0,
       ),
       body: FutureBuilder<List<PickupTicket>>(
         future: _historyFuture,
         builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
+          final isLoading = snapshot.connectionState == ConnectionState.waiting;
 
           if (snapshot.hasError) {
             return _EmptyState(
-              title: 'Unable to load history',
+              title: l.somethingWentWrong,
               subtitle: 'Please try again in a moment.',
               onRetry: _refresh,
             );
           }
 
-          final history = snapshot.data ?? [];
-          if (history.isEmpty) {
+          final history = isLoading
+              ? List.generate(
+                  4,
+                  (index) => PickupTicket(
+                    orderId: index,
+                    orderNumber: 'Order #0000000$index',
+                    pickupTicketId: 'Ticket ID #$index',
+                    customerName: 'Customer Name',
+                    pickupVerifiedAt: DateTime.now(),
+                    totalAmount: 99.99,
+                    orderStatus: 'completed',
+                    items: const [],
+                  ),
+                )
+              : (snapshot.data ?? []);
+
+          if (!isLoading && history.isEmpty) {
             return _EmptyState(
-              title: 'No completed orders yet',
+              title: l.noOrders,
               subtitle: 'Verified or expired pickup tickets will appear here.',
               onRetry: _refresh,
             );
           }
 
-          return RefreshIndicator(
-            onRefresh: _refresh,
-            child: ListView.separated(
-              padding: const EdgeInsets.all(16),
-              itemCount: history.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 12),
-              itemBuilder: (context, index) {
-                final ticket = history[index];
-                return _HistoryCard(ticket: ticket);
-              },
+          return Skeletonizer(
+            enabled: isLoading,
+            child: RefreshIndicator(
+              onRefresh: _refresh,
+              child: ListView.separated(
+                padding: const EdgeInsets.all(16),
+                itemCount: history.length,
+                separatorBuilder: (_, _) => const SizedBox(height: 12),
+                itemBuilder: (context, index) {
+                  final ticket = history[index];
+                  return _HistoryCard(ticket: ticket);
+                },
+              ),
             ),
           );
         },
@@ -103,17 +125,22 @@ class _HistoryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final scannedAt = ticket.pickupVerifiedAt;
     final scanDate = scannedAt != null
-        ? DateFormat('MMM dd, yyyy • hh:mm a').format(scannedAt)
+        ? DateFormat('MMM dd, yyyy   hh:mm a').format(scannedAt)
         : '--';
     final amount = ticket.totalAmount ?? 0;
     final status = ticket.statusLabel;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = Theme.of(context).cardColor;
+    final border = isDark ? const Color(0xFF2B3442) : const Color(0xFFE6E9F0);
+    final textPrimary = isDark ? const Color(0xFFE6EDF7) : const Color(0xFF111827);
+    final textMuted = isDark ? const Color(0xFF97A2B5) : const Color(0xFF6B7280);
 
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: cardBg,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE6E9F0)),
+        border: Border.all(color: border),
         boxShadow: const [
           BoxShadow(
             color: Color(0x0F000000),
@@ -131,7 +158,7 @@ class _HistoryCard extends StatelessWidget {
                 height: 36,
                 width: 36,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFEFF6FF),
+                  color: isDark ? const Color(0xFF1D2635) : const Color(0xFFEFF6FF),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: const Icon(
@@ -147,17 +174,17 @@ class _HistoryCard extends StatelessWidget {
                   children: [
                     Text(
                       ticket.orderNumber ?? 'Order #${ticket.orderId}',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontWeight: FontWeight.w700,
-                        color: Color(0xFF111827),
+                        color: textPrimary,
                       ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       ticket.pickupTicketId ?? 'Pickup Ticket',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
-                        color: Color(0xFF6B7280),
+                        color: textMuted,
                       ),
                     ),
                   ],
@@ -187,6 +214,10 @@ class _InfoRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textPrimary = isDark ? const Color(0xFFE6EDF7) : const Color(0xFF111827);
+    final textMuted = isDark ? const Color(0xFF97A2B5) : const Color(0xFF6B7280);
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
@@ -195,8 +226,8 @@ class _InfoRow extends StatelessWidget {
             width: 90,
             child: Text(
               label,
-              style: const TextStyle(
-                color: Color(0xFF6B7280),
+              style: TextStyle(
+                color: textMuted,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -205,8 +236,8 @@ class _InfoRow extends StatelessWidget {
           Expanded(
             child: Text(
               value,
-              style: const TextStyle(
-                color: Color(0xFF111827),
+              style: TextStyle(
+                color: textPrimary,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -272,6 +303,11 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textPrimary = isDark ? const Color(0xFFE6EDF7) : const Color(0xFF111827);
+    final textMuted = isDark ? const Color(0xFF97A2B5) : const Color(0xFF6B7280);
+
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
@@ -282,7 +318,7 @@ class _EmptyState extends StatelessWidget {
               height: 64,
               width: 64,
               decoration: BoxDecoration(
-                color: const Color(0xFFEFF6FF),
+                color: isDark ? const Color(0xFF1D2635) : const Color(0xFFEFF6FF),
                 borderRadius: BorderRadius.circular(18),
               ),
               child: const Icon(
@@ -294,19 +330,19 @@ class _EmptyState extends StatelessWidget {
             const SizedBox(height: 16),
             Text(
               title,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w700,
-                color: Color(0xFF111827),
+                color: textPrimary,
               ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 6),
             Text(
               subtitle,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 12,
-                color: Color(0xFF6B7280),
+                color: textMuted,
               ),
               textAlign: TextAlign.center,
             ),
@@ -319,7 +355,7 @@ class _EmptyState extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
-              child: const Text('Refresh'),
+              child: Text(l.retry),
             ),
           ],
         ),
@@ -327,4 +363,3 @@ class _EmptyState extends StatelessWidget {
     );
   }
 }
-

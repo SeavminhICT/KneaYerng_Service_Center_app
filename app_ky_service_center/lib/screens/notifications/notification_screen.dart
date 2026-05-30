@@ -1,11 +1,12 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
+import 'package:skeletonizer/skeletonizer.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../../models/order_tracking_notification.dart';
 import '../../services/api_service.dart';
 import '../orders/delivery_tracking_screen.dart';
 
 const Color _primary = Color(0xFF4A88F7);
-const Color _background = Color(0xFFF5F7FB);
 const Color _surface = Colors.white;
 const Color _border = Color(0xFFE4EAF4);
 const Color _textPrimary = Color(0xFF111827);
@@ -215,10 +216,11 @@ class _NotificationScreenState extends State<NotificationScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final visibleItems = _visibleItems;
 
     return Scaffold(
-      backgroundColor: _background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: RefreshIndicator(
           color: _primary,
@@ -247,9 +249,9 @@ class _NotificationScreenState extends State<NotificationScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text(
-                                  'Notifications',
-                                  style: TextStyle(
+                                Text(
+                                  l.notifications,
+                                  style: const TextStyle(
                                     fontSize: 28,
                                     fontWeight: FontWeight.w800,
                                     color: _textPrimary,
@@ -325,7 +327,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                             const SizedBox(width: 10),
                             Expanded(
                               child: Text(
-                                'Filter: ${_filterLabel(_activeFilter)}',
+                                '${l.filter}: ${_filterLabel(_activeFilter)}',
                                 style: const TextStyle(
                                   fontSize: 13,
                                   fontWeight: FontWeight.w600,
@@ -352,9 +354,29 @@ class _NotificationScreenState extends State<NotificationScreen> {
                 ),
               ),
               if (_isLoading)
-                const SliverFillRemaining(
-                  hasScrollBody: false,
-                  child: Center(child: CircularProgressIndicator()),
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+                  sliver: Skeletonizer.sliver(
+                    enabled: true,
+                    child: SliverList.separated(
+                      itemBuilder: (context, index) {
+                        return _NotificationCard(
+                          item: _NotificationItem(
+                            id: 'skeleton-$index',
+                            category: NotificationCategory.order,
+                            title: 'Loading Notification Title',
+                            preview: 'Loading Notification Preview Text',
+                            message: 'Loading Notification Message',
+                            timestamp: DateTime.now(),
+                            isUnread: false,
+                          ),
+                          onTap: () {},
+                        );
+                      },
+                      separatorBuilder: (_, _) => const SizedBox(height: 12),
+                      itemCount: 5,
+                    ),
+                  ),
                 )
               else if (visibleItems.isEmpty)
                 const SliverFillRemaining(
@@ -398,10 +420,11 @@ class _NotificationDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final accent = _categoryColor(item.category);
     final icon = _categoryIcon(item.category);
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final detailBackground = isDark ? const Color(0xFF0B1220) : _background;
+    final detailBackground = isDark ? const Color(0xFF0B1220) : Theme.of(context).scaffoldBackgroundColor;
     final detailSurface = isDark ? const Color(0xFF111C2E) : _surface;
     final detailBorder = isDark ? const Color(0xFF22314A) : _border;
     final detailTitle = isDark ? const Color(0xFFE6EEFF) : _textPrimary;
@@ -421,7 +444,7 @@ class _NotificationDetailScreen extends StatelessWidget {
         foregroundColor: detailTitle,
         titleSpacing: 0,
         title: Text(
-          'Notification',
+          l.notifications,
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.w700,
@@ -878,6 +901,7 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(28),
@@ -898,9 +922,9 @@ class _EmptyState extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 18),
-            const Text(
-              'No notifications found',
-              style: TextStyle(
+            Text(
+              l.noNotifications,
+              style: const TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w800,
                 color: _textPrimary,
@@ -926,6 +950,7 @@ class _FilterSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final filters = NotificationFilter.values;
     return SafeArea(
       top: false,
@@ -950,9 +975,9 @@ class _FilterSheet extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 18),
-            const Text(
-              'Filter notifications',
-              style: TextStyle(
+            Text(
+              l.filter,
+              style: const TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w800,
                 color: _textPrimary,
@@ -1330,4 +1355,3 @@ Color _categoryColor(NotificationCategory category) {
     NotificationCategory.update => const Color(0xFF0891B2),
   };
 }
-

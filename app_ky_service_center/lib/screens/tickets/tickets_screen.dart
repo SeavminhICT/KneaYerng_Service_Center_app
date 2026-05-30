@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:skeletonizer/skeletonizer.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../../models/pickup_ticket.dart';
 import '../../services/api_service.dart';
 import '../../widgets/page_transitions.dart';
@@ -10,7 +12,7 @@ bool _isDark(BuildContext context) =>
     Theme.of(context).brightness == Brightness.dark;
 
 Color _screenBg(BuildContext context) =>
-    _isDark(context) ? const Color(0xFF0D1117) : const Color(0xFFF6F7FB);
+    Theme.of(context).scaffoldBackgroundColor;
 
 Color _surface(BuildContext context) =>
     _isDark(context) ? const Color(0xFF161B22) : Colors.white;
@@ -57,9 +59,9 @@ class _TicketsScreenState extends State<TicketsScreen> {
       child: Scaffold(
         backgroundColor: _screenBg(context),
         appBar: AppBar(
-          title: const Text(
-            'My Tickets',
-            style: TextStyle(fontWeight: FontWeight.w700),
+          title: Text(
+            AppLocalizations.of(context).myTickets,
+            style: const TextStyle(fontWeight: FontWeight.w700),
           ),
           backgroundColor: _surface(context),
           foregroundColor: _textPrimary(context),
@@ -77,9 +79,7 @@ class _TicketsScreenState extends State<TicketsScreen> {
         body: FutureBuilder<List<PickupTicket>>(
           future: _ticketsFuture,
           builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
-            }
+            final isLoading = snapshot.connectionState == ConnectionState.waiting;
 
             if (snapshot.hasError) {
               return _EmptyState(
@@ -89,7 +89,21 @@ class _TicketsScreenState extends State<TicketsScreen> {
               );
             }
 
-            final tickets = snapshot.data ?? [];
+            final tickets = isLoading
+                ? List.generate(
+                    4,
+                    (index) => PickupTicket(
+                      orderId: index,
+                      orderNumber: 'Order #0000000$index',
+                      customerName: 'Customer Name',
+                      placedAt: DateTime.now(),
+                      totalAmount: 99.99,
+                      orderStatus: 'active',
+                      items: const [],
+                    ),
+                  )
+                : (snapshot.data ?? []);
+
             final incomingTickets = tickets
                 .where((ticket) => ticket.isActive)
                 .toList();
@@ -97,28 +111,33 @@ class _TicketsScreenState extends State<TicketsScreen> {
                 .where((ticket) => !ticket.isActive)
                 .toList();
 
-            incomingTickets.sort(
-              (a, b) => _statusWeight(a).compareTo(_statusWeight(b)),
-            );
-            completedTickets.sort(
-              (a, b) => _statusWeight(a).compareTo(_statusWeight(b)),
-            );
+            if (!isLoading) {
+              incomingTickets.sort(
+                (a, b) => _statusWeight(a).compareTo(_statusWeight(b)),
+              );
+              completedTickets.sort(
+                (a, b) => _statusWeight(a).compareTo(_statusWeight(b)),
+              );
+            }
 
-            return TabBarView(
-              children: [
-                _buildTicketList(
-                  tickets: incomingTickets,
-                  emptyTitle: 'No incoming tickets',
-                  emptySubtitle:
-                      'Active pickup tickets will appear here after a successful Bakong payment.',
-                ),
-                _buildTicketList(
-                  tickets: completedTickets,
-                  emptyTitle: 'No completed tickets',
-                  emptySubtitle:
-                      'Used or expired pickup tickets will appear here after verification.',
-                ),
-              ],
+            return Skeletonizer(
+              enabled: isLoading,
+              child: TabBarView(
+                children: [
+                  _buildTicketList(
+                    tickets: incomingTickets,
+                    emptyTitle: 'No incoming tickets',
+                    emptySubtitle:
+                        'Active pickup tickets will appear here after a successful Bakong payment.',
+                  ),
+                  _buildTicketList(
+                    tickets: isLoading ? incomingTickets : completedTickets,
+                    emptyTitle: 'No completed tickets',
+                    emptySubtitle:
+                        'Used or expired pickup tickets will appear here after verification.',
+                  ),
+                ],
+              ),
             );
           },
         ),
@@ -269,9 +288,9 @@ class _TicketCard extends StatelessWidget {
                 alignment: Alignment.centerRight,
                 child: TextButton(
                   onPressed: onView,
-                  child: const Text(
-                    'View Ticket',
-                    style: TextStyle(fontWeight: FontWeight.w700),
+                  child: Text(
+                    AppLocalizations.of(context).viewAll,
+                    style: const TextStyle(fontWeight: FontWeight.w700),
                   ),
                 ),
               ),
@@ -381,7 +400,7 @@ class _EmptyState extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
-              child: const Text('Refresh'),
+              child: Text(AppLocalizations.of(context).retry),
             ),
           ],
         ),

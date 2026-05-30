@@ -29,7 +29,11 @@ class CartController extends Controller
     public function show(Request $request)
     {
         $user = $request->user();
-        $cart = $this->getOrCreateCart($user->id)->load(['items', 'items.productVariant']);
+        $cart = $this->getOrCreateCart($user->id)->load([
+            'items',
+            'items.product.category',
+            'items.productVariant',
+        ]);
 
         return new CartResource($cart);
     }
@@ -158,7 +162,11 @@ class CartController extends Controller
             ]);
         }
 
-        return new CartResource($cart->load(['items', 'items.productVariant']));
+        return new CartResource($cart->load([
+            'items',
+            'items.product.category',
+            'items.productVariant',
+        ]));
     }
 
     public function updateItem(Request $request, CartItem $cartItem)
@@ -198,7 +206,11 @@ class CartController extends Controller
         $cartItem->line_total = $cartItem->unit_price * $newQuantity;
         $cartItem->save();
 
-        return new CartResource($cartItem->cart->load(['items', 'items.productVariant']));
+        return new CartResource($cartItem->cart->load([
+            'items',
+            'items.product.category',
+            'items.productVariant',
+        ]));
     }
 
     public function destroyItem(Request $request, CartItem $cartItem)
@@ -211,7 +223,11 @@ class CartController extends Controller
         $cart = $cartItem->cart;
         $cartItem->delete();
 
-        return new CartResource($cart->load(['items', 'items.productVariant']));
+        return new CartResource($cart->load([
+            'items',
+            'items.product.category',
+            'items.productVariant',
+        ]));
     }
 
     public function checkout(Request $request)

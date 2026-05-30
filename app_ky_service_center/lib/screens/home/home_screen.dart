@@ -3,6 +3,8 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show ScrollDirection;
 import 'package:google_fonts/google_fonts.dart';
+import 'package:skeletonizer/skeletonizer.dart';
+import '../../l10n/app_localizations.dart';
 import '../../models/banner_item.dart';
 import '../../models/category.dart';
 import '../../models/product.dart';
@@ -24,8 +26,6 @@ import '../search/search_results_screen.dart';
 
 Map<String, String>? get _imageHeaders => null;
 
-const _homeBgLight = Color(0xFFF6F7FB);
-const _homeBgDark = Color(0xFF0D1117);
 const _surfaceLight = Color(0xFFFFFFFF);
 const _surfaceDark = Color(0xFF161B22);
 const _surfaceAltLight = Color(0xFFF1F4FA);
@@ -49,7 +49,7 @@ bool _isDark(BuildContext context) =>
     Theme.of(context).brightness == Brightness.dark;
 
 Color _homeBg(BuildContext context) =>
-    _isDark(context) ? _homeBgDark : _homeBgLight;
+    Theme.of(context).scaffoldBackgroundColor;
 
 Color _surface(BuildContext context) =>
     _isDark(context) ? _surfaceDark : _surfaceLight;
@@ -152,7 +152,7 @@ class _HomeScreenState extends State<HomeScreen> {
     await _clearImageCache();
     _loadBanners();
     setState(() {
-      _categoriesFuture = _loadCategoriesSafe();
+      _categoriesFuture = _loadCategoriesSafe(forceRefresh: true);
       _productsFuture = _loadProductsSafe();
       _profileFuture = ApiService.getUserProfile();
     });
@@ -165,9 +165,9 @@ class _HomeScreenState extends State<HomeScreen> {
     cache.clearLiveImages();
   }
 
-  Future<List<Category>> _loadCategoriesSafe() async {
+  Future<List<Category>> _loadCategoriesSafe({bool forceRefresh = false}) async {
     try {
-      return await ApiService.fetchCategories();
+      return await ApiService.fetchCategories(forceRefresh: forceRefresh);
     } catch (error) {
       debugPrint('[HomeScreen] categories load failed: $error');
       return const [];
@@ -364,6 +364,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final showSearchDiscovery =
         _searchFocusNode.hasFocus &&
         _searchController.text.trim().isEmpty &&
@@ -403,7 +404,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         Navigator.of(context).push(
                           MaterialPageRoute(
                             builder: (_) =>
-                                const CategoriesScreen(showBottomNav: true),
+                                const CategoriesScreen(),
                           ),
                         );
                       },
@@ -426,7 +427,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 _SearchInput(
                   controller: _searchController,
                   focusNode: _searchFocusNode,
-                  hintText: 'Search MacBook, iPhone, repair...',
+                  hintText: l.searchProducts,
                   onChanged: _updateSuggestions,
                   onSubmitted: (value) {
                     _openSearchResults(value);
@@ -481,7 +482,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         Navigator.of(context).push(
                           MaterialPageRoute(
                             builder: (_) =>
-                                const AllProductsScreen(title: 'All Products'),
+                                AllProductsScreen(title: l.allProducts),
                           ),
                         );
                       },
@@ -505,13 +506,13 @@ class _HomeScreenState extends State<HomeScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         _HomeSectionHeader(
-                          title: 'Categories',
-                          actionLabel: 'View all',
+                          title: l.categories,
+                          actionLabel: l.viewAll,
                           onTap: () {
                             Navigator.of(context).push(
                               MaterialPageRoute(
                                 builder: (_) =>
-                                    const CategoriesScreen(showBottomNav: true),
+                                    const CategoriesScreen(),
                               ),
                             );
                           },
@@ -539,13 +540,13 @@ class _HomeScreenState extends State<HomeScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           _HomeSectionHeader(
-                            title: 'Best Sellers',
-                            actionLabel: 'View all',
+                            title: l.featuredProducts,
+                            actionLabel: l.viewAll,
                             onTap: () {
                               Navigator.of(context).push(
                                 MaterialPageRoute(
-                                  builder: (_) => const AllProductsScreen(
-                                    title: 'All Products',
+                                  builder: (_) => AllProductsScreen(
+                                    title: l.allProducts,
                                   ),
                                 ),
                               );
@@ -557,16 +558,16 @@ class _HomeScreenState extends State<HomeScreen> {
                       );
                     }
                     if (snapshot.hasError) {
-                      return const _SimpleState(
+                      return _SimpleState(
                         icon: Icons.wifi_off_rounded,
-                        title: 'Unable to load products',
+                        title: l.somethingWentWrong,
                       );
                     }
                     final allProducts = snapshot.data ?? const [];
                     if (allProducts.isEmpty) {
-                      return const _SimpleState(
+                      return _SimpleState(
                         icon: Icons.inventory_2_outlined,
-                        title: 'No products available',
+                        title: l.noData,
                       );
                     }
 
@@ -576,13 +577,13 @@ class _HomeScreenState extends State<HomeScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         _HomeSectionHeader(
-                          title: 'Best Sellers',
-                          actionLabel: 'View all',
+                          title: l.featuredProducts,
+                          actionLabel: l.viewAll,
                           onTap: () {
                             Navigator.of(context).push(
                               MaterialPageRoute(
-                                builder: (_) => const AllProductsScreen(
-                                  title: 'All Products',
+                                builder: (_) => AllProductsScreen(
+                                  title: l.allProducts,
                                 ),
                               ),
                             );
@@ -660,9 +661,10 @@ class _HomeHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final greeting = welcomeName == 'User'
         ? 'Buy. Repair. Trust.'
-        : 'Hi, $welcomeName';
+        : '${l.helloUser}, $welcomeName';
     final firstLetter = title.isNotEmpty ? title[0] : '';
     final remainingTitle = title.length > 1 ? title.substring(1) : '';
 
@@ -1844,7 +1846,7 @@ class _ValueHighlightsState extends State<_ValueHighlights>
         // ── Marquee strip ───────────────────────────────────────────────
         Container(
           decoration: BoxDecoration(
-            color: _surface(context),
+            // color: _surface(context),
             borderRadius: BorderRadius.circular(20),
             border: Border.all(color: _cardBorder(context)),
             boxShadow: [
@@ -2478,6 +2480,7 @@ class _FlashProductCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final imageUrl = product.imageUrl;
     final badge = _productBadgeText(product);
     final hasDiscount = product.hasDiscount;
@@ -2600,7 +2603,7 @@ class _FlashProductCard extends StatelessWidget {
                           ),
                         ] else
                           Text(
-                            'In stock',
+                            l.inStock,
                             style: GoogleFonts.manrope(
                               fontSize: 11,
                               fontWeight: FontWeight.w700,
@@ -2877,64 +2880,28 @@ class _CategorySkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // skeleton for the section header
-        Row(
-          children: [
-            Container(
-              width: 90,
-              height: 14,
-              decoration: BoxDecoration(
-                color: _surfaceAlt(context),
-                borderRadius: BorderRadius.circular(7),
-              ),
-            ),
-            const Spacer(),
-            Container(
-              width: 52,
-              height: 12,
-              decoration: BoxDecoration(
-                color: _surfaceAlt(context),
-                borderRadius: BorderRadius.circular(6),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 14),
-        SizedBox(
-          height: 160,
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              return SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                physics: const NeverScrollableScrollPhysics(),
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(minWidth: constraints.maxWidth),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    mainAxisSize: MainAxisSize.max,
-                    children: List.generate(4 * 2 - 1, (index) {
-                      if (index.isOdd) {
-                        return const SizedBox(width: 12);
-                      }
-                      return Container(
-                        width: 108,
-                        height: 144,
-                        decoration: BoxDecoration(
-                          color: _surfaceAlt(context),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                      );
-                    }),
-                  ),
-                ),
-              );
-            },
+    final l = AppLocalizations.of(context);
+    return Skeletonizer(
+      enabled: true,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _HomeSectionHeader(
+            title: l.categories,
+            actionLabel: l.viewAll,
+            onTap: () {},
           ),
-        ),
-      ],
+          const SizedBox(height: 14),
+          _CategoryShowcaseStrip(
+            categories: List.generate(
+              4,
+              (index) => Category(id: index, name: 'Loading', imageUrl: ''),
+            ),
+            iconFor: (name) => Icons.category_rounded,
+            onRepairTap: () {},
+          ),
+        ],
+      ),
     );
   }
 }
@@ -2944,29 +2911,35 @@ class _ProductsSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final columns = constraints.maxWidth >= 720 ? 3 : 2;
-        return GridView.builder(
-          itemCount: columns == 3 ? 6 : 4,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: columns,
-            mainAxisSpacing: 12,
-            crossAxisSpacing: 12,
-            childAspectRatio: columns == 3 ? 0.72 : 0.64,
-          ),
-          itemBuilder: (context, index) {
-            return Container(
-              decoration: BoxDecoration(
-                color: _surfaceAlt(context),
-                borderRadius: BorderRadius.circular(16),
-              ),
-            );
-          },
-        );
-      },
+    return Skeletonizer(
+      enabled: true,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final columns = constraints.maxWidth >= 720 ? 3 : 2;
+          return GridView.builder(
+            itemCount: columns == 3 ? 6 : 4,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: columns,
+              mainAxisSpacing: 14,
+              crossAxisSpacing: 14,
+              childAspectRatio: columns == 3 ? 0.72 : 0.64,
+            ),
+            itemBuilder: (context, index) {
+              return _FlashProductCard(
+                product: Product(
+                  id: index,
+                  name: 'Loading Product Name',
+                  price: 999.0,
+                ),
+                onOpen: () {},
+                onAdd: () {},
+              );
+            },
+          );
+        },
+      ),
     );
   }
 }

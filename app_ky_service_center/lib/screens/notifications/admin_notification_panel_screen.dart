@@ -2,11 +2,11 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../../models/admin_notification_campaign.dart';
 import '../../services/api_service.dart';
 
 const Color _panelPrimary = Color(0xFF4A88F7);
-const Color _panelBackground = Color(0xFFF5F7FB);
 const Color _panelSurface = Colors.white;
 const Color _panelBorder = Color(0xFFE4EAF4);
 const Color _panelText = Color(0xFF111827);
@@ -216,18 +216,19 @@ class _AdminNotificationPanelScreenState
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final previewTitle = _titleController.text.trim();
     final previewMessage = _messageController.text.trim();
     final previewLink = _deepLinkController.text.trim();
 
     return Scaffold(
-      backgroundColor: _panelBackground,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: _panelSurface,
         foregroundColor: _panelText,
-        title: const Text(
-          'Admin Notification Panel',
-          style: TextStyle(fontWeight: FontWeight.w700),
+        title: Text(
+          l.adminPanel,
+          style: const TextStyle(fontWeight: FontWeight.w700),
         ),
         actions: [
           IconButton(
@@ -496,7 +497,7 @@ class _AdminNotificationPanelScreenState
               OutlinedButton.icon(
                 onPressed: _submitting ? null : () => _submit('save_draft'),
                 icon: const Icon(Icons.save_outlined),
-                label: const Text('Save draft'),
+                label: Text(l.save),
                 style: OutlinedButton.styleFrom(
                   minimumSize: const Size(130, 46),
                 ),
@@ -517,9 +518,9 @@ class _AdminNotificationPanelScreenState
             const Center(child: CircularProgressIndicator())
           else if (_history.isEmpty)
             _card(
-              child: const Text(
-                'No actions yet. Send, schedule, or save a draft to see history rows here.',
-                style: TextStyle(color: _panelMuted),
+              child: Text(
+                l.noData,
+                style: const TextStyle(color: _panelMuted),
               ),
             )
           else
@@ -703,6 +704,7 @@ class _RecipientPickerSheetState extends State<_RecipientPickerSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return SafeArea(
       top: false,
       child: Container(
@@ -765,10 +767,10 @@ class _RecipientPickerSheetState extends State<_RecipientPickerSheet> {
                 child: _loading
                     ? const Center(child: CircularProgressIndicator())
                     : _recipients.isEmpty
-                    ? const Center(
+                    ? Center(
                         child: Text(
-                          'No users found.',
-                          style: TextStyle(color: _panelMuted),
+                          l.noData,
+                          style: const TextStyle(color: _panelMuted),
                         ),
                       )
                     : ListView.separated(
@@ -824,7 +826,7 @@ class _RecipientPickerSheetState extends State<_RecipientPickerSheet> {
                   Expanded(
                     child: OutlinedButton(
                       onPressed: () => Navigator.of(context).pop(),
-                      child: const Text('Cancel'),
+                      child: Text(l.cancel),
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -834,7 +836,7 @@ class _RecipientPickerSheetState extends State<_RecipientPickerSheet> {
                       style: FilledButton.styleFrom(
                         backgroundColor: _panelPrimary,
                       ),
-                      child: Text('Apply (${_selected.length})'),
+                      child: Text('${l.apply} (${_selected.length})'),
                     ),
                   ),
                 ],

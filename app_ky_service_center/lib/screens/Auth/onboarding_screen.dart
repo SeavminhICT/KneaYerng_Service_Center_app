@@ -1,10 +1,26 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:lottie/lottie.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import '../../l10n/app_localizations.dart';
+import '../../services/language_service.dart';
 
 import '../main_navigation_screen.dart';
 import 'login_screen.dart';
+
+// ── Design tokens ───────────────────────────────────────────────────────────
+const _primary   = Color(0xFF5198F5);
+const _primaryLight = Color(0xFFEDF3FF);
+const _bg        = Color(0xFFF8F9FC);
+const _cardWhite = Color(0xFFFFFFFF);
+const _textHead  = Color(0xFF1A1D27);
+const _textSub   = Color(0xFF6B7280);
+const _textMuted = Color(0xFF9CA3AF);
+const _accent2   = Color(0xFFFF8A65);
+const _accent3   = Color(0xFF34D399);
+const _dot       = Color(0xFFD1DCF5);
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -13,80 +29,60 @@ class OnboardingScreen extends StatefulWidget {
   State<OnboardingScreen> createState() => _OnboardingScreenState();
 }
 
-class _OnboardingScreenState extends State<OnboardingScreen> {
+class _OnboardingScreenState extends State<OnboardingScreen>
+    with TickerProviderStateMixin {
   static const _languagePreferenceKey = 'app_language_code';
 
-  final PageController _controller = PageController();
+  final PageController _pageController = PageController();
   int _currentPage = 0;
   String? _selectedLanguageCode;
   bool _savingLanguage = false;
 
-  final List<_OnboardPageData> _pages = const [
-    _OnboardPageData.feature(
-      title: 'Find the exact tech you want',
-      subtitle:
-          'Browse curated devices, compare specs, and spot deals in seconds.',
-      lottieAsset: 'assets/lottie/shopping.json',
-      accent: Color(0xFF0EA5E9),
-      glow: Color(0xFF67E8F9),
-      gradient: [Color(0xFF0F172A), Color(0xFF164E63)],
-    ),
-    _OnboardPageData.feature(
-      title: 'Save more with smart promotions',
-      subtitle:
-          'Unlock exclusive offers and seasonal discounts tailored for you.',
-      lottieAsset: 'assets/lottie/discount.json',
-      accent: Color(0xFFF97316),
-      glow: Color(0xFFFBBF24),
-      gradient: [Color(0xFF1E293B), Color(0xFF7C2D12)],
-    ),
-    _OnboardPageData.feature(
-      title: 'Checkout with total confidence',
-      subtitle: 'Secure payments, trusted gateways, and instant confirmation.',
-      lottieAsset: 'assets/lottie/payment.json',
-      accent: Color(0xFF22C55E),
-      glow: Color(0xFFA7F3D0),
-      gradient: [Color(0xFF0F172A), Color(0xFF064E3B)],
-    ),
-    _OnboardPageData.language(
-      title: 'Choose language',
-      subtitle: 'You can edit it later in your profile',
-      accent: Color(0xFF077CB4),
-      glow: Color(0xFF45AEDF),
-      gradient: [Color(0xFFF8FCFF), Color(0xFFEEF6FD)],
-    ),
-  ];
+  late final AnimationController _floatController;
+  late final Animation<double> _floatAnim;
 
-  int get _lastPage => _pages.length - 1;
+  // 3 feature pages + 1 language page
+  static const int _featurePageCount = 3;
+  static const int _totalPages = 4; // 3 feature + 1 language
+  int get _lastPage => _totalPages - 1;
+
+  @override
+  void initState() {
+    super.initState();
+    _floatController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2400),
+    )..repeat(reverse: true);
+    _floatAnim = CurvedAnimation(parent: _floatController, curve: Curves.easeInOut);
+  }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _pageController.dispose();
+    _floatController.dispose();
     super.dispose();
   }
 
   void _goNext() {
     if (_currentPage >= _lastPage) return;
-
-    _controller.nextPage(
-      duration: const Duration(milliseconds: 320),
+    _pageController.nextPage(
+      duration: const Duration(milliseconds: 350),
       curve: Curves.easeOutCubic,
     );
   }
 
   void _goBack() {
     if (_currentPage == 0) return;
-
-    _controller.previousPage(
-      duration: const Duration(milliseconds: 320),
+    _pageController.previousPage(
+      duration: const Duration(milliseconds: 350),
       curve: Curves.easeOutCubic,
     );
   }
 
-  void _skipToEnd() {
-    _controller.animateToPage(
+  void _skipToLanguage() {
+    _pageController.animateToPage(
       _lastPage,
-      duration: const Duration(milliseconds: 320),
+      duration: const Duration(milliseconds: 350),
       curve: Curves.easeOutCubic,
     );
   }
@@ -96,338 +92,350 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   Future<void> _persistLanguageSelection() async {
+    final code = _selectedLanguageCode ?? 'en';
+    await LanguageService.instance.setLanguage(code);
     final prefs = await SharedPreferences.getInstance();
-    final languageCode = _selectedLanguageCode ?? 'en';
-    await prefs.setString(_languagePreferenceKey, languageCode);
+    await prefs.setString(_languagePreferenceKey, code);
   }
 
   Future<void> _completeOnboarding() async {
     if (_selectedLanguageCode == null || _savingLanguage) return;
-
     setState(() => _savingLanguage = true);
     try {
       await _persistLanguageSelection();
       if (!mounted) return;
-
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (_) => const LoginScreen()),
       );
     } finally {
-      if (mounted) {
-        setState(() => _savingLanguage = false);
-      }
+      if (mounted) setState(() => _savingLanguage = false);
     }
   }
 
   Future<void> _skipToHome() async {
     if (_savingLanguage) return;
-
     setState(() => _savingLanguage = true);
     try {
       await _persistLanguageSelection();
       if (!mounted) return;
-
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (_) => const MainNavigationScreen()),
       );
     } finally {
-      if (mounted) {
-        setState(() => _savingLanguage = false);
-      }
+      if (mounted) setState(() => _savingLanguage = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final page = _pages[_currentPage];
-    final isLanguagePage = page.isLanguage;
+    final l = AppLocalizations.of(context);
+    final isLanguagePage = _currentPage == _lastPage;
 
     return Scaffold(
-      body: AnimatedContainer(
-        duration: const Duration(milliseconds: 420),
-        curve: Curves.easeOutCubic,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: page.gradient,
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-        ),
-        child: SafeArea(
-          child: Stack(
-            children: [
-              if (isLanguagePage) ...[
-                const Positioned(
-                  top: -48,
-                  right: -36,
-                  child: _LanguageBackdropPattern(
-                    size: 170,
-                    color: Color(0xFFC2D4E9),
-                  ),
-                ),
-                const Positioned(
-                  bottom: 130,
-                  left: -44,
-                  child: _LanguageBackdropPattern(
-                    size: 150,
-                    color: Color(0xFFD5E2EF),
-                    turns: 0.7,
-                  ),
-                ),
-                const Positioned(
-                  bottom: -28,
-                  right: -24,
-                  child: _LanguageBackdropPattern(
-                    size: 130,
-                    color: Color(0xFFE1D5F0),
-                    turns: -0.35,
-                  ),
-                ),
-              ] else ...[
-                Positioned(
-                  top: -80,
-                  right: -60,
-                  child: _GlowOrb(color: page.glow, size: 180),
-                ),
-                Positioned(
-                  bottom: -100,
-                  left: -40,
-                  child: _GlowOrb(color: page.accent, size: 220),
-                ),
-              ],
-              Column(
+      backgroundColor: _bg,
+      body: SafeArea(
+        child: Column(
+          children: [
+            // ── Top bar ────────────────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+              child: Row(
                 children: [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-                    child: Row(
+                  // App name / back
+                  if (_currentPage > 0)
+                    _IconBtn(
+                      icon: Icons.arrow_back_ios_new_rounded,
+                      onTap: _goBack,
+                    )
+                  else
+                    Row(
                       children: [
-                        _currentPage > 0
-                            ? _RoundIconButton(
-                                icon: Icons.arrow_back_rounded,
-                                onTap: _goBack,
-                                light: isLanguagePage,
-                              )
-                            : const SizedBox(width: 44),
-                        const Spacer(),
-                        if (_currentPage != _lastPage)
-                          _SkipPill(
-                            label: 'Skip',
-                            color: page.accent,
-                            onTap: _skipToEnd,
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(9),
+                          child: Image.asset(
+                            'assets/images/Logo_KYSC.png',
+                            width: 32,
+                            height: 32,
+                            fit: BoxFit.cover,
                           ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'KY Services',
+                          style: GoogleFonts.sora(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: _textHead,
+                          ),
+                        ),
                       ],
                     ),
-                  ),
-                  Expanded(
-                    child: PageView.builder(
-                      controller: _controller,
-                      itemCount: _pages.length,
-                      onPageChanged: (index) {
-                        setState(() => _currentPage = index);
-                      },
-                      itemBuilder: (context, index) {
-                        final item = _pages[index];
-                        if (item.isLanguage) {
-                          return _LanguageChoicePageView(
-                            data: item,
-                            selectedLanguageCode: _selectedLanguageCode,
-                            onSelect: _selectLanguage,
-                          );
-                        }
-
-                        return _OnboardPageView(data: item);
-                      },
+                  const Spacer(),
+                  if (!isLanguagePage)
+                    TextButton(
+                      onPressed: _skipToLanguage,
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 7),
+                        backgroundColor: _primaryLight,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                      ),
+                      child: Text(
+                        l.skip,
+                        style: GoogleFonts.sora(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w600,
+                          color: _primary,
+                        ),
+                      ),
                     ),
-                  ),
-                  _DotsRow(
-                    count: _pages.length,
-                    currentIndex: _currentPage,
-                    activeColor: page.accent,
-                    inactiveColor: isLanguagePage
-                        ? const Color(0xFFB7CADB)
-                        : Colors.white.withValues(alpha: 0.35),
-                  ),
-                  const SizedBox(height: 18),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: _currentPage == _lastPage
-                        ? Column(
-                            children: [
-                              _PrimaryButton(
-                                text: _savingLanguage
-                                    ? 'Saving...'
-                                    : 'Continue',
-                                gradient: [page.accent, page.glow],
-                                onTap:
-                                    _selectedLanguageCode == null ||
-                                        _savingLanguage
-                                    ? null
-                                    : _completeOnboarding,
-                                trailing: const Icon(
-                                  Icons.keyboard_double_arrow_right_rounded,
-                                  color: Colors.white,
-                                  size: 18,
-                                ),
-                              ),
-                              const SizedBox(height: 10),
-                              _SecondaryActionButton(
-                                text: 'Skip to Home',
-                                onTap: _savingLanguage ? null : _skipToHome,
-                              ),
-                            ],
-                          )
-                        : _PrimaryButton(
-                            text: 'Next',
-                            gradient: [page.accent, page.glow],
-                            onTap: _goNext,
-                          ),
-                  ),
-                  const SizedBox(height: 28),
                 ],
               ),
-            ],
-          ),
+            ),
+
+            // ── Pages ──────────────────────────────────────────────────
+            Expanded(
+              child: PageView.builder(
+                controller: _pageController,
+                itemCount: _totalPages,
+                onPageChanged: (i) => setState(() => _currentPage = i),
+                itemBuilder: (context, index) {
+                  if (index == _lastPage) {
+                    return _LanguagePage(
+                      selectedCode: _selectedLanguageCode,
+                      onSelect: _selectLanguage,
+                    );
+                  }
+                  return _FeaturePage(
+                    pageIndex: index,
+                    floatAnim: _floatAnim,
+                  );
+                },
+              ),
+            ),
+
+            // ── Progress dots ──────────────────────────────────────────
+            _DotsRow(
+              count: _featurePageCount,
+              current: _currentPage >= _featurePageCount
+                  ? _featurePageCount - 1
+                  : _currentPage,
+            ),
+            const SizedBox(height: 20),
+
+            // ── CTA buttons ────────────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 0, 24, 28),
+              child: isLanguagePage
+                  ? Column(
+                      children: [
+                        _PrimaryBtn(
+                          label: _savingLanguage ? 'Saving…' : l.getStarted,
+                          enabled: _selectedLanguageCode != null && !_savingLanguage,
+                          onTap: _completeOnboarding,
+                        ),
+                        const SizedBox(height: 10),
+                        _GhostBtn(
+                          label: l.skip,
+                          onTap: _savingLanguage ? null : _skipToHome,
+                        ),
+                      ],
+                    )
+                  : _PrimaryBtn(
+                      label: _currentPage == _featurePageCount - 1
+                          ? l.continueText
+                          : l.next,
+                      onTap: _goNext,
+                    ),
+            ),
+          ],
         ),
       ),
     );
   }
 }
 
-enum _OnboardPageKind { feature, language }
+// ─────────────────────────────────────────────────────────────────────────────
+//  Feature pages
+// ─────────────────────────────────────────────────────────────────────────────
+class _FeaturePage extends StatelessWidget {
+  const _FeaturePage({required this.pageIndex, required this.floatAnim});
 
-class _OnboardPageData {
-  const _OnboardPageData.feature({
-    required this.title,
-    required this.subtitle,
-    required this.lottieAsset,
-    required this.accent,
-    required this.glow,
-    required this.gradient,
-  }) : kind = _OnboardPageKind.feature;
-
-  const _OnboardPageData.language({
-    required this.title,
-    required this.subtitle,
-    required this.accent,
-    required this.glow,
-    required this.gradient,
-  }) : kind = _OnboardPageKind.language,
-       lottieAsset = null;
-
-  final _OnboardPageKind kind;
-  final String title;
-  final String subtitle;
-  final String? lottieAsset;
-  final Color accent;
-  final Color glow;
-  final List<Color> gradient;
-
-  bool get isLanguage => kind == _OnboardPageKind.language;
-}
-
-class _OnboardPageView extends StatelessWidget {
-  const _OnboardPageView({required this.data});
-
-  final _OnboardPageData data;
+  final int pageIndex;
+  final Animation<double> floatAnim;
 
   @override
   Widget build(BuildContext context) {
-    final visualSize = (MediaQuery.of(context).size.width * 0.72)
-        .clamp(220.0, 320.0)
-        .toDouble();
+    final l = AppLocalizations.of(context);
+
+    final titles = [
+      l.welcomeTitle1,
+      l.welcomeTitle2,
+      l.welcomeTitle3,
+    ];
+
+    final subtitles = [
+      l.welcomeDesc1,
+      l.welcomeDesc2,
+      l.welcomeDesc3,
+    ];
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
+      padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Container(
-            height: visualSize,
-            width: visualSize,
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(28),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
-              boxShadow: [
-                BoxShadow(
-                  color: data.glow.withValues(alpha: 0.35),
-                  blurRadius: 40,
-                  offset: const Offset(0, 18),
-                ),
-              ],
-            ),
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                Positioned(
-                  top: 20,
-                  right: 18,
-                  child: Container(
-                    width: 54,
-                    height: 54,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: data.accent.withValues(alpha: 0.25),
-                    ),
-                  ),
-                ),
-                Lottie.asset(
-                  data.lottieAsset!,
-                  width: visualSize * 0.68,
-                  height: visualSize * 0.68,
-                  fit: BoxFit.contain,
-                ),
-              ],
+          // Illustration
+          _buildIllustration(context),
+          const SizedBox(height: 36),
+          // Text card
+          Text(
+            titles[pageIndex],
+            textAlign: TextAlign.center,
+            style: GoogleFonts.sora(
+              fontSize: 26,
+              fontWeight: FontWeight.w700,
+              height: 1.25,
+              color: _textHead,
             ),
           ),
-          const SizedBox(height: 26),
+          const SizedBox(height: 12),
+          Text(
+            subtitles[pageIndex],
+            textAlign: TextAlign.center,
+            style: GoogleFonts.inter(
+              fontSize: 14,
+              fontWeight: FontWeight.w400,
+              height: 1.6,
+              color: _textSub,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildIllustration(BuildContext context) {
+    final size = MediaQuery.of(context).size.width * 0.78;
+    switch (pageIndex) {
+      case 0:
+        return _Screen1Illustration(size: size, floatAnim: floatAnim);
+      case 1:
+        return _Screen2Illustration(size: size);
+      case 2:
+        return _Screen3Illustration(size: size, floatAnim: floatAnim);
+      default:
+        return const SizedBox.shrink();
+    }
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  Screen 1: Floating product cards
+// ─────────────────────────────────────────────────────────────────────────────
+class _Screen1Illustration extends StatelessWidget {
+  const _Screen1Illustration({required this.size, required this.floatAnim});
+  final double size;
+  final Animation<double> floatAnim;
+
+  @override
+  Widget build(BuildContext context) {
+    final h = size * 0.85;
+    return SizedBox(
+      width: size,
+      height: h,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          // Background circle
           Container(
-            padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
+            width: size * 0.82,
+            height: size * 0.82,
+            decoration: const BoxDecoration(
+              shape: BoxShape.circle,
+              color: _primaryLight,
+            ),
+          ),
+          // Center logo
+          Container(
+            width: size * 0.28,
+            height: size * 0.28,
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.92),
-              borderRadius: BorderRadius.circular(22),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.7)),
+              shape: BoxShape.circle,
+              color: Colors.white,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.18),
+                  color: _primary.withValues(alpha: 0.25),
                   blurRadius: 24,
-                  offset: const Offset(0, 14),
+                  offset: const Offset(0, 10),
                 ),
               ],
             ),
-            child: Column(
-              children: [
-                Container(
-                  width: 46,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: data.accent,
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  data.title,
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.sora(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w700,
-                    color: const Color(0xFF0F172A),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  data.subtitle,
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.sora(
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.w500,
-                    color: const Color(0xFF64748B),
-                  ),
-                ),
-              ],
+            child: ClipOval(
+              child: Image.asset(
+                'assets/images/Logo_KYSC.png',
+                fit: BoxFit.cover,
+              ),
+            ),
+          ),
+          // Floating card top-left: Phone
+          AnimatedBuilder(
+            animation: floatAnim,
+            builder: (context, child) => Positioned(
+              top: h * 0.04 + floatAnim.value * 10,
+              left: size * 0.02,
+              child: _ProductCard(
+                icon: Icons.phone_android_rounded,
+                label: 'iPhone 15',
+                price: '\$xxx',
+                color: const Color(0xFF5198F5),
+              ),
+            ),
+          ),
+          // Floating card top-right: Laptop
+          AnimatedBuilder(
+            animation: floatAnim,
+            builder: (context, child) => Positioned(
+              top: h * 0.08 - floatAnim.value * 8,
+              right: size * 0.0,
+              child: _ProductCard(
+                icon: Icons.laptop_mac_rounded,
+                label: 'MacBook',
+                price: '\$x,xxx',
+                color: const Color(0xFFFF8A65),
+              ),
+            ),
+          ),
+          // Floating card bottom-left: Watch
+          AnimatedBuilder(
+            animation: floatAnim,
+            builder: (context, child) => Positioned(
+              bottom: h * 0.04 - floatAnim.value * 8,
+              left: size * 0.0,
+              child: _ProductCard(
+                icon: Icons.watch_rounded,
+                label: 'Apple Watch',
+                price: '\$xx',
+                color: const Color(0xFF34D399),
+              ),
+            ),
+          ),
+          // Floating card bottom-right: Headphones
+          AnimatedBuilder(
+            animation: floatAnim,
+            builder: (context, child) => Positioned(
+              bottom: h * 0.04 + floatAnim.value * 10,
+              right: size * 0.01,
+              child: _ProductCard(
+                icon: Icons.headphones_rounded,
+                label: 'AirPods',
+                price: '\$xxx',
+                color: const Color(0xFFA78BFA),
+              ),
             ),
           ),
         ],
@@ -436,90 +444,712 @@ class _OnboardPageView extends StatelessWidget {
   }
 }
 
-class _LanguageChoicePageView extends StatelessWidget {
-  const _LanguageChoicePageView({
-    required this.data,
-    required this.selectedLanguageCode,
-    required this.onSelect,
+class _ProductCard extends StatelessWidget {
+  const _ProductCard({
+    required this.icon,
+    required this.label,
+    required this.price,
+    required this.color,
   });
 
-  static const List<_LanguageOption> _options = [
-    _LanguageOption(code: 'km', label: 'ខ្មែរ', flagEmoji: '🇰🇭'),
-    _LanguageOption(code: 'en', label: 'English', flagEmoji: '🇺🇸'),
-  ];
-
-  final _OnboardPageData data;
-  final String? selectedLanguageCode;
-  final ValueChanged<String> onSelect;
+  final IconData icon;
+  final String label;
+  final String price;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(26, 26, 26, 10),
+    return Container(
+      width: 110,
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: _cardWhite,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: color.withValues(alpha: 0.18),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            data.title,
-            style: GoogleFonts.sora(
-              fontSize: 39,
-              height: 1.15,
-              fontWeight: FontWeight.w700,
-              color: const Color(0xFF1A739E),
-            ),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            data.subtitle,
-            style: GoogleFonts.sora(
-              fontSize: 15,
-              fontWeight: FontWeight.w500,
-              color: const Color(0xFF617285),
-            ),
-          ),
-          const SizedBox(height: 26),
           Container(
-            width: double.infinity,
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
+            width: 36,
+            height: 36,
             decoration: BoxDecoration(
-              color: const Color(0xFF007DB3),
-              borderRadius: BorderRadius.circular(20),
+              color: color.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, color: color, size: 18),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            label,
+            style: GoogleFonts.inter(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: _textHead,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            price,
+            style: GoogleFonts.sora(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  Screen 2: Shop icons grid
+// ─────────────────────────────────────────────────────────────────────────────
+class _Screen2Illustration extends StatelessWidget {
+  const _Screen2Illustration({required this.size});
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final h = size * 0.82;
+    return SizedBox(
+      width: size,
+      height: h,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          // Big pastel circle bg
+          Container(
+            width: size * 0.78,
+            height: size * 0.78,
+            decoration: const BoxDecoration(
+              shape: BoxShape.circle,
+              color: _primaryLight,
+            ),
+          ),
+          // Central phone mock
+          Container(
+            width: size * 0.32,
+            height: size * 0.44,
+            decoration: BoxDecoration(
+              color: _cardWhite,
+              borderRadius: BorderRadius.circular(22),
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFF007DB3).withValues(alpha: 0.25),
-                  blurRadius: 24,
-                  offset: const Offset(0, 14),
+                  color: _primary.withValues(alpha: 0.2),
+                  blurRadius: 28,
+                  offset: const Offset(0, 12),
                 ),
               ],
             ),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text(
-                  'Language',
-                  style: GoogleFonts.sora(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white.withValues(alpha: 0.85),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: Image.asset(
+                    'assets/images/Logo_KYSC.png',
+                    width: 40,
+                    height: 40,
+                    fit: BoxFit.cover,
                   ),
                 ),
                 const SizedBox(height: 8),
-                for (int index = 0; index < _options.length; index++) ...[
-                  _LanguageTile(
-                    option: _options[index],
-                    selected: selectedLanguageCode == _options[index].code,
-                    onTap: () => onSelect(_options[index].code),
+                Text(
+                  'KY Shop',
+                  style: GoogleFonts.sora(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: _textHead,
                   ),
-                  if (index != _options.length - 1)
-                    Divider(
-                      color: Colors.white.withValues(alpha: 0.24),
-                      thickness: 1,
-                      height: 2,
-                    ),
-                ],
+                ),
+                const SizedBox(height: 4),
+                Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 12),
+                  height: 5,
+                  decoration: BoxDecoration(
+                    color: _primary,
+                    borderRadius: BorderRadius.circular(99),
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 18),
+                  height: 5,
+                  decoration: BoxDecoration(
+                    color: _primaryLight,
+                    borderRadius: BorderRadius.circular(99),
+                  ),
+                ),
               ],
             ),
           ),
+          // Top icon: Cart
+          Positioned(
+            top: h * 0.04,
+            child: _ShopIconBubble(
+              icon: Icons.shopping_cart_rounded,
+              label: 'Cart',
+              color: _primary,
+            ),
+          ),
+          // Left icon: Wishlist
+          Positioned(
+            left: size * 0.01,
+            child: _ShopIconBubble(
+              icon: Icons.favorite_rounded,
+              label: 'Wishlist',
+              color: const Color(0xFFFF6B8B),
+            ),
+          ),
+          // Right icon: Payment
+          Positioned(
+            right: size * 0.01,
+            child: _ShopIconBubble(
+              icon: Icons.credit_card_rounded,
+              label: 'Payment',
+              color: _accent2,
+            ),
+          ),
+          // Bottom icon: Lock
+          Positioned(
+            bottom: h * 0.04,
+            child: _ShopIconBubble(
+              icon: Icons.lock_rounded,
+              label: 'Secure',
+              color: _accent3,
+            ),
+          ),
+          // Connecting lines (decorative arcs)
+          Positioned.fill(
+            child: CustomPaint(painter: _ConnectionLinePainter()),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ShopIconBubble extends StatelessWidget {
+  const _ShopIconBubble({
+    required this.icon,
+    required this.label,
+    required this.color,
+  });
+
+  final IconData icon;
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 72,
+      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+      decoration: BoxDecoration(
+        color: _cardWhite,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: color.withValues(alpha: 0.2),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
+          ),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.12),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: color, size: 20),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            label,
+            style: GoogleFonts.inter(
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+              color: _textSub,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ConnectionLinePainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = _primary.withValues(alpha: 0.12)
+      ..strokeWidth = 1.5
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+
+    final cx = size.width / 2;
+    final cy = size.height / 2;
+
+    // Draw subtle dashed lines from center to each icon
+    _drawDashedLine(canvas, paint, Offset(cx, cy), Offset(cx, cy * 0.12));
+    _drawDashedLine(canvas, paint, Offset(cx, cy), Offset(cx * 0.14, cy));
+    _drawDashedLine(canvas, paint, Offset(cx, cy), Offset(size.width - cx * 0.14, cy));
+    _drawDashedLine(canvas, paint, Offset(cx, cy), Offset(cx, size.height - cy * 0.12));
+  }
+
+  void _drawDashedLine(Canvas canvas, Paint paint, Offset from, Offset to) {
+    const dashLength = 5.0;
+    const gapLength = 4.0;
+    final total = (to - from).distance;
+    final dir = (to - from) / total;
+    double drawn = 0;
+    bool dash = true;
+    while (drawn < total) {
+      final segLen = math.min(dash ? dashLength : gapLength, total - drawn);
+      if (dash) {
+        canvas.drawLine(from + dir * drawn, from + dir * (drawn + segLen), paint);
+      }
+      drawn += segLen;
+      dash = !dash;
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  Screen 3: Delivery illustration with tracking timeline
+// ─────────────────────────────────────────────────────────────────────────────
+class _Screen3Illustration extends StatelessWidget {
+  const _Screen3Illustration({required this.size, required this.floatAnim});
+  final double size;
+  final Animation<double> floatAnim;
+
+  @override
+  Widget build(BuildContext context) {
+    final h = size * 0.85;
+    return SizedBox(
+      width: size,
+      height: h,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          // Background circle
+          Container(
+            width: size * 0.82,
+            height: size * 0.82,
+            decoration: const BoxDecoration(
+              shape: BoxShape.circle,
+              color: _primaryLight,
+            ),
+          ),
+
+          // Tracking timeline card
+          Positioned(
+            bottom: h * 0.02,
+            left: 0,
+            right: 0,
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: 4),
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+              decoration: BoxDecoration(
+                color: _cardWhite,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: _primary.withValues(alpha: 0.12),
+                    blurRadius: 22,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
+              child: Column(
+                children: [
+                  _TrackingStep(
+                    icon: Icons.check_circle_rounded,
+                    label: 'Order Confirmed',
+                    done: true,
+                  ),
+                  _TrackingConnector(done: true),
+                  _TrackingStep(
+                    icon: Icons.inventory_2_rounded,
+                    label: 'Package Ready',
+                    done: true,
+                  ),
+                  _TrackingConnector(done: false),
+                  _TrackingStep(
+                    icon: Icons.electric_moped_rounded,
+                    label: 'Out for Delivery',
+                    done: false,
+                    isCurrent: true,
+                  ),
+                  _TrackingConnector(done: false),
+                  _TrackingStep(
+                    icon: Icons.home_rounded,
+                    label: 'Delivered',
+                    done: false,
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // Delivery scooter card (floating top)
+          AnimatedBuilder(
+            animation: floatAnim,
+            builder: (context, child) => Positioned(
+              top: h * 0.04 + floatAnim.value * 8,
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                decoration: BoxDecoration(
+                  color: _primary,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: _primary.withValues(alpha: 0.4),
+                      blurRadius: 20,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.electric_moped_rounded,
+                        color: Colors.white, size: 26),
+                    const SizedBox(width: 10),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'On the way!',
+                          style: GoogleFonts.sora(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                          ),
+                        ),
+                        Text(
+                          '~15 min away',
+                          style: GoogleFonts.inter(
+                            fontSize: 10,
+                            color: Colors.white.withValues(alpha: 0.8),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+
+          // Map pin floating badge
+          Positioned(
+            top: h * 0.24,
+            right: size * 0.04,
+            child: _MapPinBadge(),
+          ),
+
+          // Package icon badge
+          Positioned(
+            top: h * 0.22,
+            left: size * 0.04,
+            child: Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: _cardWhite,
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: [
+                  BoxShadow(
+                    color: _accent2.withValues(alpha: 0.2),
+                    blurRadius: 14,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
+              ),
+              child: Icon(Icons.inventory_2_rounded,
+                  color: _accent2, size: 24),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TrackingStep extends StatelessWidget {
+  const _TrackingStep({
+    required this.icon,
+    required this.label,
+    required this.done,
+    this.isCurrent = false,
+  });
+
+  final IconData icon;
+  final String label;
+  final bool done;
+  final bool isCurrent;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = done || isCurrent ? _primary : _textMuted;
+    final bgColor = done
+        ? _primary.withValues(alpha: 0.12)
+        : isCurrent
+            ? _primary.withValues(alpha: 0.08)
+            : const Color(0xFFF1F3F5);
+
+    return Row(
+      children: [
+        Container(
+          width: 32,
+          height: 32,
+          decoration: BoxDecoration(
+            color: bgColor,
+            shape: BoxShape.circle,
+          ),
+          child: Icon(icon, size: 16, color: color),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(
+            label,
+            style: GoogleFonts.inter(
+              fontSize: 12,
+              fontWeight: isCurrent ? FontWeight.w700 : FontWeight.w500,
+              color: done || isCurrent ? _textHead : _textMuted,
+            ),
+          ),
+        ),
+        if (done)
+          const Icon(Icons.check_rounded, size: 14, color: _primary),
+        if (isCurrent)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+            decoration: BoxDecoration(
+              color: _primary.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(99),
+            ),
+            child: Text(
+              'Live',
+              style: GoogleFonts.sora(
+                fontSize: 9,
+                fontWeight: FontWeight.w700,
+                color: _primary,
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _TrackingConnector extends StatelessWidget {
+  const _TrackingConnector({required this.done});
+  final bool done;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 15),
+      child: Column(
+        children: List.generate(3, (i) {
+          return Container(
+            width: 2,
+            height: 4,
+            margin: const EdgeInsets.symmetric(vertical: 1),
+            decoration: BoxDecoration(
+              color:
+                  done ? _primary : _primary.withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(99),
+            ),
+          );
+        }),
+      ),
+    );
+  }
+}
+
+class _MapPinBadge extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 48,
+      height: 48,
+      decoration: BoxDecoration(
+        color: _cardWhite,
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFFFF6B8B).withValues(alpha: 0.2),
+            blurRadius: 14,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: const Icon(Icons.location_on_rounded,
+          color: Color(0xFFFF6B8B), size: 24),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  Language selection page
+// ─────────────────────────────────────────────────────────────────────────────
+class _LanguagePage extends StatelessWidget {
+  const _LanguagePage({required this.selectedCode, required this.onSelect});
+
+  static const _options = [
+    _LangOption(code: 'km', label: 'ខ្មែរ', flag: '🇰🇭', name: 'Khmer'),
+    _LangOption(code: 'en', label: 'English', flag: '🇺🇸', name: 'English'),
+  ];
+
+  final String? selectedCode;
+  final ValueChanged<String> onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 20, 24, 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Icon
+          Container(
+            width: 58,
+            height: 58,
+            decoration: BoxDecoration(
+              color: _primaryLight,
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: const Icon(Icons.language_rounded,
+                color: _primary, size: 30),
+          ),
+          const SizedBox(height: 20),
+          Text(
+            l.chooseYourLanguage,
+            style: GoogleFonts.sora(
+              fontSize: 30,
+              fontWeight: FontWeight.w700,
+              height: 1.2,
+              color: _textHead,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            l.languageDesc,
+            style: GoogleFonts.inter(
+              fontSize: 14,
+              color: _textSub,
+            ),
+          ),
+          const SizedBox(height: 28),
+          // Language options
+          ...List.generate(_options.length, (i) {
+            final opt = _options[i];
+            final selected = selectedCode == opt.code;
+            return GestureDetector(
+              onTap: () => onSelect(opt.code),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                margin: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 18, vertical: 16),
+                decoration: BoxDecoration(
+                  color: selected ? _primaryLight : _cardWhite,
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(
+                    color: selected ? _primary : const Color(0xFFE5E7EB),
+                    width: selected ? 1.5 : 1,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: selected
+                          ? _primary.withValues(alpha: 0.1)
+                          : Colors.black.withValues(alpha: 0.04),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    Text(opt.flag,
+                        style: const TextStyle(fontSize: 28)),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            opt.label,
+                            style: GoogleFonts.sora(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                              color: _textHead,
+                            ),
+                          ),
+                          Text(
+                            opt.name,
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              color: _textSub,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      width: 22,
+                      height: 22,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: selected ? _primary : Colors.transparent,
+                        border: Border.all(
+                          color: selected ? _primary : const Color(0xFFD1D5DB),
+                          width: 2,
+                        ),
+                      ),
+                      child: selected
+                          ? const Icon(Icons.check_rounded,
+                              color: Colors.white, size: 13)
+                          : null,
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }),
           const Spacer(),
         ],
       ),
@@ -527,149 +1157,41 @@ class _LanguageChoicePageView extends StatelessWidget {
   }
 }
 
-class _LanguageTile extends StatelessWidget {
-  const _LanguageTile({
-    required this.option,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final _LanguageOption option;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(14),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          child: Row(
-            children: [
-              Container(
-                width: 38,
-                height: 38,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.85),
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.12),
-                      blurRadius: 8,
-                      offset: const Offset(0, 3),
-                    ),
-                  ],
-                ),
-                child: Text(
-                  option.flagEmoji,
-                  style: const TextStyle(fontSize: 21),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  option.label,
-                  style: GoogleFonts.sora(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-              _LanguageRadio(selected: selected),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _LanguageRadio extends StatelessWidget {
-  const _LanguageRadio({required this.selected});
-
-  final bool selected;
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 200),
-      width: 25,
-      height: 25,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: selected
-            ? Colors.white.withValues(alpha: 0.16)
-            : Colors.transparent,
-        border: Border.all(
-          color: Colors.white.withValues(alpha: selected ? 0.95 : 0.78),
-          width: 2,
-        ),
-      ),
-      child: AnimatedOpacity(
-        duration: const Duration(milliseconds: 180),
-        opacity: selected ? 1 : 0,
-        child: Center(
-          child: Container(
-            width: 10,
-            height: 10,
-            decoration: const BoxDecoration(
-              shape: BoxShape.circle,
-              color: Colors.white,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _LanguageOption {
-  const _LanguageOption({
+class _LangOption {
+  const _LangOption({
     required this.code,
     required this.label,
-    required this.flagEmoji,
+    required this.flag,
+    required this.name,
   });
-
   final String code;
   final String label;
-  final String flagEmoji;
+  final String flag;
+  final String name;
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+//  Shared widgets
+// ─────────────────────────────────────────────────────────────────────────────
 class _DotsRow extends StatelessWidget {
-  const _DotsRow({
-    required this.count,
-    required this.currentIndex,
-    required this.activeColor,
-    required this.inactiveColor,
-  });
-
+  const _DotsRow({required this.count, required this.current});
   final int count;
-  final int currentIndex;
-  final Color activeColor;
-  final Color inactiveColor;
+  final int current;
 
   @override
   Widget build(BuildContext context) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
-      children: List.generate(count, (index) {
-        final active = index == currentIndex;
+      children: List.generate(count, (i) {
+        final active = i == current;
         return AnimatedContainer(
-          duration: const Duration(milliseconds: 260),
+          duration: const Duration(milliseconds: 280),
           margin: const EdgeInsets.symmetric(horizontal: 4),
-          width: active ? 20 : 7,
-          height: 7,
+          width: active ? 24 : 8,
+          height: 8,
           decoration: BoxDecoration(
-            color: active ? activeColor : inactiveColor,
-            borderRadius: BorderRadius.circular(999),
+            color: active ? _primary : _dot,
+            borderRadius: BorderRadius.circular(99),
           ),
         );
       }),
@@ -677,62 +1199,55 @@ class _DotsRow extends StatelessWidget {
   }
 }
 
-class _PrimaryButton extends StatelessWidget {
-  const _PrimaryButton({
-    required this.text,
-    required this.gradient,
+class _PrimaryBtn extends StatelessWidget {
+  const _PrimaryBtn({
+    required this.label,
     required this.onTap,
-    this.trailing,
+    this.enabled = true,
   });
-
-  final String text;
-  final List<Color> gradient;
+  final String label;
   final VoidCallback? onTap;
-  final Widget? trailing;
+  final bool enabled;
 
   @override
   Widget build(BuildContext context) {
-    final enabled = onTap != null;
-    final colors = enabled
-        ? gradient
-        : const [Color(0xFFAAC3D3), Color(0xFFAAC3D3)];
-
     return SizedBox(
-      height: 52,
       width: double.infinity,
+      height: 54,
       child: DecoratedBox(
         decoration: BoxDecoration(
-          gradient: LinearGradient(colors: colors),
+          color: enabled ? _primary : _primary.withValues(alpha: 0.45),
           borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.25),
-              blurRadius: 16,
-              offset: const Offset(0, 10),
-            ),
-          ],
+          boxShadow: enabled
+              ? [
+                  BoxShadow(
+                    color: _primary.withValues(alpha: 0.35),
+                    blurRadius: 20,
+                    offset: const Offset(0, 8),
+                  ),
+                ]
+              : [],
         ),
         child: Material(
           color: Colors.transparent,
           child: InkWell(
             borderRadius: BorderRadius.circular(16),
-            onTap: onTap,
+            onTap: enabled ? onTap : null,
             child: Center(
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    text,
+                    label,
                     style: GoogleFonts.sora(
                       fontSize: 15,
                       fontWeight: FontWeight.w700,
-                      color: Colors.white.withValues(alpha: enabled ? 1 : 0.72),
+                      color: Colors.white,
                     ),
                   ),
-                  if (trailing != null) ...[
-                    const SizedBox(width: 8),
-                    trailing!,
-                  ],
+                  const SizedBox(width: 6),
+                  const Icon(Icons.arrow_forward_rounded,
+                      color: Colors.white, size: 16),
                 ],
               ),
             ),
@@ -743,10 +1258,9 @@ class _PrimaryButton extends StatelessWidget {
   }
 }
 
-class _SecondaryActionButton extends StatelessWidget {
-  const _SecondaryActionButton({required this.text, required this.onTap});
-
-  final String text;
+class _GhostBtn extends StatelessWidget {
+  const _GhostBtn({required this.label, required this.onTap});
+  final String label;
   final VoidCallback? onTap;
 
   @override
@@ -754,24 +1268,20 @@ class _SecondaryActionButton extends StatelessWidget {
     return SizedBox(
       width: double.infinity,
       height: 46,
-      child: OutlinedButton(
+      child: TextButton(
         onPressed: onTap,
-        style: OutlinedButton.styleFrom(
-          side: BorderSide(
-            color: const Color(0xFF007DB3).withValues(alpha: 0.38),
-            width: 1.2,
-          ),
-          backgroundColor: Colors.white.withValues(alpha: 0.76),
+        style: TextButton.styleFrom(
+          backgroundColor: _primaryLight,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
           ),
         ),
         child: Text(
-          text,
+          label,
           style: GoogleFonts.sora(
             fontSize: 14,
             fontWeight: FontWeight.w600,
-            color: const Color(0xFF0E638A),
+            color: _primary,
           ),
         ),
       ),
@@ -779,188 +1289,32 @@ class _SecondaryActionButton extends StatelessWidget {
   }
 }
 
-class _RoundIconButton extends StatelessWidget {
-  const _RoundIconButton({
-    required this.icon,
-    required this.onTap,
-    this.light = false,
-  });
-
+class _IconBtn extends StatelessWidget {
+  const _IconBtn({required this.icon, required this.onTap});
   final IconData icon;
   final VoidCallback onTap;
-  final bool light;
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
+    return GestureDetector(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(14),
       child: Container(
-        height: 42,
-        width: 42,
+        height: 40,
+        width: 40,
         decoration: BoxDecoration(
-          color: light ? Colors.white : Colors.white.withValues(alpha: 0.18),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: light
-                ? const Color(0xFFD3E4F2)
-                : Colors.white.withValues(alpha: 0.4),
-          ),
+          color: _cardWhite,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFE5E7EB)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
-        child: Icon(
-          icon,
-          color: light ? const Color(0xFF2A6685) : Colors.white,
-        ),
+        child: Icon(icon, color: _textHead, size: 18),
       ),
     );
-  }
-}
-
-class _SkipPill extends StatelessWidget {
-  const _SkipPill({
-    required this.label,
-    required this.color,
-    required this.onTap,
-  });
-
-  final String label;
-  final Color color;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return TextButton(
-      onPressed: onTap,
-      style: TextButton.styleFrom(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        backgroundColor: Colors.white.withValues(alpha: 0.16),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
-      ),
-      child: Text(
-        label,
-        style: GoogleFonts.sora(
-          fontSize: 12.5,
-          fontWeight: FontWeight.w600,
-          color: color,
-        ),
-      ),
-    );
-  }
-}
-
-class _GlowOrb extends StatelessWidget {
-  const _GlowOrb({required this.color, required this.size});
-
-  final Color color;
-  final double size;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: color.withValues(alpha: 0.22),
-        boxShadow: [
-          BoxShadow(
-            color: color.withValues(alpha: 0.3),
-            blurRadius: 80,
-            spreadRadius: 10,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _LanguageBackdropPattern extends StatelessWidget {
-  const _LanguageBackdropPattern({
-    required this.size,
-    required this.color,
-    this.turns = 0,
-  });
-
-  final double size;
-  final Color color;
-  final double turns;
-
-  @override
-  Widget build(BuildContext context) {
-    return Transform.rotate(
-      angle: turns,
-      child: SizedBox(
-        width: size,
-        height: size,
-        child: CustomPaint(
-          painter: _LanguageBackdropPainter(
-            color: color.withValues(alpha: 0.55),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _LanguageBackdropPainter extends CustomPainter {
-  const _LanguageBackdropPainter({required this.color});
-
-  final Color color;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final linePaint = Paint()
-      ..color = color
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 4
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round;
-
-    final nodePaint = Paint()
-      ..color = color.withValues(alpha: 0.34)
-      ..style = PaintingStyle.fill;
-
-    final width = size.width;
-    final height = size.height;
-    final networkPath = Path()
-      ..moveTo(width * 0.16, height * 0.16)
-      ..lineTo(width * 0.16, height * 0.78)
-      ..lineTo(width * 0.52, height * 0.78)
-      ..lineTo(width * 0.52, height * 0.34)
-      ..lineTo(width * 0.84, height * 0.34);
-
-    final boltPath = Path()
-      ..moveTo(width * 0.28, height * 0.92)
-      ..lineTo(width * 0.44, height * 0.62)
-      ..lineTo(width * 0.34, height * 0.62)
-      ..lineTo(width * 0.5, height * 0.43);
-
-    canvas.drawPath(networkPath, linePaint);
-    canvas.drawCircle(
-      Offset(width * 0.16, height * 0.16),
-      width * 0.055,
-      linePaint,
-    );
-    canvas.drawCircle(
-      Offset(width * 0.52, height * 0.34),
-      width * 0.055,
-      linePaint,
-    );
-    canvas.drawCircle(
-      Offset(width * 0.84, height * 0.34),
-      width * 0.055,
-      linePaint,
-    );
-    canvas.drawCircle(
-      Offset(width * 0.52, height * 0.78),
-      width * 0.05,
-      nodePaint,
-    );
-    canvas.drawPath(boltPath, linePaint);
-  }
-
-  @override
-  bool shouldRepaint(covariant _LanguageBackdropPainter oldDelegate) {
-    return oldDelegate.color != color;
   }
 }

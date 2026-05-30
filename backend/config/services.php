@@ -97,6 +97,7 @@ return [
         'base_url' => env('UNIMATRIX_BASE_URL', 'https://api.unimtx.com'),
         'access_key_id' => env('UNIMATRIX_ACCESS_KEY_ID', ''),
         'access_key_secret' => env('UNIMATRIX_ACCESS_KEY_SECRET', ''),
+        'signature' => env('UNIMATRIX_SIGNATURE', ''),
         'channel' => env('UNIMATRIX_CHANNEL', 'sms'),
         'timeout' => (int) env('UNIMATRIX_TIMEOUT', 15),
         'verify' => filter_var(env('UNIMATRIX_VERIFY', true), FILTER_VALIDATE_BOOLEAN),

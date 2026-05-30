@@ -2,7 +2,9 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:skeletonizer/skeletonizer.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../../models/product.dart';
 import '../../models/search_suggestion.dart';
 import '../../services/api_service.dart';
@@ -12,8 +14,7 @@ import '../../widgets/auth_guard.dart';
 import '../../widgets/cart_added_bottom_bar.dart';
 import '../search/search_results_screen.dart';
 import 'product_detail_screen.dart';
-
-const _pageBackground = Color(0xFFF5F7FB);
+import '../cart/cart_screen.dart';
 const _surface = Color(0xFFFFFFFF);
 const _surfaceAlt = Color(0xFFF1F5F9);
 const _border = Color(0xFFE2E8F0);
@@ -180,22 +181,32 @@ class _AllProductsScreenState extends State<AllProductsScreen> {
     final cardRadius = isDesktop ? 18.0 : 16.0;
     final gridItemHeight = isDesktop ? 318.0 : (isTablet ? 302.0 : 286.0);
 
+    final l = AppLocalizations.of(context);
     return Scaffold(
-      backgroundColor: _pageBackground,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: Text(
-          widget.title ?? 'All Products',
+          widget.title ?? l.allProducts,
           style: const TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.w800,
             color: _textPrimary,
-            fontFamily: 'SF Pro Text',
           ),
         ),
-        backgroundColor: _pageBackground,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         foregroundColor: _textPrimary,
         elevation: 0,
         surfaceTintColor: Colors.transparent,
+        actions: [
+          _CartIconButton(
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const CartScreen()),
+              );
+            },
+          ),
+          const SizedBox(width: 8),
+        ],
       ),
       body: RefreshIndicator(
         color: _brandBlue,
@@ -203,19 +214,20 @@ class _AllProductsScreenState extends State<AllProductsScreen> {
         child: FutureBuilder<List<Product>>(
           future: _future,
           builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
-            }
+            final isLoading = snapshot.connectionState == ConnectionState.waiting;
             if (snapshot.hasError) {
               return _ErrorState(onRetry: _refresh);
             }
 
-            final products = snapshot.data ?? [];
-            if (products.isEmpty) {
+            final products = isLoading
+                ? List.generate(8, (index) => Product(id: index, name: 'Loading...', price: 99.99))
+                : (snapshot.data ?? []);
+                
+            if (!isLoading && products.isEmpty) {
               return const _EmptyState();
             }
 
-            final filtered = _filterProducts(products);
+            final filtered = isLoading ? products : _filterProducts(products);
             final compactToggle = width < 380;
 
             return Column(
@@ -275,9 +287,11 @@ class _AllProductsScreenState extends State<AllProductsScreen> {
                         )
                       : filtered.isEmpty
                       ? const _SearchEmptyState()
-                      : AnimatedSwitcher(
-                          duration: const Duration(milliseconds: 220),
-                          child: _isGrid
+                      : Skeletonizer(
+                          enabled: isLoading,
+                          child: AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 220),
+                            child: _isGrid
                               ? GridView.builder(
                                   key: const ValueKey('grid'),
                                   padding: const EdgeInsets.fromLTRB(
@@ -325,6 +339,7 @@ class _AllProductsScreenState extends State<AllProductsScreen> {
                                     );
                                   },
                                 ),
+                          ),
                         ),
                 ),
               ],
@@ -1281,7 +1296,7 @@ class _ErrorState extends StatelessWidget {
               onRetry();
             },
             icon: const Icon(Icons.refresh_rounded),
-            label: const Text('Retry'),
+            label: Text(AppLocalizations.of(context).retry),
           ),
         ),
       ],
@@ -1315,10 +1330,10 @@ class _ImageSkeleton extends StatelessWidget {
     return Container(
       color: _surfaceAlt,
       child: const Center(
-        child: SizedBox(
-          height: 22,
-          width: 22,
-          child: CircularProgressIndicator(strokeWidth: 2),
+        child: Icon(
+          Icons.image_outlined,
+          color: Colors.black12,
+          size: 24,
         ),
       ),
     );
@@ -1347,6 +1362,65 @@ class _AddCircleButton extends StatelessWidget {
         ),
         child: const Icon(Icons.add_rounded, size: 18, color: Colors.white),
       ),
+    );
+  }
+}
+
+class _CartIconButton extends StatelessWidget {
+  const _CartIconButton({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: CartService.instance,
+      builder: (context, _) {
+        final count = CartService.instance.totalItems;
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        final color = isDark ? Colors.white : _textPrimary;
+        return Stack(
+          clipBehavior: Clip.none,
+          alignment: Alignment.center,
+          children: [
+            IconButton(
+              icon: Icon(Icons.shopping_cart_outlined, color: color),
+              onPressed: onTap,
+            ),
+            if (count > 0)
+              Positioned(
+                top: 4,
+                right: 4,
+                child: IgnorePointer(
+                  child: Container(
+                    constraints: const BoxConstraints(
+                      minWidth: 16,
+                      minHeight: 16,
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    decoration: BoxDecoration(
+                      color: _brandBlue,
+                      borderRadius: BorderRadius.circular(999),
+                      border: Border.all(
+                        color: Theme.of(context).scaffoldBackgroundColor,
+                        width: 1.5,
+                      ),
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      '$count',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 8,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        );
+      },
     );
   }
 }

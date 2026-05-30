@@ -1,10 +1,9 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../../models/user_profile.dart';
 import '../../services/api_service.dart';
 import 'address_management_screen.dart';
@@ -19,16 +18,30 @@ class EditProfileScreen extends StatefulWidget {
 }
 
 class _EditProfileScreenState extends State<EditProfileScreen> {
-  // ── Palette ──────────────────────────────────────────────────────────────
-  static const Color _bg = Color(0xFFF4F6FB);
-  static const Color _surface = Colors.white;
-  static const Color _primary = Color(0xFF4A6CF7);
-  static const Color _primaryLight = Color(0xFFEEF1FE);
-  static const Color _textPrimary = Color(0xFF0F172A);
-  static const Color _textMuted = Color(0xFF64748B);
-  static const Color _border = Color(0xFFE2E8F0);
-  static const Color _accent = Color(0xFF22C55E);
-  static const Color _danger = Color(0xFFEF4444);
+  // ── Static palette ────────────────────────────────────────────────────────
+  static const Color _brandBlue = Color(0xFF4A88F7);
+  static const Color _heroStart = Color(0xFF4A88F7);
+  static const Color _heroEnd   = Color(0xFF96B5F2);
+  static const Color _danger    = Color(0xFFE65054);
+  static const Color _accent    = Color(0xFF22C55E);
+
+  // ── Resolved at build() — use these everywhere ────────────────────────────
+  Color _bg          = const Color(0xFFF6F9FF);
+  Color _surface     = Colors.white;
+  Color _border      = const Color(0xFFE6ECF5);
+  Color _textPrimary = const Color(0xFF111827);
+  Color _textMuted   = const Color(0xFF6B7280);
+  Color _primary     = const Color(0xFF4A88F7);
+
+  void _resolveColors(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    _bg          = dark ? const Color(0xFF1D2635) : const Color(0xFFF6F9FF);
+    _surface     = dark ? const Color(0xFF161B22) : Colors.white;
+    _border      = dark ? const Color(0xFF2B3442) : const Color(0xFFE6ECF5);
+    _textPrimary = dark ? const Color(0xFFE6EDF7) : const Color(0xFF111827);
+    _textMuted   = dark ? const Color(0xFF97A2B5) : const Color(0xFF6B7280);
+    _primary     = _brandBlue;
+  }
 
   // ── Form state ────────────────────────────────────────────────────────────
   final _formKey = GlobalKey<FormState>();
@@ -64,32 +77,162 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   // ── Build ─────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
+    _resolveColors(context);
+    final l = AppLocalizations.of(context);
+    final name = _profile.displayName.isNotEmpty ? _profile.displayName : 'User';
+    final initials = _initialsFrom(name, _profile.email ?? '');
+
     return Theme(
       data: Theme.of(context).copyWith(
-        textTheme: GoogleFonts.interTextTheme(Theme.of(context).textTheme),
+        textTheme: GoogleFonts.soraTextTheme(Theme.of(context).textTheme),
       ),
       child: Scaffold(
         backgroundColor: _bg,
-        body: CustomScrollView(
-          slivers: [
-            _buildSliverAppBar(),
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 40),
-              sliver: SliverList(
-                delegate: SliverChildListDelegate([
-                  const SizedBox(height: 20),
-                  _buildCompletionCard(),
-                  const SizedBox(height: 28),
-                  _buildSectionLabel('Edit Details'),
-                  const SizedBox(height: 12),
-                  _buildFormCard(),
-                  const SizedBox(height: 24),
-                  _buildSectionLabel('Account'),
-                  const SizedBox(height: 12),
-                  _buildActionCard(),
-                  const SizedBox(height: 32),
-                  _buildSaveButton(),
-                ]),
+        body: Column(
+          children: [
+            // ── Gradient Header ──
+            Container(
+              width: double.infinity,
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [_heroStart, _heroEnd],
+                ),
+                borderRadius: BorderRadius.vertical(bottom: Radius.circular(36)),
+              ),
+              child: SafeArea(
+                bottom: false,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
+                  child: Column(
+                    children: [
+                      // Top bar
+                      Row(
+                        children: [
+                          GestureDetector(
+                            onTap: () => Navigator.of(context).maybePop(),
+                            child: Container(
+                              height: 38,
+                              width: 38,
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.18),
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: Colors.white.withValues(alpha: 0.3),
+                                ),
+                              ),
+                              child: const Icon(
+                                Icons.arrow_back_ios_new_rounded,
+                                color: Colors.white,
+                                size: 16,
+                              ),
+                            ),
+                          ),
+                          const Spacer(),
+                          Text(
+                            l.editProfile,
+                            style: GoogleFonts.sora(
+                              fontSize: 17,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
+                            ),
+                          ),
+                          const Spacer(),
+                          const SizedBox(width: 38),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+                      // Avatar
+                      GestureDetector(
+                        onTap: _handleChangePhoto,
+                        child: Stack(
+                          alignment: Alignment.bottomRight,
+                          children: [
+                            Container(
+                              height: 96,
+                              width: 96,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(color: Colors.white, width: 3),
+                                color: Colors.white.withValues(alpha: 0.2),
+                              ),
+                              child: ClipOval(child: _buildAvatarImage(initials)),
+                            ),
+                            Container(
+                              height: 30,
+                              width: 30,
+                              decoration: BoxDecoration(
+                                color: _uploadingAvatar
+                                    ? Colors.white.withValues(alpha: 0.5)
+                                    : Colors.white,
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: const Color(0xFF3B63FF),
+                                  width: 2,
+                                ),
+                              ),
+                              child: _uploadingAvatar
+                                  ? const Padding(
+                                      padding: EdgeInsets.all(6),
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: Color(0xFF3B63FF),
+                                      ),
+                                    )
+                                  : const Icon(
+                                      Icons.camera_alt_rounded,
+                                      size: 14,
+                                      color: Color(0xFF3B63FF),
+                                    ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        name,
+                        style: GoogleFonts.sora(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        _profile.email ?? '',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Colors.white.withValues(alpha: 0.8),
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+
+            // ── Scrollable Body ──
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 40),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _buildCompletionCard(),
+                    const SizedBox(height: 24),
+                    _buildSectionLabel(l.editProfile),
+                    const SizedBox(height: 12),
+                    _buildFormCard(),
+                    const SizedBox(height: 20),
+                    _buildSectionLabel(l.personalInfo),
+                    const SizedBox(height: 12),
+                    _buildActionCard(),
+                    const SizedBox(height: 28),
+                    _buildSaveButton(),
+                  ],
+                ),
               ),
             ),
           ],
@@ -98,170 +241,73 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     );
   }
 
-  // ── Sliver AppBar ────────────────────────────────────────────────────────
-  Widget _buildSliverAppBar() {
-    final name = _profile.displayName.isNotEmpty
-        ? _profile.displayName
-        : 'User';
-    final initials = _initialsFrom(name, _profile.email ?? '');
-
-    return SliverAppBar(
-      expandedHeight: 210,
-      pinned: true,
-      elevation: 0,
-      backgroundColor: _surface,
-      foregroundColor: _textPrimary,
-      surfaceTintColor: Colors.transparent,
-      leading: IconButton(
-        onPressed: () => Navigator.of(context).maybePop(),
-        icon: Container(
-          height: 36,
-          width: 36,
-          decoration: BoxDecoration(
-            color: _bg,
-            shape: BoxShape.circle,
-            border: Border.all(color: _border),
-          ),
-          child: const Icon(Icons.arrow_back_ios_new_rounded, size: 16),
-        ),
-      ),
-      centerTitle: true,
-      title: Text(
-        'Edit Profile',
-        style: GoogleFonts.poppins(
-          fontSize: 17,
-          fontWeight: FontWeight.w700,
-          color: _textPrimary,
-        ),
-      ),
-      flexibleSpace: FlexibleSpaceBar(
-        background: Container(
-          decoration: const BoxDecoration(color: _surface),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              GestureDetector(
-                onTap: _handleChangePhoto,
-                child: Stack(
-                  alignment: Alignment.bottomRight,
-                  children: [
-                    Container(
-                      height: 88,
-                      width: 88,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(color: _primary, width: 2.5),
-                        color: _primaryLight,
-                      ),
-                      child: ClipOval(child: _buildAvatarImage(initials)),
-                    ),
-                    Container(
-                      height: 26,
-                      width: 26,
-                      decoration: BoxDecoration(
-                        color: _uploadingAvatar ? _textMuted : _primary,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 2),
-                      ),
-                      child: _uploadingAvatar
-                          ? const Padding(
-                              padding: EdgeInsets.all(5),
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            )
-                          : const Icon(
-                              Icons.camera_alt_rounded,
-                              size: 13,
-                              color: Colors.white,
-                            ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 10),
-              Text(
-                name,
-                style: GoogleFonts.poppins(
-                  fontSize: 17,
-                  fontWeight: FontWeight.w700,
-                  color: _textPrimary,
-                ),
-              ),
-              const SizedBox(height: 3),
-              Text(
-                _profile.email ?? '',
-                style: GoogleFonts.inter(
-                  fontSize: 13,
-                  color: _textMuted,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              const SizedBox(height: 16),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  // ── Completion ring card ──────────────────────────────────────────────────
+  // ── Completion card ───────────────────────────────────────────────────────
   Widget _buildCompletionCard() {
     final score = _profileScore();
-    final color = score >= 80
-        ? _accent
-        : score >= 50
-        ? _primary
-        : _danger;
+    final color = score >= 80 ? _accent : score >= 50 ? _primary : _danger;
 
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: _cardDecoration(),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(
-            height: 54,
-            width: 54,
-            child: CustomPaint(
-              painter: _RingPainter(progress: score / 100, color: color),
-              child: Center(
-                child: Text(
-                  '$score%',
-                  style: GoogleFonts.poppins(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    color: color,
-                  ),
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(
+                  score >= 100
+                      ? Icons.verified_rounded
+                      : Icons.person_outline_rounded,
+                  color: color,
+                  size: 18,
                 ),
               ),
-            ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Profile Completeness',
+                      style: GoogleFonts.sora(
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w700,
+                        color: _textPrimary,
+                      ),
+                    ),
+                    Text(
+                      score < 100
+                          ? 'Fill the form below to complete your profile'
+                          : 'Your profile is fully complete!',
+                      style: TextStyle(fontSize: 12, color: _textMuted),
+                    ),
+                  ],
+                ),
+              ),
+              Text(
+                '$score%',
+                style: GoogleFonts.sora(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                  color: color,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Profile Completeness',
-                  style: GoogleFonts.inter(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: _textPrimary,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  score < 100
-                      ? 'Fill the form below to complete your profile.'
-                      : 'Your profile is fully complete!',
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
-                    color: _textMuted,
-                    height: 1.5,
-                  ),
-                ),
-              ],
+          const SizedBox(height: 14),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(99),
+            child: LinearProgressIndicator(
+              value: score / 100,
+              minHeight: 7,
+              backgroundColor: color.withValues(alpha: 0.12),
+              valueColor: AlwaysStoppedAnimation<Color>(color),
             ),
           ),
         ],
@@ -271,6 +317,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   // ── Editable form card ────────────────────────────────────────────────────
   Widget _buildFormCard() {
+    final l = AppLocalizations.of(context);
     return Form(
       key: _formKey,
       child: Container(
@@ -280,18 +327,18 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           children: [
             _formField(
               controller: _firstNameCtrl,
-              label: 'First Name',
+              label: l.fullName,
               icon: Icons.person_outline_rounded,
               validator: (v) =>
-                  (v == null || v.trim().isEmpty) ? 'Required' : null,
+                  (v == null || v.trim().isEmpty) ? l.requiredField : null,
             ),
             const SizedBox(height: 14),
             _formField(
               controller: _lastNameCtrl,
-              label: 'Last Name',
+              label: l.fullName,
               icon: Icons.badge_outlined,
               validator: (v) =>
-                  (v == null || v.trim().isEmpty) ? 'Required' : null,
+                  (v == null || v.trim().isEmpty) ? l.requiredField : null,
             ),
             const SizedBox(height: 14),
             _dateField(),
@@ -333,11 +380,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: _border),
+          borderSide: BorderSide(color: _border),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: _primary, width: 1.5),
+          borderSide: BorderSide(color: _primary, width: 1.5),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
@@ -365,7 +412,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       decoration: InputDecoration(
         labelText: 'Birth Date',
         labelStyle: GoogleFonts.inter(fontSize: 13, color: _textMuted),
-        prefixIcon: const Icon(Icons.cake_outlined, color: _primary, size: 20),
+        prefixIcon: Icon(Icons.cake_outlined, color: _primary, size: 20),
         filled: true,
         fillColor: _bg,
         isDense: true,
@@ -375,11 +422,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: _border),
+          borderSide: BorderSide(color: _border),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: _primary, width: 1.5),
+          borderSide: BorderSide(color: _primary, width: 1.5),
         ),
       ),
     );
@@ -391,7 +438,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       decoration: InputDecoration(
         labelText: 'Gender',
         labelStyle: GoogleFonts.inter(fontSize: 13, color: _textMuted),
-        prefixIcon: const Icon(Icons.wc_outlined, color: _primary, size: 20),
+        prefixIcon: Icon(Icons.wc_outlined, color: _primary, size: 20),
         filled: true,
         fillColor: _bg,
         isDense: true,
@@ -401,11 +448,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: _border),
+          borderSide: BorderSide(color: _border),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: _primary, width: 1.5),
+          borderSide: BorderSide(color: _primary, width: 1.5),
         ),
       ),
       items: const [
@@ -419,6 +466,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   // ── Action card (Addresses only) ──────────────────────────────────────────
   Widget _buildActionCard() {
+    final l = AppLocalizations.of(context);
     return ClipRRect(
       borderRadius: BorderRadius.circular(20),
       child: Material(
@@ -428,8 +476,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           child: _actionRow(
             icon: Icons.location_on_outlined,
             color: const Color(0xFF10B981),
-            title: 'Saved Addresses',
-            subtitle: 'Pickup & delivery locations',
+            title: l.savedAddresses,
+            subtitle: l.isKhmer ? 'ទីតាំងទទួលទំនិញ និងដឹកជញ្ជូន' : 'Pickup & delivery locations',
             onTap: _openAddresses,
           ),
         ),
@@ -480,7 +528,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 ],
               ),
             ),
-            const Icon(
+            Icon(
               Icons.chevron_right_rounded,
               color: _textMuted,
               size: 22,
@@ -533,7 +581,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   ),
                 )
               : Text(
-                  'Save Changes',
+                  AppLocalizations.of(context).save,
                   style: GoogleFonts.inter(
                     fontSize: 15,
                     fontWeight: FontWeight.w700,
@@ -560,13 +608,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   BoxDecoration _cardDecoration() {
     return BoxDecoration(
       color: _surface,
-      borderRadius: BorderRadius.circular(20),
-      border: Border.all(color: _border),
-      boxShadow: const [
+      borderRadius: BorderRadius.circular(16),
+      border: Border.all(color: _border, width: 1.2),
+      boxShadow: [
         BoxShadow(
-          color: Color(0x0A0F172A),
-          blurRadius: 16,
-          offset: Offset(0, 6),
+          color: _brandBlue.withValues(alpha: 0.06),
+          blurRadius: 18,
+          offset: const Offset(0, 6),
         ),
       ],
     );
@@ -589,21 +637,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       url,
       fit: BoxFit.cover,
       errorBuilder: (context, error, stackTrace) => fallback,
-      loadingBuilder: (_, child, progress) {
-        if (progress == null) return child;
-        return Container(
-          color: _primaryLight,
-          alignment: Alignment.center,
-          child: const SizedBox(
-            height: 18,
-            width: 18,
-            child: CircularProgressIndicator(
-              strokeWidth: 2,
-              valueColor: AlwaysStoppedAnimation<Color>(_primary),
-            ),
-          ),
-        );
-      },
     );
   }
 
@@ -649,7 +682,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       builder: (context, child) => Theme(
         data: Theme.of(
           context,
-        ).copyWith(colorScheme: const ColorScheme.light(primary: _primary)),
+        ).copyWith(colorScheme: ColorScheme.light(primary: _primary)),
         child: child!,
       ),
     );
@@ -666,10 +699,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
     setState(() => _saving = true);
     try {
+      // Only send email if it looks like a real email (not a phone number)
+      final rawEmail = _profile.email?.trim() ?? '';
+      final isValidEmail = RegExp(r'^[\w\-\.]+@([\w\-]+\.)+[\w\-]{2,}$')
+          .hasMatch(rawEmail);
       final error = await ApiService.updateProfile(
         firstName: _firstNameCtrl.text.trim(),
         lastName: _lastNameCtrl.text.trim(),
-        email: _profile.email ?? '',
+        email: isValidEmail ? rawEmail : '',
         birth: _birthCtrl.text,
         gender: _gender ?? '',
         avatarPath: null,
@@ -696,6 +733,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   }
 
   void _showSuccessSnackbar() {
+    final l = AppLocalizations.of(context);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         backgroundColor: _accent,
@@ -706,7 +744,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             const Icon(Icons.check_circle_rounded, color: Colors.white),
             const SizedBox(width: 10),
             Text(
-              'Profile updated successfully!',
+              l.successfullySaved,
               style: GoogleFonts.inter(
                 fontWeight: FontWeight.w600,
                 color: Colors.white,
@@ -736,10 +774,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
     setState(() => _uploadingAvatar = true);
     try {
+      final rawEmail2 = _profile.email?.trim() ?? '';
+      final isValidEmail2 = RegExp(r'^[\w\-\.]+@([\w\-]+\.)+[\w\-]{2,}$')
+          .hasMatch(rawEmail2);
       final error = await ApiService.updateProfile(
         firstName: _firstNameCtrl.text.trim(),
         lastName: _lastNameCtrl.text.trim(),
-        email: _profile.email ?? '',
+        email: isValidEmail2 ? rawEmail2 : '',
         birth: _birthCtrl.text,
         gender: _gender ?? '',
         avatarPath: file.path,
@@ -760,42 +801,3 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   }
 }
 
-// ── Ring Painter ───────────────────────────────────────────────────────────
-class _RingPainter extends CustomPainter {
-  const _RingPainter({required this.progress, required this.color});
-
-  final double progress;
-  final Color color;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height / 2);
-    final radius = (size.shortestSide / 2) - 4;
-    const strokeWidth = 5.0;
-
-    canvas.drawCircle(
-      center,
-      radius,
-      Paint()
-        ..color = color.withAlpha(30)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = strokeWidth,
-    );
-
-    canvas.drawArc(
-      Rect.fromCircle(center: center, radius: radius),
-      -math.pi / 2,
-      2 * math.pi * progress,
-      false,
-      Paint()
-        ..color = color
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = strokeWidth
-        ..strokeCap = StrokeCap.round,
-    );
-  }
-
-  @override
-  bool shouldRepaint(_RingPainter old) =>
-      old.progress != progress || old.color != color;
-}

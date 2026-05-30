@@ -1,6 +1,7 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../../models/saved_address.dart';
 import '../../services/address_book_service.dart';
 import '../cart/delivery_location_picker.dart';
@@ -118,17 +119,20 @@ class _AddressFormScreenState extends State<AddressFormScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final isEditing = widget.initial != null;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textPrimary = isDark ? const Color(0xFFE6EDF7) : const Color(0xFF111827);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF6F7FB),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: Text(
-          isEditing ? 'Edit Location' : 'Add New Location',
+          isEditing ? l.edit : l.addNewAddress,
           style: const TextStyle(fontWeight: FontWeight.w700),
         ),
-        backgroundColor: Colors.white,
-        foregroundColor: const Color(0xFF111827),
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        foregroundColor: textPrimary,
         elevation: 0,
       ),
       body: ListView(
@@ -159,8 +163,8 @@ class _AddressFormScreenState extends State<AddressFormScreen> {
                       : _selectedAddress,
                   style: TextStyle(
                     color: _selectedAddress.isEmpty
-                        ? const Color(0xFF9CA3AF)
-                        : const Color(0xFF111827),
+                        ? (isDark ? const Color(0xFF97A2B5) : const Color(0xFF9CA3AF))
+                        : textPrimary,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -194,7 +198,7 @@ class _AddressFormScreenState extends State<AddressFormScreen> {
                 ),
               ),
               child: Text(
-                _saving ? 'Saving...' : (isEditing ? 'Save Changes' : 'Save'),
+                _saving ? l.loading : l.save,
                 style: const TextStyle(fontWeight: FontWeight.w700),
               ),
             ),
@@ -213,12 +217,17 @@ class _FormCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = Theme.of(context).cardColor;
+    final border = isDark ? const Color(0xFF2B3442) : const Color(0xFFE6E9F0);
+    final textPrimary = isDark ? const Color(0xFFE6EDF7) : const Color(0xFF111827);
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: cardBg,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE6E9F0)),
+        border: Border.all(color: border),
         boxShadow: const [
           BoxShadow(
             color: Color(0x0F000000),
@@ -232,9 +241,9 @@ class _FormCard extends StatelessWidget {
         children: [
           Text(
             title,
-            style: const TextStyle(
+            style: TextStyle(
               fontWeight: FontWeight.w700,
-              color: Color(0xFF111827),
+              color: textPrimary,
             ),
           ),
           const SizedBox(height: 12),
@@ -260,28 +269,43 @@ class _InputField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textMuted = isDark ? const Color(0xFF97A2B5) : const Color(0xFF6B7280);
+    final textPrimary = isDark ? const Color(0xFFE6EDF7) : const Color(0xFF111827);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.w700,
-            color: Color(0xFF6B7280),
+            color: textMuted,
           ),
         ),
         const SizedBox(height: 6),
         TextField(
           controller: controller,
           maxLines: maxLines,
+          style: TextStyle(color: textPrimary),
           decoration: InputDecoration(
             hintText: hint,
+            hintStyle: TextStyle(color: textMuted.withValues(alpha: 0.7)),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(
+                color: isDark ? const Color(0xFF2B3442) : const Color(0xFFE6E9F0),
+              ),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(
+                color: isDark ? const Color(0xFF2B3442) : const Color(0xFFE6E9F0),
+              ),
             ),
             filled: true,
-            fillColor: Colors.white,
+            fillColor: Theme.of(context).scaffoldBackgroundColor,
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 12,
               vertical: 12,

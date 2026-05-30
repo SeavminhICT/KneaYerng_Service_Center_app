@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Services\FirebaseAuthService;
 use App\Services\OtpService;
-use App\Services\UnimatrixOtpService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -19,8 +18,7 @@ class OtpController extends Controller
 {
     public function __construct(
         private OtpService $otpService,
-        private FirebaseAuthService $firebaseAuth,
-        private UnimatrixOtpService $unimatrixOtp
+        private FirebaseAuthService $firebaseAuth
     )
     {
     }
@@ -29,7 +27,7 @@ class OtpController extends Controller
     {
         $validated = $request->validate([
             'destination' => ['required', 'string', 'max:255'],
-            'type' => ['required', 'in:phone'],
+            'type' => ['required', 'in:phone,email'],
             'purpose' => ['required', 'in:signup,login,reset_password,change_phone,change_email'],
             'device_id' => ['nullable', 'string', 'max:191'],
         ]);
@@ -53,7 +51,14 @@ class OtpController extends Controller
             ], 404);
         }
 
-        $result = $this->unimatrixOtp->sendOtp($destination, $purpose, $request->ip());
+        $result = $this->otpService->requestOtp(
+            $type,
+            $destination,
+            $purpose,
+            $user?->id,
+            $request->ip(),
+            $validated['device_id'] ?? null
+        );
 
         return response()->json([
             'message' => $result['message'] ?? 'OTP request processed.',
@@ -66,7 +71,7 @@ class OtpController extends Controller
     {
         $validated = $request->validate([
             'destination' => ['required', 'string', 'max:255'],
-            'type' => ['required', 'in:phone'],
+            'type' => ['required', 'in:phone,email'],
             'purpose' => ['required', 'in:signup,login,reset_password,change_phone,change_email'],
             'otp' => ['required', 'string', 'max:12'],
         ]);
@@ -75,7 +80,8 @@ class OtpController extends Controller
         $destination = $this->otpService->normalizeDestination($type, $validated['destination']);
         $purpose = strtolower($validated['purpose']);
 
-        $verify = $this->unimatrixOtp->verifyOtp($destination, $validated['otp']);
+        $verify = $this->otpService->verifyOtp($type, $destination, $purpose, $validated['otp']);
+
         if (! ($verify['ok'] ?? false)) {
             return response()->json(['message' => $verify['message'] ?? 'OTP verification failed.'], $verify['status'] ?? 422);
         }
@@ -271,6 +277,7 @@ class OtpController extends Controller
         if ($type === 'phone') {
             $candidates = array_values(array_unique(array_filter([
                 $destination,
+                '+'.$destination,
                 ltrim($destination, '+'),
                 $this->otpService->normalizeDestination('phone', $destination),
             ])));

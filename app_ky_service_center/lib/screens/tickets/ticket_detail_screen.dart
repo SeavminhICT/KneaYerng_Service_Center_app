@@ -1,7 +1,8 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../../models/pickup_ticket.dart';
 
 class TicketDetailScreen extends StatelessWidget {
@@ -16,21 +17,24 @@ class TicketDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final date = ticket.placedAt != null
         ? DateFormat('MMM dd, yyyy • hh:mm a').format(ticket.placedAt!)
         : '--';
     final amount = ticket.totalAmount ?? 0;
     final qrToken = ticket.pickupQrToken ?? '';
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textPrimary = isDark ? const Color(0xFFE6EDF7) : const Color(0xFF111827);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF6F7FB),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        title: const Text(
-          'Pickup Ticket',
-          style: TextStyle(fontWeight: FontWeight.w700),
+        title: Text(
+          l.myTickets,
+          style: const TextStyle(fontWeight: FontWeight.w700),
         ),
-        backgroundColor: Colors.white,
-        foregroundColor: const Color(0xFF111827),
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        foregroundColor: textPrimary,
         elevation: 0,
       ),
       body: ListView(
@@ -46,7 +50,7 @@ class TicketDetailScreen extends StatelessWidget {
           _QrCard(token: qrToken, ticketId: ticket.pickupTicketId),
           const SizedBox(height: 12),
           _SectionCard(
-            title: 'Ticket Details',
+            title: l.myTickets,
             children: [
               _InfoRow(label: 'Order ID', value: '${ticket.orderId}'),
               _InfoRow(
@@ -63,12 +67,12 @@ class TicketDetailScreen extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           _SectionCard(
-            title: 'Items',
+            title: l.quantity,
             children: ticket.items.isEmpty
                 ? [
-                    const Text(
-                      'No items found.',
-                      style: TextStyle(color: Color(0xFF6B7280)),
+                    Text(
+                      l.noData,
+                      style: TextStyle(color: isDark ? const Color(0xFF97A2B5) : const Color(0xFF6B7280)),
                     ),
                   ]
                 : ticket.items
@@ -82,30 +86,32 @@ class TicketDetailScreen extends StatelessWidget {
                               height: 28,
                               alignment: Alignment.center,
                               decoration: BoxDecoration(
-                                color: const Color(0xFFF3F4F6),
+                                color: isDark ? const Color(0xFF1D2635) : const Color(0xFFF3F4F6),
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Text(
                                 '${item.quantity}',
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.w700),
+                                style: TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    color: textPrimary),
                               ),
                             ),
                             const SizedBox(width: 10),
                             Expanded(
                               child: Text(
                                 item.name,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontWeight: FontWeight.w600,
-                                  color: Color(0xFF374151),
+                                  color: isDark ? const Color(0xFFE6EDF7) : const Color(0xFF374151),
                                 ),
                               ),
                             ),
                             Text(
                               NumberFormat.currency(symbol: '\$')
                                   .format(item.lineTotal),
-                              style: const TextStyle(
-                                  fontWeight: FontWeight.w700),
+                              style: TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  color: textPrimary),
                             ),
                           ],
                         ),
@@ -115,24 +121,24 @@ class TicketDetailScreen extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           _SectionCard(
-            title: 'Total Paid',
+            title: l.total,
             children: [
               Row(
                 children: [
-                  const Text(
-                    'Amount',
+                  Text(
+                    l.price,
                     style: TextStyle(
                       fontWeight: FontWeight.w600,
-                      color: Color(0xFF374151),
+                      color: isDark ? const Color(0xFFE6EDF7) : const Color(0xFF374151),
                     ),
                   ),
                   const Spacer(),
                   Text(
                     NumberFormat.currency(symbol: '\$').format(amount),
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontWeight: FontWeight.w800,
                       fontSize: 18,
-                      color: Color(0xFF111827),
+                      color: textPrimary,
                     ),
                   ),
                 ],
@@ -196,12 +202,18 @@ class _HeaderCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = Theme.of(context).cardColor;
+    final border = isDark ? const Color(0xFF2B3442) : const Color(0xFFE6E9F0);
+    final textPrimary = isDark ? const Color(0xFFE6EDF7) : const Color(0xFF111827);
+    final textMuted = isDark ? const Color(0xFF97A2B5) : const Color(0xFF6B7280);
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: cardBg,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE6E9F0)),
+        border: Border.all(color: border),
         boxShadow: const [
           BoxShadow(
             color: Color(0x0F000000),
@@ -216,7 +228,7 @@ class _HeaderCard extends StatelessWidget {
             height: 44,
             width: 44,
             decoration: BoxDecoration(
-              color: const Color(0xFFEFF6FF),
+              color: isDark ? const Color(0xFF1D2635) : const Color(0xFFEFF6FF),
               borderRadius: BorderRadius.circular(12),
             ),
             child: const Icon(
@@ -231,24 +243,25 @@ class _HeaderCard extends StatelessWidget {
               children: [
                 Text(
                   orderLabel,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontWeight: FontWeight.w800,
                     fontSize: 16,
+                    color: textPrimary,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   customerName,
-                  style: const TextStyle(
-                    color: Color(0xFF6B7280),
+                  style: TextStyle(
+                    color: textMuted,
                     fontSize: 12,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   dateLabel,
-                  style: const TextStyle(
-                    color: Color(0xFF9CA3AF),
+                  style: TextStyle(
+                    color: textMuted.withValues(alpha: 0.8),
                     fontSize: 11,
                   ),
                 ),
@@ -271,20 +284,26 @@ class _QrCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const qrSize = 260.0;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = Theme.of(context).cardColor;
+    final border = isDark ? const Color(0xFF2B3442) : const Color(0xFFE6E9F0);
+    final textPrimary = isDark ? const Color(0xFFE6EDF7) : const Color(0xFF111827);
+    final textMuted = isDark ? const Color(0xFF97A2B5) : const Color(0xFF6B7280);
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: cardBg,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE6E9F0)),
+        border: Border.all(color: border),
       ),
       child: Column(
         children: [
           Text(
             ticketId ?? 'Pickup QR Code',
-            style: const TextStyle(
+            style: TextStyle(
               fontWeight: FontWeight.w700,
-              color: Color(0xFF111827),
+              color: textPrimary,
             ),
           ),
           const SizedBox(height: 12),
@@ -308,29 +327,29 @@ class _QrCard extends StatelessWidget {
               height: qrSize,
               alignment: Alignment.center,
               decoration: BoxDecoration(
-                color: const Color(0xFFF3F4F6),
+                color: isDark ? const Color(0xFF1D2635) : const Color(0xFFF3F4F6),
                 borderRadius: BorderRadius.circular(16),
               ),
-              child: const Text(
+              child: Text(
                 'QR not available',
-                style: TextStyle(color: Color(0xFF6B7280)),
+                style: TextStyle(color: textMuted),
               ),
             ),
           const SizedBox(height: 8),
-          const Text(
+          Text(
             'Scan this code at the pickup counter for verification.',
             style: TextStyle(
               fontSize: 12,
-              color: Color(0xFF6B7280),
+              color: textMuted,
             ),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 6),
-          const Text(
+          Text(
             'Tip: increase screen brightness and keep the code steady.',
             style: TextStyle(
               fontSize: 11,
-              color: Color(0xFF9CA3AF),
+              color: textMuted.withValues(alpha: 0.8),
             ),
             textAlign: TextAlign.center,
           ),
@@ -339,6 +358,7 @@ class _QrCard extends StatelessWidget {
     );
   }
 }
+
 class _SectionCard extends StatelessWidget {
   const _SectionCard({required this.title, required this.children});
 
@@ -347,21 +367,26 @@ class _SectionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = Theme.of(context).cardColor;
+    final border = isDark ? const Color(0xFF2B3442) : const Color(0xFFE6E9F0);
+    final textPrimary = isDark ? const Color(0xFFE6EDF7) : const Color(0xFF111827);
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: cardBg,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE6E9F0)),
+        border: Border.all(color: border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             title,
-            style: const TextStyle(
+            style: TextStyle(
               fontWeight: FontWeight.w700,
-              color: Color(0xFF111827),
+              color: textPrimary,
             ),
           ),
           const SizedBox(height: 12),
@@ -380,6 +405,10 @@ class _InfoRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textPrimary = isDark ? const Color(0xFFE6EDF7) : const Color(0xFF111827);
+    final textMuted = isDark ? const Color(0xFF97A2B5) : const Color(0xFF6B7280);
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
@@ -389,8 +418,8 @@ class _InfoRow extends StatelessWidget {
             width: 110,
             child: Text(
               label,
-              style: const TextStyle(
-                color: Color(0xFF6B7280),
+              style: TextStyle(
+                color: textMuted,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -399,8 +428,8 @@ class _InfoRow extends StatelessWidget {
           Expanded(
             child: Text(
               value,
-              style: const TextStyle(
-                color: Color(0xFF111827),
+              style: TextStyle(
+                color: textPrimary,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -452,4 +481,3 @@ class _StatusPill extends StatelessWidget {
     );
   }
 }
-

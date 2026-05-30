@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../l10n/app_localizations.dart';
 import '../../models/product.dart';
 import '../../services/favorite_service.dart';
 import '../products/product_detail_screen.dart';
@@ -10,18 +11,19 @@ class FavoriteScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return AnimatedBuilder(
       animation: FavoriteService.instance,
       builder: (context, _) {
         final items = FavoriteService.instance.items;
         return Scaffold(
-          backgroundColor: const Color(0xFFF6F7FB),
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
           appBar: AppBar(
-            title: const Text(
-              'Favorite',
-              style: TextStyle(fontWeight: FontWeight.w700),
+            title: Text(
+              l.favorites,
+              style: const TextStyle(fontWeight: FontWeight.w700),
             ),
-            backgroundColor: Colors.white,
+            backgroundColor: Theme.of(context).scaffoldBackgroundColor,
             foregroundColor: const Color(0xFF111827),
             elevation: 0,
           ),
@@ -146,15 +148,16 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
-        children: const [
-          Icon(Icons.favorite_border, size: 72, color: Color(0xFF9CA3AF)),
-          SizedBox(height: 12),
+        children: [
+          const Icon(Icons.favorite_border, size: 72, color: Color(0xFF9CA3AF)),
+          const SizedBox(height: 12),
           Text(
-            'No favorites yet',
-            style: TextStyle(
+            l.noFavorites,
+            style: const TextStyle(
               fontWeight: FontWeight.w600,
               color: Color(0xFF6B7280),
             ),

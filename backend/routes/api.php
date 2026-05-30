@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\CartController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\CheckoutOptionsController;
 use App\Http\Controllers\Api\AdminReportsController;
+use App\Http\Controllers\Api\ForgotPasswordController;
 use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\OrderTrackingController;
 use App\Http\Controllers\Api\OtpController;
@@ -33,6 +34,7 @@ use App\Http\Controllers\Api\SupportChatController;
 use App\Http\Controllers\Api\TelegramOrderController;
 use App\Http\Controllers\Api\TelegramWebhookController;
 use App\Http\Controllers\Api\TechnicianController;
+use App\Http\Controllers\Api\UpdatesController;
 use App\Http\Controllers\Api\VoucherController;
 use App\Http\Controllers\Api\VoucherValidationController;
 use App\Http\Controllers\Api\PartController;
@@ -47,6 +49,11 @@ Route::get('/user', function (Request $request) {
 Route::prefix('auth')->group(function () {
     Route::post('send-otp', [AuthOtpController::class, 'sendOtp']);
     Route::post('verify-otp', [AuthOtpController::class, 'verifyOtp']);
+    Route::prefix('forgot-password')->group(function () {
+        Route::post('send-otp', [ForgotPasswordController::class, 'sendOtp']);
+        Route::post('verify-otp', [ForgotPasswordController::class, 'verifyOtp']);
+        Route::post('reset-password', [ForgotPasswordController::class, 'resetPassword']);
+    });
     Route::post('register', [AuthController::class, 'register']);
     Route::post('login', [AuthController::class, 'login']);
     Route::post('google', [AuthController::class, 'googleLogin']);
@@ -67,6 +74,7 @@ Route::prefix('public')->group(function () {
     Route::get('products/{product}', [ProductController::class, 'show']);
 });
 
+Route::get('updates', [UpdatesController::class, 'check']);
 Route::get('banners', [BannerController::class, 'publicIndex']);
 Route::get('banners/{banner}', [BannerController::class, 'show']);
 Route::get('media/{path}', MediaController::class)->where('path', '.*');

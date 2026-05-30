@@ -3,7 +3,9 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
+import 'package:skeletonizer/skeletonizer.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../../services/api_service.dart';
 
 class RepairScreen extends StatefulWidget {
@@ -14,13 +16,11 @@ class RepairScreen extends StatefulWidget {
 }
 
 class _RepairScreenState extends State<RepairScreen> {
-  static const _bg = Color(0xFFF2F3F6);
   static const _surface = Colors.white;
   static const _ink = Color(0xFF1E1E1E);
   static const _muted = Color(0xFF8A8A8E);
   static const _line = Color(0xFFE5E5EA);
   static const _blue = Color(0xFF4B6BFF);
-  static const _darkBg = Color(0xFF0D1117);
   static const _darkSurface = Color(0xFF161B22);
   static const _darkInk = Color(0xFFE6EDF7);
   static const _darkMuted = Color(0xFF97A2B5);
@@ -52,6 +52,7 @@ class _RepairScreenState extends State<RepairScreen> {
   }
 
   Future<void> _openSearchSheet() async {
+    final l = AppLocalizations.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final textController = TextEditingController(text: _searchController.text);
 
@@ -74,7 +75,7 @@ class _RepairScreenState extends State<RepairScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Search accessories',
+                  l.search,
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
@@ -134,7 +135,7 @@ class _RepairScreenState extends State<RepairScreen> {
                             borderRadius: BorderRadius.circular(10),
                           ),
                         ),
-                        child: const Text('Clear'),
+                        child: Text(l.clear),
                       ),
                     ),
                     const SizedBox(width: 10),
@@ -152,7 +153,7 @@ class _RepairScreenState extends State<RepairScreen> {
                             borderRadius: BorderRadius.circular(10),
                           ),
                         ),
-                        child: const Text('Apply'),
+                        child: Text(l.apply),
                       ),
                     ),
                   ],
@@ -231,22 +232,23 @@ class _RepairScreenState extends State<RepairScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final items = _filteredItems;
 
     return Theme(
       data: Theme.of(context).copyWith(
-        textTheme: GoogleFonts.interTextTheme(Theme.of(context).textTheme),
+        textTheme: GoogleFonts.soraTextTheme(Theme.of(context).textTheme),
       ),
       child: Scaffold(
-        backgroundColor: isDark ? _darkBg : _bg,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         appBar: AppBar(
-          backgroundColor: isDark ? _darkBg : _bg,
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
           surfaceTintColor: Colors.transparent,
           elevation: 0,
           centerTitle: true,
           title: Text(
-            'Accessories',
+            l.repairService,
             style: TextStyle(
               fontSize: 28,
               fontWeight: FontWeight.w700,
@@ -255,7 +257,7 @@ class _RepairScreenState extends State<RepairScreen> {
           ),
           actions: [
             IconButton(
-              tooltip: 'Search',
+              tooltip: l.search,
               onPressed: _openSearchSheet,
               icon: Icon(
                 Icons.search_rounded,
@@ -286,22 +288,38 @@ class _RepairScreenState extends State<RepairScreen> {
                   ),
                 ),
               if (_loading)
-                const Padding(
-                  padding: EdgeInsets.only(top: 120),
-                  child: Center(
-                    child: CircularProgressIndicator(color: _blue),
+                Skeletonizer(
+                  enabled: true,
+                  child: Column(
+                    children: List.generate(
+                      4,
+                      (index) => Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: _AccessoryCard(
+                          item: const _RepairAccessory(
+                            id: 0,
+                            name: 'Loading Accessory Name',
+                            basePrice: 99.99,
+                            finalPrice: 99.99,
+                            stock: 10,
+                            brand: 'Brand',
+                            warranty: '1 Year',
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
                 )
               else if (_error != null)
                 _MessageCard(
-                  title: 'Connection issue',
+                  title: l.somethingWentWrong,
                   message: _error!,
-                  actionLabel: 'Try Again',
+                  actionLabel: l.retry,
                   onTap: _loadAccessories,
                 )
               else if (items.isEmpty)
                 _MessageCard(
-                  title: 'No accessories found',
+                  title: l.noData,
                   message: _searchController.text.trim().isEmpty
                       ? 'No accessory data available yet.'
                       : 'Try a different keyword.',
@@ -334,6 +352,7 @@ class _AccessoryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       padding: const EdgeInsets.all(14),
@@ -347,7 +366,7 @@ class _AccessoryCard extends StatelessWidget {
           BoxShadow(
             color: isDark ? const Color(0x44000000) : const Color(0x0F000000),
             blurRadius: 8,
-            offset: Offset(0, 2),
+            offset: const Offset(0, 2),
           ),
         ],
       ),
@@ -370,7 +389,7 @@ class _AccessoryCard extends StatelessWidget {
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
                         color: isDark
-                            ? Color(0xFF97A2B5)
+                            ? const Color(0xFF97A2B5)
                             : _muted,
                         letterSpacing: 0.3,
                       ),
@@ -383,7 +402,7 @@ class _AccessoryCard extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w700,
-                        color: isDark ? Color(0xFFE6EDF7) : _ink,
+                        color: isDark ? const Color(0xFFE6EDF7) : _ink,
                       ),
                     ),
                     const SizedBox(height: 10),
@@ -395,7 +414,7 @@ class _AccessoryCard extends StatelessWidget {
                             fontSize: 24,
                             height: 1,
                             fontWeight: FontWeight.w800,
-                            color: isDark ? Color(0xFFE6EDF7) : _ink,
+                            color: isDark ? const Color(0xFFE6EDF7) : _ink,
                           ),
                         ),
                         if (item.hasDiscount) ...[
@@ -406,7 +425,7 @@ class _AccessoryCard extends StatelessWidget {
                               fontSize: 14,
                               fontWeight: FontWeight.w500,
                               color: isDark
-                                  ? Color(0xFF97A2B5)
+                                  ? const Color(0xFF97A2B5)
                                   : _muted,
                               decoration: TextDecoration.lineThrough,
                             ),
@@ -420,7 +439,7 @@ class _AccessoryCard extends StatelessWidget {
                       children: [
                         Expanded(
                           child: Text(
-                            item.stockLabel,
+                            item.stock > 0 ? l.inStock : l.outOfStock,
                             style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w600,
@@ -611,11 +630,6 @@ class _RepairAccessory {
   String get brandLabel {
     final text = (brand ?? '').trim();
     return text.isEmpty ? 'Unknown' : text;
-  }
-
-  String get stockLabel {
-    if (stock > 0) return 'In Stock: $stock';
-    return 'Out of Stock';
   }
 
   factory _RepairAccessory.fromJson(Map<String, dynamic> json) {

@@ -30,12 +30,12 @@ class OtpService
 
         if ($requestIp && RateLimiter::tooManyAttempts('otp:ip:'.$requestIp, $ipLimit)) {
             $retry = RateLimiter::availableIn('otp:ip:'.$requestIp);
-            return ['ok' => false, 'status' => 429, 'message' => 'Too many OTP requests. Please retry later.', 'retry_in' => $retry];
+            return ['ok' => false, 'status' => 429, 'message' => 'Too many OTP requests. Please retry later.', 'retry_in' => $retry, 'resend_in_sec' => $retry];
         }
 
         if (RateLimiter::tooManyAttempts('otp:dest:'.$destinationType.':'.$destination, $destLimit)) {
             $retry = RateLimiter::availableIn('otp:dest:'.$destinationType.':'.$destination);
-            return ['ok' => false, 'status' => 429, 'message' => 'Too many OTP requests for this destination.', 'retry_in' => $retry];
+            return ['ok' => false, 'status' => 429, 'message' => 'Too many OTP requests for this destination.', 'retry_in' => $retry, 'resend_in_sec' => $retry];
         }
 
         if ($requestIp) {
@@ -56,7 +56,7 @@ class OtpService
                 'ok' => false,
                 'status' => 429,
                 'message' => 'Please wait before requesting another OTP.',
-                'resend_in' => now()->diffInSeconds($latestActive->cooldown_until, false) * -1,
+                'resend_in_sec' => max(1, now()->diffInSeconds($latestActive->cooldown_until)),
             ];
         }
 
@@ -97,14 +97,39 @@ class OtpService
         $sent = $this->delivery->send($destinationType, $destination, $message, [
             'code' => $otpCode,
             'expires_minutes' => $expiresMinutes,
+            'ttl_seconds' => $ttl,
+            'purpose' => $purpose,
         ]);
+
+        $isLocalFallback = false;
+        if (! $sent && (config('app.env') === 'local' || config('app.debug'))) {
+            $sent = true;
+            $isLocalFallback = true;
+            \Illuminate\Support\Facades\Log::info(sprintf(
+                '[LOCAL OTP FALLBACK] Destination: %s (%s). Purpose: %s. OTP Code: %s. Message: %s',
+                $destination,
+                $destinationType,
+                $purpose,
+                $otpCode,
+                $message
+            ));
+        }
+
+        if (! $sent) {
+            OtpVerification::query()
+                ->where('destination_type', $destinationType)
+                ->where('destination', $destination)
+                ->where('purpose', $purpose)
+                ->where('status', 'active')
+                ->update(['status' => 'expired']);
+        }
 
         return [
             'ok' => $sent,
             'status' => $sent ? 200 : 500,
-            'message' => $sent
-                ? 'If this destination exists, an OTP was sent.'
-                : 'OTP could not be sent. Please try again.',
+            'message' => $isLocalFallback 
+                ? 'If this destination exists, an OTP was sent (local fallback enabled).'
+                : ($sent ? 'If this destination exists, an OTP was sent.' : 'OTP could not be sent. Please try again.'),
             'expires_in_sec' => $ttl,
             'resend_in_sec' => $cooldown,
         ];
@@ -138,7 +163,7 @@ class OtpService
         if (now()->gt($record->expires_at)) {
             $record->status = 'expired';
             $record->save();
-            return ['ok' => false, 'status' => 422, 'message' => 'OTP has expired.'];
+            return ['ok' => false, 'status' => 422, 'message' => 'OTP expired. Please request a new code.'];
         }
 
         if (! hash_equals($record->otp_hash, $this->hashOtp($otp))) {
@@ -148,7 +173,7 @@ class OtpService
                 $record->locked_until = now()->addSeconds(max(60, (int) config('otp.lock_seconds', 600)));
             }
             $record->save();
-            return ['ok' => false, 'status' => 422, 'message' => 'Invalid OTP code.'];
+            return ['ok' => false, 'status' => 422, 'message' => 'Invalid OTP. Please try again.'];
         }
 
         DB::transaction(function () use ($record, $destinationType, $destination, $purpose) {

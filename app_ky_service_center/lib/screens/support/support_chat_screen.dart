@@ -2,11 +2,14 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:skeletonizer/skeletonizer.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../../models/support_chat.dart';
 import '../../services/api_service.dart';
+import '../Auth/login_screen.dart';
+import '../Auth/register_screen.dart';
 
-const _supportBg = Color(0xFFF4F7FB);
 const _supportSurface = Colors.white;
 const _supportBorder = Color(0xFFE2E8F0);
 const _supportText = Color(0xFF0F172A);
@@ -41,6 +44,7 @@ class _SupportChatScreenState extends State<SupportChatScreen> {
   bool _isLoading = true;
   bool _isRefreshing = false;
   bool _isSending = false;
+  bool _isGuest = false;
   String? _errorMessage;
 
   @override
@@ -84,15 +88,19 @@ class _SupportChatScreenState extends State<SupportChatScreen> {
       setState(() {
         _conversation = conversation;
         _isLoading = false;
+        _isGuest = false;
         _errorMessage = null;
       });
 
       _jumpToLatest();
     } catch (error) {
       if (!mounted) return;
+      final msg = error.toString().replaceFirst('Exception: ', '');
+      final isAuth = msg.toLowerCase().contains('auth');
       setState(() {
         _isLoading = false;
-        _errorMessage = error.toString().replaceFirst('Exception: ', '');
+        _isGuest = isAuth;
+        _errorMessage = isAuth ? null : msg;
       });
     } finally {
       _isRefreshing = false;
@@ -149,19 +157,19 @@ class _SupportChatScreenState extends State<SupportChatScreen> {
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
       child: Scaffold(
-        backgroundColor: _supportBg,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         appBar: AppBar(
           elevation: 0,
-          backgroundColor: _supportBg,
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
           foregroundColor: _supportText,
           surfaceTintColor: Colors.transparent,
           titleSpacing: 16,
           title: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Chat Support',
-                style: TextStyle(
+              Text(
+                AppLocalizations.of(context).supportChat,
+                style: const TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w800,
                   color: _supportText,
@@ -184,8 +192,34 @@ class _SupportChatScreenState extends State<SupportChatScreen> {
                 child: _SupportHeader(conversation: conversation),
               ),
               Expanded(
-                child: _isLoading
-                    ? const Center(child: CircularProgressIndicator())
+                child: _isGuest
+                    ? _GuestSupportState(
+                        onLoginDone: () => _loadConversation(),
+                      )
+                    : _isLoading
+                    ? Skeletonizer(
+                        enabled: true,
+                        child: ListView.builder(
+                          reverse: true,
+                          padding: const EdgeInsets.fromLTRB(16, 4, 16, 18),
+                          itemCount: 4,
+                          itemBuilder: (context, index) {
+                            return _MessageBubble(
+                              message: SupportChatMessage(
+                                id: index,
+                                conversationId: 1,
+                                senderType: index % 2 == 0 ? 'customer' : 'support',
+                                messageType: 'text',
+                                body: index % 2 == 0
+                                    ? 'Hello, I need some help with my order status'
+                                    : 'Hi! Sure, I can help you. What is your order ID?',
+                                deliveryStatus: 'seen',
+                                createdAt: DateTime.now().subtract(Duration(minutes: 5 - index)),
+                              ),
+                            );
+                          },
+                        ),
+                      )
                     : _errorMessage != null
                     ? _SupportErrorState(
                         message: _errorMessage!,
@@ -438,7 +472,7 @@ class _Composer extends StatelessWidget {
             Expanded(
               child: Container(
                 decoration: BoxDecoration(
-                  color: _supportBg,
+                  color: Theme.of(context).scaffoldBackgroundColor,
                   borderRadius: BorderRadius.circular(18),
                   border: Border.all(color: _supportBorder),
                 ),
@@ -493,6 +527,133 @@ class _Composer extends StatelessWidget {
   }
 }
 
+class _GuestSupportState extends StatelessWidget {
+  const _GuestSupportState({required this.onLoginDone});
+
+  final VoidCallback onLoginDone;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 28),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF3B63FF), Color(0xFF7C3AED)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.support_agent_rounded,
+                color: Colors.white,
+                size: 38,
+              ),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              AppLocalizations.of(context).supportChat,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+                color: _supportText,
+              ),
+            ),
+            const SizedBox(height: 10),
+            const Text(
+              'Create an account or login to start\na live conversation with our team.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 13.5,
+                color: _supportMuted,
+                height: 1.5,
+              ),
+            ),
+            const SizedBox(height: 28),
+            // Login button
+            SizedBox(
+              width: double.infinity,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF3B63FF), Color(0xFF7C3AED)],
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF3B63FF).withValues(alpha: 0.35),
+                      blurRadius: 14,
+                      offset: const Offset(0, 6),
+                    ),
+                  ],
+                ),
+                child: ElevatedButton(
+                  onPressed: () => Navigator.of(context)
+                      .push(MaterialPageRoute(
+                        builder: (_) => const LoginScreen(),
+                      ))
+                      .then((_) => onLoginDone()),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.transparent,
+                    shadowColor: Colors.transparent,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
+                  child: Text(
+                    AppLocalizations.of(context).login,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+            // Register button
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton(
+                onPressed: () => Navigator.of(context)
+                    .push(MaterialPageRoute(
+                      builder: (_) => const RegisterScreen(),
+                    ))
+                    .then((_) => onLoginDone()),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: const Color(0xFF3B63FF),
+                  side: const BorderSide(color: Color(0xFF3B63FF), width: 1.6),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+                child: Text(
+                  AppLocalizations.of(context).createAccount,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _SupportErrorState extends StatelessWidget {
   const _SupportErrorState({required this.message, required this.onRetry});
 
@@ -513,9 +674,9 @@ class _SupportErrorState extends StatelessWidget {
               color: _supportMuted,
             ),
             const SizedBox(height: 12),
-            const Text(
-              'Unable to open support chat',
-              style: TextStyle(
+            Text(
+              AppLocalizations.of(context).somethingWentWrong,
+              style: const TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w800,
                 color: _supportText,
@@ -534,7 +695,7 @@ class _SupportErrorState extends StatelessWidget {
             const SizedBox(height: 14),
             FilledButton(
               onPressed: () => onRetry(),
-              child: const Text('Retry'),
+              child: Text(AppLocalizations.of(context).retry),
             ),
           ],
         ),

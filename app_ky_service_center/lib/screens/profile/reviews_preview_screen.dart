@@ -5,6 +5,9 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:skeletonizer/skeletonizer.dart';
+
+import '../../l10n/app_localizations.dart';
 
 class ReviewsPreviewScreen extends StatefulWidget {
   const ReviewsPreviewScreen({super.key, this.productName = 'Samsung'});
@@ -18,11 +21,6 @@ class ReviewsPreviewScreen extends StatefulWidget {
 class _ReviewsPreviewScreenState extends State<ReviewsPreviewScreen> {
   static const int _maxImages = 4;
   static const String _historyStorageKey = 'profile_feedback_history_v1';
-
-  static const Color _panelBackground = Color(0xFFF8FAFC);
-  static const Color _panelBorder = Color(0xFFDCE5F2);
-  static const Color _hintColor = Color(0xFF64748B);
-  static const Color _titleColor = Color(0xFF1E293B);
   static const Color _brandBlue = Color(0xFF2563EB);
   static const Color _starColor = Color(0xFFF2A93B);
 
@@ -280,20 +278,26 @@ class _ReviewsPreviewScreenState extends State<ReviewsPreviewScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    final scaffoldBg = Theme.of(context).scaffoldBackgroundColor;
+    final panelBg = Theme.of(context).cardColor;
+    final panelBorder = isDark ? const Color(0xFF2B3442) : const Color(0xFFDCE5F2);
+    final titleColor = isDark ? const Color(0xFFE6EDF7) : const Color(0xFF1E293B);
+    final hintColor = isDark ? const Color(0xFF97A2B5) : const Color(0xFF64748B);
+    final inputBg = isDark ? const Color(0xFF0F172A) : const Color(0xFFEFF3FA);
+    final inputBorder = isDark ? const Color(0xFF2B3442) : const Color(0xFFD4DEEE);
+    final headerTextColor = isDark ? const Color(0xFFE6EDF7) : Colors.white;
+    final headerMutedColor = isDark ? const Color(0xFF97A2B5) : Colors.white70;
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0F172A),
+      backgroundColor: scaffoldBg,
       body: GestureDetector(
         onTap: () => FocusScope.of(context).unfocus(),
         child: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [Color(0xFF0B1220), Color(0xFF101A2D)],
-            ),
-          ),
+          color: scaffoldBg,
           child: SafeArea(
             bottom: false,
             child: Column(
@@ -306,7 +310,7 @@ class _ReviewsPreviewScreenState extends State<ReviewsPreviewScreen> {
                         onPressed: _closePage,
                         splashRadius: 20,
                         icon: const Icon(Icons.arrow_back_ios_new_rounded),
-                        color: Colors.white,
+                        color: headerTextColor,
                       ),
                       const SizedBox(width: 4),
                       Expanded(
@@ -316,7 +320,7 @@ class _ReviewsPreviewScreenState extends State<ReviewsPreviewScreen> {
                             Text(
                               'Feedback Center',
                               style: GoogleFonts.inter(
-                                color: Colors.white,
+                                color: headerTextColor,
                                 fontSize: 19,
                                 fontWeight: FontWeight.w800,
                               ),
@@ -324,7 +328,7 @@ class _ReviewsPreviewScreenState extends State<ReviewsPreviewScreen> {
                             Text(
                               'Rate, comment, and share photos',
                               style: GoogleFonts.inter(
-                                color: Colors.white70,
+                                color: headerMutedColor,
                                 fontSize: 12,
                                 fontWeight: FontWeight.w500,
                               ),
@@ -351,9 +355,9 @@ class _ReviewsPreviewScreenState extends State<ReviewsPreviewScreen> {
                         constraints: const BoxConstraints(maxWidth: 560),
                         child: Container(
                           decoration: BoxDecoration(
-                            color: _panelBackground,
+                            color: panelBg,
                             borderRadius: BorderRadius.circular(30),
-                            border: Border.all(color: _panelBorder),
+                            border: Border.all(color: panelBorder),
                           ),
                           child: ListView(
                             padding: const EdgeInsets.fromLTRB(18, 18, 18, 20),
@@ -361,7 +365,7 @@ class _ReviewsPreviewScreenState extends State<ReviewsPreviewScreen> {
                               Text(
                                 'New Feedback',
                                 style: GoogleFonts.inter(
-                                  color: _titleColor,
+                                  color: titleColor,
                                   fontSize: 22,
                                   fontWeight: FontWeight.w800,
                                 ),
@@ -372,7 +376,7 @@ class _ReviewsPreviewScreenState extends State<ReviewsPreviewScreen> {
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: GoogleFonts.inter(
-                                  color: _hintColor,
+                                  color: hintColor,
                                   fontSize: 13,
                                   fontWeight: FontWeight.w500,
                                 ),
@@ -381,7 +385,7 @@ class _ReviewsPreviewScreenState extends State<ReviewsPreviewScreen> {
                               Text(
                                 'Rate',
                                 style: GoogleFonts.inter(
-                                  color: _titleColor,
+                                  color: titleColor,
                                   fontSize: 14,
                                   fontWeight: FontWeight.w700,
                                 ),
@@ -410,15 +414,15 @@ class _ReviewsPreviewScreenState extends State<ReviewsPreviewScreen> {
                                         height: 40,
                                         decoration: BoxDecoration(
                                           color: selected
-                                              ? const Color(0xFFFFF7E6)
-                                              : Colors.white,
+                                              ? (isDark ? const Color(0xFF2A200B) : const Color(0xFFFFF7E6))
+                                              : (isDark ? const Color(0xFF0F172A) : Colors.white),
                                           borderRadius: BorderRadius.circular(
                                             12,
                                           ),
                                           border: Border.all(
                                             color: selected
                                                 ? const Color(0xFFF3C56A)
-                                                : const Color(0xFFD6DFED),
+                                                : (isDark ? const Color(0xFF2B3442) : const Color(0xFFD6DFED)),
                                           ),
                                         ),
                                         child: Icon(
@@ -437,7 +441,7 @@ class _ReviewsPreviewScreenState extends State<ReviewsPreviewScreen> {
                               Text(
                                 'Comment',
                                 style: GoogleFonts.inter(
-                                  color: _titleColor,
+                                  color: titleColor,
                                   fontSize: 14,
                                   fontWeight: FontWeight.w700,
                                 ),
@@ -447,34 +451,35 @@ class _ReviewsPreviewScreenState extends State<ReviewsPreviewScreen> {
                                 controller: _commentController,
                                 maxLines: 4,
                                 minLines: 4,
+                                style: TextStyle(color: titleColor),
                                 decoration: InputDecoration(
                                   hintText:
                                       'Share your experience with this product.',
                                   hintStyle: GoogleFonts.inter(
-                                    color: _hintColor.withAlpha(
+                                    color: hintColor.withAlpha(
                                       (0.85 * 255).round(),
                                     ),
                                     fontSize: 15,
                                   ),
                                   filled: true,
-                                  fillColor: const Color(0xFFEFF3FA),
+                                  fillColor: inputBg,
                                   contentPadding: const EdgeInsets.all(14),
                                   border: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(16),
-                                    borderSide: const BorderSide(
-                                      color: Color(0xFFD4DEEE),
+                                    borderSide: BorderSide(
+                                      color: inputBorder,
                                     ),
                                   ),
                                   enabledBorder: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(16),
-                                    borderSide: const BorderSide(
-                                      color: Color(0xFFD4DEEE),
+                                    borderSide: BorderSide(
+                                      color: inputBorder,
                                     ),
                                   ),
                                   focusedBorder: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(16),
                                     borderSide: const BorderSide(
-                                      color: Color(0xFF95B8F5),
+                                      color: Color(0xFF2563EB),
                                       width: 1.3,
                                     ),
                                   ),
@@ -486,7 +491,7 @@ class _ReviewsPreviewScreenState extends State<ReviewsPreviewScreen> {
                                   Text(
                                     'Images',
                                     style: GoogleFonts.inter(
-                                      color: _titleColor,
+                                      color: titleColor,
                                       fontSize: 14,
                                       fontWeight: FontWeight.w700,
                                     ),
@@ -495,7 +500,7 @@ class _ReviewsPreviewScreenState extends State<ReviewsPreviewScreen> {
                                   Text(
                                     '(optional)',
                                     style: GoogleFonts.inter(
-                                      color: _hintColor,
+                                      color: hintColor,
                                       fontSize: 13,
                                       fontWeight: FontWeight.w500,
                                     ),
@@ -504,7 +509,7 @@ class _ReviewsPreviewScreenState extends State<ReviewsPreviewScreen> {
                                   Text(
                                     '${_images.length}/$_maxImages',
                                     style: GoogleFonts.inter(
-                                      color: _hintColor,
+                                      color: hintColor,
                                       fontSize: 13,
                                       fontWeight: FontWeight.w500,
                                     ),
@@ -532,14 +537,14 @@ class _ReviewsPreviewScreenState extends State<ReviewsPreviewScreen> {
                                       ),
                                 label: Text(
                                   _isPickingImages
-                                      ? 'Selecting...'
+                                      ? l.loading
                                       : 'Upload Images',
                                 ),
                                 style: OutlinedButton.styleFrom(
                                   foregroundColor: _brandBlue,
-                                  backgroundColor: Colors.white,
-                                  side: const BorderSide(
-                                    color: Color(0xFFD4DEEE),
+                                  backgroundColor: isDark ? const Color(0xFF0F172A) : Colors.white,
+                                  side: BorderSide(
+                                    color: inputBorder,
                                   ),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(12),
@@ -585,13 +590,13 @@ class _ReviewsPreviewScreenState extends State<ReviewsPreviewScreen> {
                                               child: Container(
                                                 width: 20,
                                                 height: 20,
-                                                decoration: const BoxDecoration(
-                                                  color: Color(0xFF0F172A),
+                                                decoration: BoxDecoration(
+                                                  color: isDark ? Colors.white : const Color(0xFF0F172A),
                                                   shape: BoxShape.circle,
                                                 ),
-                                                child: const Icon(
+                                                child: Icon(
                                                   Icons.close_rounded,
-                                                  color: Colors.white,
+                                                  color: isDark ? const Color(0xFF0F172A) : Colors.white,
                                                   size: 13,
                                                 ),
                                               ),
@@ -614,15 +619,15 @@ class _ReviewsPreviewScreenState extends State<ReviewsPreviewScreen> {
                                     backgroundColor:
                                         (_canSubmit || _isSubmitting)
                                         ? _brandBlue
-                                        : const Color(0xFFE5E7EB),
+                                        : (isDark ? const Color(0xFF1E293B) : const Color(0xFFE5E7EB)),
                                     foregroundColor:
                                         (_canSubmit || _isSubmitting)
                                         ? Colors.white
-                                        : const Color(0xFF9CA3AF),
-                                    disabledBackgroundColor: const Color(
+                                        : (isDark ? const Color(0xFF4A5568) : const Color(0xFF9CA3AF)),
+                                    disabledBackgroundColor: isDark ? const Color(0xFF1E293B) : const Color(
                                       0xFFE5E7EB,
                                     ),
-                                    disabledForegroundColor: const Color(
+                                    disabledForegroundColor: isDark ? const Color(0xFF4A5568) : const Color(
                                       0xFF9CA3AF,
                                     ),
                                     elevation: 0,
@@ -654,7 +659,7 @@ class _ReviewsPreviewScreenState extends State<ReviewsPreviewScreen> {
                               const SizedBox(height: 24),
                               Divider(
                                 height: 1,
-                                color: _panelBorder.withAlpha(
+                                color: panelBorder.withAlpha(
                                   (0.8 * 255).round(),
                                 ),
                               ),
@@ -665,7 +670,7 @@ class _ReviewsPreviewScreenState extends State<ReviewsPreviewScreen> {
                                     child: Text(
                                       'Feedback History',
                                       style: GoogleFonts.inter(
-                                        color: _titleColor,
+                                        color: titleColor,
                                         fontSize: 20,
                                         fontWeight: FontWeight.w800,
                                       ),
@@ -677,7 +682,7 @@ class _ReviewsPreviewScreenState extends State<ReviewsPreviewScreen> {
                                       vertical: 5,
                                     ),
                                     decoration: BoxDecoration(
-                                      color: const Color(0xFFEAF1FF),
+                                      color: isDark ? const Color(0xFF1D2635) : const Color(0xFFEAF1FF),
                                       borderRadius: BorderRadius.circular(999),
                                     ),
                                     child: Text(
@@ -695,7 +700,7 @@ class _ReviewsPreviewScreenState extends State<ReviewsPreviewScreen> {
                               Text(
                                 'All user feedback appears below.',
                                 style: GoogleFonts.inter(
-                                  color: _hintColor,
+                                  color: hintColor,
                                   fontSize: 13,
                                   fontWeight: FontWeight.w500,
                                 ),
@@ -704,14 +709,27 @@ class _ReviewsPreviewScreenState extends State<ReviewsPreviewScreen> {
                               AnimatedSwitcher(
                                 duration: const Duration(milliseconds: 220),
                                 child: _isLoadingHistory
-                                    ? Container(
+                                    ? Skeletonizer(
                                         key: const ValueKey('loading_history'),
-                                        padding: const EdgeInsets.symmetric(
-                                          vertical: 26,
-                                        ),
-                                        alignment: Alignment.center,
-                                        child: const CircularProgressIndicator(
-                                          strokeWidth: 2.5,
+                                        enabled: true,
+                                        child: Column(
+                                          children: List.generate(
+                                            2,
+                                            (index) => Padding(
+                                              padding: const EdgeInsets.only(bottom: 12),
+                                              child: _FeedbackHistoryCard(
+                                                entry: _FeedbackEntry(
+                                                  id: 'mock-$index',
+                                                  userName: 'Customer Name',
+                                                  rating: 5,
+                                                  comment: 'Mock feedback comment description for rating high-quality services.',
+                                                  imageBase64: const [],
+                                                  createdAt: DateTime.now(),
+                                                ),
+                                                timeLabel: 'Just now',
+                                              ),
+                                            ),
+                                          ),
                                         ),
                                       )
                                     : _history.isEmpty
@@ -720,18 +738,18 @@ class _ReviewsPreviewScreenState extends State<ReviewsPreviewScreen> {
                                         width: double.infinity,
                                         padding: const EdgeInsets.all(16),
                                         decoration: BoxDecoration(
-                                          color: Colors.white,
+                                          color: isDark ? const Color(0xFF0F172A) : Colors.white,
                                           borderRadius: BorderRadius.circular(
                                             16,
                                           ),
                                           border: Border.all(
-                                            color: _panelBorder,
+                                            color: panelBorder,
                                           ),
                                         ),
                                         child: Text(
-                                          'No feedback yet. Be the first to rate and comment.',
+                                          l.noData,
                                           style: GoogleFonts.inter(
-                                            color: _hintColor,
+                                            color: hintColor,
                                             fontSize: 13,
                                             fontWeight: FontWeight.w500,
                                           ),
@@ -779,14 +797,20 @@ class _FeedbackHistoryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final decodedImages = entry.decodeImages();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = isDark ? Theme.of(context).scaffoldBackgroundColor : Colors.white;
+    final border = isDark ? const Color(0xFF2B3442) : const Color(0xFFDCE5F2);
+    final titleColor = isDark ? const Color(0xFFE6EDF7) : const Color(0xFF1E293B);
+    final hintColor = isDark ? const Color(0xFF97A2B5) : const Color(0xFF64748B);
+    final textBody = isDark ? const Color(0xFFD3E0F8) : const Color(0xFF334155);
 
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: cardBg,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFDCE5F2)),
+        border: Border.all(color: border),
         boxShadow: const [
           BoxShadow(
             color: Color(0x14000000),
@@ -802,7 +826,7 @@ class _FeedbackHistoryCard extends StatelessWidget {
             children: [
               CircleAvatar(
                 radius: 18,
-                backgroundColor: const Color(0xFFEAF1FF),
+                backgroundColor: isDark ? const Color(0xFF1D2635) : const Color(0xFFEAF1FF),
                 child: Text(
                   entry.initial,
                   style: GoogleFonts.inter(
@@ -820,7 +844,7 @@ class _FeedbackHistoryCard extends StatelessWidget {
                     Text(
                       entry.userName,
                       style: GoogleFonts.inter(
-                        color: const Color(0xFF1E293B),
+                        color: titleColor,
                         fontSize: 14,
                         fontWeight: FontWeight.w700,
                       ),
@@ -829,7 +853,7 @@ class _FeedbackHistoryCard extends StatelessWidget {
                     Text(
                       timeLabel,
                       style: GoogleFonts.inter(
-                        color: const Color(0xFF64748B),
+                        color: hintColor,
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
                       ),
@@ -840,7 +864,7 @@ class _FeedbackHistoryCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFFF7E6),
+                  color: isDark ? const Color(0xFF2A200B) : const Color(0xFFFFF7E6),
                   borderRadius: BorderRadius.circular(999),
                   border: Border.all(color: const Color(0xFFF3C56A)),
                 ),
@@ -856,7 +880,7 @@ class _FeedbackHistoryCard extends StatelessWidget {
                     Text(
                       '${entry.rating}',
                       style: GoogleFonts.inter(
-                        color: const Color(0xFF7C5710),
+                        color: isDark ? const Color(0xFFFFD17A) : const Color(0xFF7C5710),
                         fontSize: 12,
                         fontWeight: FontWeight.w700,
                       ),
@@ -870,7 +894,7 @@ class _FeedbackHistoryCard extends StatelessWidget {
           Text(
             entry.comment,
             style: GoogleFonts.inter(
-              color: const Color(0xFF334155),
+              color: textBody,
               fontSize: 13,
               fontWeight: FontWeight.w500,
               height: 1.4,
@@ -927,6 +951,13 @@ class _FeedbackSubmitSuccessDialogState
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = Theme.of(context).cardColor;
+    final border = isDark ? const Color(0xFF2B3442) : const Color(0xFFDCE5F2);
+    final titleColor = isDark ? const Color(0xFFE6EDF7) : const Color(0xFF1E293B);
+    final hintColor = isDark ? const Color(0xFF97A2B5) : const Color(0xFF64748B);
+
     return Material(
       type: MaterialType.transparency,
       child: Padding(
@@ -935,9 +966,9 @@ class _FeedbackSubmitSuccessDialogState
           constraints: const BoxConstraints(maxWidth: 320),
           padding: const EdgeInsets.fromLTRB(22, 22, 22, 18),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: cardBg,
             borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: const Color(0xFFDCE5F2)),
+            border: Border.all(color: border),
             boxShadow: const [
               BoxShadow(
                 color: Color(0x33000000),
@@ -979,17 +1010,17 @@ class _FeedbackSubmitSuccessDialogState
                 'Feedback Submitted',
                 textAlign: TextAlign.center,
                 style: GoogleFonts.inter(
-                  color: const Color(0xFF1E293B),
+                  color: titleColor,
                   fontSize: 20,
                   fontWeight: FontWeight.w800,
                 ),
               ),
               const SizedBox(height: 8),
               Text(
-                'Thank you for sharing.\nYour feedback is now in history.',
+                l.successfullySaved,
                 textAlign: TextAlign.center,
                 style: GoogleFonts.inter(
-                  color: const Color(0xFF64748B),
+                  color: hintColor,
                   fontSize: 13,
                   fontWeight: FontWeight.w500,
                   height: 1.45,
@@ -1009,7 +1040,7 @@ class _FeedbackSubmitSuccessDialogState
                     ),
                   ),
                   child: Text(
-                    'Done',
+                    l.done,
                     style: GoogleFonts.inter(
                       fontWeight: FontWeight.w700,
                       fontSize: 14,

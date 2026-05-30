@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:skeletonizer/skeletonizer.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../../models/product.dart';
 import '../../models/search_results.dart';
 import '../../services/api_service.dart';
@@ -9,8 +11,8 @@ import '../../services/search_history_service.dart';
 import '../../widgets/auth_guard.dart';
 import '../../widgets/cart_added_bottom_bar.dart';
 import '../products/product_detail_screen.dart';
+import '../cart/cart_screen.dart';
 
-const _searchBg = Color(0xFFF5F7FB);
 const _searchSurface = Colors.white;
 const _searchSurfaceAlt = Color(0xFFF1F5F9);
 const _searchBorder = Color(0xFFE2E8F0);
@@ -89,20 +91,29 @@ class _SearchResultsScreenState extends State<SearchResultsScreen> {
     final columns = width >= 1024 ? 4 : (width >= 600 ? 3 : 2);
 
     return Scaffold(
-      backgroundColor: _searchBg,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: _searchBg,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         foregroundColor: _searchText,
         elevation: 0,
         surfaceTintColor: Colors.transparent,
-        title: const Text(
-          'Search',
-          style: TextStyle(
+        title: Text(
+          AppLocalizations.of(context).search,
+          style: const TextStyle(
             fontWeight: FontWeight.w800,
             color: _searchText,
-            fontFamily: 'SF Pro Text',
           ),
         ),
+        actions: [
+          _CartIconButton(
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const CartScreen()),
+              );
+            },
+          ),
+          const SizedBox(width: 8),
+        ],
       ),
       body: RefreshIndicator(
         onRefresh: _refresh,
@@ -112,7 +123,30 @@ class _SearchResultsScreenState extends State<SearchResultsScreen> {
           builder: (context, snapshot) {
             final loading = snapshot.connectionState == ConnectionState.waiting;
             final hasError = snapshot.hasError;
-            final results = snapshot.data;
+            
+            final results = loading
+                ? SearchResults(
+                    query: _controller.text,
+                    repairServices: const [
+                      SearchRepairService(
+                        id: '1',
+                        title: 'Repair Service Loading',
+                        description: 'Detailed description of the repair service.',
+                        keywords: ['Keyword 1', 'Keyword 2'],
+                      ),
+                    ],
+                    products: List.generate(
+                      4,
+                      (index) => Product(
+                        id: index,
+                        name: 'Mock Product Loading Name',
+                        price: 99.99,
+                        salePriceOverride: 99.99,
+                        stock: 10,
+                      ),
+                    ),
+                  )
+                : snapshot.data;
 
             return ListView(
               physics: const AlwaysScrollableScrollPhysics(),
@@ -127,87 +161,89 @@ class _SearchResultsScreenState extends State<SearchResultsScreen> {
                   },
                 ),
                 const SizedBox(height: 16),
-                if (loading)
-                  const Padding(
-                    padding: EdgeInsets.only(top: 80),
-                    child: Center(child: CircularProgressIndicator()),
-                  )
-                else if (hasError)
+                if (hasError)
                   _ResultMessage(
                     icon: Icons.wifi_off_rounded,
-                    title: 'Unable to load search results',
+                    title: AppLocalizations.of(context).somethingWentWrong,
                     message: 'Check the API connection and try your search again.',
-                    actionLabel: 'Retry',
+                    actionLabel: AppLocalizations.of(context).retry,
                     onTap: () {
                       _submitSearch();
                     },
                   )
-                else if (results != null) ...[
-                  _ResultHeader(query: results.query, total: _totalItems(results)),
-                  const SizedBox(height: 14),
-                  if (results.categories.isNotEmpty || results.brands.isNotEmpty)
-                    _FilterChips(
-                      categories: results.categories.map((item) => item.name).toList(),
-                      brands: results.brands,
-                      onSelect: (value) {
-                        _controller.text = value;
-                        _submitSearch(value);
-                      },
-                    ),
-                  if (results.categories.isNotEmpty || results.brands.isNotEmpty)
-                    const SizedBox(height: 18),
-                  if (results.repairServices.isNotEmpty) ...[
-                    const _SectionTitle('Repair Services'),
-                    const SizedBox(height: 10),
-                    ...results.repairServices.map(
-                      (service) => Padding(
-                        padding: const EdgeInsets.only(bottom: 10),
-                        child: _RepairServiceCard(service: service),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                  ],
-                  if (results.products.isNotEmpty) ...[
-                    const _SectionTitle('Products'),
-                    const SizedBox(height: 10),
-                    _isGrid
-                        ? _ProductGrid(
-                            columns: columns,
-                            products: results.products,
-                            onAdd: (product) {
-                              _addToCart(product);
-                            },
-                          )
-                        : _ProductList(
-                            products: results.products,
-                            onAdd: (product) {
-                              _addToCart(product);
+                else if (results != null)
+                  Skeletonizer(
+                    enabled: loading,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _ResultHeader(query: results.query, total: loading ? 5 : _totalItems(results)),
+                        const SizedBox(height: 14),
+                        if (results.categories.isNotEmpty || results.brands.isNotEmpty)
+                          _FilterChips(
+                            categories: results.categories.map((item) => item.name).toList(),
+                            brands: results.brands,
+                            onSelect: (value) {
+                              _controller.text = value;
+                              _submitSearch(value);
                             },
                           ),
-                    const SizedBox(height: 18),
-                  ],
-                  if (results.accessories.isNotEmpty) ...[
-                    const _SectionTitle('Accessories'),
-                    const SizedBox(height: 10),
-                    _AccessoryGrid(
-                      columns: columns,
-                      items: results.accessories,
+                        if (results.categories.isNotEmpty || results.brands.isNotEmpty)
+                          const SizedBox(height: 18),
+                        if (results.repairServices.isNotEmpty) ...[
+                          _SectionTitle(AppLocalizations.of(context).repairService),
+                          const SizedBox(height: 10),
+                          ...results.repairServices.map(
+                            (service) => Padding(
+                              padding: const EdgeInsets.only(bottom: 10),
+                              child: _RepairServiceCard(service: service),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                        ],
+                        if (results.products.isNotEmpty) ...[
+                          _SectionTitle(AppLocalizations.of(context).allProducts),
+                          const SizedBox(height: 10),
+                          _isGrid
+                              ? _ProductGrid(
+                                  columns: columns,
+                                  products: results.products,
+                                  onAdd: (product) {
+                                    _addToCart(product);
+                                  },
+                                )
+                              : _ProductList(
+                                  products: results.products,
+                                  onAdd: (product) {
+                                    _addToCart(product);
+                                  },
+                                ),
+                          const SizedBox(height: 18),
+                        ],
+                        if (results.accessories.isNotEmpty) ...[
+                          const _SectionTitle('Accessories'),
+                          const SizedBox(height: 10),
+                          _AccessoryGrid(
+                            columns: columns,
+                            items: results.accessories,
+                          ),
+                          const SizedBox(height: 18),
+                        ],
+                        if (!loading && !results.hasAnyResult)
+                          _ResultMessage(
+                            icon: Icons.search_off_rounded,
+                            title: AppLocalizations.of(context).noData,
+                            message:
+                                'Try a different keyword, or use one of the popular searches below.',
+                            popularSearches: results.popularSearches,
+                            onSelectPopular: (value) {
+                              _controller.text = value;
+                              _submitSearch(value);
+                            },
+                          ),
+                      ],
                     ),
-                    const SizedBox(height: 18),
-                  ],
-                  if (!results.hasAnyResult)
-                    _ResultMessage(
-                      icon: Icons.search_off_rounded,
-                      title: 'No results found',
-                      message:
-                          'Try a different keyword, or use one of the popular searches below.',
-                      popularSearches: results.popularSearches,
-                      onSelectPopular: (value) {
-                        _controller.text = value;
-                        _submitSearch(value);
-                      },
-                    ),
-                ],
+                  ),
               ],
             );
           },
@@ -980,6 +1016,65 @@ class _ResultMessage extends StatelessWidget {
           ],
         ],
       ),
+    );
+  }
+}
+
+class _CartIconButton extends StatelessWidget {
+  const _CartIconButton({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: CartService.instance,
+      builder: (context, _) {
+        final count = CartService.instance.totalItems;
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        final color = isDark ? Colors.white : _searchText;
+        return Stack(
+          clipBehavior: Clip.none,
+          alignment: Alignment.center,
+          children: [
+            IconButton(
+              icon: Icon(Icons.shopping_cart_outlined, color: color),
+              onPressed: onTap,
+            ),
+            if (count > 0)
+              Positioned(
+                top: 4,
+                right: 4,
+                child: IgnorePointer(
+                  child: Container(
+                    constraints: const BoxConstraints(
+                      minWidth: 16,
+                      minHeight: 16,
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    decoration: BoxDecoration(
+                      color: _searchBlue,
+                      borderRadius: BorderRadius.circular(999),
+                      border: Border.all(
+                        color: Theme.of(context).scaffoldBackgroundColor,
+                        width: 1.5,
+                      ),
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      '$count',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 8,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        );
+      },
     );
   }
 }

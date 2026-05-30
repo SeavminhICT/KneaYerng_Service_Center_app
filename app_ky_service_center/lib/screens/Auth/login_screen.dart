@@ -1,12 +1,17 @@
+import 'dart:async';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import '../../l10n/app_localizations.dart';
 import '../../services/api_service.dart';
 import '../../services/app_notification_service.dart';
+import '../../services/cart_service.dart';
 import '../../theme/app_palette.dart';
 import '../main_navigation_screen.dart';
 import 'register_screen.dart';
 import 'forgot_password_screen.dart';
+import 'otp_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -17,11 +22,8 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   static const double _radius = 18;
-  static const double _panelRadius = 30;
-  static const double _fieldSpacing = 16;
   static const Color _brandBlue = Color(0xFF4A88F7);
   static const Color _brandBlueSoft = Color(0xFF96B5F2);
-  static const Color _background = Color(0xFFF5F7FB);
   static const Color _surface = Colors.white;
   static const Color _surfaceAlt = Color(0xFFF9FBFF);
   static const Color _border = Color(0xFFE6ECF5);
@@ -64,6 +66,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
     if (error == null) {
       await AppNotificationService.instance.syncTokenWithBackend(force: true);
+      unawaited(CartService.instance.loadFromApi());
       if (!mounted) return;
       Navigator.pushReplacement(
         context,
@@ -118,12 +121,30 @@ class _LoginScreenState extends State<LoginScreen> {
       setState(() => _loading = false);
 
       if (error == null) {
-        await AppNotificationService.instance.syncTokenWithBackend(force: true);
-        if (!mounted) return;
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const MainNavigationScreen()),
+        // Request OTP to Gmail for verification
+        final otpResult = await ApiService.requestOtp(
+          destination: email,
+          type: 'email',
+          purpose: 'login',
         );
+        if (!mounted) return;
+        setState(() => _loading = false);
+
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(otpResult.message)));
+
+        if (otpResult.ok) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => OtpScreen(
+                destination: email,
+                type: 'email',
+                purpose: 'login',
+              ),
+            ),
+          );
+        }
         return;
       }
 
@@ -143,324 +164,232 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final mediaQuery = MediaQuery.of(context);
-    final bottomInset = mediaQuery.viewInsets.bottom;
-    final viewportHeight =
-        mediaQuery.size.height - mediaQuery.padding.vertical - bottomInset - 48;
+    final l = AppLocalizations.of(context);
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
 
     return Scaffold(
-      backgroundColor: _background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       resizeToAvoidBottomInset: true,
       body: GestureDetector(
         onTap: () => FocusScope.of(context).unfocus(),
-        child: Stack(
+        child: Column(
           children: [
-            Positioned.fill(
-              child: DecoratedBox(
-                decoration: const BoxDecoration(color: _background),
-              ),
-            ),
-            Positioned(
-              top: -120,
-              right: -90,
-              child: IgnorePointer(
-                child: _buildGlow(
-                  size: 250,
-                  colors: const [
-                    Color(0x284A88F7),
-                    Color(0x1496B5F2),
-                    Colors.transparent,
-                  ],
+            // ── Gradient Header ──
+            Container(
+              width: double.infinity,
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Color(0xFF3B63FF), Color(0xFF7C3AED)],
+                ),
+                borderRadius: BorderRadius.vertical(
+                  bottom: Radius.circular(36),
                 ),
               ),
-            ),
-            Positioned(
-              left: -110,
-              bottom: 110,
-              child: IgnorePointer(
-                child: _buildGlow(
-                  size: 290,
-                  colors: const [
-                    Color(0x1A4A88F7),
-                    Color(0x12EAF1FF),
-                    Colors.transparent,
-                  ],
-                ),
-              ),
-            ),
-            SafeArea(
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  final isCompact = constraints.maxHeight < 760;
-
-                  final isKeyboardOpen = bottomInset > 0;
-                  return SingleChildScrollView(
-                    physics: isKeyboardOpen
-                        ? const ClampingScrollPhysics()
-                        : const NeverScrollableScrollPhysics(),
-                    keyboardDismissBehavior:
-                        ScrollViewKeyboardDismissBehavior.onDrag,
-                    padding: EdgeInsets.fromLTRB(24, 24, 24, bottomInset + 24),
-                    child: ConstrainedBox(
-                      constraints: BoxConstraints(
-                        minHeight: viewportHeight.clamp(0.0, double.infinity),
-                      ),
-                      child: Center(
-                        child: ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 380),
-                          child: Form(
-                            key: _formKey,
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                SizedBox(height: isCompact ? 8 : 24),
-                                _buildLogoBadge(),
-                                SizedBox(height: isCompact ? 28 : 38),
-                                const Text(
-                                  'Sign in',
-                                  style: TextStyle(
-                                    fontSize: 30,
-                                    fontWeight: FontWeight.w700,
-                                    color: _textPrimary,
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                const Text(
-                                  'Continue to your service account.',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w500,
-                                    color: _textMuted,
-                                  ),
-                                ),
-                                const SizedBox(height: 24),
-                                _buildAuthPanel(),
-                                SizedBox(height: isCompact ? 22 : 28),
-                                _buildOrDivider(),
-                                const SizedBox(height: 18),
-                                _buildGoogleButton(),
-                                const SizedBox(height: 18),
-                                _buildSignUpPrompt(),
-                              ],
+              child: SafeArea(
+                bottom: false,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Logo — long-press opens server settings
+                      GestureDetector(
+                        onLongPress: _showServerSettingsDialog,
+                        child: Container(
+                          width: 64,
+                          height: 64,
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.18),
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.3),
                             ),
+                          ),
+                          child: Image.asset(
+                            'assets/images/Logo_KYSC.png',
+                            fit: BoxFit.contain,
                           ),
                         ),
                       ),
-                    ),
-                  );
-                },
-              ),
-            ),
-            if (_loading)
-              Positioned.fill(
-                child: ColoredBox(
-                  color: const Color(0x66FFFFFF),
-                  child: const Center(
-                    child: SizedBox(
-                      width: 24,
-                      height: 24,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2.2,
-                        color: _brandBlue,
+                      const SizedBox(height: 16),
+                      Text(
+                        l.welcomeBack,
+                        style: const TextStyle(
+                          fontSize: 26,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.white,
+                          letterSpacing: -0.5,
+                        ),
                       ),
-                    ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Sign in to your KY Service Center account',
+                        style: TextStyle(
+                          fontSize: 13.5,
+                          color: Colors.white.withValues(alpha: 0.8),
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
+            ),
+
+            // ── Form ──
+            Expanded(
+              child: SingleChildScrollView(
+                physics: const ClampingScrollPhysics(),
+                keyboardDismissBehavior:
+                    ScrollViewKeyboardDismissBehavior.onDrag,
+                padding: EdgeInsets.fromLTRB(20, 24, 20, bottomInset + 24),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _buildTextField(
+                        controller: _emailCtrl,
+                        hint: l.email,
+                        keyboard: TextInputType.text,
+                        prefixIcon: const Icon(
+                          Icons.mail_outline_rounded,
+                          size: 22,
+                          color: _iconMuted,
+                        ),
+                        textInputAction: TextInputAction.next,
+                        onFieldSubmitted: (_) =>
+                            FocusScope.of(context).nextFocus(),
+                        validator: (v) {
+                          if (v == null || v.trim().isEmpty) {
+                            return l.requiredField;
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 14),
+                      _buildTextField(
+                        controller: _passwordCtrl,
+                        hint: l.password,
+                        obscure: obscurePassword,
+                        prefixIcon: const Icon(
+                          Icons.lock_outline_rounded,
+                          size: 22,
+                          color: _iconMuted,
+                        ),
+                        textInputAction: TextInputAction.done,
+                        onFieldSubmitted: (_) => _submitLogin(),
+                        validator: (v) {
+                          if (v == null || v.isEmpty) {
+                            return l.requiredField;
+                          }
+                          if (v.length < 6) {
+                            return 'Password must be at least 6 characters';
+                          }
+                          return null;
+                        },
+                        suffixIcon: IconButton(
+                          onPressed: () =>
+                              setState(() => obscurePassword = !obscurePassword),
+                          icon: Icon(
+                            obscurePassword
+                                ? Icons.visibility_off_outlined
+                                : Icons.visibility_outlined,
+                            size: 22,
+                            color: _iconMuted,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      // Remember me + Forgot password
+                      Row(
+                        children: [
+                          Transform.scale(
+                            scale: 0.82,
+                            alignment: Alignment.centerLeft,
+                            child: CupertinoSwitch(
+                              value: rememberMe,
+                              activeTrackColor: const Color(0xFF3B63FF),
+                              inactiveTrackColor: const Color(0xFFD5DDEA),
+                              thumbColor: Colors.white,
+                              onChanged: (v) => setState(() => rememberMe = v),
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          const Expanded(
+                            child: Text(
+                              'Remember Me',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                                color: _textMuted,
+                              ),
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const ForgotPasswordScreen(),
+                              ),
+                            ),
+                            style: TextButton.styleFrom(
+                              foregroundColor: const Color(0xFF3B63FF),
+                              padding: EdgeInsets.zero,
+                              minimumSize: const Size(0, 0),
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            ),
+                            child: Text(
+                              l.forgotPassword,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+                      _buildSignInButton(l),
+                      const SizedBox(height: 10),
+                      TextButton(
+                        onPressed: () => Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const MainNavigationScreen(),
+                          ),
+                        ),
+                        style: TextButton.styleFrom(
+                          foregroundColor: const Color(0xFF3B63FF),
+                          textStyle: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        child: const Text('Go to Home'),
+                      ),
+                      const SizedBox(height: 8),
+                      _buildOrDivider(),
+                      const SizedBox(height: 16),
+                      _buildGoogleButton(l),
+                      const SizedBox(height: 20),
+                      _buildSignUpPrompt(l),
+                      const SizedBox(height: 8),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildGlow({required double size, required List<Color> colors}) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        gradient: RadialGradient(radius: 0.7, colors: colors),
-      ),
-    );
-  }
-
-  Widget _buildLogoBadge() {
-    return Center(
-      child: GestureDetector(
-        onLongPress: _showServerSettingsDialog,
-        child: Container(
-          width: 112,
-          height: 112,
-          padding: const EdgeInsets.all(18),
-          decoration: BoxDecoration(
-            color: const Color(0xFFFDFEFF),
-            borderRadius: BorderRadius.circular(28),
-            border: Border.all(color: _border),
-            boxShadow: const [
-              BoxShadow(
-                color: Color(0x144A88F7),
-                blurRadius: 28,
-                offset: Offset(0, 16),
-              ),
-            ],
-          ),
-          child: Image.asset(
-            'assets/images/Logo_KYSC.png',
-            fit: BoxFit.contain,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildAuthPanel() {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 18),
-      decoration: BoxDecoration(
-        color: _surface,
-        borderRadius: BorderRadius.circular(_panelRadius),
-        border: Border.all(color: _border),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x120F172A),
-            blurRadius: 32,
-            offset: Offset(0, 18),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          _buildTextField(
-            controller: _emailCtrl,
-            hint: 'Email or phone number',
-            keyboard: TextInputType.text,
-            prefixIcon: const Icon(
-              Icons.mail_outline_rounded,
-              size: 20,
-              color: _iconMuted,
-            ),
-            textInputAction: TextInputAction.next,
-            onFieldSubmitted: (_) {
-              FocusScope.of(context).nextFocus();
-            },
-            validator: (v) {
-              if (v == null || v.trim().isEmpty) {
-                return 'Email or phone required';
-              }
-              return null;
-            },
-          ),
-          const SizedBox(height: _fieldSpacing),
-          _buildTextField(
-            controller: _passwordCtrl,
-            hint: 'Your password',
-            obscure: obscurePassword,
-            prefixIcon: const Icon(
-              Icons.lock_outline_rounded,
-              size: 20,
-              color: _iconMuted,
-            ),
-            textInputAction: TextInputAction.done,
-            onFieldSubmitted: (_) => _submitLogin(),
-            validator: (v) {
-              if (v == null || v.isEmpty) {
-                return 'Password required';
-              }
-              if (v.length < 6) {
-                return 'Password must be at least 6 characters';
-              }
-              return null;
-            },
-            suffixIcon: IconButton(
-              onPressed: () {
-                setState(() {
-                  obscurePassword = !obscurePassword;
-                });
-              },
-              icon: Icon(
-                obscurePassword
-                    ? Icons.visibility_off_outlined
-                    : Icons.visibility_outlined,
-                size: 20,
-                color: _iconMuted,
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Transform.scale(
-                scale: 0.82,
-                alignment: Alignment.centerLeft,
-                child: CupertinoSwitch(
-                  value: rememberMe,
-                  activeTrackColor: _brandBlue,
-                  inactiveTrackColor: const Color(0xFFD5DDEA),
-                  thumbColor: Colors.white,
-                  onChanged: (value) {
-                    setState(() => rememberMe = value);
-                  },
-                ),
-              ),
-              const SizedBox(width: 4),
-              const Expanded(
-                child: Text(
-                  'Remember Me',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                    color: _textMuted,
-                  ),
-                ),
-              ),
-              TextButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const ForgotPasswordScreen(),
-                    ),
-                  );
-                },
-                style: TextButton.styleFrom(
-                  foregroundColor: _brandBlue,
-                  padding: EdgeInsets.zero,
-                  minimumSize: const Size(0, 0),
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                ),
-                child: const Text(
-                  'Forgot Password?',
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 18),
-          _buildSignInButton(),
-          const SizedBox(height: 8),
-          TextButton(
-            onPressed: () {
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (_) => const MainNavigationScreen()),
-              );
-            },
-            style: TextButton.styleFrom(
-              foregroundColor: _brandBlue,
-              textStyle: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            child: const Text('Go to Home'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSignInButton() {
+  Widget _buildSignInButton(AppLocalizations l) {
     return SizedBox(
       height: 54,
       child: DecoratedBox(
@@ -501,9 +430,9 @@ class _LoginScreenState extends State<LoginScreen> {
                     color: Colors.white,
                   ),
                 )
-              : const Text(
-                  'Sign in',
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+              : Text(
+                  l.signIn,
+                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
                 ),
         ),
       ),
@@ -530,7 +459,7 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  Widget _buildGoogleButton() {
+  Widget _buildGoogleButton(AppLocalizations l) {
     return SizedBox(
       height: 54,
       child: OutlinedButton(
@@ -567,14 +496,14 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  Widget _buildSignUpPrompt() {
+  Widget _buildSignUpPrompt(AppLocalizations l) {
     return Center(
       child: Wrap(
         crossAxisAlignment: WrapCrossAlignment.center,
         children: [
-          const Text(
-            "Don't have an account? ",
-            style: TextStyle(fontSize: 13, color: _textMuted),
+          Text(
+            '${l.dontHaveAccount} ',
+            style: const TextStyle(fontSize: 13, color: _textMuted),
           ),
           TextButton(
             onPressed: () {
@@ -589,9 +518,9 @@ class _LoginScreenState extends State<LoginScreen> {
               minimumSize: const Size(0, 0),
               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
             ),
-            child: const Text(
-              'Sign up',
-              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+            child: Text(
+              l.signUp,
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
             ),
           ),
         ],

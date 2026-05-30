@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'dart:typed_data';
 
+import '../../l10n/app_localizations.dart';
 import '../../models/cart_item.dart';
 import '../../models/product.dart';
 import '../../services/cart_service.dart';
@@ -14,11 +15,11 @@ import '../../widgets/auth_guard.dart';
 import '../../widgets/cart_added_bottom_bar.dart';
 import '../../widgets/page_transitions.dart';
 import '../cart/checkout_flow_screen.dart';
+import '../cart/cart_screen.dart';
 
 Map<String, String>? get _imageHeaders => null;
 
 // ── Design tokens ──────────────────────────────────────────────────────────
-const _bg           = Color(0xFFF7F8FA);
 const _white        = Color(0xFFFFFFFF);
 const _divider      = Color(0xFFEEF0F4);
 const _border       = Color(0xFFE2E6EF);
@@ -382,6 +383,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
 
   @override
   Widget build(BuildContext context) {
+    final l                = AppLocalizations.of(context);
     final product          = widget.product;
     final variantRows      = _activeVariants(product);
     final storageOptions   = variantRows.isNotEmpty
@@ -455,12 +457,12 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
 
         return Theme(
           data: Theme.of(context).copyWith(
-            scaffoldBackgroundColor: _bg,
+            scaffoldBackgroundColor: Theme.of(context).scaffoldBackgroundColor,
             textTheme:
-                GoogleFonts.interTextTheme(Theme.of(context).textTheme),
+                GoogleFonts.soraTextTheme(Theme.of(context).textTheme),
           ),
           child: Scaffold(
-            backgroundColor: _bg,
+            backgroundColor: Theme.of(context).scaffoldBackgroundColor,
             body: FadeTransition(
               opacity: _fadeAnim,
               child: SafeArea(
@@ -469,10 +471,16 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
                   children: [
                     // ── App Bar ──────────────────────────────────────────
                     _AppBar(
+                      title:      l.productDetails,
                       isFavorite: isFavorite,
                       onBack:     () => Navigator.of(context).pop(),
                       onFavorite: () =>
                           FavoriteService.instance.toggle(product),
+                      onCartTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const CartScreen()),
+                        );
+                      },
                     ),
 
                     // ── Scrollable body ──────────────────────────────────
@@ -488,8 +496,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
                               gallery:       gallery,
                               selectedIndex: safeIndex,
                               stockLabel: isOutOfStock
-                                  ? 'Out of Stock'
-                                  : 'In Stock',
+                                  ? l.outOfStock
+                                  : l.inStock,
                               isOutOfStock: isOutOfStock,
                               discountLabel: discountPct > 0
                                   ? '-${discountPct.round()}%'
@@ -568,7 +576,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
                                   if (storageOptions.isNotEmpty ||
                                       colorOptions.isNotEmpty ||
                                       conditionOptions.isNotEmpty) ...[
-                                    _SectionTitle(title: 'Options'),
+                                    _SectionTitle(title: l.filter),
                                     const SizedBox(height: 12),
                                     _Card(
                                       child: Column(
@@ -690,7 +698,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
                                   const SizedBox(height: 16),
 
                                   // ── Description ───────────────────────
-                                  _SectionTitle(title: 'Description'),
+                                  _SectionTitle(title: l.description),
                                   const SizedBox(height: 12),
                                   _Card(
                                     child: Column(
@@ -766,14 +774,18 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
 // ─────────────────────────────────────────────────────────────────────────────
 class _AppBar extends StatelessWidget {
   const _AppBar({
+    required this.title,
     required this.isFavorite,
     required this.onBack,
     required this.onFavorite,
+    required this.onCartTap,
   });
 
+  final String      title;
   final bool        isFavorite;
   final VoidCallback onBack;
   final VoidCallback onFavorite;
+  final VoidCallback onCartTap;
 
   @override
   Widget build(BuildContext context) {
@@ -794,7 +806,7 @@ class _AppBar extends StatelessWidget {
           ),
           Expanded(
             child: Text(
-              'Product Details',
+              title,
               textAlign: TextAlign.center,
               style: GoogleFonts.inter(
                 fontSize:   16,
@@ -811,8 +823,63 @@ class _AppBar extends StatelessWidget {
             bg:        isFavorite ? _redLight : null,
             onTap:     onFavorite,
           ),
+          const SizedBox(width: 4),
+          _CartIconBtn(onTap: onCartTap),
         ],
       ),
+    );
+  }
+}
+
+class _CartIconBtn extends StatelessWidget {
+  const _CartIconBtn({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: CartService.instance,
+      builder: (context, _) {
+        final count = CartService.instance.totalItems;
+        return Stack(
+          clipBehavior: Clip.none,
+          children: [
+            _IconBtn(
+              icon: Icons.shopping_cart_outlined,
+              onTap: onTap,
+            ),
+            if (count > 0)
+              Positioned(
+                top: 4,
+                right: 4,
+                child: IgnorePointer(
+                  child: Container(
+                    constraints: const BoxConstraints(
+                      minWidth: 16,
+                      minHeight: 16,
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    decoration: BoxDecoration(
+                      color: _accent,
+                      borderRadius: BorderRadius.circular(999),
+                      border: Border.all(color: Colors.white, width: 1.5),
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      '$count',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 8,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        );
+      },
     );
   }
 }
@@ -1237,7 +1304,7 @@ class _PriceQuantityCard extends StatelessWidget {
               ),
               // Stock badge
               _StockBadge(
-                label:        isOutOfStock ? 'Out of Stock' : 'In Stock',
+                label:        isOutOfStock ? AppLocalizations.of(context).outOfStock : AppLocalizations.of(context).inStock,
                 isOutOfStock: isOutOfStock,
               ),
             ],
@@ -1971,9 +2038,9 @@ class _BottomBar extends StatelessWidget {
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    child: const Text(
-                      'Add to Cart',
-                      style: TextStyle(
+                    child: Text(
+                      AppLocalizations.of(context).addToCart,
+                      style: const TextStyle(
                         fontWeight: FontWeight.w700,
                         fontSize:   14,
                       ),
@@ -1997,9 +2064,9 @@ class _BottomBar extends StatelessWidget {
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    child: const Text(
-                      'Buy Now',
-                      style: TextStyle(
+                    child: Text(
+                      AppLocalizations.of(context).buyNow,
+                      style: const TextStyle(
                         fontWeight: FontWeight.w700,
                         fontSize:   14,
                       ),

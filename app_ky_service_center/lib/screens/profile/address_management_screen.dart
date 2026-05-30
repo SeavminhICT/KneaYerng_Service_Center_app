@@ -1,5 +1,7 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
+import 'package:skeletonizer/skeletonizer.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../../models/saved_address.dart';
 import '../../services/address_book_service.dart';
 import 'address_form_screen.dart';
@@ -50,15 +52,19 @@ class _AddressManagementScreenState extends State<AddressManagementScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textPrimary = isDark ? const Color(0xFFE6EDF7) : const Color(0xFF111827);
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF6F7FB),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        title: const Text(
-          'Address Management',
-          style: TextStyle(fontWeight: FontWeight.w700),
+        title: Text(
+          l.savedAddresses,
+          style: const TextStyle(fontWeight: FontWeight.w700),
         ),
-        backgroundColor: Colors.white,
-        foregroundColor: const Color(0xFF111827),
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        foregroundColor: textPrimary,
         elevation: 0,
         actions: [
           IconButton(
@@ -70,42 +76,59 @@ class _AddressManagementScreenState extends State<AddressManagementScreen> {
       body: FutureBuilder<List<SavedAddress>>(
         future: _addressesFuture,
         builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
+          final isLoading = snapshot.connectionState == ConnectionState.waiting;
 
           if (snapshot.hasError) {
             return _EmptyState(
-              title: 'Unable to load addresses',
+              title: l.somethingWentWrong,
               subtitle: 'Please try again in a moment.',
               onRetry: _refresh,
+              buttonLabel: l.retry,
             );
           }
 
-          final addresses = snapshot.data ?? [];
-          if (addresses.isEmpty) {
+          final addresses = isLoading
+              ? List.generate(
+                  3,
+                  (index) => SavedAddress(
+                    id: 'mock-$index',
+                    name: 'Home Address',
+                    phone: '012 345 678',
+                    addressLine: '123 St, Phnom Penh, Cambodia',
+                    note: 'Near Central Market',
+                    lat: 0,
+                    lng: 0,
+                    createdAt: DateTime.now(),
+                  ),
+                )
+              : (snapshot.data ?? []);
+
+          if (!isLoading && addresses.isEmpty) {
             return _EmptyState(
-              title: 'No saved locations',
+              title: l.noData,
               subtitle: 'Tap + to add a new location in Cambodia.',
               onRetry: _addAddress,
-              buttonLabel: 'Add Location',
+              buttonLabel: l.addNewAddress,
             );
           }
 
-          return RefreshIndicator(
-            onRefresh: _refresh,
-            child: ListView.separated(
-              padding: const EdgeInsets.all(16),
-              itemCount: addresses.length,
-              separatorBuilder: (_, _) => const SizedBox(height: 12),
-              itemBuilder: (context, index) {
-                final address = addresses[index];
-                return _AddressCard(
-                  address: address,
-                  onEdit: () => _editAddress(address),
-                  onDelete: () => _deleteAddress(address),
-                );
-              },
+          return Skeletonizer(
+            enabled: isLoading,
+            child: RefreshIndicator(
+              onRefresh: _refresh,
+              child: ListView.separated(
+                padding: const EdgeInsets.all(16),
+                itemCount: addresses.length,
+                separatorBuilder: (_, _) => const SizedBox(height: 12),
+                itemBuilder: (context, index) {
+                  final address = addresses[index];
+                  return _AddressCard(
+                    address: address,
+                    onEdit: isLoading ? () {} : () => _editAddress(address),
+                    onDelete: isLoading ? () {} : () => _deleteAddress(address),
+                  );
+                },
+              ),
             ),
           );
         },
@@ -113,8 +136,9 @@ class _AddressManagementScreenState extends State<AddressManagementScreen> {
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _addAddress,
         backgroundColor: const Color(0xFF2563EB),
+        foregroundColor: Colors.white,
         icon: const Icon(Icons.add_location_alt_outlined),
-        label: const Text('Add Location'),
+        label: Text(l.addNewAddress),
       ),
     );
   }
@@ -133,12 +157,19 @@ class _AddressCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = Theme.of(context).cardColor;
+    final border = isDark ? const Color(0xFF2B3442) : const Color(0xFFE6E9F0);
+    final textPrimary = isDark ? const Color(0xFFE6EDF7) : const Color(0xFF111827);
+    final textMuted = isDark ? const Color(0xFF97A2B5) : const Color(0xFF6B7280);
+    final textBody = isDark ? const Color(0xFFD3E0F8) : const Color(0xFF374151);
+
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: cardBg,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE6E9F0)),
+        border: Border.all(color: border),
         boxShadow: const [
           BoxShadow(
             color: Color(0x0F000000),
@@ -156,7 +187,7 @@ class _AddressCard extends StatelessWidget {
                 height: 34,
                 width: 34,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFEFF6FF),
+                  color: isDark ? const Color(0xFF1D2635) : const Color(0xFFEFF6FF),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: const Icon(
@@ -172,18 +203,18 @@ class _AddressCard extends StatelessWidget {
                   children: [
                     Text(
                       address.name,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontWeight: FontWeight.w700,
-                        color: Color(0xFF111827),
+                        color: textPrimary,
                       ),
                     ),
                     if (address.phone.trim().isNotEmpty) ...[
                       const SizedBox(height: 4),
                       Text(
                         address.phone,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 12,
-                          color: Color(0xFF6B7280),
+                          color: textMuted,
                         ),
                       ),
                     ],
@@ -203,8 +234,8 @@ class _AddressCard extends StatelessWidget {
           const SizedBox(height: 10),
           Text(
             address.addressLine,
-            style: const TextStyle(
-              color: Color(0xFF374151),
+            style: TextStyle(
+              color: textBody,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -212,8 +243,8 @@ class _AddressCard extends StatelessWidget {
             const SizedBox(height: 6),
             Text(
               address.note,
-              style: const TextStyle(
-                color: Color(0xFF6B7280),
+              style: TextStyle(
+                color: textMuted,
                 fontSize: 12,
               ),
             ),
@@ -239,6 +270,10 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textPrimary = isDark ? const Color(0xFFE6EDF7) : const Color(0xFF111827);
+    final textMuted = isDark ? const Color(0xFF97A2B5) : const Color(0xFF6B7280);
+
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
@@ -249,7 +284,7 @@ class _EmptyState extends StatelessWidget {
               height: 64,
               width: 64,
               decoration: BoxDecoration(
-                color: const Color(0xFFEFF6FF),
+                color: isDark ? const Color(0xFF1D2635) : const Color(0xFFEFF6FF),
                 borderRadius: BorderRadius.circular(18),
               ),
               child: const Icon(
@@ -261,19 +296,19 @@ class _EmptyState extends StatelessWidget {
             const SizedBox(height: 16),
             Text(
               title,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w700,
-                color: Color(0xFF111827),
+                color: textPrimary,
               ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 6),
             Text(
               subtitle,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 12,
-                color: Color(0xFF6B7280),
+                color: textMuted,
               ),
               textAlign: TextAlign.center,
             ),

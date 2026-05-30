@@ -18,6 +18,7 @@ import '../models/search_results.dart';
 import '../models/search_suggestion.dart';
 import '../models/category.dart';
 import '../models/banner_item.dart';
+import '../models/cart_item.dart';
 import '../models/order_tracking_notification.dart';
 import '../models/admin_notification_campaign.dart';
 import '../models/support_chat.dart';
@@ -28,6 +29,188 @@ class ApiService {
   static final ValueNotifier<int> _profileVersion = ValueNotifier<int>(0);
 
   static ValueListenable<int> get profileVersionListenable => _profileVersion;
+
+  static Map<String, String>? _serverUpdatesCache;
+  static DateTime? _serverUpdatesFetchTime;
+
+  // ================= CACHING HELPERS =================
+  static Future<Map<String, String>> getLatestServerUpdates({
+    bool forceRefresh = false,
+  }) async {
+    if (!forceRefresh &&
+        _serverUpdatesCache != null &&
+        _serverUpdatesFetchTime != null &&
+        DateTime.now().difference(_serverUpdatesFetchTime!).inSeconds < 30) {
+      return _serverUpdatesCache!;
+    }
+
+    try {
+      final res = await http
+          .get(
+            Uri.parse('$baseUrl/updates'),
+            headers: _buildHeaders(),
+          )
+          .timeout(const Duration(seconds: 3));
+
+      if (res.statusCode == 200) {
+        final decoded = jsonDecode(res.body);
+        if (decoded is Map && decoded['data'] is Map) {
+          final data = Map<String, dynamic>.from(decoded['data']);
+          final updates = data.map(
+            (key, value) => MapEntry(key, value.toString()),
+          );
+          _serverUpdatesCache = updates;
+          _serverUpdatesFetchTime = DateTime.now();
+          return updates;
+        }
+      }
+    } catch (e) {
+      debugPrint('[ApiService] Failed to fetch server updates: $e');
+    }
+
+    return _serverUpdatesCache ?? const {};
+  }
+
+  static Future<String?> _getCachedData(String key) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      return prefs.getString(key);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static Future<int?> _getCachedTimestamp(String key) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      return prefs.getInt('${key}_timestamp');
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static Future<String?> _getCachedEtag(String key) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      return prefs.getString('${key}_etag');
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static Future<void> _setCache(String key, String data, String? etag) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(key, data);
+      await prefs.setInt(
+        '${key}_timestamp',
+        DateTime.now().millisecondsSinceEpoch,
+      );
+      if (etag != null) {
+        await prefs.setString('${key}_etag', etag);
+      } else {
+        await prefs.remove('${key}_etag');
+      }
+    } catch (e) {
+      debugPrint('[ApiService] Error saving cache: $e');
+    }
+  }
+
+  static Future<String> _fetchWithCache({
+    required String cacheKey,
+    required String updateType,
+    required Uri uri,
+    required Map<String, String> headers,
+    bool forceRefresh = false,
+  }) async {
+    final cachedJson = await _getCachedData(cacheKey);
+    final cachedTimeMs = await _getCachedTimestamp(cacheKey);
+    final cachedEtag = await _getCachedEtag(cacheKey);
+
+    if (!forceRefresh && cachedJson != null && cachedTimeMs != null) {
+      final localTime = DateTime.fromMillisecondsSinceEpoch(cachedTimeMs);
+      final age = DateTime.now().difference(localTime);
+
+      // 1. Serve immediately from cache if it is fresh (< 60 seconds old)
+      if (age.inSeconds < 60) {
+        debugPrint(
+          '[ApiService] Serving $updateType from fresh cache: $cacheKey (age: ${age.inSeconds}s)',
+        );
+        return cachedJson;
+      }
+
+      // 2. Otherwise check server updates when that resource is advertised.
+      final serverUpdates = await getLatestServerUpdates();
+      DateTime? serverTime;
+      if (serverUpdates.containsKey(updateType)) {
+        try {
+          serverTime = DateTime.parse(serverUpdates[updateType]!);
+        } catch (_) {}
+      }
+
+      // 3. If cache is newer than or equal to server update, return cache and renew TTL
+      if (serverTime != null &&
+          (localTime.isAfter(serverTime) ||
+              localTime.isAtSameMomentAs(serverTime))) {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setInt(
+          '${cacheKey}_timestamp',
+          DateTime.now().millisecondsSinceEpoch,
+        );
+        debugPrint(
+          '[ApiService] Serving $updateType from cache (validated): $cacheKey',
+        );
+        return cachedJson;
+      }
+    }
+
+    final reqHeaders = _buildHeaders(headers);
+    if (cachedEtag != null && cachedEtag.isNotEmpty) {
+      reqHeaders['If-None-Match'] = cachedEtag;
+    }
+
+    try {
+      final res = await http
+          .get(uri, headers: reqHeaders)
+          .timeout(const Duration(seconds: 12));
+
+      if (res.statusCode == 304) {
+        debugPrint(
+          '[ApiService] ETag 304 Not Modified for $updateType ($cacheKey)',
+        );
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setInt(
+          '${cacheKey}_timestamp',
+          DateTime.now().millisecondsSinceEpoch,
+        );
+        return cachedJson ?? '';
+      }
+
+      if (res.statusCode == 200) {
+        final etag =
+            res.headers['etag'] ?? res.headers['ETag'] ?? res.headers['ETAG'];
+        await _setCache(cacheKey, res.body, etag);
+        return res.body;
+      }
+
+      if (cachedJson != null) {
+        debugPrint(
+          '[ApiService] API returned ${res.statusCode}. Falling back to cache.',
+        );
+        return cachedJson;
+      }
+
+      throw Exception(
+        'Failed to fetch $updateType from server (status ${res.statusCode})',
+      );
+    } catch (e) {
+      if (cachedJson != null) {
+        debugPrint('[ApiService] Network error: $e. Falling back to cache.');
+        return cachedJson;
+      }
+      rethrow;
+    }
+  }
 
   static const String _baseUrlOverride = String.fromEnvironment(
     'API_BASE_URL',
@@ -42,12 +225,27 @@ class ApiService {
   static const int _maxBaseUrlHistoryEntries = 8;
   static const String _loopbackApi = 'http://127.0.0.1:8000/api';
   static const String _androidEmulatorApi = 'http://10.0.2.2:8000/api';
+  // ⚡ DEV: Update this whenever you restart ngrok with a new URL
+  static const String _ngrokDevUrl =
+      'https://unkempt-flashcard-wieldable.ngrok-free.dev/api';
   static String? _runtimeBaseUrl;
   static String? _autoDetectedBaseUrl;
   static String? _resolvedBaseUrl;
 
   static Future<void> initialize() async {
     final prefs = await SharedPreferences.getInstance();
+
+    // ⚡ DEV SHORTCUT: If a hardcoded ngrok URL is set, use it immediately
+    // and skip the slow LAN-scanning auto-detection. Remove or blank out
+    // _ngrokDevUrl to re-enable auto-detection.
+    if (_ngrokDevUrl.isNotEmpty) {
+      _resolvedBaseUrl = _normalizeBaseUrl(_ngrokDevUrl);
+      _runtimeBaseUrl = _resolvedBaseUrl;
+      await _rememberBaseUrlInHistory(_resolvedBaseUrl!, prefs: prefs);
+      debugPrint('[ApiService] DEV: Using ngrok URL → $_resolvedBaseUrl');
+      return;
+    }
+
     final stored = prefs.getString(_baseUrlPreferenceKey);
     if (stored == null || stored.trim().isEmpty) {
       _runtimeBaseUrl = null;
@@ -163,7 +361,7 @@ class ApiService {
 
     try {
       final response = await http
-          .get(probeUri, headers: const {'Accept': 'application/json'})
+          .get(probeUri, headers: _buildHeaders())
           .timeout(const Duration(seconds: 8));
 
       if (_looksLikeBackendApiResponse(response)) {
@@ -298,8 +496,8 @@ class ApiService {
     return OtpRequestResult(
       ok: res.statusCode >= 200 && res.statusCode < 300,
       message: map['message']?.toString() ?? 'OTP request completed.',
-      expiresInSec: _parseInt(map['expires_in_sec']),
-      resendInSec: _parseInt(map['resend_in_sec']),
+      expiresInSec: _parseInt(map['expiresInSec'] ?? map['expires_in_sec']),
+      resendInSec: _parseInt(map['resendInSec'] ?? map['resend_in_sec']),
     );
   }
 
@@ -360,7 +558,7 @@ class ApiService {
       ok: res.statusCode >= 200 && res.statusCode < 300,
       message: map['message']?.toString() ?? 'OTP verification completed.',
       token: token,
-      resetToken: map['reset_token']?.toString(),
+      resetToken: (map['resetPasswordToken'] ?? map['reset_token'])?.toString(),
     );
   }
 
@@ -420,28 +618,107 @@ class ApiService {
       ok: res.statusCode >= 200 && res.statusCode < 300,
       message: map['message']?.toString() ?? 'OTP verification completed.',
       token: token,
-      resetToken: map['reset_token']?.toString(),
+      resetToken: (map['resetPasswordToken'] ?? map['reset_token'])?.toString(),
     );
   }
 
-  static Future<String?> resetPasswordWithOtp({
-    required String resetToken,
-    required String password,
-    required String confirmPassword,
+  static Future<OtpRequestResult> sendForgotPasswordOtp({
+    required String identifier,
   }) async {
     http.Response res;
     try {
       res = await http
           .post(
-            Uri.parse('$baseUrl/password/reset-with-otp'),
+            Uri.parse('$baseUrl/auth/forgot-password/send-otp'),
+            headers: const {
+              'Accept': 'application/json',
+              'Content-Type': 'application/json',
+            },
+            body: jsonEncode({'identifier': identifier.trim()}),
+          )
+          .timeout(const Duration(seconds: 15));
+    } catch (_) {
+      return const OtpRequestResult(
+        ok: false,
+        message: 'Unable to send OTP. Please try again.',
+      );
+    }
+
+    dynamic decoded;
+    try {
+      decoded = jsonDecode(res.body);
+    } catch (_) {}
+
+    final map = decoded is Map
+        ? Map<String, dynamic>.from(decoded)
+        : const <String, dynamic>{};
+
+    return OtpRequestResult(
+      ok: res.statusCode >= 200 && res.statusCode < 300,
+      message: map['message']?.toString() ?? 'OTP request completed.',
+      expiresInSec: _parseInt(map['expiresInSec'] ?? map['expires_in_sec']),
+      resendInSec: _parseInt(map['resendInSec'] ?? map['resend_in_sec']),
+    );
+  }
+
+  static Future<OtpVerifyResult> verifyForgotPasswordOtp({
+    required String identifier,
+    required String otp,
+  }) async {
+    http.Response res;
+    try {
+      res = await http
+          .post(
+            Uri.parse('$baseUrl/auth/forgot-password/verify-otp'),
             headers: const {
               'Accept': 'application/json',
               'Content-Type': 'application/json',
             },
             body: jsonEncode({
-              'reset_token': resetToken,
-              'password': password,
-              'password_confirmation': confirmPassword,
+              'identifier': identifier.trim(),
+              'otp': otp.trim(),
+            }),
+          )
+          .timeout(const Duration(seconds: 15));
+    } catch (_) {
+      return const OtpVerifyResult(
+        ok: false,
+        message: 'Unable to verify OTP right now.',
+      );
+    }
+
+    dynamic decoded;
+    try {
+      decoded = jsonDecode(res.body);
+    } catch (_) {}
+
+    final map = decoded is Map
+        ? Map<String, dynamic>.from(decoded)
+        : const <String, dynamic>{};
+
+    return OtpVerifyResult(
+      ok: res.statusCode >= 200 && res.statusCode < 300,
+      message: map['message']?.toString() ?? 'OTP verification completed.',
+      resetToken: (map['resetPasswordToken'] ?? map['reset_token'])?.toString(),
+    );
+  }
+
+  static Future<String?> resetForgotPassword({
+    required String resetPasswordToken,
+    required String newPassword,
+  }) async {
+    http.Response res;
+    try {
+      res = await http
+          .post(
+            Uri.parse('$baseUrl/auth/forgot-password/reset-password'),
+            headers: const {
+              'Accept': 'application/json',
+              'Content-Type': 'application/json',
+            },
+            body: jsonEncode({
+              'resetPasswordToken': resetPasswordToken,
+              'newPassword': newPassword,
             }),
           )
           .timeout(const Duration(seconds: 15));
@@ -461,6 +738,17 @@ class ApiService {
     } catch (_) {}
 
     return 'Unable to reset password.';
+  }
+
+  static Future<String?> resetPasswordWithOtp({
+    required String resetToken,
+    required String password,
+    required String confirmPassword,
+  }) async {
+    return resetForgotPassword(
+      resetPasswordToken: resetToken,
+      newPassword: password,
+    );
   }
 
   // ================= LOGIN =================
@@ -839,6 +1127,11 @@ class ApiService {
       addCandidate(raw);
     }
 
+    // ⚡ DEV: Try ngrok tunnel first (works from any real device)
+    if (_ngrokDevUrl.isNotEmpty) {
+      addCandidate(_ngrokDevUrl);
+    }
+
     if (defaultTargetPlatform != TargetPlatform.android &&
         defaultTargetPlatform != TargetPlatform.iOS) {
       addCandidate(await local_host_resolver.detectLocalServerBaseUrl());
@@ -901,6 +1194,23 @@ class ApiService {
     return null;
   }
 
+  /// Returns headers that include the ngrok bypass header when the current
+  /// base URL is an ngrok tunnel. This prevents ngrok's browser-warning page
+  /// from being returned instead of JSON.
+  static Map<String, String> _buildHeaders([
+    Map<String, String> extra = const {},
+  ]) {
+    final headers = <String, String>{
+      'Accept': 'application/json',
+      ...extra,
+    };
+    final url = baseUrl.toLowerCase();
+    if (url.contains('ngrok')) {
+      headers['ngrok-skip-browser-warning'] = 'true';
+    }
+    return headers;
+  }
+
   static Future<bool> _isBaseUrlReachable(String raw) async {
     final normalized = _normalizeBaseUrl(raw);
     if (normalized.isEmpty) {
@@ -911,9 +1221,15 @@ class ApiService {
       '$normalized/categories',
     ).replace(queryParameters: const {'per_page': '1', 'status': 'active'});
 
+    // Build headers — include ngrok bypass if needed
+    final headers = <String, String>{'Accept': 'application/json'};
+    if (normalized.toLowerCase().contains('ngrok')) {
+      headers['ngrok-skip-browser-warning'] = 'true';
+    }
+
     try {
       final response = await http
-          .get(probeUri, headers: const {'Accept': 'application/json'})
+          .get(probeUri, headers: headers)
           .timeout(const Duration(milliseconds: 2200));
       return _looksLikeBackendApiResponse(response);
     } catch (_) {
@@ -1488,6 +1804,7 @@ class ApiService {
     String? status,
     int perPage = 20,
     String? queryText,
+    bool forceRefresh = false,
   }) async {
     final query = <String, String>{};
     if (status != null && status.isNotEmpty) {
@@ -1505,59 +1822,63 @@ class ApiService {
     final uri = Uri.parse(
       '$baseUrl/products',
     ).replace(queryParameters: query.isEmpty ? null : query);
-    final res = await http.get(
-      uri,
-      headers: const {'Accept': 'application/json'},
-    );
 
-    if (res.statusCode != 200) {
-      throw Exception('Failed to load products');
-    }
+    final cacheKey =
+        'cached_products_${categoryId ?? 0}_${categoryName ?? ''}_${status ?? ''}_${perPage}_${queryText ?? ''}';
 
-    dynamic decoded;
     try {
-      decoded = jsonDecode(res.body);
-    } catch (_) {
-      return [];
-    }
-
-    if (decoded is Map && decoded['success'] == false) {
-      final message = decoded['message']?.toString().trim();
-      throw Exception(
-        (message != null && message.isNotEmpty)
-            ? message
-            : 'Invalid products response',
+      final body = await _fetchWithCache(
+        cacheKey: cacheKey,
+        updateType: 'products',
+        uri: uri,
+        headers: const {'Accept': 'application/json'},
+        forceRefresh: forceRefresh,
       );
-    }
 
-    final rawList = decoded is Map
-        ? decoded['data'] ?? decoded['products'] ?? decoded['items']
-        : decoded;
-    if (rawList is! List) {
-      throw Exception('Invalid products response');
-    }
+      if (body.isEmpty) return [];
 
-    final products = rawList
-        .whereType<Map>()
-        .map((item) => Product.fromJson(Map<String, dynamic>.from(item)))
-        .toList();
+      final decoded = jsonDecode(body);
+      if (decoded is Map && decoded['success'] == false) {
+        final message = decoded['message']?.toString().trim();
+        throw Exception(
+          (message != null && message.isNotEmpty)
+              ? message
+              : 'Invalid products response',
+        );
+      }
 
-    if (categoryId == null &&
-        (categoryName == null || categoryName.trim().isEmpty)) {
-      return products;
-    }
+      final rawList = decoded is Map
+          ? decoded['data'] ?? decoded['products'] ?? decoded['items']
+          : decoded;
+      if (rawList is! List) {
+        throw Exception('Invalid products response');
+      }
 
-    if (categoryId != null && categoryId > 0) {
-      return products
-          .where((product) => product.categoryId == categoryId)
+      final products = rawList
+          .whereType<Map>()
+          .map((item) => Product.fromJson(Map<String, dynamic>.from(item)))
           .toList();
-    }
 
-    final target = categoryName!.trim().toLowerCase();
-    return products.where((product) {
-      final name = (product.categoryName ?? '').trim().toLowerCase();
-      return name == target;
-    }).toList();
+      if (categoryId == null &&
+          (categoryName == null || categoryName.trim().isEmpty)) {
+        return products;
+      }
+
+      if (categoryId != null && categoryId > 0) {
+        return products
+            .where((product) => product.categoryId == categoryId)
+            .toList();
+      }
+
+      final target = categoryName!.trim().toLowerCase();
+      return products.where((product) {
+        final name = (product.categoryName ?? '').trim().toLowerCase();
+        return name == target;
+      }).toList();
+    } catch (e) {
+      debugPrint('[ApiService] Error fetching products: $e');
+      rethrow;
+    }
   }
 
   // ================= CATEGORIES =================
@@ -1565,28 +1886,39 @@ class ApiService {
     String? status = 'active',
     int perPage = 100,
     String? query,
+    bool forceRefresh = false,
   }) async {
+    final cacheKey = 'cached_categories_${status}_${perPage}_${query ?? ''}';
     final params = <String, String>{
       'per_page': perPage.clamp(1, 100).toString(),
       if (status != null && status.trim().isNotEmpty) 'status': status.trim(),
       if (query != null && query.trim().isNotEmpty) 'q': query.trim(),
     };
-    final res = await http.get(
-      Uri.parse('$baseUrl/categories').replace(queryParameters: params),
-      headers: const {'Accept': 'application/json'},
-    );
 
-    if (res.statusCode != 200) {
-      throw Exception('Failed to load categories');
-    }
+    final uri = Uri.parse(
+      '$baseUrl/categories',
+    ).replace(queryParameters: params);
 
-    dynamic decoded;
     try {
-      decoded = jsonDecode(res.body);
-    } catch (_) {
+      final body = await _fetchWithCache(
+        cacheKey: cacheKey,
+        updateType: 'categories',
+        uri: uri,
+        headers: const {'Accept': 'application/json'},
+        forceRefresh: forceRefresh,
+      );
+
+      if (body.isEmpty) return [];
+
+      final decoded = jsonDecode(body);
+      return _parseCategoriesJson(decoded);
+    } catch (e) {
+      debugPrint('[ApiService] Error fetching categories: $e');
       return [];
     }
+  }
 
+  static List<Category> _parseCategoriesJson(dynamic decoded) {
     List<dynamic>? rawList;
     if (decoded is List) {
       rawList = decoded;
@@ -1613,30 +1945,38 @@ class ApiService {
   }
 
   // ================= BANNERS =================
-  static Future<List<BannerItem>> fetchBanners() async {
-    final res = await http
-        .get(
-          Uri.parse('$baseUrl/banners'),
-          headers: const {'Accept': 'application/json'},
-        )
-        .timeout(const Duration(seconds: 12));
+  static Future<List<BannerItem>> fetchBanners({
+    bool forceRefresh = false,
+  }) async {
+    final uri = Uri.parse('$baseUrl/banners');
+    final cacheKey = 'cached_banners';
 
-    if (res.statusCode != 200) {
-      debugPrint(
-        '[ApiService] banners status=${res.statusCode} body=${res.body}',
+    try {
+      final body = await _fetchWithCache(
+        cacheKey: cacheKey,
+        updateType: 'banners',
+        uri: uri,
+        headers: const {'Accept': 'application/json'},
+        forceRefresh: forceRefresh,
       );
+
+      if (body.isEmpty) return [];
+
+      final decoded = jsonDecode(body);
+      final rawList = decoded['data'] ?? decoded['banners'] ?? decoded;
+      if (rawList is! List) return [];
+
+      return rawList
+          .whereType<Map>()
+          .map((item) => BannerItem.fromJson(Map<String, dynamic>.from(item)))
+          .where(
+            (item) => item.isActive && (item.imageUrl?.isNotEmpty ?? false),
+          )
+          .toList();
+    } catch (e) {
+      debugPrint('[ApiService] Error fetching banners: $e');
       throw Exception('Failed to load banners');
     }
-
-    final decoded = jsonDecode(res.body);
-    final rawList = decoded['data'] ?? decoded['banners'] ?? decoded;
-    if (rawList is! List) return [];
-
-    return rawList
-        .whereType<Map>()
-        .map((item) => BannerItem.fromJson(Map<String, dynamic>.from(item)))
-        .where((item) => item.isActive && (item.imageUrl?.isNotEmpty ?? false))
-        .toList();
   }
 
   // ================= VOUCHER =================
@@ -1766,25 +2106,24 @@ class ApiService {
   }
 
   // ================= CHECKOUT OPTIONS =================
-  static Future<CheckoutOptions> fetchCheckoutOptions() async {
-    http.Response? res;
-    try {
-      res = await http
-          .get(
-            Uri.parse('$baseUrl/checkout/options'),
-            headers: const {'Accept': 'application/json'},
-          )
-          .timeout(const Duration(seconds: 12));
-    } catch (_) {
-      return CheckoutOptions.fallback();
-    }
-
-    if (res.statusCode != 200) {
-      return CheckoutOptions.fallback();
-    }
+  static Future<CheckoutOptions> fetchCheckoutOptions({
+    bool forceRefresh = false,
+  }) async {
+    final uri = Uri.parse('$baseUrl/checkout/options');
+    final cacheKey = 'cached_checkout_options';
 
     try {
-      final decoded = jsonDecode(res.body);
+      final body = await _fetchWithCache(
+        cacheKey: cacheKey,
+        updateType: 'checkout_options',
+        uri: uri,
+        headers: const {'Accept': 'application/json'},
+        forceRefresh: forceRefresh,
+      );
+
+      if (body.isEmpty) return CheckoutOptions.fallback();
+
+      final decoded = jsonDecode(body);
       if (decoded is Map<String, dynamic>) {
         return CheckoutOptions.fromApi(decoded);
       }
@@ -1795,6 +2134,199 @@ class ApiService {
     } catch (_) {
       return CheckoutOptions.fallback();
     }
+  }
+
+  // ================= CART =================
+  static Future<CartApiResult> fetchCartItems() async {
+    final token = await getToken();
+    if (token == null || token.isEmpty) {
+      return const CartApiResult(items: []);
+    }
+
+    http.Response res;
+    try {
+      res = await http
+          .get(
+            Uri.parse('$baseUrl/cart'),
+            headers: {
+              'Accept': 'application/json',
+              'Authorization': 'Bearer $token',
+            },
+          )
+          .timeout(const Duration(seconds: 12));
+    } catch (_) {
+      return const CartApiResult(
+        errorMessage: 'Unable to reach the cart service.',
+      );
+    }
+
+    return _parseCartResponse(res, fallbackMessage: 'Unable to load cart.');
+  }
+
+  static Future<CartApiResult> addCartItem({
+    required Product product,
+    int quantity = 1,
+    String? variant,
+    int? variantId,
+  }) async {
+    final token = await getToken();
+    if (token == null || token.isEmpty) {
+      return const CartApiResult(errorMessage: 'Please log in to add items.');
+    }
+
+    final payload = <String, dynamic>{
+      'product_id': product.id,
+      'item_type': 'product',
+      'item_id': product.id,
+      'quantity': quantity < 1 ? 1 : quantity,
+    };
+    if (variantId != null) {
+      payload['product_variant_id'] = variantId;
+    }
+    if (variant != null && variant.trim().isNotEmpty) {
+      payload['variant_label'] = variant.trim();
+    }
+
+    http.Response res;
+    try {
+      res = await http
+          .post(
+            Uri.parse('$baseUrl/cart/items'),
+            headers: {
+              'Accept': 'application/json',
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $token',
+            },
+            body: jsonEncode(payload),
+          )
+          .timeout(const Duration(seconds: 12));
+    } catch (_) {
+      return const CartApiResult(errorMessage: 'Unable to add item to cart.');
+    }
+
+    return _parseCartResponse(res, fallbackMessage: 'Unable to add item.');
+  }
+
+  static Future<CartApiResult> updateCartItemQuantity({
+    required int cartItemId,
+    required int quantity,
+  }) async {
+    final token = await getToken();
+    if (token == null || token.isEmpty) {
+      return const CartApiResult(errorMessage: 'Please log in to update cart.');
+    }
+
+    http.Response res;
+    try {
+      res = await http
+          .patch(
+            Uri.parse('$baseUrl/cart/items/$cartItemId'),
+            headers: {
+              'Accept': 'application/json',
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $token',
+            },
+            body: jsonEncode({'quantity': quantity < 1 ? 1 : quantity}),
+          )
+          .timeout(const Duration(seconds: 12));
+    } catch (_) {
+      return const CartApiResult(errorMessage: 'Unable to update cart item.');
+    }
+
+    return _parseCartResponse(res, fallbackMessage: 'Unable to update cart.');
+  }
+
+  static Future<CartApiResult> removeCartItem({required int cartItemId}) async {
+    final token = await getToken();
+    if (token == null || token.isEmpty) {
+      return const CartApiResult(errorMessage: 'Please log in to update cart.');
+    }
+
+    http.Response res;
+    try {
+      res = await http
+          .delete(
+            Uri.parse('$baseUrl/cart/items/$cartItemId'),
+            headers: {
+              'Accept': 'application/json',
+              'Authorization': 'Bearer $token',
+            },
+          )
+          .timeout(const Duration(seconds: 12));
+    } catch (_) {
+      return const CartApiResult(errorMessage: 'Unable to remove cart item.');
+    }
+
+    return _parseCartResponse(res, fallbackMessage: 'Unable to update cart.');
+  }
+
+  static CartApiResult _parseCartResponse(
+    http.Response response, {
+    required String fallbackMessage,
+  }) {
+    dynamic decoded;
+    try {
+      decoded = response.body.isEmpty ? null : jsonDecode(response.body);
+    } catch (_) {}
+
+    if (response.statusCode == 401) {
+      return const CartApiResult(errorMessage: 'Please log in to view cart.');
+    }
+
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      return CartApiResult(
+        errorMessage: _extractApiMessage(decoded) ?? fallbackMessage,
+      );
+    }
+
+    final cartMap = _extractCartMap(decoded);
+    final rawItems = cartMap?['items'];
+    if (rawItems is! List) {
+      return const CartApiResult(items: []);
+    }
+
+    final items = rawItems
+        .whereType<Map>()
+        .map((item) => CartItem.fromApi(Map<String, dynamic>.from(item)))
+        .toList();
+
+    return CartApiResult(items: items);
+  }
+
+  static Map<String, dynamic>? _extractCartMap(dynamic decoded) {
+    if (decoded is Map<String, dynamic>) {
+      final data = decoded['data'];
+      if (data is Map<String, dynamic>) return data;
+      if (data is Map) return Map<String, dynamic>.from(data);
+      return decoded;
+    }
+    if (decoded is Map) {
+      final map = Map<String, dynamic>.from(decoded);
+      final data = map['data'];
+      if (data is Map<String, dynamic>) return data;
+      if (data is Map) return Map<String, dynamic>.from(data);
+      return map;
+    }
+    return null;
+  }
+
+  static String? _extractApiMessage(dynamic decoded) {
+    if (decoded is Map) {
+      final message = decoded['message'];
+      if (message is String && message.trim().isNotEmpty) {
+        return message.trim();
+      }
+      final errors = decoded['errors'];
+      if (errors is Map) {
+        for (final value in errors.values) {
+          if (value is List && value.isNotEmpty) {
+            final first = value.first?.toString().trim();
+            if (first != null && first.isNotEmpty) return first;
+          }
+        }
+      }
+    }
+    return null;
   }
 
   // ================= ORDERS =================
@@ -2598,6 +3130,15 @@ class ApiService {
       return false;
     }
   }
+}
+
+class CartApiResult {
+  const CartApiResult({this.items = const [], this.errorMessage});
+
+  final List<CartItem> items;
+  final String? errorMessage;
+
+  bool get isSuccess => errorMessage == null;
 }
 
 class OrderCreateResult {

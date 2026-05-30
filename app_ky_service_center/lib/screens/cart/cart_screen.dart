@@ -3,16 +3,17 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../l10n/app_localizations.dart';
 import '../../models/cart_item.dart';
 import '../../services/api_service.dart';
 import '../../services/cart_service.dart';
 import '../../widgets/auth_guard.dart';
 import '../../widgets/page_transitions.dart';
+import '../support/support_chat_screen.dart';
 import 'checkout_flow_screen.dart';
 
 Map<String, String>? get _imageHeaders => null;
 
-const _pageBg = Color(0xFFF3F7FF);
 const _surface = Color(0xFFFFFFFF);
 const _surfaceSoft = Color(0xFFF8FBFF);
 const _border = Color(0xFFD7E3F4);
@@ -87,6 +88,7 @@ class _CartScreenState extends State<CartScreen> with TickerProviderStateMixin {
     ).animate(CurvedAnimation(parent: _shakeController, curve: Curves.easeOut));
 
     CartService.instance.addListener(_handleCartChanged);
+    unawaited(CartService.instance.loadFromApi());
   }
 
   @override
@@ -307,6 +309,7 @@ class _CartScreenState extends State<CartScreen> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final theme = Theme.of(context);
 
     return AnimatedBuilder(
@@ -321,10 +324,37 @@ class _CartScreenState extends State<CartScreen> with TickerProviderStateMixin {
         final total = (subtotal + shipping + tax - discount).clamp(0, 9999999);
         return Theme(
           data: theme.copyWith(
-            textTheme: GoogleFonts.interTextTheme(theme.textTheme),
+            textTheme: GoogleFonts.soraTextTheme(theme.textTheme),
           ),
           child: Scaffold(
-            backgroundColor: _pageBg,
+            backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+            floatingActionButton: Padding(
+              padding: EdgeInsets.only(bottom: items.isNotEmpty ? 80 : 0),
+              child: FloatingActionButton.extended(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const SupportChatScreen(
+                      contextType: 'cart',
+                      subject: 'Cart Support',
+                    ),
+                  ),
+                ),
+                backgroundColor: const Color(0xFF3B63FF),
+                foregroundColor: Colors.white,
+                elevation: 6,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                icon: const Icon(Icons.headset_mic_rounded, size: 20),
+                label: Text(
+                  l.support,
+                  style: GoogleFonts.sora(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
             body: SafeArea(
               child: Column(
                 children: [
@@ -418,6 +448,7 @@ class _CartHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return Row(
       children: [
         _IconBtn(
@@ -432,7 +463,7 @@ class _CartHeader extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'My Cart',
+                l.cart,
                 style: GoogleFonts.poppins(
                   fontSize: 24,
                   fontWeight: FontWeight.w700,
@@ -688,9 +719,9 @@ class _CartItemCard extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
-                        const Text(
-                          'Total',
-                          style: TextStyle(
+                        Text(
+                          AppLocalizations.of(context).total,
+                          style: const TextStyle(
                             fontSize: 10.5,
                             fontWeight: FontWeight.w700,
                             color: _muted,
@@ -861,6 +892,7 @@ class _PromoCodeCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final hasError = errorText != null && errorText!.isNotEmpty;
     final applyButtonEnabled = _inputEnabled;
     final showChipView = showChip && (appliedCode?.isNotEmpty ?? false);
@@ -887,9 +919,9 @@ class _PromoCodeCard extends StatelessWidget {
         case _ApplyState.successCheck:
           return const Icon(Icons.check_circle_rounded, key: ValueKey('check'));
         case _ApplyState.applied:
-          return const Text('Applied', key: ValueKey('applied'));
+          return Text(l.apply, key: const ValueKey('applied'));
         case _ApplyState.idle:
-          return const Text('Apply', key: ValueKey('apply'));
+          return Text(l.apply, key: const ValueKey('apply'));
       }
     }
 
@@ -1099,7 +1131,7 @@ class _PromoCodeCard extends StatelessWidget {
                 foregroundColor: _ink,
                 textStyle: const TextStyle(fontWeight: FontWeight.w700),
               ),
-              child: const Text('Remove'),
+              child: Text(l.remove),
             ),
           ],
         ),
@@ -1208,8 +1240,8 @@ class _PromoCodeCard extends StatelessWidget {
                           border: Border.all(color: const Color(0xFFCAE8D7)),
                         ),
                         child: Text(
-                          'Applied',
-                          style: TextStyle(
+                          l.apply,
+                          style: const TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w700,
                             color: _success,
@@ -1333,8 +1365,9 @@ class _OrderSummaryState extends State<_OrderSummary>
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final rows = <Widget>[
-      _SummaryRow(label: 'Subtotal', value: widget.subtotal),
+      _SummaryRow(label: l.subtotal, value: widget.subtotal),
       _SummaryRow(
         label: 'Shipping',
         value: widget.shipping,
@@ -1362,7 +1395,7 @@ class _OrderSummaryState extends State<_OrderSummary>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Order summary',
+            l.orderSummary,
             style: GoogleFonts.poppins(
               fontSize: 17,
               fontWeight: FontWeight.w600,
@@ -1411,10 +1444,10 @@ class _OrderSummaryState extends State<_OrderSummary>
                     : widget.total;
                 return Row(
                   children: [
-                    const Expanded(
+                    Expanded(
                       child: Text(
-                        'Total due',
-                        style: TextStyle(
+                        l.total,
+                        style: const TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w700,
                           color: _muted,
@@ -1501,6 +1534,7 @@ class _CheckoutBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.fromLTRB(18, 12, 18, 18),
       decoration: BoxDecoration(
@@ -1523,9 +1557,9 @@ class _CheckoutBar extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Text(
-                  'Total due',
-                  style: TextStyle(
+                Text(
+                  l.total,
+                  style: const TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
                     color: _muted,
@@ -1571,9 +1605,9 @@ class _CheckoutBar extends StatelessWidget {
                   borderRadius: BorderRadius.circular(18),
                 ),
               ),
-              child: const Text(
-                'Proceed to checkout',
-                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+              child: Text(
+                l.checkout,
+                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
               ),
             ),
           );
@@ -1605,6 +1639,7 @@ class _EmptyCart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return Center(
       child: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
@@ -1647,7 +1682,7 @@ class _EmptyCart extends StatelessWidget {
                 ),
                 const SizedBox(height: 22),
                 Text(
-                  'Your cart is empty',
+                  l.emptyCart,
                   style: GoogleFonts.poppins(
                     fontSize: 24,
                     fontWeight: FontWeight.w700,

@@ -1,10 +1,16 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'l10n/app_localizations.dart';
 import 'screens/Auth/onboarding_screen.dart';
 import 'screens/main_navigation_screen.dart';
 import 'screens/splash/splash_screen.dart';
 import 'services/api_service.dart';
 import 'services/app_notification_service.dart';
+import 'services/cart_service.dart';
+import 'services/language_service.dart';
 import 'services/theme_service.dart';
 import 'theme/app_theme.dart';
 
@@ -14,6 +20,7 @@ Future<void> main() async {
   await ApiService.initialize();
   await AppNotificationService.instance.initialize();
   await ThemeService.instance.load();
+  await LanguageService.instance.load();
   runApp(const MyApp());
 }
 
@@ -38,7 +45,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
-      animation: ThemeService.instance,
+      animation: Listenable.merge([ThemeService.instance, LanguageService.instance]),
       builder: (context, _) {
         return MaterialApp(
           debugShowCheckedModeBanner: false,
@@ -46,6 +53,14 @@ class MyApp extends StatelessWidget {
           theme: AppTheme.light,
           darkTheme: AppTheme.dark,
           themeMode: ThemeService.instance.themeMode,
+          locale: LanguageService.instance.locale,
+          supportedLocales: const [Locale('en'), Locale('km')],
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
           home: const _StartupGate(),
         );
       },
@@ -72,16 +87,13 @@ class _StartupGateState extends State<_StartupGate> {
   Future<void> _bootstrap() async {
     Widget destination = const OnboardingScreen();
     try {
-      final results = await Future.wait([
-        ApiService.getToken(),
-        Future<void>.delayed(kSplashDuration),
-      ]);
-      final token = results[0] as String?;
+      final token = await ApiService.getToken();
       if (token != null && token.isNotEmpty) {
+        unawaited(CartService.instance.loadFromApi());
         final launchTarget = AppNotificationService.instance
             .consumePendingLaunchTarget();
         destination = MainNavigationScreen(
-          initialIndex: launchTarget == null ? 0 : 3,
+          initialIndex: launchTarget == null ? 0 : 2,
           initialDeliveryOrderId: launchTarget?.orderId,
           initialDeliveryOrderNumber: launchTarget?.orderNumber,
         );
@@ -89,6 +101,8 @@ class _StartupGateState extends State<_StartupGate> {
     } catch (_) {
       // Fall back to onboarding if startup restoration fails.
     }
+
+    await Future.delayed(kSplashDuration);
 
     if (!mounted) return;
     setState(() {

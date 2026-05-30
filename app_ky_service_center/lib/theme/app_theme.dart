@@ -16,9 +16,9 @@ class AppTheme {
       useMaterial3: true,
       brightness: Brightness.light,
       colorScheme: colorScheme,
-      scaffoldBackgroundColor: const Color(0xFFF8F9FB),
+      scaffoldBackgroundColor: const Color(0xFFEEF6FD),
       appBarTheme: const AppBarTheme(
-        backgroundColor: Color(0xFFF8F9FB),
+        backgroundColor: Color(0xFFEEF6FD),
         surfaceTintColor: Colors.transparent,
         elevation: 0,
       ),
@@ -28,7 +28,7 @@ class AppTheme {
     );
 
     return base.copyWith(
-      textTheme: GoogleFonts.interTextTheme(base.textTheme),
+      textTheme: GoogleFonts.soraTextTheme(base.textTheme),
     );
   }
 
@@ -42,9 +42,9 @@ class AppTheme {
       useMaterial3: true,
       brightness: Brightness.dark,
       colorScheme: colorScheme,
-      scaffoldBackgroundColor: const Color(0xFF0D1117),
+      scaffoldBackgroundColor: const Color(0xFF0F172A),
       appBarTheme: const AppBarTheme(
-        backgroundColor: Color(0xFF0D1117),
+        backgroundColor: Color(0xFF0F172A),
         surfaceTintColor: Colors.transparent,
         elevation: 0,
       ),
@@ -54,7 +54,7 @@ class AppTheme {
     );
 
     return base.copyWith(
-      textTheme: GoogleFonts.interTextTheme(base.textTheme),
+      textTheme: GoogleFonts.soraTextTheme(base.textTheme),
     );
   }
 }

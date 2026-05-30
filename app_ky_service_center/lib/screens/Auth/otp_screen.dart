@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../../services/api_service.dart';
 import '../../services/app_notification_service.dart';
 import '../main_navigation_screen.dart';
@@ -30,7 +31,6 @@ class _OtpScreenState extends State<OtpScreen> {
   static const int _otpLength = 6;
   static const Color _brandBlue = Color(0xFF5A67F8);
   static const Color _brandBlueDark = Color(0xFF4C5EF1);
-  static const Color _background = Color(0xFFFAFBFF);
   static const Color _surface = Colors.white;
   static const Color _textPrimary = Color(0xFF1B1738);
   static const Color _hint = Color(0xFFD8D6D8);
@@ -251,6 +251,7 @@ class _OtpScreenState extends State<OtpScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final mediaQuery = MediaQuery.of(context);
     final bottomInset = mediaQuery.viewInsets.bottom;
     final viewportHeight =
@@ -258,7 +259,7 @@ class _OtpScreenState extends State<OtpScreen> {
     final masked = _maskDestination(widget.destination, widget.type);
 
     return Scaffold(
-      backgroundColor: _background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       resizeToAvoidBottomInset: true,
       body: GestureDetector(
         onTap: () => FocusScope.of(context).unfocus(),
@@ -266,7 +267,7 @@ class _OtpScreenState extends State<OtpScreen> {
           children: [
             Positioned.fill(
               child: DecoratedBox(
-                decoration: const BoxDecoration(color: _background),
+                decoration: BoxDecoration(color: Theme.of(context).scaffoldBackgroundColor),
               ),
             ),
             Positioned(
@@ -340,9 +341,9 @@ class _OtpScreenState extends State<OtpScreen> {
                                 ),
                               ),
                               SizedBox(height: isCompact ? 16 : 24),
-                              const Text(
-                                'Verification',
-                                style: TextStyle(
+                              Text(
+                                l.otpVerification,
+                                style: const TextStyle(
                                   fontSize: 32,
                                   fontWeight: FontWeight.w700,
                                   color: _textPrimary,
@@ -362,9 +363,9 @@ class _OtpScreenState extends State<OtpScreen> {
                               SizedBox(height: isCompact ? 30 : 40),
                               _buildOtpFields(),
                               SizedBox(height: isCompact ? 34 : 44),
-                              _buildContinueButton(),
+                              _buildContinueButton(l),
                               const SizedBox(height: 28),
-                              _buildResendSection(),
+                              _buildResendSection(l),
                             ],
                           ),
                         ),
@@ -481,7 +482,7 @@ class _OtpScreenState extends State<OtpScreen> {
     );
   }
 
-  Widget _buildContinueButton() {
+  Widget _buildContinueButton(AppLocalizations l) {
     return SizedBox(
       height: 64,
       child: DecoratedBox(
@@ -530,10 +531,10 @@ class _OtpScreenState extends State<OtpScreen> {
                     key: const ValueKey('ready'),
                     alignment: Alignment.center,
                     children: [
-                      const Center(
+                      Center(
                         child: Text(
-                          'CONTINUE',
-                          style: TextStyle(
+                          l.continueText.toUpperCase(),
+                          style: const TextStyle(
                             color: Colors.white,
                             fontSize: 17,
                             fontWeight: FontWeight.w700,
@@ -565,12 +566,12 @@ class _OtpScreenState extends State<OtpScreen> {
     );
   }
 
-  Widget _buildResendSection() {
+  Widget _buildResendSection(AppLocalizations l) {
     if (_isResending) {
-      return const Center(
+      return Center(
         child: Text(
           'Sending...',
-          style: TextStyle(
+          style: const TextStyle(
             color: _textPrimary,
             fontSize: 16,
             fontWeight: FontWeight.w500,
@@ -614,9 +615,9 @@ class _OtpScreenState extends State<OtpScreen> {
           minimumSize: const Size(0, 0),
           tapTargetSize: MaterialTapTargetSize.shrinkWrap,
         ),
-        child: const Text(
-          'Re-send code',
-          style: TextStyle(
+        child: Text(
+          l.resend,
+          style: const TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w600,
           ),

@@ -57,3 +57,4 @@ Artisan::command('khqr:expire', function () {
 })->purpose('Expire stale KHQR transactions');
 
 Schedule::command('khqr:expire')->everyMinute();
+Schedule::command('backup:run')->daily();

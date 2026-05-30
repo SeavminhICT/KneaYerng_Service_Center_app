@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart'; // Recommended for date formatting
+import '../../l10n/app_localizations.dart';
 import '../../models/user_profile.dart';
 import '../../services/api_service.dart';
 
@@ -85,11 +86,12 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     const brandBlue = Color(0xFF1E5EFF);
     const brandMint = Color(0xFF00C2A8);
     const brandPeach = Color(0xFFFFB870);
-    final canvas = isDark ? const Color(0xFF0D1117) : const Color(0xFFF6F7FB);
+    final canvas = Theme.of(context).scaffoldBackgroundColor;
     final titleStyle = TextStyle(
       fontSize: 20,
       fontWeight: FontWeight.w700,
@@ -100,27 +102,16 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
     return Scaffold(
       backgroundColor: canvas,
       appBar: AppBar(
-        automaticallyImplyLeading: false,
-        title: Text('Personal Information', style: titleStyle),
+        title: Text(l.personalInfo, style: titleStyle),
         backgroundColor: Colors.transparent,
         elevation: 0,
         foregroundColor: isDark ? const Color(0xFFE6EDF7) : Colors.black87,
       ),
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: isDark
-                ? const [Color(0xFF0D1117), Color(0xFF101A29)]
-                : const [Color(0xFFEAF2FF), Color(0xFFFFF2E5)],
-          ),
-        ),
-        child: SafeArea(
-          child: Form(
-            key: _formKey,
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+      body: SafeArea(
+        child: Form(
+          key: _formKey,
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -142,11 +133,11 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
                   const SizedBox(height: 8),
                   _animatedEntry(
                     2,
-                    _field('First Name', _firstNameCtrl, Icons.person_outline),
+                    _field(l.fullName, _firstNameCtrl, Icons.person_outline),
                   ),
                   _animatedEntry(
                     3,
-                    _field('Last Name', _lastNameCtrl, Icons.badge_outlined),
+                    _field(l.fullName, _lastNameCtrl, Icons.badge_outlined),
                   ),
                   _animatedEntry(
                     4,
@@ -156,7 +147,7 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
                       Icons.calendar_month_outlined,
                     ),
                   ),
-                  _animatedEntry(5, _genderDropdown()),
+                  _animatedEntry(5, _genderDropdown(l)),
                   const SizedBox(height: 8),
                   const SizedBox(height: 24),
                   _animatedEntry(
@@ -185,7 +176,7 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
                                   ),
                                 ),
                               )
-                            : const Text('Save Changes'),
+                            : Text(l.save),
                       ),
                     ),
                   ),
@@ -196,8 +187,7 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
             ),
           ),
         ),
-      ),
-    );
+      );
   }
 
   Widget _headerCard({
@@ -216,7 +206,7 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF161B22) : Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
@@ -404,23 +394,6 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
       normalizedUrl,
       fit: BoxFit.cover,
       errorBuilder: (context, error, stackTrace) => fallback,
-      loadingBuilder: (context, child, progress) {
-        if (progress == null) return child;
-        return Container(
-          color: accent,
-          alignment: Alignment.center,
-          child: SizedBox(
-            height: 18,
-            width: 18,
-            child: CircularProgressIndicator(
-              strokeWidth: 2,
-              valueColor: AlwaysStoppedAnimation<Color>(
-                Colors.white.withAlpha((0.9 * 255).round()),
-              ),
-            ),
-          ),
-        );
-      },
     );
   }
 
@@ -431,19 +404,21 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
     IconData icon, {
     TextInputType? keyboardType,
   }) {
+    final l = AppLocalizations.of(context);
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: TextFormField(
         controller: ctrl,
         keyboardType: keyboardType,
         decoration: _inputDecoration(label, icon),
-        validator: (v) => v == null || v.isEmpty ? 'Required' : null,
+        validator: (v) => v == null || v.isEmpty ? l.requiredField : null,
       ),
     );
   }
 
   // Specific field for Date (Read Only + Tap)
   Widget _dateField(String label, TextEditingController ctrl, IconData icon) {
+    final l = AppLocalizations.of(context);
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: TextFormField(
@@ -451,12 +426,12 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
         readOnly: true, // Prevents typing
         onTap: _selectDate, // Opens calendar
         decoration: _inputDecoration(label, icon),
-        validator: (v) => v == null || v.isEmpty ? 'Required' : null,
+        validator: (v) => v == null || v.isEmpty ? l.requiredField : null,
       ),
     );
   }
 
-  Widget _genderDropdown() {
+  Widget _genderDropdown(AppLocalizations l) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: DropdownButtonFormField<String>(
@@ -480,7 +455,7 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
       filled: true,
       labelStyle: TextStyle(color: isDark ? const Color(0xFF97A2B5) : null),
       prefixIconColor: isDark ? const Color(0xFF97A2B5) : null,
-      fillColor: isDark ? const Color(0xFF161B22) : Colors.white,
+      fillColor: Theme.of(context).cardColor,
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
         borderSide: BorderSide.none,
@@ -497,6 +472,7 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
     required String message,
   }) {
     const accent = Color(0xFF1E5EFF);
+    final l = AppLocalizations.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return showDialog<void>(
       context: context,
@@ -508,7 +484,7 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
           child: Container(
             padding: const EdgeInsets.fromLTRB(22, 24, 22, 20),
             decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF161B22) : Colors.white,
+              color: Theme.of(context).cardColor,
               borderRadius: BorderRadius.circular(28),
               boxShadow: const [
                 BoxShadow(
@@ -579,9 +555,9 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
                         borderRadius: BorderRadius.circular(16),
                       ),
                     ),
-                    child: const Text(
-                      'OK',
-                      style: TextStyle(
+                    child: Text(
+                      l.ok,
+                      style: const TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w700,
                       ),
@@ -622,7 +598,7 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
       setState(() => _saving = false);
       await _showSuccessDialog(
         title: 'Profile Updated',
-        message: 'Your personal information has been saved successfully.',
+        message: AppLocalizations.of(context).successfullySaved,
       );
       if (!mounted) return;
       Navigator.pop(context);
@@ -665,7 +641,7 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
       setState(() => _avatarUrl = updated?.avatarUrl);
       await _showSuccessDialog(
         title: 'Photo Updated',
-        message: 'Your profile picture has been updated successfully.',
+        message: AppLocalizations.of(context).successfullySaved,
       );
     } finally {
       if (mounted) {

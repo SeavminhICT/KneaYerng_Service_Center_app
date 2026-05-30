@@ -1,4 +1,4 @@
-﻿@extends('layouts.admin')
+@extends('layouts.admin')
 
 @section('title', 'Edit Category')
 @section('page-title', 'Edit Category')
@@ -38,20 +38,16 @@
         </form>
 
         <div class="space-y-6">
-            <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900" x-data="{ preview: null }">
+            <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
                 <h3 class="text-sm font-semibold text-slate-900 dark:text-white">Category Image</h3>
                 <p class="mt-1 text-xs text-slate-500">Replace the current thumbnail if needed.</p>
                 <div class="mt-4 flex h-40 items-center justify-center rounded-xl border border-dashed border-slate-300 bg-slate-50 text-xs text-slate-500 dark:border-slate-700 dark:bg-slate-900/60" id="category-image-preview">
-                    <template x-if="preview">
-                        <img :src="preview" alt="Preview" class="h-32 w-32 rounded-xl object-cover" />
-                    </template>
-                    <template x-if="!preview">
-                        <div class="text-center">
-                            <p class="font-semibold">No image uploaded</p>
-                        </div>
-                    </template>
+                    <div id="preview-placeholder" class="text-center">
+                        <p class="font-semibold">No image uploaded</p>
+                    </div>
+                    <img id="preview-image" src="" alt="Preview" class="hidden h-32 w-32 rounded-xl object-cover" />
                 </div>
-                <input type="file" name="image" form="category-edit-form" class="mt-4 w-full text-sm text-slate-500" @change="const file = $event.target.files[0]; if (file) { const reader = new FileReader(); reader.onload = e => preview = e.target.result; reader.readAsDataURL(file); }" />
+                <input type="file" name="image" form="category-edit-form" class="mt-4 w-full text-sm text-slate-500" />
             </div>
 
             <div class="rounded-2xl border border-danger-100 bg-danger-50 p-5 text-xs text-danger-700 dark:border-danger-500/30 dark:bg-danger-500/10 dark:text-danger-100">
@@ -68,12 +64,36 @@
                 var file = event.target.files[0];
                 if (file) {
                     document.getElementById('category-form-error').textContent = '';
+                    
+                    var reader = new FileReader();
+                    reader.onload = function (e) {
+                        var img = document.getElementById('preview-image');
+                        var placeholder = document.getElementById('preview-placeholder');
+                        if (img) {
+                            img.src = e.target.result;
+                            img.classList.remove('hidden');
+                        }
+                        if (placeholder) {
+                            placeholder.classList.add('hidden');
+                        }
+                    };
+                    reader.readAsDataURL(file);
                 }
                 if (window.adminValidateFileSize && file && !window.adminValidateFileSize(file, 'Image')) {
                     event.stopImmediatePropagation();
                     event.preventDefault();
                     event.target.value = '';
                     document.getElementById('category-form-error').textContent = 'Image must be 5MB or smaller.';
+                    
+                    var img = document.getElementById('preview-image');
+                    var placeholder = document.getElementById('preview-placeholder');
+                    if (img) {
+                        img.src = '';
+                        img.classList.add('hidden');
+                    }
+                    if (placeholder) {
+                        placeholder.classList.remove('hidden');
+                    }
                 }
             }, true);
         }
@@ -93,7 +113,15 @@
                 document.getElementById('slug').value = data.data.slug || '';
                 document.getElementById('status').value = data.data.status || 'active';
                 if (data.data.image) {
-                    document.getElementById('category-image-preview').innerHTML = '<img src="' + data.data.image + '" alt="' + data.data.name + '" class="h-32 w-32 rounded-xl object-cover" />';
+                    var img = document.getElementById('preview-image');
+                    var placeholder = document.getElementById('preview-placeholder');
+                    if (img) {
+                        img.src = data.data.image;
+                        img.classList.remove('hidden');
+                    }
+                    if (placeholder) {
+                        placeholder.classList.add('hidden');
+                    }
                 }
             }
         });

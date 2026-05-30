@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:khqr_sdk/khqr_sdk.dart';
 import 'package:latlong2/latlong.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../../models/pickup_ticket.dart';
 import '../../models/user_profile.dart';
 import '../../services/api_service.dart' as api;
@@ -278,6 +279,7 @@ class _BakongCheckoutSheetState extends State<BakongCheckoutSheet> {
     }
     if (!mounted) return false;
 
+    final l = AppLocalizations.of(context);
     final shouldLogin = await showDialog<bool>(
       context: context,
       builder: (context) {
@@ -287,7 +289,7 @@ class _BakongCheckoutSheetState extends State<BakongCheckoutSheet> {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Cancel'),
+              child: Text(l.cancel),
             ),
             TextButton(
               onPressed: () => Navigator.of(context).pop(true),
@@ -673,6 +675,7 @@ class _BakongCheckoutSheetState extends State<BakongCheckoutSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final config = BakongPaymentService.config;
     final amount = _amount ?? _resolveAmount();
     final total = amount.toStringAsFixed(2);
@@ -856,7 +859,7 @@ class _BakongCheckoutSheetState extends State<BakongCheckoutSheet> {
                       isError: _isError,
                       onRetry: _generateQr,
                       onRegenerate: _generateQr,
-                      retryButtonText: 'Try again',
+                      retryButtonText: l.retry,
                       regenerateButtonText: 'Refresh QR',
                     );
                   },
@@ -883,7 +886,7 @@ class _BakongCheckoutSheetState extends State<BakongCheckoutSheet> {
                   ),
                   child: Column(
                     children: [
-                      _InfoRow(label: 'Total', value: '\$$total'),
+                      _InfoRow(label: l.total, value: '\$$total'),
                       if (_orderNumber != null)
                         _InfoRow(label: 'Order No.', value: _orderNumber!),
                       if (_orderNumber == null && _orderId != null)
@@ -1012,7 +1015,7 @@ class _BakongCheckoutSheetState extends State<BakongCheckoutSheet> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  child: const Text('Done'),
+                  child: Text(l.done),
                 ),
               ),
             ],
@@ -1225,6 +1228,7 @@ class _DeliveryForm extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     InputDecoration fieldDecoration(String hint) {
       return InputDecoration(
         hintText: hint,
@@ -1257,15 +1261,15 @@ class _DeliveryForm extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Text(
-                'Delivery Location',
-                style: TextStyle(fontWeight: FontWeight.w700),
+              Text(
+                l.deliveryAddress,
+                style: const TextStyle(fontWeight: FontWeight.w700),
               ),
               const Spacer(),
               TextButton.icon(
                 onPressed: onSelectLocation,
                 icon: const Icon(Icons.location_on_outlined, size: 16),
-                label: const Text('Select'),
+                label: Text(l.selectAddress),
               ),
             ],
           ),
@@ -1273,7 +1277,7 @@ class _DeliveryForm extends StatelessWidget {
             controller: addressController,
             readOnly: true,
             onTap: onSelectLocation,
-            decoration: fieldDecoration('Select delivery location'),
+            decoration: fieldDecoration(l.selectAddress),
           ),
           if (selectedLatLng != null) ...[
             const SizedBox(height: 6),

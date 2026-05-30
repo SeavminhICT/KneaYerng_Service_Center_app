@@ -24,7 +24,7 @@ class FirebaseAuthService
 
         $this->auth = $factory->createAuth();
     }
-
+p, 
     public function verifyIdToken(string $idToken): array
     {
         $verifiedToken = $this->auth->verifyIdToken($idToken);

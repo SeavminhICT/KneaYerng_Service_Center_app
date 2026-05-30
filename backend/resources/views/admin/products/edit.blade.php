@@ -19,68 +19,64 @@
             <div class="grid gap-4 sm:grid-cols-2">
                 <div>
                     <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="name">Product Name</label>
-                    <input id="name" name="name" type="text" class="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200" />
+                    <input id="name" name="name" type="text" value="{{ old('name', $product->name ?? '') }}" class="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200" />
                 </div>
                 <div>
                     <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="brand">Brand</label>
-                    <input id="brand" name="brand" type="text" class="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200" />
+                    <input id="brand" name="brand" type="text" value="{{ old('brand', $product->brand ?? '') }}" class="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200" />
                 </div>
                 <div>
                     <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="sku">SKU</label>
-                    <input id="sku" name="sku" type="text" class="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200" />
+                    <input id="sku" name="sku" type="text" value="{{ old('sku', $product->sku ?? '') }}" class="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200" />
                 </div>
                 <div>
                     <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="category">Category</label>
                     <select id="category" name="category_id" class="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200">
                         <option value="">Select category</option>
-                        @foreach (($categories ?? collect()) as $category)
-                            <option value="{{ $category->id }}">{{ $category->name }}</option>
+                        @foreach (($categories ?? collect()) as $cat)
+                            <option value="{{ $cat->id }}" {{ old('category_id', $product->category_id ?? '') == $cat->id ? 'selected' : '' }}>{{ $cat->name }}</option>
                         @endforeach
                     </select>
                 </div>
                 <div>
                     <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="status">Status</label>
                     <select id="status" name="status" class="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200">
-                        <option value="active">Active</option>
-                        <option value="draft">Draft</option>
-                        <option value="archived">Archived</option>
+                        <option value="active" {{ old('status', $product->status ?? '') === 'active' ? 'selected' : '' }}>Active</option>
+                        <option value="draft" {{ old('status', $product->status ?? '') === 'draft' ? 'selected' : '' }}>Draft</option>
+                        <option value="archived" {{ old('status', $product->status ?? '') === 'archived' ? 'selected' : '' }}>Archived</option>
                     </select>
                 </div>
                 <div>
                     <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="discount">Discount</label>
-                    <input id="discount" name="discount" type="number" step="0.01" min="0" class="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200" />
+                    <input id="discount" name="discount" type="number" step="0.01" min="0" value="{{ old('discount', $product->discount ?? 0) }}" class="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200" />
                 </div>
                 <div>
                     <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="cpu">CPU</label>
-                    <input id="cpu" name="cpu" type="text" class="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200" />
+                    <input id="cpu" name="cpu" type="text" value="{{ old('cpu', is_array($product->cpu ?? null) ? implode(', ', $product->cpu) : ($product->cpu ?? '')) }}" class="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200" />
                 </div>
                 <div>
                     <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="display">Display</label>
-                    <input id="display" name="display" type="text" class="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200" />
+                    <input id="display" name="display" type="text" value="{{ old('display', is_array($product->display ?? null) ? implode(', ', $product->display) : ($product->display ?? '')) }}" class="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200" />
                 </div>
                 <div>
                     <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="country">Country / Region</label>
-                    <input id="country" name="country" type="text" class="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200" />
+                    <input id="country" name="country" type="text" value="{{ old('country', is_array($product->country ?? null) ? implode(', ', $product->country) : ($product->country ?? '')) }}" class="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200" />
                 </div>
                 <div>
                     <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="warranty">Warranty</label>
                     <select id="warranty" name="warranty" class="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200">
                         <option value="">Select warranty</option>
-                        <option value="NO_WARRANTY">NO_WARRANTY</option>
-                        <option value="7_DAYS">7_DAYS</option>
-                        <option value="14_DAYS">14_DAYS</option>
-                        <option value="1_MONTH">1_MONTH</option>
-                        <option value="3_MONTHS">3_MONTHS</option>
-                        <option value="6_MONTHS">6_MONTHS</option>
-                        <option value="1_YEAR">1_YEAR</option>
+                        @foreach (\App\Models\Product::WARRANTIES as $w)
+                            <option value="{{ $w }}" {{ old('warranty', $product->warranty ?? '') === $w ? 'selected' : '' }}>{{ $w }}</option>
+                        @endforeach
                     </select>
                 </div>
                 <div>
                     <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="tag">Tag</label>
                     <select id="tag" name="tag" class="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200">
                         <option value="">No tag</option>
-                        @foreach (\App\Models\Product::TAGS as $tag)
-                            <option value="{{ $tag }}">{{ \Illuminate\Support\Str::title(str_replace('_', ' ', strtolower($tag))) }}</option>
+                        @foreach (\App\Models\Product::TAGS as $t)
+                            <option value="{{ $t }}" {{ old('tag', $product->tag ?? '') === $t ? 'selected' : '' }}>{{ \Illuminate\Support\Str::title(str_replace('_', ' ', strtolower($t))) }}</option>
                         @endforeach
                     </select>
                 </div>
@@ -88,7 +84,7 @@
 
             <div>
                 <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="description">Description</label>
-                <textarea id="description" name="description" rows="4" class="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200"></textarea>
+                <textarea id="description" name="description" rows="4" class="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200">{{ old('description', $product->description ?? '') }}</textarea>
             </div>
 
             <div class="rounded-2xl border border-slate-200 p-4 dark:border-slate-800">
@@ -214,14 +210,27 @@
         <div class="space-y-6">
             <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
                 <h3 class="text-sm font-semibold text-slate-900 dark:text-white">Current Thumbnail</h3>
-                <div id="current-thumbnail-wrapper" class="mt-3 hidden h-40 overflow-hidden rounded-xl border border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-900/50">
-                    <img id="current-thumbnail-image" src="" alt="Current thumbnail" class="h-full w-full object-cover" />
+                @php $thumbUrl = $product->thumbnail ?? $product->image ?? null; @endphp
+                <div id="current-thumbnail-wrapper" class="mt-3 {{ $thumbUrl ? '' : 'hidden' }} h-40 overflow-hidden rounded-xl border border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-900/50">
+                    <img id="current-thumbnail-image" src="{{ $thumbUrl ? (str_starts_with($thumbUrl, 'http') ? $thumbUrl : '/'.$thumbUrl) : '' }}" alt="Current thumbnail" class="h-full w-full object-cover" />
                 </div>
-                <p id="current-thumbnail" class="mt-2 text-xs text-slate-500">No image</p>
+                <p id="current-thumbnail" class="mt-2 text-xs text-slate-500">{{ $thumbUrl ? basename($thumbUrl) : 'No image' }}</p>
                 <input type="file" name="thumbnail" form="product-edit-form" class="mt-3 w-full text-sm text-slate-500" />
 
                 <label class="mt-4 block text-xs font-semibold text-slate-600 dark:text-slate-300">Current Gallery</label>
-                <div id="current-gallery" class="mt-2 grid grid-cols-3 gap-2"></div>
+                <div id="current-gallery" class="mt-2 grid grid-cols-3 gap-2">
+                    @php $gallery = is_array($product->image_gallery ?? null) ? $product->image_gallery : []; @endphp
+                    @forelse ($gallery as $img)
+                        @php $imgUrl = $img ? (str_starts_with($img, 'http') ? $img : '/'.$img) : ''; @endphp
+                        @if ($imgUrl)
+                            <div class="h-20 overflow-hidden rounded-lg border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+                                <img src="{{ $imgUrl }}" alt="gallery" class="h-full w-full object-cover" />
+                            </div>
+                        @endif
+                    @empty
+                        <p class="col-span-3 text-xs text-slate-400">No gallery images</p>
+                    @endforelse
+                </div>
 
                 <label class="mt-4 block text-xs font-semibold text-slate-600 dark:text-slate-300">Replace Gallery</label>
                 <div id="gallery-preview" class="mt-2 grid grid-cols-3 gap-2"></div>

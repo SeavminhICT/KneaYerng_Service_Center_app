@@ -8,6 +8,51 @@ import 'package:skeletonizer/skeletonizer.dart';
 import '../../l10n/app_localizations.dart';
 import '../../services/api_service.dart';
 
+// ── Design tokens ─────────────────────────────────────────────────────────────
+const _primary = Color(0xFF3B6BFF);
+const _primarySoft = Color(0xFFEEF2FF);
+const _success = Color(0xFF16A34A);
+const _successSoft = Color(0xFFDCFCE7);
+const _danger = Color(0xFFDC2626);
+const _dangerSoft = Color(0xFFFEE2E2);
+const _warning = Color(0xFFD97706);
+const _warningSoft = Color(0xFFFEF3C7);
+
+Color _bg(BuildContext ctx) =>
+    Theme.of(ctx).brightness == Brightness.dark
+        ? const Color(0xFF0D1117)
+        : const Color(0xFFF4F6FB);
+
+Color _surface(BuildContext ctx) =>
+    Theme.of(ctx).brightness == Brightness.dark
+        ? const Color(0xFF161B22)
+        : Colors.white;
+
+Color _ink(BuildContext ctx) =>
+    Theme.of(ctx).brightness == Brightness.dark
+        ? const Color(0xFFE6EDF7)
+        : const Color(0xFF111827);
+
+Color _muted(BuildContext ctx) =>
+    Theme.of(ctx).brightness == Brightness.dark
+        ? const Color(0xFF7D8FA9)
+        : const Color(0xFF64748B);
+
+Color _border(BuildContext ctx) =>
+    Theme.of(ctx).brightness == Brightness.dark
+        ? const Color(0xFF2B3442)
+        : const Color(0xFFE5EAF2);
+
+Color _imageBg(BuildContext ctx) =>
+    Theme.of(ctx).brightness == Brightness.dark
+        ? const Color(0xFF1D2635)
+        : const Color(0xFFF0F4FC);
+
+bool _isDark(BuildContext ctx) =>
+    Theme.of(ctx).brightness == Brightness.dark;
+
+// ── Screen ────────────────────────────────────────────────────────────────────
+
 class RepairScreen extends StatefulWidget {
   const RepairScreen({super.key});
 
@@ -16,18 +61,7 @@ class RepairScreen extends StatefulWidget {
 }
 
 class _RepairScreenState extends State<RepairScreen> {
-  static const _surface = Colors.white;
-  static const _ink = Color(0xFF1E1E1E);
-  static const _muted = Color(0xFF8A8A8E);
-  static const _line = Color(0xFFE5E5EA);
-  static const _blue = Color(0xFF4B6BFF);
-  static const _darkSurface = Color(0xFF161B22);
-  static const _darkInk = Color(0xFFE6EDF7);
-  static const _darkMuted = Color(0xFF97A2B5);
-  static const _darkLine = Color(0xFF2B3442);
-
-  final TextEditingController _searchController = TextEditingController();
-
+  final _searchCtrl = TextEditingController();
   bool _loading = true;
   String? _error;
   List<_RepairAccessory> _items = const [];
@@ -35,300 +69,192 @@ class _RepairScreenState extends State<RepairScreen> {
   @override
   void initState() {
     super.initState();
-    _searchController.addListener(_onSearchChanged);
-    _loadAccessories();
+    _searchCtrl.addListener(() { if (mounted) setState(() {}); });
+    _load();
   }
 
   @override
   void dispose() {
-    _searchController.removeListener(_onSearchChanged);
-    _searchController.dispose();
+    _searchCtrl.dispose();
     super.dispose();
   }
 
-  void _onSearchChanged() {
-    if (!mounted) return;
-    setState(() {});
-  }
-
-  Future<void> _openSearchSheet() async {
-    final l = AppLocalizations.of(context);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final textController = TextEditingController(text: _searchController.text);
-
-    await showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (context) {
-        final bottomInset = MediaQuery.of(context).viewInsets.bottom;
-        return Padding(
-          padding: EdgeInsets.fromLTRB(12, 0, 12, bottomInset + 12),
-          child: Container(
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
-            decoration: BoxDecoration(
-              color: isDark ? _darkSurface : _surface,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  l.search,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: isDark ? _darkInk : _ink,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                TextField(
-                  controller: textController,
-                  autofocus: true,
-                  textInputAction: TextInputAction.search,
-                  onSubmitted: (_) {
-                    _searchController.text = textController.text.trim();
-                    Navigator.of(context).pop();
-                  },
-                  decoration: InputDecoration(
-                    hintText: 'Name, brand, or ID',
-                    hintStyle: TextStyle(
-                      color: isDark ? _darkMuted : _muted,
-                    ),
-                    prefixIcon: Icon(
-                      Icons.search_rounded,
-                      color: isDark ? _darkMuted : _muted,
-                    ),
-                    suffixIcon: textController.text.isEmpty
-                        ? null
-                        : IconButton(
-                            onPressed: textController.clear,
-                            icon: const Icon(Icons.close_rounded),
-                            color: isDark ? _darkMuted : _muted,
-                          ),
-                    filled: true,
-                    fillColor: isDark
-                        ? const Color(0xFF1D2635)
-                        : const Color(0xFFF5F5F7),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: () {
-                          _searchController.clear();
-                          Navigator.of(context).pop();
-                        },
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: isDark ? _darkInk : _ink,
-                          side: BorderSide(
-                            color: isDark ? _darkLine : _line,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                        ),
-                        child: Text(l.clear),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: () {
-                          _searchController.text = textController.text.trim();
-                          Navigator.of(context).pop();
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: _blue,
-                          foregroundColor: Colors.white,
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                        ),
-                        child: Text(l.apply),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-
-    textController.dispose();
-  }
-
-  Future<void> _loadAccessories() async {
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
-
+  Future<void> _load() async {
+    setState(() { _loading = true; _error = null; });
     try {
       final res = await http.get(
         Uri.parse('${ApiService.baseUrl}/accessories'),
         headers: const {'Accept': 'application/json'},
       );
-
-      if (res.statusCode != 200) {
-        throw Exception('Status ${res.statusCode}');
-      }
-
+      if (res.statusCode != 200) throw Exception('${res.statusCode}');
       final decoded = jsonDecode(res.body);
-      final raw = decoded is Map<String, dynamic> ? decoded['data'] : null;
+      final raw = decoded is Map ? decoded['data'] : null;
       final list = raw is List
-          ? raw
-                .whereType<Map>()
-                .map(
-                  (entry) => _RepairAccessory.fromJson(
-                    Map<String, dynamic>.from(entry),
-                  ),
-                )
-                .toList()
+          ? raw.whereType<Map>()
+              .map((e) => _RepairAccessory.fromJson(Map<String, dynamic>.from(e)))
+              .toList()
           : <_RepairAccessory>[];
-
       if (!mounted) return;
-      setState(() {
-        _items = list;
-        _loading = false;
-      });
+      setState(() { _items = list; _loading = false; });
     } catch (_) {
       if (!mounted) return;
-      setState(() {
-        _loading = false;
-        _error = 'Could not load accessories. Pull down to refresh.';
-      });
+      setState(() { _loading = false; _error = 'Could not load. Pull down to retry.'; });
     }
   }
 
-  List<_RepairAccessory> get _filteredItems {
-    final query = _searchController.text.trim().toLowerCase();
-
-    final items = _items.where((item) {
-      if (query.isEmpty) return true;
-      return item.name.toLowerCase().contains(query) ||
-          item.brandLabel.toLowerCase().contains(query) ||
-          '#${item.id}'.contains(query);
+  List<_RepairAccessory> get _filtered {
+    final q = _searchCtrl.text.trim().toLowerCase();
+    final list = _items.where((i) {
+      if (q.isEmpty) return true;
+      return i.name.toLowerCase().contains(q) ||
+          i.brandLabel.toLowerCase().contains(q) ||
+          '#${i.id}'.contains(q);
     }).toList();
-
-    items.sort((a, b) {
-      final aDate = a.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
-      final bDate = b.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
-      return bDate.compareTo(aDate);
+    list.sort((a, b) {
+      final ad = a.createdAt ?? DateTime(2000);
+      final bd = b.createdAt ?? DateTime(2000);
+      return bd.compareTo(ad);
     });
-
-    return items;
+    return list;
   }
 
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final items = _filteredItems;
+    final items = _filtered;
 
-    return Theme(
-      data: Theme.of(context).copyWith(
-        textTheme: GoogleFonts.soraTextTheme(Theme.of(context).textTheme),
-      ),
-      child: Scaffold(
-        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-        appBar: AppBar(
-          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-          surfaceTintColor: Colors.transparent,
-          elevation: 0,
-          centerTitle: true,
-          title: Text(
-            l.repairService,
-            style: TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.w700,
-              color: isDark ? _darkInk : _ink,
-            ),
-          ),
-          actions: [
-            IconButton(
-              tooltip: l.search,
-              onPressed: _openSearchSheet,
-              icon: Icon(
-                Icons.search_rounded,
-                color: isDark ? _darkInk : _ink,
-              ),
-            ),
-          ],
-        ),
-        body: RefreshIndicator(
-          color: _blue,
-          onRefresh: _loadAccessories,
-          child: ListView(
+    return Scaffold(
+      backgroundColor: _bg(context),
+      body: SafeArea(
+        child: RefreshIndicator(
+          color: _primary,
+          onRefresh: _load,
+          child: CustomScrollView(
             physics: const BouncingScrollPhysics(
               parent: AlwaysScrollableScrollPhysics(),
             ),
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-            children: [
-              if (_searchController.text.trim().isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
-                  child: Text(
-                    'Result: ${items.length}',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: isDark ? _darkMuted : _muted,
-                    ),
+            slivers: [
+              // ── Header ────────────────────────────────────────────────
+              SliverToBoxAdapter(child: _Header(l: l)),
+
+              // ── Hero banner ───────────────────────────────────────────
+              const SliverToBoxAdapter(child: _HeroBanner()),
+
+              // ── Search bar ────────────────────────────────────────────
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+                  child: _SearchBar(controller: _searchCtrl),
+                ),
+              ),
+
+              // ── Section title ─────────────────────────────────────────
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 20, 16, 12),
+                  child: Row(
+                    children: [
+                      Text(
+                        'Parts & Accessories',
+                        style: GoogleFonts.manrope(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                          color: _ink(context),
+                        ),
+                      ),
+                      const Spacer(),
+                      if (!_loading && _error == null)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: _primarySoft,
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Text(
+                            '${items.length} items',
+                            style: GoogleFonts.manrope(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: _primary,
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
                 ),
+              ),
+
+              // ── Body content ──────────────────────────────────────────
               if (_loading)
-                Skeletonizer(
-                  enabled: true,
-                  child: Column(
-                    children: List.generate(
-                      4,
-                      (index) => Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: _AccessoryCard(
-                          item: const _RepairAccessory(
-                            id: 0,
-                            name: 'Loading Accessory Name',
-                            basePrice: 99.99,
-                            finalPrice: 99.99,
-                            stock: 10,
-                            brand: 'Brand',
-                            warranty: '1 Year',
+                SliverPadding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  sliver: SliverList(
+                    delegate: SliverChildBuilderDelegate(
+                      (_, i) => Padding(
+                        padding: const EdgeInsets.only(bottom: 14),
+                        child: Skeletonizer(
+                          enabled: true,
+                          child: _AccessoryCard(
+                            item: const _RepairAccessory(
+                              id: 0,
+                              name: 'Loading Accessory Item Name',
+                              basePrice: 99,
+                              finalPrice: 89,
+                              stock: 5,
+                              brand: 'Apple',
+                              warranty: '1 Year',
+                            ),
                           ),
                         ),
                       ),
+                      childCount: 4,
                     ),
                   ),
                 )
               else if (_error != null)
-                _MessageCard(
-                  title: l.somethingWentWrong,
-                  message: _error!,
-                  actionLabel: l.retry,
-                  onTap: _loadAccessories,
+                SliverPadding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  sliver: SliverToBoxAdapter(
+                    child: _StateCard(
+                      icon: Icons.wifi_off_rounded,
+                      iconColor: _danger,
+                      iconBg: _dangerSoft,
+                      title: l.somethingWentWrong,
+                      subtitle: _error!,
+                      buttonLabel: l.retry,
+                      onButton: _load,
+                    ),
+                  ),
                 )
               else if (items.isEmpty)
-                _MessageCard(
-                  title: l.noData,
-                  message: _searchController.text.trim().isEmpty
-                      ? 'No accessory data available yet.'
-                      : 'Try a different keyword.',
+                SliverPadding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  sliver: SliverToBoxAdapter(
+                    child: _StateCard(
+                      icon: Icons.inventory_2_outlined,
+                      iconColor: _muted(context),
+                      iconBg: _imageBg(context),
+                      title: l.noData,
+                      subtitle: _searchCtrl.text.trim().isEmpty
+                          ? 'No accessories available yet.'
+                          : 'No results for "${_searchCtrl.text.trim()}".',
+                    ),
+                  ),
                 )
               else
-                ...items.map(
-                  (item) => Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: _AccessoryCard(item: item),
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
+                  sliver: SliverList(
+                    delegate: SliverChildBuilderDelegate(
+                      (_, i) => Padding(
+                        padding: const EdgeInsets.only(bottom: 14),
+                        child: _AccessoryCard(item: items[i]),
+                      ),
+                      childCount: items.length,
+                    ),
                   ),
                 ),
             ],
@@ -339,261 +265,558 @@ class _RepairScreenState extends State<RepairScreen> {
   }
 }
 
-class _AccessoryCard extends StatelessWidget {
-  const _AccessoryCard({required this.item});
+// ── Header ────────────────────────────────────────────────────────────────────
 
-  final _RepairAccessory item;
-
-  static const _surface = Colors.white;
-  static const _ink = Color(0xFF1E1E1E);
-  static const _muted = Color(0xFF8A8A8E);
-  static const _line = Color(0xFFE5E5EA);
-  static const _green = Color(0xFF11A34B);
+class _Header extends StatelessWidget {
+  const _Header({required this.l});
+  final AppLocalizations l;
 
   @override
   Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF161B22) : _surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isDark ? const Color(0xFF2B3442) : _line,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: isDark ? const Color(0x44000000) : const Color(0x0F000000),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
+      child: Row(
         children: [
-          Row(
+          Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _ItemImage(imageUrl: item.imageUrl),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      item.brandLabel.toUpperCase(),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: isDark
-                            ? const Color(0xFF97A2B5)
-                            : _muted,
-                        letterSpacing: 0.3,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      item.name,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
-                        color: isDark ? const Color(0xFFE6EDF7) : _ink,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    Row(
-                      children: [
-                        Text(
-                          '\$${item.finalPrice.toStringAsFixed(2)}',
-                          style: TextStyle(
-                            fontSize: 24,
-                            height: 1,
-                            fontWeight: FontWeight.w800,
-                            color: isDark ? const Color(0xFFE6EDF7) : _ink,
-                          ),
-                        ),
-                        if (item.hasDiscount) ...[
-                          const SizedBox(width: 8),
-                          Text(
-                            '\$${item.basePrice.toStringAsFixed(2)}',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
-                              color: isDark
-                                  ? const Color(0xFF97A2B5)
-                                  : _muted,
-                              decoration: TextDecoration.lineThrough,
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            item.stock > 0 ? l.inStock : l.outOfStock,
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: item.stock > 0 ? _green : Colors.red,
-                            ),
-                          ),
-                        ),
-                        _WarrantyChip(warranty: item.warranty),
-                      ],
-                    ),
-                  ],
+              Text(
+                l.repairService,
+                style: GoogleFonts.manrope(
+                  fontSize: 26,
+                  fontWeight: FontWeight.w800,
+                  color: _ink(context),
+                  letterSpacing: -0.5,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                'Genuine parts & professional repair',
+                style: GoogleFonts.manrope(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                  color: _muted(context),
                 ),
               ),
             ],
           ),
+          const Spacer(),
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: _primarySoft,
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: const Icon(
+              Icons.build_circle_rounded,
+              color: _primary,
+              size: 22,
+            ),
+          ),
         ],
       ),
     );
   }
 }
 
-class _WarrantyChip extends StatelessWidget {
-  const _WarrantyChip({required this.warranty});
+// ── Hero Banner ───────────────────────────────────────────────────────────────
 
-  final String? warranty;
+class _HeroBanner extends StatelessWidget {
+  const _HeroBanner();
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final text = (warranty ?? '').trim();
-    final hasWarranty = text.isNotEmpty && text.toLowerCase() != 'no warranty';
-
-    final foreground = hasWarranty
-        ? Colors.white
-        : (isDark ? const Color(0xFF97A2B5) : const Color(0xFF8A8A8E));
-    final background = hasWarranty
-        ? const Color(0xFF4B6BFF)
-        : (isDark ? const Color(0xFF1D2635) : const Color(0xFFF2F2F2));
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: background,
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        hasWarranty ? text : 'No Warranty',
-        style: TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w500,
-          color: foreground,
+    final isDark = _isDark(context);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          gradient: LinearGradient(
+            colors: isDark
+                ? [const Color(0xFF1B2A4A), const Color(0xFF1A3360)]
+                : [const Color(0xFF3B6BFF), const Color(0xFF6B8FFF)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.18),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Text(
+                      'KY Service Center',
+                      style: GoogleFonts.manrope(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white.withValues(alpha: 0.9),
+                        letterSpacing: 0.3,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    'We Fix.\nYou Relax.',
+                    style: GoogleFonts.sora(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
+                      height: 1.2,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Fast diagnosis · Quality parts\nProfessional repair',
+                    style: GoogleFonts.manrope(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.white.withValues(alpha: 0.8),
+                      height: 1.5,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 16),
+            // Illustration
+            Column(
+              children: [
+                Container(
+                  width: 72,
+                  height: 72,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.18),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: const Icon(
+                    Icons.build_rounded,
+                    color: Colors.white,
+                    size: 36,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  width: 72,
+                  height: 28,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    'Book Now',
+                    style: GoogleFonts.manrope(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                      color: _primary,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );
   }
 }
+
+// ── Search Bar ────────────────────────────────────────────────────────────────
+
+class _SearchBar extends StatelessWidget {
+  const _SearchBar({required this.controller});
+  final TextEditingController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: _surface(context),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: _border(context)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: _isDark(context) ? 0.2 : 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: TextField(
+        controller: controller,
+        textInputAction: TextInputAction.search,
+        onTapOutside: (_) => FocusScope.of(context).unfocus(),
+        style: GoogleFonts.manrope(
+          fontSize: 14,
+          fontWeight: FontWeight.w600,
+          color: _ink(context),
+        ),
+        decoration: InputDecoration(
+          hintText: 'Search by name, brand…',
+          hintStyle: GoogleFonts.manrope(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            color: _muted(context),
+          ),
+          prefixIcon: Icon(Icons.search_rounded, color: _muted(context), size: 22),
+          suffixIcon: controller.text.isNotEmpty
+              ? IconButton(
+                  icon: Icon(Icons.close_rounded, color: _muted(context), size: 20),
+                  onPressed: controller.clear,
+                )
+              : null,
+          counterText: '',
+          filled: true,
+          fillColor: _surface(context),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: BorderSide.none,
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: BorderSide.none,
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: const BorderSide(color: _primary, width: 1.5),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Accessory Card ────────────────────────────────────────────────────────────
+
+class _AccessoryCard extends StatelessWidget {
+  const _AccessoryCard({required this.item});
+  final _RepairAccessory item;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = _isDark(context);
+    final inStock = item.stock > 0;
+    final hasDiscount = item.hasDiscount;
+    final warranty = (item.warranty ?? '').trim();
+    final hasWarranty = warranty.isNotEmpty && warranty.toLowerCase() != 'no warranty';
+
+    return Container(
+      decoration: BoxDecoration(
+        color: _surface(context),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: _border(context)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.06),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // ── Image ──────────────────────────────────────────────────
+            _ItemImage(imageUrl: item.imageUrl),
+            const SizedBox(width: 14),
+            // ── Content ────────────────────────────────────────────────
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Brand pill
+                  if (item.brandLabel != 'Unknown')
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: _primarySoft,
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Text(
+                        item.brandLabel.toUpperCase(),
+                        style: GoogleFonts.manrope(
+                          fontSize: 9,
+                          fontWeight: FontWeight.w800,
+                          color: _primary,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ),
+                  const SizedBox(height: 5),
+                  // Name
+                  Text(
+                    item.name,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.manrope(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: _ink(context),
+                      height: 1.3,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  // Price row
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        '\$${item.finalPrice.toStringAsFixed(2)}',
+                        style: GoogleFonts.manrope(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w800,
+                          color: hasDiscount ? _danger : _primary,
+                          height: 1,
+                        ),
+                      ),
+                      if (hasDiscount) ...[
+                        const SizedBox(width: 6),
+                        Text(
+                          '\$${item.basePrice.toStringAsFixed(2)}',
+                          style: GoogleFonts.manrope(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color: _muted(context),
+                            decoration: TextDecoration.lineThrough,
+                            decorationColor: _muted(context),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: _dangerSoft,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            '-${(((item.basePrice - item.finalPrice) / item.basePrice) * 100).toStringAsFixed(0)}%',
+                            style: GoogleFonts.manrope(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w800,
+                              color: _danger,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  // Bottom row: stock + warranty
+                  Row(
+                    children: [
+                      _StatusChip(
+                        label: inStock ? 'In Stock' : 'Out of Stock',
+                        color: inStock ? _success : _danger,
+                        bg: inStock ? _successSoft : _dangerSoft,
+                        icon: inStock
+                            ? Icons.check_circle_rounded
+                            : Icons.cancel_rounded,
+                      ),
+                      if (hasWarranty) ...[
+                        const SizedBox(width: 6),
+                        _StatusChip(
+                          label: warranty,
+                          color: _warning,
+                          bg: _warningSoft,
+                          icon: Icons.shield_rounded,
+                        ),
+                      ],
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Status Chip ───────────────────────────────────────────────────────────────
+
+class _StatusChip extends StatelessWidget {
+  const _StatusChip({
+    required this.label,
+    required this.color,
+    required this.bg,
+    required this.icon,
+  });
+
+  final String label;
+  final Color color;
+  final Color bg;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 11, color: color),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: GoogleFonts.manrope(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Item Image ────────────────────────────────────────────────────────────────
 
 class _ItemImage extends StatelessWidget {
   const _ItemImage({required this.imageUrl});
-
   final String? imageUrl;
-
-  static const _surfaceSoft = Color(0xFFF4F4F6);
-  static const _muted = Color(0xFF8A8A8E);
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
-      width: 68,
-      height: 68,
+      width: 82,
+      height: 82,
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1D2635) : _surfaceSoft,
-        borderRadius: BorderRadius.circular(10),
+        color: _imageBg(context),
+        borderRadius: BorderRadius.circular(14),
       ),
-      child: imageUrl == null || imageUrl!.isEmpty
-          ? Icon(
-              Icons.image_not_supported_rounded,
-              color: isDark ? const Color(0xFF97A2B5) : _muted,
-            )
-          : Image.network(
+      child: imageUrl != null && imageUrl!.isNotEmpty
+          ? Image.network(
               imageUrl!,
               fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) => Icon(
-                Icons.image_not_supported_rounded,
-                color: isDark ? const Color(0xFF97A2B5) : _muted,
-              ),
-            ),
+              errorBuilder: (ctx, err, st) => const _ImageFallback(),
+            )
+          : const _ImageFallback(),
     );
   }
 }
 
-class _MessageCard extends StatelessWidget {
-  const _MessageCard({
-    required this.title,
-    required this.message,
-    this.actionLabel,
-    this.onTap,
-  });
-
-  final String title;
-  final String message;
-  final String? actionLabel;
-  final Future<void> Function()? onTap;
-
-  static const _surface = Colors.white;
-  static const _ink = Color(0xFF1E1E1E);
-  static const _muted = Color(0xFF8A8A8E);
-  static const _line = Color(0xFFE5E5EA);
-  static const _blue = Color(0xFF4B6BFF);
+class _ImageFallback extends StatelessWidget {
+  const _ImageFallback();
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Center(
+      child: Icon(
+        Icons.build_circle_outlined,
+        size: 32,
+        color: _muted(context),
+      ),
+    );
+  }
+}
+
+// ── State Card (Empty / Error) ────────────────────────────────────────────────
+
+class _StateCard extends StatelessWidget {
+  const _StateCard({
+    required this.icon,
+    required this.iconColor,
+    required this.iconBg,
+    required this.title,
+    required this.subtitle,
+    this.buttonLabel,
+    this.onButton,
+  });
+
+  final IconData icon;
+  final Color iconColor;
+  final Color iconBg;
+  final String title;
+  final String subtitle;
+  final String? buttonLabel;
+  final Future<void> Function()? onButton;
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 24),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF161B22) : _surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isDark ? const Color(0xFF2B3442) : _line,
-        ),
+        color: _surface(context),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: _border(context)),
       ),
       child: Column(
         children: [
+          Container(
+            width: 72,
+            height: 72,
+            decoration: BoxDecoration(
+              color: iconBg,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: iconColor, size: 32),
+          ),
+          const SizedBox(height: 16),
           Text(
             title,
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
-              color: isDark ? const Color(0xFFE6EDF7) : _ink,
+            style: GoogleFonts.manrope(
+              fontSize: 17,
+              fontWeight: FontWeight.w800,
+              color: _ink(context),
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           Text(
-            message,
+            subtitle,
             textAlign: TextAlign.center,
-            style: TextStyle(
+            style: GoogleFonts.manrope(
               fontSize: 13,
               fontWeight: FontWeight.w500,
-              color: isDark ? const Color(0xFF97A2B5) : _muted,
+              color: _muted(context),
+              height: 1.5,
             ),
           ),
-          if (actionLabel != null && onTap != null) ...[
-            const SizedBox(height: 14),
-            ElevatedButton(
-              onPressed: onTap,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: _blue,
-                foregroundColor: Colors.white,
-                elevation: 0,
+          if (buttonLabel != null && onButton != null) ...[
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: onButton,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _primary,
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: Text(
+                  buttonLabel!,
+                  style: GoogleFonts.manrope(fontWeight: FontWeight.w700),
+                ),
               ),
-              child: Text(actionLabel!),
             ),
           ],
         ],
@@ -601,6 +824,8 @@ class _MessageCard extends StatelessWidget {
     );
   }
 }
+
+// ── Model ─────────────────────────────────────────────────────────────────────
 
 class _RepairAccessory {
   const _RepairAccessory({
@@ -628,28 +853,23 @@ class _RepairAccessory {
   bool get hasDiscount => basePrice > 0 && finalPrice < basePrice;
 
   String get brandLabel {
-    final text = (brand ?? '').trim();
-    return text.isEmpty ? 'Unknown' : text;
+    final t = (brand ?? '').trim();
+    return t.isEmpty ? 'Unknown' : t;
   }
 
   factory _RepairAccessory.fromJson(Map<String, dynamic> json) {
     final image = ApiService.normalizeMediaUrl(
       json['image'] ?? json['thumbnail'] ?? json['photo'] ?? json['image_url'],
     );
-
-    final basePrice = _toDouble(
-      json['price'] ?? json['regular_price'] ?? json['original_price'],
-    );
-    final finalPrice = _toDouble(
-      json['final_price'] ?? json['sale_price'] ?? json['selling_price'] ?? basePrice,
-    );
+    final base = _d(json['price'] ?? json['regular_price'] ?? json['original_price']);
+    final final_ = _d(json['final_price'] ?? json['sale_price'] ?? json['selling_price'] ?? base);
 
     return _RepairAccessory(
-      id: _toInt(json['id']),
+      id: _i(json['id']),
       name: (json['name'] ?? '').toString(),
-      basePrice: basePrice,
-      finalPrice: finalPrice,
-      stock: _toInt(json['stock']),
+      basePrice: base,
+      finalPrice: final_,
+      stock: _i(json['stock']),
       brand: json['brand']?.toString(),
       warranty: json['warranty']?.toString(),
       createdAt: DateTime.tryParse((json['created_at'] ?? '').toString()),
@@ -657,15 +877,15 @@ class _RepairAccessory {
     );
   }
 
-  static int _toInt(dynamic value) {
-    if (value is int) return value;
-    if (value is num) return value.toInt();
-    return int.tryParse(value?.toString() ?? '') ?? 0;
+  static int _i(dynamic v) {
+    if (v is int) return v;
+    if (v is num) return v.toInt();
+    return int.tryParse(v?.toString() ?? '') ?? 0;
   }
 
-  static double _toDouble(dynamic value) {
-    if (value is double) return value;
-    if (value is num) return value.toDouble();
-    return double.tryParse(value?.toString() ?? '') ?? 0;
+  static double _d(dynamic v) {
+    if (v is double) return v;
+    if (v is num) return v.toDouble();
+    return double.tryParse(v?.toString() ?? '') ?? 0;
   }
 }

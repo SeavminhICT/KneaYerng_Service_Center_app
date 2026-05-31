@@ -400,14 +400,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     return _HomeHeader(
                       title: 'KY-App',
                       welcomeName: safeName,
-                      onMenuTap: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) =>
-                                const CategoriesScreen(),
-                          ),
-                        );
-                      },
                       onNotificationTap: () {
                         Navigator.of(context).push(
                           MaterialPageRoute(
@@ -496,9 +488,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     if (snapshot.connectionState == ConnectionState.waiting) {
                       return const _CategorySkeleton();
                     }
-                    final categories = _selectHomepageCategories(
-                      snapshot.data ?? const [],
-                    );
+                    final categories = snapshot.data ?? const [];
                     if (categories.isEmpty) {
                       return const SizedBox.shrink();
                     }
@@ -648,14 +638,12 @@ class _HomeHeader extends StatelessWidget {
   const _HomeHeader({
     required this.title,
     required this.welcomeName,
-    required this.onMenuTap,
     required this.onNotificationTap,
     required this.onCartTap,
   });
 
   final String title;
   final String welcomeName;
-  final VoidCallback onMenuTap;
   final VoidCallback onNotificationTap;
   final VoidCallback onCartTap;
 
@@ -670,8 +658,6 @@ class _HomeHeader extends StatelessWidget {
 
     return Row(
       children: [
-        _IconCircleButton(icon: Icons.menu_rounded, onTap: onMenuTap),
-        const SizedBox(width: 12),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -1471,93 +1457,76 @@ class _CategoryShowcaseStrip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cards = categories.take(6).toList();
-
-    return SizedBox(
-      height: 160,
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          return SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            physics: const BouncingScrollPhysics(),
-            child: ConstrainedBox(
-              constraints: BoxConstraints(minWidth: constraints.maxWidth),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                mainAxisSize: MainAxisSize.max,
-                children: List.generate(cards.length * 2 - 1, (index) {
-                  if (index.isOdd) {
-                    return const SizedBox(width: 12);
-                  }
-                  final itemIndex = index ~/ 2;
-                  final category = cards[itemIndex];
-                  final isRepair =
-                      category.name.toLowerCase().contains('repair') ||
-                      category.name.toLowerCase().contains('service');
-                  return _CategorySpotlightCard(
-                    category: category,
-                    icon: iconFor(category.name),
-                    onTap: () {
-                      if (isRepair) {
-                        onRepairTap();
-                        return;
-                      }
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => CategoryProductsScreen(
-                            categoryId: category.id,
-                            categoryName: category.name,
-                            title: category.name,
-                          ),
-                        ),
-                      );
-                    },
-                    ctaLabel: isRepair ? 'Book Now' : 'Shop Now →',
-                  );
-                }),
-              ),
-            ),
-          );
-        },
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      padding: EdgeInsets.zero,
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 4,
+        mainAxisSpacing: 12,
+        crossAxisSpacing: 8,
+        childAspectRatio: 0.82,
       ),
+      itemCount: categories.length,
+      itemBuilder: (_, i) {
+        final category = categories[i];
+        final isRepair =
+            category.name.toLowerCase().contains('repair') ||
+            category.name.toLowerCase().contains('service');
+        return _CategoryChip(
+          category: category,
+          icon: iconFor(category.name),
+          onTap: () {
+            if (isRepair) {
+              onRepairTap();
+              return;
+            }
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => CategoryProductsScreen(
+                  categoryId: category.id,
+                  categoryName: category.name,
+                  title: category.name,
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 }
 
-class _CategorySpotlightCard extends StatefulWidget {
-  const _CategorySpotlightCard({
+class _CategoryChip extends StatefulWidget {
+  const _CategoryChip({
     required this.category,
     required this.icon,
     required this.onTap,
-    required this.ctaLabel,
   });
 
   final Category category;
   final IconData icon;
   final VoidCallback onTap;
-  final String ctaLabel;
 
   @override
-  State<_CategorySpotlightCard> createState() => _CategorySpotlightCardState();
+  State<_CategoryChip> createState() => _CategoryChipState();
 }
 
-class _CategorySpotlightCardState extends State<_CategorySpotlightCard>
+class _CategoryChipState extends State<_CategoryChip>
     with SingleTickerProviderStateMixin {
   late final AnimationController _ctrl;
-  late final Animation<double> _scaleAnim;
+  late final Animation<double> _scale;
 
   @override
   void initState() {
     super.initState();
     _ctrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 130),
-      lowerBound: 0.0,
-      upperBound: 1.0,
+      duration: const Duration(milliseconds: 120),
     );
-    _scaleAnim = Tween<double>(
+    _scale = Tween<double>(
       begin: 1.0,
-      end: 0.95,
+      end: 0.93,
     ).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOut));
   }
 
@@ -1572,19 +1541,6 @@ class _CategorySpotlightCardState extends State<_CategorySpotlightCard>
     final isDark = _isDark(context);
     final imageUrl = widget.category.imageUrl;
 
-    // Premium background gradient
-    final bgGradient = isDark
-        ? LinearGradient(
-            colors: [_surface(context), const Color(0xFF1B2230)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          )
-        : LinearGradient(
-            colors: [_surface(context), const Color(0xFFF5F7FF)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          );
-
     return GestureDetector(
       onTapDown: (_) => _ctrl.forward(),
       onTapUp: (_) {
@@ -1593,116 +1549,60 @@ class _CategorySpotlightCardState extends State<_CategorySpotlightCard>
       },
       onTapCancel: () => _ctrl.reverse(),
       child: ScaleTransition(
-        scale: _scaleAnim,
+        scale: _scale,
         child: SizedBox(
-          width: 108,
-          height: 144,
-          child: Container(
-            decoration: BoxDecoration(
-              gradient: bgGradient,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: isDark
-                    ? const Color(0xFF2D3545)
-                    : const Color(0xFFDFE4F2),
-                width: 1,
-              ),
-              boxShadow: [
-                BoxShadow(
+          width: 72,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // ── Icon circle ──────────────────────────────────────────
+              Container(
+                width: 58,
+                height: 58,
+                decoration: BoxDecoration(
                   color: isDark
-                      ? const Color(0x1F000000)
-                      : const Color(0x0A233380),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
+                      ? const Color(0xFF1D2635)
+                      : const Color(0xFFEEF2FF),
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: _primary.withValues(alpha: isDark ? 0.10 : 0.08),
+                      blurRadius: 10,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // ── Icon / Image (No circular background) ────────────────
-                SizedBox(
-                  width: 50,
-                  height: 50,
-                  child: Center(
-                    child: imageUrl == null || imageUrl.isEmpty
-                        ? Icon(widget.icon, color: _primary, size: 30)
-                        : Image.network(
-                            imageUrl,
-                            fit: BoxFit.contain,
-                            headers: _imageHeaders,
-                            errorBuilder: (context, error, stackTrace) =>
-                                Icon(widget.icon, color: _primary, size: 30),
+                child: imageUrl != null && imageUrl.isNotEmpty
+                    ? Padding(
+                        padding: const EdgeInsets.all(10),
+                        child: Image.network(
+                          imageUrl,
+                          fit: BoxFit.contain,
+                          headers: _imageHeaders,
+                          errorBuilder: (ctx, err, st) => Icon(
+                            widget.icon,
+                            color: _primary,
+                            size: 26,
                           ),
-                  ),
-                ),
-
-                const SizedBox(height: 6),
-
-                // ── Name (Fixed height to align layout) ─────────────────
-                SizedBox(
-                  height: 36,
-                  child: Center(
-                    child: Text(
-                      widget.category.name,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.manrope(
-                        fontSize: 12.5,
-                        fontWeight: FontWeight.w800,
-                        color: _textPrimary(context),
-                        height: 1.2,
-                      ),
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 6),
-
-                // ── CTA link (Premium pill badge with Chevron) ──────────
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: isDark
-                        ? _primary.withValues(alpha: 0.18)
-                        : const Color(0xFFF0F4FF),
-                    borderRadius: BorderRadius.circular(30),
-                    border: Border.all(
-                      color: _primary.withValues(alpha: isDark ? 0.15 : 0.08),
-                      width: 1,
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        widget.ctaLabel.replaceAll(' →', ''),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.manrope(
-                          fontSize: 9,
-                          fontWeight: FontWeight.w800,
-                          color: isDark ? const Color(0xFF7E9BFF) : _primary,
-                          letterSpacing: 0.3,
                         ),
-                      ),
-                      const SizedBox(width: 3),
-                      Icon(
-                        Icons.chevron_right_rounded,
-                        size: 11,
-                        color: isDark ? const Color(0xFF7E9BFF) : _primary,
-                      ),
-                    ],
-                  ),
+                      )
+                    : Icon(widget.icon, color: _primary, size: 26),
+              ),
+              const SizedBox(height: 7),
+              // ── Label ────────────────────────────────────────────────
+              Text(
+                widget.category.name,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: GoogleFonts.manrope(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: _textPrimary(context),
+                  height: 1.2,
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
@@ -2639,45 +2539,6 @@ Product? _firstProductMatch(List<Product> products, List<String> keywords) {
   return products.isEmpty ? null : products.first;
 }
 
-List<Category> _selectHomepageCategories(List<Category> categories) {
-  final selected = <Category>[];
-  final usedIds = <int>{};
-
-  Category? pick(List<String> keywords) {
-    for (final category in categories) {
-      if (usedIds.contains(category.id)) continue;
-      final haystack = [
-        category.name,
-        category.slug ?? '',
-      ].join(' ').toLowerCase();
-      if (keywords.any(haystack.contains)) {
-        return category;
-      }
-    }
-    return null;
-  }
-
-  for (final keywords in const [
-    ['mac', 'laptop'],
-    ['iphone', 'phone'],
-    ['repair', 'service'],
-  ]) {
-    final match = pick(keywords);
-    if (match != null) {
-      usedIds.add(match.id);
-      selected.add(match);
-    }
-  }
-
-  for (final category in categories) {
-    if (selected.length >= 3) break;
-    if (usedIds.add(category.id)) {
-      selected.add(category);
-    }
-  }
-
-  return selected.take(3).toList();
-}
 
 String _homeProductSpecs(Product product) {
   final parts = <String>[];

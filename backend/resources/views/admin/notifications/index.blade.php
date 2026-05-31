@@ -12,20 +12,7 @@
                     <h1 class="mt-3 text-2xl font-semibold text-slate-900 dark:text-white">Send Notifications With Delivery Context</h1>
                     <p class="mt-2 max-w-3xl text-sm text-slate-500">Design and preview the notification payload, choose the audience, and follow the full system flow from admin action to mobile deep linking.</p>
                 </div>
-                <div class="grid gap-3 sm:grid-cols-3">
-                    <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-800 dark:bg-slate-950">
-                        <p class="text-xs font-semibold uppercase tracking-widest text-slate-400">Primary color</p>
-                        <p class="mt-2 text-sm font-semibold text-slate-900 dark:text-white">#4A88F7</p>
-                    </div>
-                    <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-800 dark:bg-slate-950">
-                        <p class="text-xs font-semibold uppercase tracking-widest text-slate-400">Mobile state</p>
-                        <p class="mt-2 text-sm font-semibold text-slate-900 dark:text-white">Unread -&gt; Read</p>
-                    </div>
-                    <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-800 dark:bg-slate-950">
-                        <p class="text-xs font-semibold uppercase tracking-widest text-slate-400">Delivery path</p>
-                        <p class="mt-2 text-sm font-semibold text-slate-900 dark:text-white">Admin -&gt; Backend -&gt; FCM -&gt; App</p>
-                    </div>
-                </div>
+                
             </div>
         </div>
 
@@ -109,28 +96,7 @@
                     </form>
                 </div>
 
-                <div class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-                    <div class="flex items-center justify-between gap-3">
-                        <div>
-                            <h2 class="text-lg font-semibold text-slate-900 dark:text-white">End-to-End System Flow</h2>
-                            <p class="mt-1 text-sm text-slate-500">The notification lifecycle from admin action to user click and read state.</p>
-                        </div>
-                    </div>
-                    <div class="mt-6 grid gap-4 md:grid-cols-5">
-                        @foreach ([
-                            ['Admin Dashboard', 'Create notification payload and audience'],
-                            ['Backend + Database', 'Store payload and metadata'],
-                            ['Firebase Push', 'Dispatch title, body, and deep link'],
-                            ['Mobile App', 'Show system or in-app alert'],
-                            ['Open + Mark Read', 'Navigate and update status'],
-                        ] as [$title, $body])
-                            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950">
-                                <p class="text-sm font-semibold text-slate-900 dark:text-white">{{ $title }}</p>
-                                <p class="mt-2 text-xs leading-5 text-slate-500">{{ $body }}</p>
-                            </div>
-                        @endforeach
-                    </div>
-                </div>
+                
             </div>
 
             <div class="space-y-6">
@@ -159,7 +125,7 @@
                     </div>
                 </div>
 
-                <div class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                {{-- <div class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
                     <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Routing Rules</h2>
                     <div class="mt-5 space-y-3 text-sm">
                         @foreach ([
@@ -176,7 +142,7 @@
                             </div>
                         @endforeach
                     </div>
-                </div>
+                </div> --}}
             </div>
         </div>
     </section>
@@ -267,17 +233,7 @@
             }
 
             function summaryText(summary) {
-                if (!summary) {
-                    return 'Notification was processed.';
-                }
-                return [
-                    'Target users: ' + (summary.targeted_users || 0),
-                    'Saved notifications: ' + (summary.saved_notifications || 0),
-                    'Registered devices: ' + (summary.device_tokens || 0),
-                    'Delivered to phones: ' + (summary.delivered || 0),
-                    'Failed deliveries: ' + (summary.failed || 0),
-                    'Removed invalid tokens: ' + (summary.removed_invalid_tokens || 0),
-                ].join('\n');
+                return 'Message sent successfully.';
             }
 
             function resetFormState() {

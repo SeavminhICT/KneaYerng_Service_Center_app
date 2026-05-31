@@ -8,179 +8,208 @@
         <form
             id="product-create-form"
             enctype="multipart/form-data"
-            class="space-y-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+            class="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900"
         >
             <div>
-                <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Main Product Information</h2>
+                <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Create Product</h2>
                 <p class="text-sm text-slate-500">Create one base product, then add variants one by one.</p>
             </div>
 
-            <div class="grid gap-4 sm:grid-cols-2">
-                <div>
-                    <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="name">Product Name</label>
-                    <input id="name" name="name" type="text" placeholder="iPhone 17 Pro Max" class="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200" />
-                </div>
-                <div>
-                    <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="brand">Brand</label>
-                    <input id="brand" name="brand" type="text" placeholder="Apple" class="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200" />
-                </div>
-                <div>
-                    <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="category">Category</label>
-                    <select id="category" name="category_id" class="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200">
-                        <option value="">Select category</option>
-                        @foreach (($categories ?? collect()) as $category)
-                            <option value="{{ $category->id }}">{{ $category->name }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div>
-                    <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="status">Status</label>
-                    <select id="status" name="status" class="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200">
-                        <option value="active" selected>Active</option>
-                        <option value="draft">Draft</option>
-                        <option value="archived">Archived</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="cpu">CPU</label>
-                    <input id="cpu" name="cpu" type="text" placeholder="A19 Pro" class="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200" />
-                </div>
-                <div>
-                    <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="display">Display</label>
-                    <input id="display" name="display" type="text" placeholder="6.9\" OLED" class="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200" />
-                </div>
-                <div>
-                    <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="country">Country / Region</label>
-                    <input id="country" name="country" type="text" placeholder="United States" class="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200" />
-                </div>
-                <div>
-                    <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="warranty">Warranty</label>
-                    <select id="warranty" name="warranty" class="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200">
-                        <option value="">Select warranty</option>
-                        <option value="NO_WARRANTY">NO_WARRANTY</option>
-                        <option value="7_DAYS">7_DAYS</option>
-                        <option value="14_DAYS">14_DAYS</option>
-                        <option value="1_MONTH">1_MONTH</option>
-                        <option value="3_MONTHS">3_MONTHS</option>
-                        <option value="6_MONTHS">6_MONTHS</option>
-                        <option value="1_YEAR">1_YEAR</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="tag">Tag</label>
-                    <select id="tag" name="tag" class="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200">
-                        <option value="">No tag</option>
-                        @foreach (\App\Models\Product::TAGS as $tag)
-                            <option value="{{ $tag }}">{{ \Illuminate\Support\Str::title(str_replace('_', ' ', strtolower($tag))) }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div>
-                    <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="discount">Discount</label>
-                    <input id="discount" name="discount" type="number" step="0.01" min="0" value="0" class="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200" />
-                </div>
-            </div>
-
-            <div>
-                <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="description">Description</label>
-                <textarea id="description" name="description" rows="4" class="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200"></textarea>
-            </div>
-
-            <div class="rounded-2xl border border-slate-200 p-4 dark:border-slate-800">
-                <div class="flex flex-wrap items-center justify-between gap-3">
-                    <div>
-                        <h3 class="text-sm font-semibold text-slate-900 dark:text-white">Variant Summary</h3>
-                        <p class="text-xs text-slate-500">Price and stock are auto-calculated from variants.</p>
-                    </div>
-                    <span id="variant-count-badge" class="inline-flex rounded-full border border-primary-200 bg-primary-50 px-3 py-1 text-xs font-semibold text-primary-700 dark:border-primary-500/40 dark:bg-primary-500/10 dark:text-primary-200">0 variants</span>
-                </div>
-                <div class="mt-4 grid gap-4 sm:grid-cols-2">
-                    <div>
-                        <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="price">Price (From)</label>
-                        <input id="price" name="price" type="number" step="0.01" min="0" value="0" readonly class="mt-2 w-full rounded-xl border border-slate-200 bg-slate-100 px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200" />
+            <!-- Basic Information Section -->
+            <div x-data="{ open: true }" class="rounded-2xl border border-slate-200 dark:border-slate-800">
+                <button type="button" @click="open = !open" class="flex w-full items-center justify-between p-4 hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                    <h3 class="text-sm font-semibold text-slate-900 dark:text-white">Basic Information</h3>
+                    <svg :class="{ 'rotate-180': open }" class="h-5 w-5 transition-transform text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                    </svg>
+                </button>
+                <div x-show="open" class="space-y-4 border-t border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-900/50">
+                    <div class="grid gap-4 sm:grid-cols-2">
+                        <div>
+                            <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="name">Product Name</label>
+                            <input id="name" name="name" type="text" placeholder="iPhone 17 Pro Max" class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200" />
+                        </div>
+                        <div>
+                            <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="brand">Brand</label>
+                            <input id="brand" name="brand" type="text" placeholder="Apple" class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200" />
+                        </div>
+                        <div>
+                            <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="category">Category</label>
+                            <select id="category" name="category_id" class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200">
+                                <option value="">Select category</option>
+                                @foreach (($categories ?? collect()) as $category)
+                                    <option value="{{ $category->id }}">{{ $category->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div>
+                            <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="status">Status</label>
+                            <select id="status" name="status" class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200">
+                                <option value="active" selected>Active</option>
+                                <option value="draft">Draft</option>
+                                <option value="archived">Archived</option>
+                            </select>
+                        </div>
                     </div>
                     <div>
-                        <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="stock">Total Stock</label>
-                        <input id="stock" name="stock" type="number" min="0" value="0" readonly class="mt-2 w-full rounded-xl border border-slate-200 bg-slate-100 px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200" />
+                        <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="description">Description</label>
+                        <textarea id="description" name="description" rows="4" class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200"></textarea>
                     </div>
                 </div>
             </div>
 
-            <div class="rounded-2xl border border-slate-200 p-4 dark:border-slate-800">
-                <div class="flex items-center justify-between gap-3">
-                    <div>
-                        <h3 class="text-sm font-semibold text-slate-900 dark:text-white">Add Variant</h3>
-                        <p class="text-xs text-slate-500">Storage + Color + Condition with price and stock.</p>
-                    </div>
-                    <button id="variant-clear-btn" type="button" class="rounded-lg border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600 dark:border-slate-700 dark:text-slate-300">Clear</button>
-                </div>
-
-                <div class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                    <div>
-                        <label class="text-xs font-semibold text-slate-600 dark:text-slate-300" for="variant-storage">Storage</label>
-                        <select id="variant-storage" class="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200">
-                            <option value="">Select</option>
-                            <option value="128GB">128GB</option>
-                            <option value="256GB">256GB</option>
-                            <option value="512GB">512GB</option>
-                            <option value="1TB">1TB</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="text-xs font-semibold text-slate-600 dark:text-slate-300" for="variant-color">Color</label>
-                        <select id="variant-color" class="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200">
-                            <option value="">Select</option>
-                            <option value="Black">Black</option>
-                            <option value="White">White</option>
-                            <option value="Blue">Blue</option>
-                            <option value="Gold">Gold</option>
-                            <option value="Natural Titanium">Natural Titanium</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="text-xs font-semibold text-slate-600 dark:text-slate-300" for="variant-condition">Condition</label>
-                        <select id="variant-condition" class="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200">
-                            <option value="">Select</option>
-                            <option value="New">New</option>
-                            <option value="Used">Used</option>
-                            <option value="Like New">Like New</option>
-                            <option value="Refurbished">Refurbished</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="text-xs font-semibold text-slate-600 dark:text-slate-300" for="variant-ram">RAM</label>
-                        <input id="variant-ram" type="text" placeholder="8GB" class="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200" />
-                    </div>
-                    <div>
-                        <label class="text-xs font-semibold text-slate-600 dark:text-slate-300" for="variant-ssd">SSD</label>
-                        <input id="variant-ssd" type="text" placeholder="NVMe" class="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200" />
-                    </div>
-                    <div>
-                        <label class="text-xs font-semibold text-slate-600 dark:text-slate-300" for="variant-sku">SKU</label>
-                        <input id="variant-sku" type="text" placeholder="IP17PM-256-BLK" class="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200" />
-                    </div>
-                    <div>
-                        <label class="text-xs font-semibold text-slate-600 dark:text-slate-300" for="variant-price">Price</label>
-                        <input id="variant-price" type="number" step="0.01" min="0" placeholder="1230" class="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200" />
-                    </div>
-                    <div>
-                        <label class="text-xs font-semibold text-slate-600 dark:text-slate-300" for="variant-stock">Stock</label>
-                        <input id="variant-stock" type="number" min="0" placeholder="10" class="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200" />
-                    </div>
-                    <div>
-                        <label class="text-xs font-semibold text-slate-600 dark:text-slate-300" for="variant-image">Variant Image</label>
-                        <input id="variant-image" type="file" accept="image/*" class="mt-1 w-full text-xs text-slate-500" />
+            <!-- Specifications Section -->
+            <div x-data="{ open: true }" class="rounded-2xl border border-slate-200 dark:border-slate-800">
+                <button type="button" @click="open = !open" class="flex w-full items-center justify-between p-4 hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                    <h3 class="text-sm font-semibold text-slate-900 dark:text-white">Specifications</h3>
+                    <svg :class="{ 'rotate-180': open }" class="h-5 w-5 transition-transform text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                    </svg>
+                </button>
+                <div x-show="open" class="space-y-4 border-t border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-900/50">
+                    <div class="grid gap-4 sm:grid-cols-2">
+                        <div>
+                            <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="cpu">CPU</label>
+                            <input id="cpu" name="cpu" type="text" placeholder="A19 Pro" class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200" />
+                        </div>
+                        <div>
+                            <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="display">Display</label>
+                            <input id="display" name="display" type="text" placeholder="6.9\" OLED" class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200" />
+                        </div>
+                        <div>
+                            <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="country">Country / Region</label>
+                            <input id="country" name="country" type="text" placeholder="United States" class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200" />
+                        </div>
+                        <div>
+                            <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="warranty">Warranty</label>
+                            <select id="warranty" name="warranty" class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200">
+                                <option value="">Select warranty</option>
+                                <option value="NO_WARRANTY">NO_WARRANTY</option>
+                                <option value="7_DAYS">7_DAYS</option>
+                                <option value="14_DAYS">14_DAYS</option>
+                                <option value="1_MONTH">1_MONTH</option>
+                                <option value="3_MONTHS">3_MONTHS</option>
+                                <option value="6_MONTHS">6_MONTHS</option>
+                                <option value="1_YEAR">1_YEAR</option>
+                            </select>
+                        </div>
+                        <div class="sm:col-span-2">
+                            <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="tag">Tag</label>
+                            <select id="tag" name="tag" class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200">
+                                <option value="">No tag</option>
+                                @foreach (\App\Models\Product::TAGS as $tag)
+                                    <option value="{{ $tag }}">{{ \Illuminate\Support\Str::title(str_replace('_', ' ', strtolower($tag))) }}</option>
+                                @endforeach
+                            </select>
+                        </div>
                     </div>
                 </div>
+            </div>
 
-                <div class="mt-4 flex items-center gap-2">
-                    <button id="variant-add-btn" type="button" class="inline-flex h-10 items-center rounded-xl bg-primary-600 px-4 text-sm font-semibold text-white">Add Variant</button>
-                    <p id="variant-form-error" class="text-xs text-danger-600"></p>
+            <!-- Pricing & Discount Section -->
+            <div x-data="{ open: true }" class="rounded-2xl border border-slate-200 dark:border-slate-800">
+                <button type="button" @click="open = !open" class="flex w-full items-center justify-between p-4 hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                    <h3 class="text-sm font-semibold text-slate-900 dark:text-white">Pricing & Discount</h3>
+                    <svg :class="{ 'rotate-180': open }" class="h-5 w-5 transition-transform text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                    </svg>
+                </button>
+                <div x-show="open" class="space-y-4 border-t border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-900/50">
+                    <div class="grid gap-4 sm:grid-cols-2">
+                        <div>
+                            <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="price">Price (From Variants)</label>
+                            <input id="price" name="price" type="number" step="0.01" min="0" value="0" readonly class="mt-2 w-full rounded-xl border border-slate-200 bg-slate-100 px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200" />
+                        </div>
+                        <div>
+                            <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="stock">Total Stock</label>
+                            <input id="stock" name="stock" type="number" min="0" value="0" readonly class="mt-2 w-full rounded-xl border border-slate-200 bg-slate-100 px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200" />
+                        </div>
+                        <div>
+                            <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="discount">Discount (%)</label>
+                            <input id="discount" name="discount" type="number" step="0.01" min="0" value="0" class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Product Variants Section -->
+            <div class="rounded-2xl border border-slate-200 dark:border-slate-800">
+                <div class="p-4">
+                    <h3 class="text-sm font-semibold text-slate-900 dark:text-white">Product Variants</h3>
+                    <p class="text-xs text-slate-500 mt-1">Add one or more variants with storage, color, condition, and pricing.</p>
                 </div>
 
-                <div class="mt-4 overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800">
+                <!-- Variant Input Form -->
+                <div class="border-t border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-900/50">
+                    <div class="grid gap-3 sm:grid-cols-2">
+                        <div>
+                            <label class="text-xs font-semibold text-slate-600 dark:text-slate-300" for="variant-storage">Storage *</label>
+                            <select id="variant-storage" class="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200">
+                                <option value="">Select</option>
+                                <option value="128GB">128GB</option>
+                                <option value="256GB">256GB</option>
+                                <option value="512GB">512GB</option>
+                                <option value="1TB">1TB</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="text-xs font-semibold text-slate-600 dark:text-slate-300" for="variant-color">Color *</label>
+                            <select id="variant-color" class="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200">
+                                <option value="">Select</option>
+                                <option value="Black">Black</option>
+                                <option value="White">White</option>
+                                <option value="Blue">Blue</option>
+                                <option value="Gold">Gold</option>
+                                <option value="Natural Titanium">Natural Titanium</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="text-xs font-semibold text-slate-600 dark:text-slate-300" for="variant-condition">Condition *</label>
+                            <select id="variant-condition" class="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200">
+                                <option value="">Select</option>
+                                <option value="New">New</option>
+                                <option value="Used">Used</option>
+                                <option value="Like New">Like New</option>
+                                <option value="Refurbished">Refurbished</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="text-xs font-semibold text-slate-600 dark:text-slate-300" for="variant-price">Price *</label>
+                            <input id="variant-price" type="number" step="0.01" min="0" placeholder="1230" class="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200" />
+                        </div>
+                        <div>
+                            <label class="text-xs font-semibold text-slate-600 dark:text-slate-300" for="variant-stock">Stock *</label>
+                            <input id="variant-stock" type="number" min="0" placeholder="10" class="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200" />
+                        </div>
+                        <div>
+                            <label class="text-xs font-semibold text-slate-600 dark:text-slate-300" for="variant-sku">SKU</label>
+                            <input id="variant-sku" type="text" placeholder="IP17PM-256-BLK" class="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200" />
+                        </div>
+                        <div>
+                            <label class="text-xs font-semibold text-slate-600 dark:text-slate-300" for="variant-ram">RAM</label>
+                            <input id="variant-ram" type="text" placeholder="8GB" class="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200" />
+                        </div>
+                        <div>
+                            <label class="text-xs font-semibold text-slate-600 dark:text-slate-300" for="variant-ssd">SSD</label>
+                            <input id="variant-ssd" type="text" placeholder="NVMe" class="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200" />
+                        </div>
+                        <div>
+                            <label class="text-xs font-semibold text-slate-600 dark:text-slate-300" for="variant-image">Variant Image</label>
+                            <input id="variant-image" type="file" accept="image/*" class="mt-1 w-full text-xs text-slate-500" />
+                        </div>
+                    </div>
+
+                    <div class="mt-4 flex items-center gap-2">
+                        <button id="variant-add-btn" type="button" class="inline-flex h-10 items-center rounded-xl bg-primary-600 px-4 text-sm font-semibold text-white hover:bg-primary-700">Add Variant</button>
+                        <button id="variant-clear-btn" type="button" class="inline-flex h-10 items-center rounded-xl border border-slate-200 px-4 text-sm font-semibold text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300">Clear</button>
+                        <p id="variant-form-error" class="ml-auto text-xs text-danger-600"></p>
+                    </div>
+                </div>
+
+                <!-- Variants Table -->
+                <div class="border-t border-slate-200 overflow-x-auto dark:border-slate-800">
                     <table class="w-full text-left text-sm">
-                        <thead class="bg-slate-50 text-xs uppercase tracking-wider text-slate-500 dark:bg-slate-950 dark:text-slate-400">
+                        <thead class="bg-slate-100 text-xs uppercase tracking-wider text-slate-600 dark:bg-slate-800 dark:text-slate-300">
                             <tr>
                                 <th class="px-3 py-2">Storage</th>
                                 <th class="px-3 py-2">Color</th>
@@ -199,17 +228,18 @@
                 </div>
             </div>
 
-            <div class="flex items-center gap-3">
-                <button class="inline-flex h-10 items-center rounded-xl bg-primary-600 px-4 text-sm font-semibold text-white shadow-sm">Save Product</button>
-                <a href="{{ route('admin.products.index') }}" class="text-sm font-semibold text-slate-500">Cancel</a>
+            <div class="flex items-center gap-3 border-t border-slate-200 pt-4 dark:border-slate-800">
+                <button class="inline-flex h-10 items-center rounded-xl bg-primary-600 px-6 text-sm font-semibold text-white shadow-sm hover:bg-primary-700">Save Product</button>
+                <a href="{{ route('admin.products.index') }}" class="text-sm font-semibold text-slate-500 hover:text-slate-700">Cancel</a>
             </div>
             <p id="product-form-error" class="text-sm text-danger-600"></p>
         </form>
 
         <div class="space-y-6">
+            <!-- Image Upload Card -->
             <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900" x-data="{ preview: null }">
-                <h3 class="text-sm font-semibold text-slate-900 dark:text-white">Main Product Images</h3>
-                <p class="mt-1 text-xs text-slate-500">Upload thumbnail and gallery for storefront display.</p>
+                <h3 class="text-sm font-semibold text-slate-900 dark:text-white">Product Images</h3>
+                <p class="mt-1 text-xs text-slate-500">Upload thumbnail and gallery images.</p>
                 <div class="mt-4 flex h-40 items-center justify-center rounded-xl border border-dashed border-slate-300 bg-slate-50 text-xs text-slate-500 dark:border-slate-700 dark:bg-slate-900/60">
                     <template x-if="preview">
                         <img :src="preview" alt="Preview" class="h-32 w-32 rounded-xl object-cover" />
@@ -217,14 +247,25 @@
                     <template x-if="!preview">
                         <div class="text-center">
                             <p class="font-semibold">Drop image here</p>
-                            <p>PNG, JPG up to 5MB</p>
+                            <p class="text-xs">PNG, JPG up to 5MB</p>
                         </div>
                     </template>
                 </div>
                 <input type="file" name="thumbnail" form="product-create-form" class="mt-4 w-full text-sm text-slate-500" @change="const file = $event.target.files[0]; if (file) { const reader = new FileReader(); reader.onload = e => preview = e.target.result; reader.readAsDataURL(file); }" />
-                <label class="mt-4 text-xs font-semibold text-slate-600 dark:text-slate-300">Image Gallery</label>
+                <label class="mt-4 block text-xs font-semibold text-slate-600 dark:text-slate-300">Gallery Images</label>
                 <div id="gallery-preview" class="mt-2 grid grid-cols-3 gap-2 text-xs text-slate-500"></div>
                 <input type="file" name="image_gallery[]" form="product-create-form" multiple class="mt-2 w-full text-sm text-slate-500" />
+            </div>
+
+            <!-- Variant Summary Card -->
+            <div class="rounded-2xl border border-primary-200 bg-primary-50 p-4 dark:border-primary-500/40 dark:bg-primary-500/10">
+                <div class="flex items-start justify-between gap-3">
+                    <div>
+                        <h3 class="text-sm font-semibold text-primary-900 dark:text-primary-100">Variants Added</h3>
+                        <p class="mt-1 text-xs text-primary-700 dark:text-primary-200">Total count of variants for this product.</p>
+                    </div>
+                    <span id="variant-count-badge" class="inline-flex rounded-full border border-primary-300 bg-primary-100 px-3 py-1 text-xs font-semibold text-primary-700 dark:border-primary-500/40 dark:bg-primary-500/20 dark:text-primary-200">0 variants</span>
+                </div>
             </div>
         </div>
     </div>

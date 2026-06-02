@@ -1,7 +1,8 @@
-import 'dart:async';
+﻿import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../theme/app_fonts.dart';
 
 import '../l10n/app_localizations.dart';
 import '../models/pickup_ticket.dart';
@@ -176,7 +177,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                 icon: const Icon(Icons.headset_mic_rounded, size: 20),
                 label: Text(
                   AppLocalizations.of(context).support,
-                  style: GoogleFonts.sora(
+                  style: kFont(context, 
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
                   ),
@@ -333,10 +334,10 @@ class _AnimatedBottomNavBar extends StatelessWidget {
     final inactiveColor = isDark
         ? const Color(0xFF4A6070)
         : const Color(0xFFB0C4D0);
-    const activeLabelColor = brandDark;
+    const activeLabelColor = Colors.black;
     final inactiveLabelColor = isDark
-        ? const Color(0xFF4A6070)
-        : const Color(0xFFB0C4D0);
+        ? const Color(0xFF8AA0B0)
+        : Colors.black54;
 
     return Container(
       margin: EdgeInsets.fromLTRB(
@@ -474,7 +475,7 @@ class _BottomNavItem extends StatelessWidget {
               style: TextStyle(
                 color: active ? activeLabelColor : inactiveLabelColor,
                 fontSize: active ? 10.5 : 10,
-                fontWeight: active ? FontWeight.w700 : FontWeight.w500,
+                fontWeight: active ? FontWeight.w800 : FontWeight.w600,
                 letterSpacing: active ? 0.3 : 0.1,
                 height: 1,
               ),

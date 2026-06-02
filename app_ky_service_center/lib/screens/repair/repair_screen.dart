@@ -1,7 +1,8 @@
-import 'dart:convert';
+﻿import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../theme/app_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'package:skeletonizer/skeletonizer.dart';
 
@@ -370,7 +371,7 @@ class _HeroBanner extends StatelessWidget {
                   const SizedBox(height: 10),
                   Text(
                     'We Fix.\nYou Relax.',
-                    style: GoogleFonts.sora(
+                    style: kFont(context, 
                       fontSize: 22,
                       fontWeight: FontWeight.w800,
                       color: Colors.white,

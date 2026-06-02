@@ -1,6 +1,7 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../theme/app_fonts.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../services/api_service.dart';
@@ -161,7 +162,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
 
                     Text(
                       l.forgotPassword,
-                      style: GoogleFonts.sora(
+                      style: kFont(context, 
                         fontSize: 28,
                         fontWeight: FontWeight.w700,
                         color: _textHead,
@@ -474,7 +475,7 @@ class _OtpVerifyScreenState extends State<OtpVerifyScreen> {
 
                 Text(
                   'Verification',
-                  style: GoogleFonts.sora(
+                  style: kFont(context, 
                     fontSize: 28,
                     fontWeight: FontWeight.w700,
                     color: _textHead,
@@ -642,7 +643,7 @@ class _OtpVerifyScreenState extends State<OtpVerifyScreen> {
             maxLength: 6,
             textAlign: TextAlign.center,
             cursorColor: _primary,
-            style: GoogleFonts.sora(
+            style: kFont(context, 
               fontSize: 22,
               fontWeight: FontWeight.w700,
               color: isError ? AppPalette.error : _textHead,
@@ -825,7 +826,7 @@ class _ResetPasswordNewScreenState extends State<ResetPasswordNewScreen> {
 
                   Text(
                     l.newPassword,
-                    style: GoogleFonts.sora(
+                    style: kFont(context, 
                       fontSize: 28,
                       fontWeight: FontWeight.w700,
                       color: _textHead,
@@ -965,7 +966,7 @@ class _SuccessSheet extends StatelessWidget {
           const SizedBox(height: 20),
           Text(
             'Password Reset!',
-            style: GoogleFonts.sora(
+            style: kFont(context, 
               fontSize: 22,
               fontWeight: FontWeight.w700,
               color: _textHead,
@@ -996,7 +997,7 @@ class _SuccessSheet extends StatelessWidget {
               ),
               child: Text(
                 l.back,
-                style: GoogleFonts.sora(
+                style: kFont(context, 
                   fontSize: 15,
                   fontWeight: FontWeight.w700,
                   color: Colors.white,
@@ -1054,7 +1055,7 @@ class _StepIndicator extends StatelessWidget {
                         )
                       : Text(
                           '${i + 1}',
-                          style: GoogleFonts.sora(
+                          style: kFont(context, 
                             fontSize: 11,
                             fontWeight: FontWeight.w700,
                             color: active ? _primary : _iconMuted,
@@ -1170,7 +1171,7 @@ class _Tab extends StatelessWidget {
               const SizedBox(width: 6),
               Text(
                 label,
-                style: GoogleFonts.sora(
+                style: kFont(context, 
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
                   color: active ? _primary : _iconMuted,
@@ -1451,7 +1452,7 @@ class _PrimaryBtn extends StatelessWidget {
                     children: [
                       Text(
                         label,
-                        style: GoogleFonts.sora(
+                        style: kFont(context, 
                           fontSize: 15,
                           fontWeight: FontWeight.w700,
                           color: Colors.white,

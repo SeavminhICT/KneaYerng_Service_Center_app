@@ -1,5 +1,6 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../theme/app_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:skeletonizer/skeletonizer.dart';
@@ -18,6 +19,8 @@ import 'edit_profile_screen.dart';
 import 'reviews_preview_screen.dart';
 import '../../widgets/auth_guard.dart';
 import '../support/support_chat_screen.dart';
+import 'help_center_screen.dart';
+import 'privacy_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -250,7 +253,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 children: [
                   Text(
                     'Complete Your Profile',
-                    style: GoogleFonts.sora(
+                    style: kFont(context, 
                       color: Colors.white,
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
@@ -794,7 +797,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
           _settingsRow(
             icon: Icons.lock_outline_rounded,
             title: l.privacy,
-            onTap: () => _showFeatureComingSoon(l.privacy),
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const PrivacyScreen()),
+            ),
           ),
           _settingsDivider(),
           _settingsRow(
@@ -817,7 +822,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
           _settingsRow(
             icon: Icons.help_outline_rounded,
             title: l.helpCenter,
-            onTap: () => _showFeatureComingSoon(l.helpCenter),
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const HelpCenterScreen()),
+            ),
           ),
         ],
       ),

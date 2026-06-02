@@ -1,5 +1,6 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../theme/app_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 
@@ -132,7 +133,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                           const Spacer(),
                           Text(
                             l.editProfile,
-                            style: GoogleFonts.sora(
+                            style: kFont(context, 
                               fontSize: 17,
                               fontWeight: FontWeight.w700,
                               color: Colors.white,
@@ -192,7 +193,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       const SizedBox(height: 12),
                       Text(
                         name,
-                        style: GoogleFonts.sora(
+                        style: kFont(context, 
                           fontSize: 18,
                           fontWeight: FontWeight.w700,
                           color: Colors.white,
@@ -275,7 +276,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   children: [
                     Text(
                       'Profile Completeness',
-                      style: GoogleFonts.sora(
+                      style: kFont(context, 
                         fontSize: 13.5,
                         fontWeight: FontWeight.w700,
                         color: _textPrimary,
@@ -292,7 +293,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               ),
               Text(
                 '$score%',
-                style: GoogleFonts.sora(
+                style: kFont(context, 
                   fontSize: 16,
                   fontWeight: FontWeight.w800,
                   color: color,

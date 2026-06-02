@@ -1,5 +1,6 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../theme/app_fonts.dart';
 import '../services/api_service.dart';
 import '../screens/Auth/login_screen.dart';
 import '../screens/Auth/register_screen.dart';
@@ -83,7 +84,7 @@ Future<bool> ensureLoggedIn(
                     const SizedBox(height: 16),
                     Text(
                       'Login Required',
-                      style: GoogleFonts.sora(
+                      style: kFont(context, 
                         fontSize: 22,
                         fontWeight: FontWeight.w700,
                         color: Colors.white,
@@ -143,7 +144,7 @@ Future<bool> ensureLoggedIn(
                         ),
                         child: Text(
                           'Login',
-                          style: GoogleFonts.sora(
+                          style: kFont(context, 
                             fontSize: 15,
                             fontWeight: FontWeight.w700,
                             letterSpacing: 0.2,
@@ -171,7 +172,7 @@ Future<bool> ensureLoggedIn(
                       ),
                       child: Text(
                         'Create Account',
-                        style: GoogleFonts.sora(
+                        style: kFont(context, 
                           fontSize: 15,
                           fontWeight: FontWeight.w600,
                         ),

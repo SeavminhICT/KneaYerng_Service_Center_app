@@ -1,8 +1,9 @@
-import 'dart:async';
+﻿import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../theme/app_fonts.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/cart_item.dart';
 import '../../services/api_service.dart';
@@ -348,7 +349,7 @@ class _CartScreenState extends State<CartScreen> with TickerProviderStateMixin {
                 icon: const Icon(Icons.headset_mic_rounded, size: 20),
                 label: Text(
                   l.support,
-                  style: GoogleFonts.sora(
+                  style: kFont(context, 
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
                   ),

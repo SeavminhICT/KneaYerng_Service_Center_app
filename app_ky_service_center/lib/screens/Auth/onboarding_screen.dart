@@ -1,7 +1,8 @@
-import 'dart:math' as math;
+﻿import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../theme/app_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../l10n/app_localizations.dart';
@@ -164,7 +165,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                         const SizedBox(width: 8),
                         Text(
                           'KY Services',
-                          style: GoogleFonts.sora(
+                          style: kFont(context, 
                             fontSize: 14,
                             fontWeight: FontWeight.w700,
                             color: _textHead,
@@ -186,7 +187,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                       ),
                       child: Text(
                         l.skip,
-                        style: GoogleFonts.sora(
+                        style: kFont(context, 
                           fontSize: 12.5,
                           fontWeight: FontWeight.w600,
                           color: _primary,
@@ -296,7 +297,7 @@ class _FeaturePage extends StatelessWidget {
           Text(
             titles[pageIndex],
             textAlign: TextAlign.center,
-            style: GoogleFonts.sora(
+            style: kFont(context, 
               fontSize: 26,
               fontWeight: FontWeight.w700,
               height: 1.25,
@@ -502,7 +503,7 @@ class _ProductCard extends StatelessWidget {
           const SizedBox(height: 2),
           Text(
             price,
-            style: GoogleFonts.sora(
+            style: kFont(context, 
               fontSize: 12,
               fontWeight: FontWeight.w700,
               color: color,
@@ -569,7 +570,7 @@ class _Screen2Illustration extends StatelessWidget {
                 const SizedBox(height: 8),
                 Text(
                   'KY Shop',
-                  style: GoogleFonts.sora(
+                  style: kFont(context, 
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
                     color: _textHead,
@@ -848,7 +849,7 @@ class _Screen3Illustration extends StatelessWidget {
                       children: [
                         Text(
                           'On the way!',
-                          style: GoogleFonts.sora(
+                          style: kFont(context, 
                             fontSize: 12,
                             fontWeight: FontWeight.w700,
                             color: Colors.white,
@@ -959,7 +960,7 @@ class _TrackingStep extends StatelessWidget {
             ),
             child: Text(
               'Live',
-              style: GoogleFonts.sora(
+              style: kFont(context, 
                 fontSize: 9,
                 fontWeight: FontWeight.w700,
                 color: _primary,
@@ -1057,7 +1058,7 @@ class _LanguagePage extends StatelessWidget {
           const SizedBox(height: 20),
           Text(
             l.chooseYourLanguage,
-            style: GoogleFonts.sora(
+            style: kFont(context, 
               fontSize: 30,
               fontWeight: FontWeight.w700,
               height: 1.2,
@@ -1112,7 +1113,7 @@ class _LanguagePage extends StatelessWidget {
                         children: [
                           Text(
                             opt.label,
-                            style: GoogleFonts.sora(
+                            style: kFont(context, 
                               fontSize: 15,
                               fontWeight: FontWeight.w600,
                               color: _textHead,
@@ -1239,7 +1240,7 @@ class _PrimaryBtn extends StatelessWidget {
                 children: [
                   Text(
                     label,
-                    style: GoogleFonts.sora(
+                    style: kFont(context, 
                       fontSize: 15,
                       fontWeight: FontWeight.w700,
                       color: Colors.white,
@@ -1278,7 +1279,7 @@ class _GhostBtn extends StatelessWidget {
         ),
         child: Text(
           label,
-          style: GoogleFonts.sora(
+          style: kFont(context, 
             fontSize: 14,
             fontWeight: FontWeight.w600,
             color: _primary,

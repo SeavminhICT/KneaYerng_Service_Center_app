@@ -1,0 +1,20 @@
+.git
+.github
+.idea
+.vscode
+node_modules
+vendor
+storage/logs/*
+storage/framework/cache/*
+storage/framework/sessions/*
+storage/framework/views/*
+bootstrap/cache/*
+public/hot
+public/build
+.env
+.env.*
+*.md
+tests
+phpunit.xml
+.php-cs-fixer.php
+# keep backend/docker/ (supervisord.conf needed by Dockerfile)

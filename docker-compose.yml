@@ -1,0 +1,79 @@
+services:
+
+  # ── Laravel application (PHP-FPM + queue worker) ──────────────────────────
+  app:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: production
+    container_name: ky_app
+    restart: unless-stopped
+    environment:
+      APP_ENV: production
+      APP_DEBUG: "false"
+    env_file:
+      - ./backend/.env.docker
+    volumes:
+      # Persistent storage (logs, uploads, framework cache)
+      - app_storage:/var/www/html/storage
+      # Firebase service-account JSON (place file next to docker-compose.yml)
+      - ./firebase-credentials.json:/var/www/html/storage/app/firebase-credentials.json:ro
+      # PHP-FPM socket shared with Nginx
+      - php_socket:/var/run
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - ky_network
+
+  # ── Nginx web server ───────────────────────────────────────────────────────
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: ky_nginx
+    restart: unless-stopped
+    ports:
+      - "8080:80"     # Access app at http://localhost:8080
+    volumes:
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      # Serve public files and built assets directly from the host copy
+      - ./backend/public:/var/www/html/public:ro
+      - php_socket:/var/run
+    depends_on:
+      - app
+    networks:
+      - ky_network
+
+  # ── MySQL 8 database ───────────────────────────────────────────────────────
+  mysql:
+    image: mysql:8.0
+    container_name: ky_mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: db_ky_servicercenter
+      MYSQL_USER: laravel
+      MYSQL_PASSWORD: secret
+    ports:
+      - "3307:3306"   # Exposed on 3307 to avoid clashing with local MySQL
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./docker/mysql/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-prootpassword"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - ky_network
+
+# ── Named volumes ─────────────────────────────────────────────────────────────
+volumes:
+  mysql_data:
+  app_storage:
+  php_socket:
+
+# ── Internal network ──────────────────────────────────────────────────────────
+networks:
+  ky_network:
+    driver: bridge

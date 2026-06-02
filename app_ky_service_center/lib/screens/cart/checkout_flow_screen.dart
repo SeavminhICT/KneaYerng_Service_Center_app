@@ -94,7 +94,9 @@ class _CheckoutFlowScreenState extends State<CheckoutFlowScreen> {
   ];
 
   late final List<CartItem> _items;
-  final TextEditingController _noteController = TextEditingController();
+  final TextEditingController _noteController    = TextEditingController();
+  final TextEditingController _promoController   = TextEditingController();
+  final TextEditingController _phoneController   = TextEditingController();
   LatLng? _selectedDeliveryLatLng;
   String _selectedDeliveryAddress = '';
   List<SavedAddress> _savedAddresses = [];
@@ -106,8 +108,15 @@ class _CheckoutFlowScreenState extends State<CheckoutFlowScreen> {
   int _selectedSlot = 0;
   int _selectedPayment = 0;
 
-  bool _loadingOptions = true;
-  bool _placingOrder = false;
+  bool _loadingOptions  = true;
+  bool _placingOrder    = false;
+  bool _applyingPromo   = false;
+  bool _promoApplied    = false;
+  String? _promoError;
+  String? _appliedPromoCode;
+
+  // true = phone came from profile (read-only display), false = user must type
+  bool _phoneFromProfile = false;
 
   CheckoutOptions _options = CheckoutOptions.fallback();
   double _voucherDiscount = 0;
@@ -131,6 +140,7 @@ class _CheckoutFlowScreenState extends State<CheckoutFlowScreen> {
     _voucherDiscount = widget.initialDiscount;
     _loadCheckoutOptions();
     _loadSavedAddresses();
+    _loadUserPhone();
   }
 
   Future<void> _loadCheckoutOptions() async {
@@ -149,9 +159,62 @@ class _CheckoutFlowScreenState extends State<CheckoutFlowScreen> {
     });
   }
 
+  Future<void> _loadUserPhone() async {
+    final profile = await ApiService.getUserProfile();
+    if (!mounted) return;
+    final phone = profile?.phone?.trim() ?? '';
+    setState(() {
+      _phoneFromProfile = phone.isNotEmpty;
+      _phoneController.text = phone;
+    });
+  }
+
+  Future<void> _applyPromoCode() async {
+    final code = _promoController.text.trim();
+    if (code.isEmpty) return;
+    setState(() {
+      _applyingPromo = true;
+      _promoError    = null;
+    });
+    final result = await ApiService.validateVoucher(
+      code: code,
+      subtotal: _subtotal,
+    );
+    if (!mounted) return;
+    if (result.isValid) {
+      setState(() {
+        _promoApplied      = true;
+        _appliedPromoCode  = code;
+        _voucherDiscount   = result.discountFor(_subtotal);
+        _applyingPromo     = false;
+        _promoError        = null;
+      });
+    } else {
+      setState(() {
+        _promoApplied     = false;
+        _appliedPromoCode = null;
+        _voucherDiscount  = 0;
+        _applyingPromo    = false;
+        _promoError       = result.message ?? 'Invalid promo code.';
+      });
+    }
+  }
+
+  void _removePromoCode() {
+    setState(() {
+      _promoApplied     = false;
+      _appliedPromoCode = null;
+      _voucherDiscount  = 0;
+      _promoError       = null;
+      _promoController.clear();
+    });
+  }
+
   @override
   void dispose() {
     _noteController.dispose();
+    _promoController.dispose();
+    _phoneController.dispose();
     super.dispose();
   }
 
@@ -528,8 +591,9 @@ class _CheckoutFlowScreenState extends State<CheckoutFlowScreen> {
 
     setState(() => _placingOrder = true);
 
-    var voucherCode = widget.voucherCode?.trim();
-    if (voucherCode != null && voucherCode.isNotEmpty) {
+    // Use the in-screen applied promo code, falling back to cart-passed code
+    var voucherCode = _appliedPromoCode ?? widget.voucherCode?.trim();
+    if (voucherCode != null && voucherCode.isNotEmpty && !_promoApplied) {
       final result = await ApiService.validateVoucher(
         code: voucherCode,
         subtotal: _subtotal,
@@ -585,7 +649,7 @@ class _CheckoutFlowScreenState extends State<CheckoutFlowScreen> {
         ? null
         : _composeDeliveryNote(_deliveryNoteValue, slot);
     final customerDisplayName = customerName;
-    final deliveryPhone = profile?.phone?.trim();
+    final deliveryPhone = _phoneController.text.trim();
 
     final result = await ApiService.createOrder(
       customerName: customerDisplayName,
@@ -598,9 +662,7 @@ class _CheckoutFlowScreenState extends State<CheckoutFlowScreen> {
           ? 'unpaid'
           : 'processing',
       deliveryAddress: _isPickup ? null : _deliveryAddressLine,
-      deliveryPhone: _isPickup || deliveryPhone == null || deliveryPhone.isEmpty
-          ? null
-          : deliveryPhone,
+      deliveryPhone: deliveryPhone.isEmpty ? null : deliveryPhone,
       deliveryNote: deliveryNote,
       deliveryLat: _isPickup ? null : _selectedDeliveryLatLng?.latitude,
       deliveryLng: _isPickup ? null : _selectedDeliveryLatLng?.longitude,
@@ -1049,6 +1111,10 @@ class _CheckoutFlowScreenState extends State<CheckoutFlowScreen> {
       key: const ValueKey(2),
       padding: const EdgeInsets.fromLTRB(20, 14, 20, 28),
       children: [
+        _buildPhoneCard(),
+        const SizedBox(height: 14),
+        _buildPromoCodeCard(),
+        const SizedBox(height: 14),
         _buildPaymentMethodCard(),
         const SizedBox(height: 14),
         _OrderItemsCard(items: _items),
@@ -1062,6 +1128,262 @@ class _CheckoutFlowScreenState extends State<CheckoutFlowScreen> {
           primary: _primary,
         ),
       ],
+    );
+  }
+
+  Widget _buildPhoneCard() {
+    return _SurfaceCard(
+      padding: const EdgeInsets.all(18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.phone_outlined, size: 18, color: _checkoutPrimary),
+              const SizedBox(width: 8),
+              Text(
+                'Contact Phone',
+                style: kFont(context,
+                    fontSize: 15, fontWeight: FontWeight.w700, color: _checkoutInk),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            _phoneFromProfile
+                ? 'Using your registered phone number.'
+                : 'Enter a phone number so we can reach you about this order.',
+            style: const TextStyle(
+                fontSize: 12, color: _checkoutMuted, height: 1.4),
+          ),
+          const SizedBox(height: 12),
+          TextFormField(
+            controller: _phoneController,
+            readOnly: _phoneFromProfile,
+            keyboardType: TextInputType.phone,
+            style: kFont(context,
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: _phoneFromProfile ? _checkoutMuted : _checkoutInk),
+            decoration: InputDecoration(
+              hintText: '+855 XX XXX XXX',
+              hintStyle:
+                  const TextStyle(color: _checkoutMuted, fontSize: 14),
+              prefixIcon: const Icon(Icons.phone_outlined,
+                  size: 18, color: _checkoutMuted),
+              suffixIcon: _phoneFromProfile
+                  ? Tooltip(
+                      message: 'From your profile',
+                      child: const Padding(
+                        padding: EdgeInsets.all(12),
+                        child: Icon(Icons.lock_outline_rounded,
+                            size: 16, color: _checkoutMuted),
+                      ),
+                    )
+                  : null,
+              filled: true,
+              fillColor: _phoneFromProfile
+                  ? _checkoutSurfaceAlt
+                  : _checkoutSurface,
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide:
+                    const BorderSide(color: _checkoutBorder),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide:
+                    const BorderSide(color: _checkoutBorder),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide:
+                    const BorderSide(color: _checkoutPrimary, width: 1.6),
+              ),
+            ),
+          ),
+          if (_phoneFromProfile)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: GestureDetector(
+                onTap: () => setState(() => _phoneFromProfile = false),
+                child: Text(
+                  'Use a different number',
+                  style: TextStyle(
+                      fontSize: 12,
+                      color: _checkoutPrimary,
+                      fontWeight: FontWeight.w600),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPromoCodeCard() {
+    return _SurfaceCard(
+      padding: const EdgeInsets.all(18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.local_offer_outlined,
+                  size: 18, color: _checkoutPrimary),
+              const SizedBox(width: 8),
+              Text(
+                'Promo Code',
+                style: kFont(context,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: _checkoutInk),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          if (_promoApplied) ...[
+            // Applied state
+            Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFECFDF5),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFF6EE7B7)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.check_circle_outline_rounded,
+                      size: 18, color: _checkoutSuccess),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _appliedPromoCode ?? '',
+                          style: kFont(context,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                              color: _checkoutSuccess),
+                        ),
+                        Text(
+                          '- \$${_discount.toStringAsFixed(2)} discount applied',
+                          style: const TextStyle(
+                              fontSize: 12, color: _checkoutSuccess),
+                        ),
+                      ],
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: _removePromoCode,
+                    child: const Icon(Icons.close_rounded,
+                        size: 18, color: _checkoutMuted),
+                  ),
+                ],
+              ),
+            ),
+          ] else ...[
+            // Input state
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      TextFormField(
+                        controller: _promoController,
+                        textCapitalization: TextCapitalization.characters,
+                        style: kFont(context,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: _checkoutInk),
+                        decoration: InputDecoration(
+                          hintText: 'Enter promo code',
+                          hintStyle: const TextStyle(
+                              color: _checkoutMuted, fontSize: 14),
+                          prefixIcon: const Icon(Icons.confirmation_number_outlined,
+                              size: 18, color: _checkoutMuted),
+                          filled: true,
+                          fillColor: _checkoutSurface,
+                          contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 14, vertical: 13),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide:
+                                const BorderSide(color: _checkoutBorder),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide:
+                                const BorderSide(color: _checkoutBorder),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(
+                                color: _checkoutPrimary, width: 1.6),
+                          ),
+                          errorBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(
+                                color: Color(0xFFEF4444)),
+                          ),
+                        ),
+                        onFieldSubmitted: (_) => _applyPromoCode(),
+                      ),
+                      if (_promoError != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 6, left: 4),
+                          child: Text(
+                            _promoError!,
+                            style: const TextStyle(
+                                fontSize: 12, color: Color(0xFFEF4444)),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 10),
+                SizedBox(
+                  height: 48,
+                  child: ElevatedButton(
+                    onPressed: _applyingPromo ? null : _applyPromoCode,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _checkoutPrimary,
+                      foregroundColor: Colors.white,
+                      disabledBackgroundColor:
+                          _checkoutPrimary.withAlpha(120),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                    ),
+                    child: _applyingPromo
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : Text(
+                            'Apply',
+                            style: kFont(context,
+                                fontSize: 14, fontWeight: FontWeight.w700),
+                          ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
     );
   }
 

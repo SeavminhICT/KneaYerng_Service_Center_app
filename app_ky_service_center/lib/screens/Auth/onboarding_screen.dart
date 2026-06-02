@@ -1,4 +1,4 @@
-﻿import 'dart:math' as math;
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -43,13 +43,13 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   late final Animation<double> _floatAnim;
 
   // 3 feature pages + 1 language page
-  static const int _featurePageCount = 3;
   static const int _totalPages = 4; // 3 feature + 1 language
   int get _lastPage => _totalPages - 1;
 
   @override
   void initState() {
     super.initState();
+    _selectedLanguageCode = LanguageService.instance.locale.languageCode;
     _floatController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 2400),
@@ -80,7 +80,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     );
   }
 
-  void _skipToLanguage() {
+  void _skipToLastPage() {
     _pageController.animateToPage(
       _lastPage,
       duration: const Duration(milliseconds: 350),
@@ -88,8 +88,11 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     );
   }
 
-  void _selectLanguage(String code) {
+  void _selectLanguage(String code) async {
     setState(() => _selectedLanguageCode = code);
+    await LanguageService.instance.setLanguage(code);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_languagePreferenceKey, code);
   }
 
   Future<void> _persistLanguageSelection() async {
@@ -132,7 +135,6 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    final isLanguagePage = _currentPage == _lastPage;
 
     return Scaffold(
       backgroundColor: _bg,
@@ -174,9 +176,9 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                       ],
                     ),
                   const Spacer(),
-                  if (!isLanguagePage)
+                  if (_currentPage > 0 && _currentPage < _lastPage)
                     TextButton(
-                      onPressed: _skipToLanguage,
+                      onPressed: _skipToLastPage,
                       style: TextButton.styleFrom(
                         padding: const EdgeInsets.symmetric(
                             horizontal: 14, vertical: 7),
@@ -205,14 +207,14 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                 itemCount: _totalPages,
                 onPageChanged: (i) => setState(() => _currentPage = i),
                 itemBuilder: (context, index) {
-                  if (index == _lastPage) {
+                  if (index == 0) {
                     return _LanguagePage(
                       selectedCode: _selectedLanguageCode,
                       onSelect: _selectLanguage,
                     );
                   }
                   return _FeaturePage(
-                    pageIndex: index,
+                    pageIndex: index - 1,
                     floatAnim: _floatAnim,
                   );
                 },
@@ -221,17 +223,15 @@ class _OnboardingScreenState extends State<OnboardingScreen>
 
             // ── Progress dots ──────────────────────────────────────────
             _DotsRow(
-              count: _featurePageCount,
-              current: _currentPage >= _featurePageCount
-                  ? _featurePageCount - 1
-                  : _currentPage,
+              count: _totalPages,
+              current: _currentPage,
             ),
             const SizedBox(height: 20),
 
             // ── CTA buttons ────────────────────────────────────────────
             Padding(
               padding: const EdgeInsets.fromLTRB(24, 0, 24, 28),
-              child: isLanguagePage
+              child: _currentPage == _lastPage
                   ? Column(
                       children: [
                         _PrimaryBtn(
@@ -247,9 +247,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                       ],
                     )
                   : _PrimaryBtn(
-                      label: _currentPage == _featurePageCount - 1
-                          ? l.continueText
-                          : l.next,
+                      label: l.next,
                       onTap: _goNext,
                     ),
             ),

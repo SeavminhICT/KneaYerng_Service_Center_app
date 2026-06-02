@@ -90,6 +90,13 @@ flutter:
     - assets/images/logo_bakong.png
     - assets/images/Logo_KYSC.png
 
+  fonts:
+    - family: KantumruyPro
+      fonts:
+        - asset: assets/fonts/KantumruyPro-VariableFont_wght.ttf
+        - asset: assets/fonts/KantumruyPro-Italic-VariableFont_wght.ttf
+          style: italic
+
 flutter_launcher_icons:
   android: true
   ios: true

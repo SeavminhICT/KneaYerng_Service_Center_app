@@ -1,8 +1,9 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../theme/app_fonts.dart';
 import 'package:khqr_sdk/khqr_sdk.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:skeletonizer/skeletonizer.dart';
@@ -172,12 +173,12 @@ class _CheckoutFlowScreenState extends State<CheckoutFlowScreen> {
     const bakong = CheckoutPaymentMethod(
       code: 'aba_qr',
       label: 'Bakong QR Payment',
-      description: 'Scan to pay with Bakong KHQR',
+      description: '',
     );
     const cod = CheckoutPaymentMethod(
       code: 'cod',
       label: 'Cash on Delivery',
-      description: 'Pay with cash when your order arrives',
+      description: '',
     );
     if (_isPickup) {
       return const [bakong];
@@ -768,7 +769,7 @@ class _CheckoutFlowScreenState extends State<CheckoutFlowScreen> {
           ),
           title: Text(
             l.checkout,
-            style: GoogleFonts.sora(
+            style: kFont(context, 
               fontSize: 24,
               fontWeight: FontWeight.w700,
               color: _checkoutInk,
@@ -854,7 +855,7 @@ class _CheckoutFlowScreenState extends State<CheckoutFlowScreen> {
       children: [
         Text(
           'Delivery Method',
-          style: GoogleFonts.sora(
+          style: kFont(context, 
             fontSize: 18,
             fontWeight: FontWeight.w700,
             color: _checkoutInk,
@@ -911,7 +912,7 @@ class _CheckoutFlowScreenState extends State<CheckoutFlowScreen> {
       children: [
         Text(
           l.deliveryAddress,
-          style: GoogleFonts.sora(
+          style: kFont(context, 
             fontSize: 18,
             fontWeight: FontWeight.w700,
             color: _checkoutInk,
@@ -938,7 +939,7 @@ class _CheckoutFlowScreenState extends State<CheckoutFlowScreen> {
                 children: [
                   Text(
                     'Saved Maps',
-                    style: GoogleFonts.sora(
+                    style: kFont(context, 
                       fontSize: 16,
                       fontWeight: FontWeight.w700,
                       color: _checkoutInk,
@@ -1072,7 +1073,7 @@ class _CheckoutFlowScreenState extends State<CheckoutFlowScreen> {
         children: [
           Text(
             'Payment method',
-            style: GoogleFonts.sora(
+            style: kFont(context, 
               fontSize: 16,
               fontWeight: FontWeight.w700,
               color: _checkoutInk,
@@ -1140,7 +1141,7 @@ class _CheckoutFlowScreenState extends State<CheckoutFlowScreen> {
       children: [
         Text(
           'Confirm Order',
-          style: GoogleFonts.sora(
+          style: kFont(context, 
             fontSize: 20,
             fontWeight: FontWeight.w700,
             color: _checkoutInk,
@@ -1218,7 +1219,7 @@ class _StepHeader extends StatelessWidget {
                   current.title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.sora(
+                  style: kFont(context, 
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
                     color: accent,
@@ -1397,7 +1398,7 @@ class _AddressPreviewCard extends StatelessWidget {
             children: [
               Text(
                 'Map Location',
-                style: GoogleFonts.sora(
+                style: kFont(context, 
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
                   color: _checkoutInk,
@@ -1838,7 +1839,7 @@ class _SelectCard extends StatelessWidget {
                           children: [
                             Text(
                               title,
-                              style: GoogleFonts.sora(
+                              style: kFont(context, 
                                 fontSize: 15,
                                 fontWeight: FontWeight.w700,
                                 color: _checkoutInk,
@@ -1932,7 +1933,7 @@ class _OrderItemsCard extends StatelessWidget {
             children: [
               Text(
                 'Order items',
-                style: GoogleFonts.sora(
+                style: kFont(context, 
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
                   color: _checkoutInk,
@@ -2030,7 +2031,7 @@ class _OrderItemsCard extends StatelessWidget {
                     const SizedBox(width: 8),
                     Text(
                       '\$${item.subtotal.toStringAsFixed(2)}',
-                      style: GoogleFonts.sora(
+                      style: kFont(context, 
                         fontWeight: FontWeight.w700,
                         color: _checkoutInk,
                       ),
@@ -2076,7 +2077,7 @@ class _SummaryCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   l.orderSummary,
-                  style: GoogleFonts.sora(
+                  style: kFont(context, 
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
                     color: _checkoutInk,
@@ -2315,7 +2316,7 @@ class _ReviewTotalsCard extends StatelessWidget {
         children: [
           Text(
             'Pricing',
-            style: GoogleFonts.sora(
+            style: kFont(context, 
               fontSize: 15,
               fontWeight: FontWeight.w700,
               color: _checkoutInk,
@@ -2379,7 +2380,7 @@ class _ConfirmCard extends StatelessWidget {
               const SizedBox(width: 12),
               Text(
                 title,
-                style: GoogleFonts.sora(
+                style: kFont(context, 
                   fontSize: 15,
                   fontWeight: FontWeight.w700,
                   color: _checkoutInk,
@@ -2492,7 +2493,7 @@ class _BottomTotalBar extends StatelessWidget {
                     children: [
                       Text(
                         stepLabel,
-                        style: GoogleFonts.sora(
+                        style: kFont(context, 
                           fontSize: 13,
                           fontWeight: FontWeight.w700,
                           color: _checkoutPrimary,
@@ -2540,7 +2541,7 @@ class _BottomTotalBar extends StatelessWidget {
                       const SizedBox(height: 4),
                       Text(
                         '\$${total.toStringAsFixed(2)}',
-                        style: GoogleFonts.sora(
+                        style: kFont(context, 
                           fontWeight: FontWeight.w800,
                           fontSize: compact ? 16 : 20,
                           color: _checkoutInk,
@@ -2567,7 +2568,7 @@ class _BottomTotalBar extends StatelessWidget {
                 ),
                 child: Text(
                   buttonText,
-                  style: GoogleFonts.sora(
+                  style: kFont(context, 
                     fontWeight: FontWeight.w700,
                     fontSize: compact ? 14 : 15,
                   ),
@@ -2659,7 +2660,7 @@ class _FallbackProductTile extends StatelessWidget {
           child: Center(
             child: Text(
               'x$quantity',
-              style: GoogleFonts.sora(
+              style: kFont(context, 
                 fontWeight: FontWeight.w700,
                 color: _checkoutMuted,
               ),

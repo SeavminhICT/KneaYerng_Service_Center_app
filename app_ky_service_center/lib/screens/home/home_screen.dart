@@ -1,8 +1,9 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show ScrollDirection;
 import 'package:google_fonts/google_fonts.dart';
+import '../../theme/app_fonts.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/banner_item.dart';
@@ -667,7 +668,7 @@ class _HomeHeader extends StatelessWidget {
                   children: [
                     TextSpan(
                       text: firstLetter,
-                      style: GoogleFonts.sora(
+                      style: kFont(context, 
                         fontSize: 20,
                         fontWeight: FontWeight.w700,
                         color: _primary,
@@ -675,7 +676,7 @@ class _HomeHeader extends StatelessWidget {
                     ),
                     TextSpan(
                       text: remainingTitle,
-                      style: GoogleFonts.sora(
+                      style: kFont(context, 
                         fontSize: 20,
                         fontWeight: FontWeight.w700,
                         color: _textPrimary(context),
@@ -1082,7 +1083,7 @@ class _HeroShowcase extends StatelessWidget {
                           'Power.\nPerformance.\nPerfected.',
                           maxLines: 3,
                           overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.sora(
+                          style: kFont(context, 
                             fontSize: compact ? 28 : 31,
                             height: 1.06,
                             fontWeight: FontWeight.w700,
@@ -1267,7 +1268,7 @@ class _HeroBannerSlide extends StatelessWidget {
                               title,
                               maxLines: compact ? 2 : 3,
                               overflow: TextOverflow.ellipsis,
-                              style: GoogleFonts.sora(
+                              style: kFont(context, 
                                 fontSize: compact ? 20 : 23,
                                 height: 1.08,
                                 fontWeight: FontWeight.w700,
@@ -1896,7 +1897,7 @@ class _RepairCallout extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               'Professional Repair\nYou Can Trust.',
-              style: GoogleFonts.sora(
+              style: kFont(context, 
                 fontSize: 26,
                 height: 1.18,
                 fontWeight: FontWeight.w700,
@@ -2455,7 +2456,7 @@ class _FlashProductCard extends StatelessWidget {
                 product.name,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.sora(
+                style: kFont(context, 
                   fontSize: 14,
                   fontWeight: FontWeight.w700,
                   color: _textPrimary(context),
@@ -2483,7 +2484,7 @@ class _FlashProductCard extends StatelessWidget {
                       children: [
                         Text(
                           '\$${discountedPrice.toStringAsFixed(0)}',
-                          style: GoogleFonts.sora(
+                          style: kFont(context, 
                             fontSize: 15,
                             fontWeight: FontWeight.w700,
                             color: hasDiscount

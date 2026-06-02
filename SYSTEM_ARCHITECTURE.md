@@ -1,4 +1,4 @@
-# ជំពូកទី ៤ — ការរចនា និងការអនុវត្តប្រព័ន្ធ
+﻿# ជំពូកទី ៤ — ការរចនា និងការអនុវត្តប្រព័ន្ធ
 ## KneaYerng Service Center Application
 
 ---
@@ -28,13 +28,63 @@ KneaYerng Service Center Application គឺជាប្រព័ន្ធគ្�
 
 ### ៤.២.២ តម្រូវការរបស់ប្រព័ន្ធ (System Requirements)
 
-ដើម្បីឱ្យប្រព័ន្ធអាចដំណើរការបានត្រឹមត្រូវ ត្រូវការធនធានដូចខាងក្រោម:
+ប្រព័ន្ធ KneaYerng Service Center Application ប្រើ Architecture បែប Client–Server ដែលទំនាក់ទំនងគ្នារវាង Mobile Application (Flutter) និង Backend Server (Laravel) តាម Internet ។ ដើម្បីឱ្យប្រព័ន្ធ KneaYerng Service Center ដំណើរការបានគ្រប់ Function ត្រឹមត្រូវ ទាំងការ Login, ការ Order ផលិតផល, ការ Repair, ការ Payment ដោយ KHQR, ការ Chat Real-time, និងការ Push Notification គឺតម្រូវឱ្យមាន Resources ដូចខាងក្រោម ៖
 
-- **Web Hosting** ជាកន្លែងរក្សាទុក File និងដំណើរការ Backend Server របស់ប្រព័ន្ធ
-- **Domain Name** គឺជា URL (Uniform Resource Locator) ឬអាសយដ្ឋាន ដែលប្រើជាច្រកទ្វារចូលរបស់ប្រព័ន្ធ
-- **Internet Connection** ជាស្ពានសម្រាប់ User ក្រៅក្រុម ឬ Administrator ភ្ជាប់ទៅកាន់ Server — ឧទាហរណ៍ ការ Insert, Update ទិន្នន័យ ចំណែក USER ក៏ត្រូវការ Internet Connection ដើម្បីភ្ជាប់ទៅកាន់ Server
-- **Web Server** សម្រាប់ដំណើរការ File ប្រភេទ Server Side Script — ឧទាហរណ៍ Apache (ប្រើក្នុង Laragon/XAMPP) ឬ Nginx
-- **MySQL Server** គឺជា Database Server ដែលផ្ទុក និងធ្វើការរក្សាទុកព័ត៌មានទាំងអស់
+- **Web Hosting** : ជាកន្លែងរក្សាទុក File ប្រព័ន្ធ Laravel (Back-end API), Admin Panel (Front-end), និង Database (MySQL) ដើម្បីឱ្យអ្នកប្រើប្រាស់ (Customer) និង Admin អាចភ្ជាប់ប្រើប្រាស់ប្រព័ន្ធបាន ។
+
+- **Domain Name** : គឺជា URL (Uniform Resource Locator) ឬជាអាស័យដ្ឋាន ដែលជាឈ្មោះសម្គាល់ប្រព័ន្ធ (ឧ. `https://api.kneayerng.com`) ហើយត្រូវ Configure SSL Certificate ដើម្បីដំណើរការ HTTPS ។ Mobile App ប្រើ Domain Name ជា Base URL ដើម្បី Call API Backend ។
+
+- **Internet Connection** : ជាស្ពានភ្ជាប់ User (Customer, Admin, Staff, Technician) ជាមួយ Server ដើម្បីអនុញ្ញាតការ Upload/Download ទិន្នន័យ, API Call Real-time ។ ចំណែក Server ផ្ទាល់ក៏ត្រូវការ Internet ដើម្បីភ្ជាប់ External Services ដូចជា Firebase, Pusher, Bakong, SMS Gateway ។
+
+- **Web Server (Nginx)** : សម្រាប់ដំណើរការ File ប្រភេទ Server Side Script, ទទួល HTTP/HTTPS Request ហើយ Forward ទៅ PHP-FPM ដើម្បីដំណើរការ Laravel Application ។
+
+- **MySQL Server** : គឺជា Database ចម្បងនៃប្រព័ន្ធ KneaYerng, សម្រាប់ធ្វើការរក្សាទុកទិន្នន័យទាំងអស់ ដូចជា Product, Order, Customer, Repair, Payment, Chat, Voucher, Warranty ។
+
+ដើម្បីឱ្យប្រព័ន្ធ KneaYerng Service Center ដំណើរការបានគ្រប់ជ្រុងជ្រោយ ត្រូវការ Component ចំបងៗ ដូចខាងក្រោម ៖
+
+- **Server ចម្បង (Cloud VPS / Web Hosting)**
+
+  ប្រើដំណើរការ Laravel Backend API, Admin Panel, MySQL Database, Redis Queue ។ Server ត្រូវ ៖
+
+  - ដំណើរការ Linux OS (Ubuntu/Debian) 24/7 ដោយ​មិនផ្អាក ។
+  - ប្រើ Nginx Web Server ជាមួយ PHP-FPM ដើម្បីដំណើរការ Laravel Application ។
+  - Authenticate (Login/Register) ដោយ Laravel Sanctum (Session Admin + API Token) ។
+  - គ្រប់គ្រងបញ្ជូន Background Job (Queue Worker) ដូចជា Notification, SMS, Email ។
+  - Backup Database ប្រចាំថ្ងៃ ទៅ Cloudflare R2 ស្វ័យប្រវត្តិ ។
+  - ដំណើរការ Cron Scheduler (Artisan Schedule) ប្រចាំ ១ នាទី ។
+
+- **Mobile Application (Flutter)**
+
+  ប្រើជា Client Interface ជូន Customer ដំណើរការ Android និង iOS ។ Mobile App ត្រូវ ៖
+
+  - Login ដោយ Firebase Auth (Phone OTP + Google Sign-In) ។
+  - ស្វែងរក, Order ផលិតផល, Accessories, ដំណើរការ Checkout ។
+  - ទូទាត់ប្រាក់ ដោយ Scan KHQR (ABA, Wing, ACLEDA, Bakong App) ។
+  - តាមដាន Order Status, Repair Status Real-time ។
+  - Chat ជាមួយ Support Staff Real-time ។
+  - ទទួល Push Notification ពី Firebase Cloud Messaging (FCM) ។
+
+- **Admin Panel (Web Browser Dashboard)**
+
+  ប្រើជា Control Panel ជូន Admin, Staff, Technician ដំណើរការតាម Browser ។ Admin Panel ត្រូវ ៖
+
+  - គ្រប់គ្រង Product, Category, Accessories, Banner, Voucher, Attributes ។
+  - Approve, Reject, Track Order, Assign Staff ។
+  - គ្រប់គ្រង Repair Workflow (Intake → Diagnostic → Quotation → Invoice → Warranty) ។
+  - Reply Support Chat Real-time, Monitor Payment, Revenue Report ។
+  - គ្រប់គ្រង User, Staff, Technician Account ។
+
+- **External Services (ភាគីទីបី)**
+
+  ប្រព័ន្ធ KneaYerng ភ្ជាប់ Service ខាងក្រៅ ដើម្បីបំពេញ Function ខ្ពស់ ។ Service ទាំងនោះ ៖
+
+  - **Firebase Auth + FCM** — OTP Phone Login, Google Login, Push Notification ។
+  - **Cloudflare R2** — Cloud Storage រក្សា Image, File Product, Repair Photo ។
+  - **Pusher WebSocket** — Real-time Chat Support, Order Alert, Repair Notification ។
+  - **KHQR / Bakong API** — Cambodia QR Payment Processing ។
+  - **SMS Gateway (UniMTX / Infobip / Twilio)** — ផ្ញើ OTP SMS ជូន Customer ។
+  - **Gmail SMTP** — ផ្ញើ Email Confirmation, Order, Repair Invoice ។
+  - **Telegram Bot API** — ផ្ញើ Alert Order ថ្មី, Payment ជូន Admin Group ។
 
 ### ៤.២.៣ ការផ្តោត System Architecture
 

@@ -50,8 +50,8 @@ class MyApp extends StatelessWidget {
         return MaterialApp(
           debugShowCheckedModeBanner: false,
           navigatorKey: AppNotificationService.instance.navigatorKey,
-          theme: AppTheme.light,
-          darkTheme: AppTheme.dark,
+          theme: AppTheme.light(locale: LanguageService.instance.locale),
+          darkTheme: AppTheme.dark(locale: LanguageService.instance.locale),
           themeMode: ThemeService.instance.themeMode,
           locale: LanguageService.instance.locale,
           supportedLocales: const [Locale('en'), Locale('km')],

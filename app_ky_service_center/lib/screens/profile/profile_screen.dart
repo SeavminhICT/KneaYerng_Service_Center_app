@@ -7,6 +7,7 @@ import 'package:skeletonizer/skeletonizer.dart';
 import '../../models/user_profile.dart';
 import '../../l10n/app_localizations.dart';
 import '../../services/api_service.dart';
+import '../../widgets/app_network_image.dart';
 import '../../services/app_notification_service.dart';
 import '../../services/language_service.dart';
 import '../../services/theme_service.dart';
@@ -1335,10 +1336,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
       return fallback;
     }
 
-    return Image.network(
+    return AppNetworkImage(
       normalizedUrl,
       fit: BoxFit.cover,
-      errorBuilder: (context, error, stackTrace) => fallback,
+      errorWidget: (context, _, error) => fallback,
     );
   }
 

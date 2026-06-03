@@ -33,7 +33,7 @@
     {{-- Filters --}}
     <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
         <div class="flex flex-wrap items-center gap-3">
-            <select id="track-status-filter" class="h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-600 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300">
+            <select id="track-status-filter" class="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-600 focus:border-primary-500 focus:ring-primary-500 sm:w-[13.5rem] dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300">
                 <option value="">All Workflow Stages</option>
                 <option value="pending_approval">Pending</option>
                 <option value="approved">Approved</option>
@@ -43,13 +43,13 @@
                 <option value="cancelled">Cancelled</option>
                 <option value="rejected">Rejected</option>
             </select>
-            <input id="track-from-date" type="date" class="h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-600 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300" />
-            <input id="track-to-date" type="date" class="h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-600 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300" />
-            <div class="relative flex-1">
+            <input id="track-from-date" type="date" class="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-600 focus:border-primary-500 focus:ring-primary-500 sm:w-36 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300" />
+            <input id="track-to-date" type="date" class="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-600 focus:border-primary-500 focus:ring-primary-500 sm:w-36 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300" />
+            <div class="relative w-full sm:flex-1">
                 <input id="track-search" type="text" placeholder="Search order, customer…" class="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 pr-9 text-sm text-slate-700 placeholder:text-slate-400 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200" />
                 <svg class="absolute right-3 top-3 h-4 w-4 text-slate-400" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35m1.6-5.15a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
             </div>
-            <button id="track-refresh" class="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-600 shadow-sm hover:border-primary-300 hover:text-primary-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
+            <button id="track-refresh" class="inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-600 shadow-sm hover:border-primary-300 hover:text-primary-600 sm:w-auto dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
                 <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h5M20 20v-5h-5M4.05 9A9 9 0 0119.95 15M19.95 15A9 9 0 014.05 9"/></svg>
                 Refresh
             </button>

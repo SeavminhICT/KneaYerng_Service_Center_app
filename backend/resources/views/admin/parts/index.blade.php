@@ -18,7 +18,7 @@
         <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
             <div class="flex flex-wrap items-center justify-between gap-3">
                 <div class="flex w-60 flex-wrap items-center gap-3 sm:w-auto">
-                    <select class="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-600 focus:border-primary-500 focus:ring-primary-500 sm:w-[7.5rem] dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300">
+                    <select class="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-600 focus:border-primary-500 focus:ring-primary-500 sm:w-40 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300">
                         <option>Bulk actions</option>
                         <option>Delete</option>
                     </select>

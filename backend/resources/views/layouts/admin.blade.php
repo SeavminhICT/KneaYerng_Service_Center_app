@@ -300,5 +300,7 @@
                 consumeAlert();
             })();
         </script>
+
+        @stack('scripts')
     </body>
 </html>

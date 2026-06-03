@@ -9,7 +9,7 @@
             <div class="flex flex-wrap items-center justify-between gap-3">
                 <div>
                     <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Order Counts by Shift</h2>
-                    <p class="text-sm text-slate-500">Track order volume and totals for the current filters.</p>
+                    <p id="shift-summary-subtitle" class="text-sm text-slate-500">Track order volume and totals for the current filters.</p>
                 </div>
                 <span class="text-xs font-semibold uppercase tracking-widest text-slate-400">Live</span>
             </div>
@@ -55,7 +55,7 @@
         <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
             <div class="flex flex-wrap items-center justify-between gap-3">
                 <div class="flex flex-wrap items-center gap-3">
-                    <select id="order-status-filter" class="h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-600 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300">
+                    <select id="order-status-filter" class="h-10 w-44 rounded-xl border border-slate-200 bg-slate-50 pl-3 pr-8 text-sm text-slate-600 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300">
                         <option>All statuses</option>
                         <option>Created</option>
                         <option>Pending Approval</option>
@@ -69,19 +69,19 @@
                         <option>Cancelled</option>
                         <option>Rejected</option>
                     </select>
-                    <select id="order-type-filter" class="h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-600 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300">
+                    <select id="order-type-filter" class="h-10 w-36 rounded-xl border border-slate-200 bg-slate-50 pl-3 pr-8 text-sm text-slate-600 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300">
                         <option>All types</option>
                         <option value="pickup">Pickup</option>
                         <option value="delivery">Delivery</option>
                     </select>
-                    <select id="order-payment-filter" class="h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-600 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300">
+                    <select id="order-payment-filter" class="h-10 w-36 rounded-xl border border-slate-200 bg-slate-50 pl-3 pr-8 text-sm text-slate-600 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300">
                         <option>Payment</option>
                         <option>Paid</option>
                         <option>Unpaid</option>
                         <option>Refunded</option>
                     </select>
-                    <input id="order-from-date" type="date" class="h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-600 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300" />
-                    <input id="order-to-date" type="date" class="h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-600 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300" />
+                    <input id="order-from-date" type="date" class="h-10 w-36 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-600 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300" />
+                    <input id="order-to-date" type="date" class="h-10 w-36 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-600 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300" />
                 </div>
                 <div class="relative">
                     <input id="order-search" type="text" placeholder="Search orders" class="h-10 w-60 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700 placeholder:text-slate-400 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200" />
@@ -154,6 +154,7 @@
             var info = document.getElementById('order-pagination-info');
             var rows = document.getElementById('order-rows');
             var exportButton = document.getElementById('order-export');
+            var shiftSummarySubtitle = document.getElementById('shift-summary-subtitle');
             var currencyFormatter = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
             var latestOrders = [];
             var hasServerSummary = false;
@@ -215,7 +216,7 @@
                 if (searchInput.value.trim()) {
                     query.set('q', searchInput.value.trim());
                 }
-                if (mapStatus(statusFilter.value) && mapStatus(statusFilter.value) !== 'all statuses') {
+                if (mapStatus(statusFilter.value) && mapStatus(statusFilter.value) !== 'all_statuses') {
                     query.set('status', mapStatus(statusFilter.value));
                 }
                 if (mapStatus(paymentFilter.value) && mapStatus(paymentFilter.value) !== 'payment') {
@@ -237,7 +238,8 @@
                 if (!date || Number.isNaN(date.getTime())) {
                     return null;
                 }
-                var hour = date.getHours();
+                var phnomPenhDate = new Date(date.toLocaleString('en-US', { timeZone: 'Asia/Phnom_Penh' }));
+                var hour = phnomPenhDate.getHours();
                 if (hour >= 6 && hour < 12) {
                     return 'morning';
                 }
@@ -636,7 +638,23 @@
                 });
             }
 
+            function updateShiftSummarySubtitle() {
+                if (!shiftSummarySubtitle) return;
+                var fromVal = orderFromDate ? orderFromDate.value : '';
+                var toVal = orderToDate ? orderToDate.value : '';
+                if (!fromVal && !toVal) {
+                    shiftSummarySubtitle.textContent = 'Track order volume and totals for today.';
+                } else if (fromVal && toVal) {
+                    shiftSummarySubtitle.textContent = 'Track order volume and totals from ' + fromVal + ' to ' + toVal + '.';
+                } else if (fromVal) {
+                    shiftSummarySubtitle.textContent = 'Track order volume and totals since ' + fromVal + '.';
+                } else {
+                    shiftSummarySubtitle.textContent = 'Track order volume and totals up to ' + toVal + '.';
+                }
+            }
+
             async function loadShiftSummary() {
+                updateShiftSummarySubtitle();
                 await window.adminApi.ensureCsrfCookie();
                 var query = buildOrderQuery();
                 var response = await window.adminApi.request('/api/admin/orders/summary?' + query.toString());

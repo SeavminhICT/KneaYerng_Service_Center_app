@@ -7,26 +7,40 @@ use Kreait\Firebase\Factory;
 
 class FirebaseAuthService
 {
-    private Auth $auth;
+    private ?Auth $auth = null;
+    private ?string $initError = null;
 
     public function __construct()
     {
-        $projectId = (string) config('services.firebase.project_id', '');
-        $credentials = (string) config('services.firebase.credentials', '');
+        try {
+            $projectId = (string) config('services.firebase.project_id', '');
+            $credentials = (string) config('services.firebase.credentials', '');
 
-        $factory = new Factory();
-        if ($credentials !== '') {
-            $factory = $factory->withServiceAccount($this->resolveCredentialsPath($credentials));
-        }
-        if ($projectId !== '') {
-            $factory = $factory->withProjectId($projectId);
-        }
+            $factory = new Factory();
+            if ($credentials !== '') {
+                $credentialsPath = $this->resolveCredentialsPath($credentials);
+                if (file_exists($credentialsPath) && is_readable($credentialsPath)) {
+                    $factory = $factory->withServiceAccount($credentialsPath);
+                } else {
+                    throw new \RuntimeException("Firebase credentials file not found or not readable at: {$credentialsPath}");
+                }
+            }
+            if ($projectId !== '') {
+                $factory = $factory->withProjectId($projectId);
+            }
 
-        $this->auth = $factory->createAuth();
+            $this->auth = $factory->createAuth();
+        } catch (\Throwable $e) {
+            $this->initError = $e->getMessage();
+            \Illuminate\Support\Facades\Log::warning("Firebase Auth Service initialization failed: " . $e->getMessage());
+        }
     }
-p, 
+
     public function verifyIdToken(string $idToken): array
     {
+        if (!$this->auth) {
+            throw new \RuntimeException("Firebase Auth is not properly configured. Initialization error: " . $this->initError);
+        }
         $verifiedToken = $this->auth->verifyIdToken($idToken);
         $claims = $verifiedToken->claims();
 

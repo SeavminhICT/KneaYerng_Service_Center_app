@@ -121,18 +121,15 @@ class ProductResource extends JsonResource
 
         $path = ltrim($path, '/');
 
-        if (env('FILESYSTEM_DISK') === 's3' || config('filesystems.default') === 's3') {
+        if (config('filesystems.default') === 's3') {
             $cleanPath = $path;
             if (str_starts_with($cleanPath, 'public/storage/')) {
                 $cleanPath = substr($cleanPath, strlen('public/storage/'));
             } elseif (str_starts_with($cleanPath, 'storage/')) {
                 $cleanPath = substr($cleanPath, strlen('storage/'));
             }
-            $s3Url = config('filesystems.disks.s3.url');
-            if (empty($s3Url)) {
-                $s3Url = config('filesystems.disks.public.url');
-            }
-            return rtrim($s3Url, '/').'/'.$cleanPath;
+            $cleanPath = ltrim(preg_replace('/\/{2,}/', '/', $cleanPath), '/');
+            return $baseUrl.'/api/media/'.$cleanPath;
         }
 
         if (str_starts_with($path, 'public/storage/')) {

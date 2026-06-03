@@ -5,6 +5,7 @@ import 'package:skeletonizer/skeletonizer.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/category.dart';
 import '../../services/api_service.dart';
+import '../../widgets/app_network_image.dart';
 import 'category_products_screen.dart';
 
 const _primary = Color(0xFF4A6CF7);
@@ -311,16 +312,14 @@ class _CategoryCardState extends State<_CategoryCard> {
                                 ),
                                 child: Padding(
                                   padding: const EdgeInsets.all(10),
-                                  child: Image.network(
+                                  child: AppNetworkImage(
                                     imageUrl,
                                     fit: BoxFit.contain,
-                                    errorBuilder: (context, error, stackTrace) {
-                                      return Icon(
-                                        _iconForCategory(category.name),
-                                        size: iconSize,
-                                        color: _primary,
-                                      );
-                                    },
+                                    errorWidget: (context, url, error) => Icon(
+                                      _iconForCategory(category.name),
+                                      size: iconSize,
+                                      color: _primary,
+                                    ),
                                   ),
                                 ),
                               )

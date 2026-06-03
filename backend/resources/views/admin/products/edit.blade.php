@@ -63,11 +63,27 @@
                     <input id="country" name="country" type="text" value="{{ old('country', is_array($product->country ?? null) ? implode(', ', $product->country) : ($product->country ?? '')) }}" class="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200" />
                 </div>
                 <div>
-                    <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="warranty">Warranty</label>
+                    <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="warranty">
+                        Warranty
+                        <span class="ml-1 text-xs font-normal text-slate-400">— auto-tracks when order completes</span>
+                    </label>
+                    @php
+                        $warrantyLabels = [
+                            'NO_WARRANTY' => 'No Warranty',
+                            '1_DAYS'      => '1 Day',
+                            '7_DAYS'      => '7 Days',
+                            '14_DAYS'     => '14 Days',
+                            '1_MONTH'     => '1 Month',
+                            '3_MONTHS'    => '3 Months',
+                            '6_MONTHS'    => '6 Months',
+                            '1_YEAR'      => '1 Year',
+                        ];
+                    @endphp
                     <select id="warranty" name="warranty" class="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200">
-                        <option value="">Select warranty</option>
                         @foreach (\App\Models\Product::WARRANTIES as $w)
-                            <option value="{{ $w }}" {{ old('warranty', $product->warranty ?? '') === $w ? 'selected' : '' }}>{{ $w }}</option>
+                            <option value="{{ $w }}" {{ old('warranty', $product->warranty ?? 'NO_WARRANTY') === $w ? 'selected' : '' }}>
+                                {{ $warrantyLabels[$w] ?? $w }}
+                            </option>
                         @endforeach
                     </select>
                 </div>
@@ -201,18 +217,45 @@
         <div class="space-y-6">
             <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
                 <h3 class="text-sm font-semibold text-slate-900 dark:text-white">Current Thumbnail</h3>
-                @php $thumbUrl = $product->thumbnail ?? $product->image ?? null; @endphp
+                @php
+                    // Resolve the stored path to a displayable URL for both local and S3/R2 storage.
+                    $thumbRaw = $product->thumbnail ?? $product->image ?? null;
+                    if ($thumbRaw) {
+                        if (str_starts_with($thumbRaw, 'http://') || str_starts_with($thumbRaw, 'https://')) {
+                            $thumbUrl = $thumbRaw;
+                        } else {
+                            // Strip 'storage/' prefix so Storage::url() gets the disk-relative path.
+                            $thumbKey = preg_replace('#^storage/#', '', ltrim($thumbRaw, '/'));
+                            $thumbUrl = \Illuminate\Support\Facades\Storage::disk('public')->url($thumbKey);
+                        }
+                    } else {
+                        $thumbUrl = null;
+                    }
+                @endphp
                 <div id="current-thumbnail-wrapper" class="mt-3 {{ $thumbUrl ? '' : 'hidden' }} h-40 overflow-hidden rounded-xl border border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-900/50">
-                    <img id="current-thumbnail-image" src="{{ $thumbUrl ? (str_starts_with($thumbUrl, 'http') ? $thumbUrl : '/'.$thumbUrl) : '' }}" alt="Current thumbnail" class="h-full w-full object-cover" />
+                    <img id="current-thumbnail-image" src="{{ $thumbUrl ?? '' }}" alt="Current thumbnail" class="h-full w-full object-cover" />
                 </div>
-                <p id="current-thumbnail" class="mt-2 text-xs text-slate-500">{{ $thumbUrl ? basename($thumbUrl) : 'No image' }}</p>
+                <p id="current-thumbnail" class="mt-2 text-xs text-slate-500">{{ $thumbRaw ? basename($thumbRaw) : 'No image' }}</p>
                 <input type="file" name="thumbnail" form="product-edit-form" class="mt-3 w-full text-sm text-slate-500" />
 
                 <label class="mt-4 block text-xs font-semibold text-slate-600 dark:text-slate-300">Current Gallery</label>
                 <div id="current-gallery" class="mt-2 grid grid-cols-3 gap-2">
-                    @php $gallery = is_array($product->image_gallery ?? null) ? $product->image_gallery : []; @endphp
+                    @php
+                        $gallery = is_array($product->image_gallery ?? null) ? $product->image_gallery : [];
+                    @endphp
                     @forelse ($gallery as $img)
-                        @php $imgUrl = $img ? (str_starts_with($img, 'http') ? $img : '/'.$img) : ''; @endphp
+                        @php
+                            if ($img) {
+                                if (str_starts_with($img, 'http://') || str_starts_with($img, 'https://')) {
+                                    $imgUrl = $img;
+                                } else {
+                                    $imgKey = preg_replace('#^storage/#', '', ltrim($img, '/'));
+                                    $imgUrl = \Illuminate\Support\Facades\Storage::disk('public')->url($imgKey);
+                                }
+                            } else {
+                                $imgUrl = null;
+                            }
+                        @endphp
                         @if ($imgUrl)
                             <div class="h-20 overflow-hidden rounded-lg border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
                                 <img src="{{ $imgUrl }}" alt="gallery" class="h-full w-full object-cover" />
@@ -480,56 +523,9 @@
                 });
             }
 
-            async function loadCategories(selectedId) {
-                await window.adminApi.ensureCsrfCookie();
-                const categories = [];
-                let page = 1;
-
-                while (true) {
-                    const response = await window.adminApi.request('/api/categories?per_page=100&page=' + page);
-                    if (!response.ok) {
-                        return;
-                    }
-
-                    const data = await response.json();
-                    const list = Array.isArray(data.data) ? data.data : [];
-                    categories.push.apply(categories, list);
-
-                    if (!data.links || !data.links.next || !list.length) {
-                        break;
-                    }
-
-                    page += 1;
-                }
-
-                const select = document.getElementById('category');
-                select.innerHTML = '<option value="">Select category</option>' + categories.map(function (category) {
-                    const selected = selectedId && String(category.id) === String(selectedId) ? ' selected' : '';
-                    return '<option value="' + category.id + '"' + selected + '>' + category.name + '</option>';
-                }).join('');
-            }
-
-            function renderCurrentGallery(items) {
-                const container = document.getElementById('current-gallery');
-                if (!container) {
-                    return;
-                }
-                const images = Array.isArray(items) ? items : [];
-                if (!images.length) {
-                    container.innerHTML = '<p class="col-span-3 text-xs text-slate-400">No gallery images</p>';
-                    return;
-                }
-
-                container.innerHTML = images.map(function (url) {
-                    const safeUrl = String(url || '').trim();
-                    if (!safeUrl) {
-                        return '';
-                    }
-                    return '<div class="h-20 overflow-hidden rounded-lg border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900"><img src="' + safeUrl + '" alt="gallery" class="h-full w-full object-cover" /></div>';
-                }).join('');
-            }
-
-            async function loadProduct() {
+            // Blade already renders all basic fields server-side.
+            // JS only needs to load variants (not server-side rendered).
+            async function loadVariants() {
                 if (!productId) {
                     return;
                 }
@@ -542,36 +538,6 @@
 
                 const payload = await response.json();
                 const product = payload.data || payload;
-
-                document.getElementById('name').value = cleanText(product.name);
-                document.getElementById('brand').value = cleanText(product.brand);
-                document.getElementById('sku').value = cleanText(product.sku);
-                document.getElementById('status').value = cleanText(product.status) || 'active';
-                document.getElementById('discount').value = product.discount ?? 0;
-                document.getElementById('cpu').value = toArrayText(product.cpu);
-                document.getElementById('display').value = toArrayText(product.display);
-                document.getElementById('country').value = toArrayText(product.country);
-                document.getElementById('warranty').value = cleanText(product.warranty);
-                document.getElementById('tag').value = cleanText(product.tag);
-                document.getElementById('description').value = cleanText(product.description);
-
-                await loadCategories(product.category && product.category.id ? product.category.id : null);
-
-                const thumbUrl = cleanText(product.thumbnail || product.image);
-                const thumbLabel = document.getElementById('current-thumbnail');
-                const thumbWrap = document.getElementById('current-thumbnail-wrapper');
-                const thumbImg = document.getElementById('current-thumbnail-image');
-                if (thumbUrl) {
-                    thumbLabel.textContent = thumbUrl.split('/').pop();
-                    thumbImg.src = thumbUrl;
-                    thumbWrap.classList.remove('hidden');
-                } else {
-                    thumbLabel.textContent = 'No image';
-                    thumbImg.removeAttribute('src');
-                    thumbWrap.classList.add('hidden');
-                }
-
-                renderCurrentGallery(product.image_gallery || []);
 
                 variants.splice(0, variants.length);
                 (product.variants || []).forEach(function (item) {
@@ -731,17 +697,15 @@
                 }
             }
 
-            if (productId) {
-                loadProduct();
-            } else {
-                loadCategories();
-            }
-            renderVariantRows();
-
-            // loadAttributeOptions must run after window.adminApi is defined by the layout
+            // Both calls need window.adminApi (defined by layout after @yield('content')).
+            // DOMContentLoaded fires after all scripts are parsed, so adminApi is ready.
             document.addEventListener('DOMContentLoaded', function () {
                 loadAttributeOptions();
+                if (productId) {
+                    loadVariants();
+                }
             });
+            renderVariantRows(); // Shows empty-state immediately while variants load
         })();
     </script>
 @endsection

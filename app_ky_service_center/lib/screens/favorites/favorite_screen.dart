@@ -4,8 +4,8 @@ import '../../l10n/app_localizations.dart';
 import '../../models/product.dart';
 import '../../services/favorite_service.dart';
 import '../products/product_detail_screen.dart';
+import '../../widgets/app_network_image.dart';
 
-Map<String, String>? get _imageHeaders => null;
 
 final _currency = NumberFormat.currency(symbol: '\$', decimalDigits: 2);
 
@@ -236,11 +236,11 @@ class _GridCard extends StatelessWidget {
                         ? const Color(0xFF1D2635)
                         : const Color(0xFFF0F4FC),
                     child: imageUrl != null && imageUrl.isNotEmpty
-                        ? Image.network(
+                        ? AppNetworkImage(
                             imageUrl,
                             fit: BoxFit.cover,
-                            headers: _imageHeaders,
-                            errorBuilder: (ctx, err, st) => const _ImagePlaceholder(),
+                            errorWidget: (ctx, url, err) =>
+                                const _ImagePlaceholder(),
                           )
                         : const _ImagePlaceholder(),
                   ),
@@ -382,11 +382,10 @@ class _ListCard extends StatelessWidget {
                         ? const Color(0xFF1D2635)
                         : const Color(0xFFF0F4FC),
                     child: imageUrl != null && imageUrl.isNotEmpty
-                        ? Image.network(
+                        ? AppNetworkImage(
                             imageUrl,
                             fit: BoxFit.cover,
-                            headers: _imageHeaders,
-                            errorBuilder: (_, __, ___) =>
+                            errorWidget: (_, __, ___) =>
                                 const _ImagePlaceholder(),
                           )
                         : const _ImagePlaceholder(),

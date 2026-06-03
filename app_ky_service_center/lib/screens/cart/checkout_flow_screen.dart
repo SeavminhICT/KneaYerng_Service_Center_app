@@ -13,6 +13,7 @@ import '../../models/cart_item.dart';
 import '../../models/pickup_ticket.dart';
 import '../../models/saved_address.dart';
 import '../../services/api_service.dart';
+import '../../widgets/app_network_image.dart';
 import '../../services/address_book_service.dart';
 import '../../services/cart_service.dart';
 import '../Auth/login_screen.dart';
@@ -2302,14 +2303,13 @@ class _OrderItemsCard extends StatelessWidget {
                         child:
                             item.product.imageUrl != null &&
                                 item.product.imageUrl!.isNotEmpty
-                            ? Image.network(
+                            ? AppNetworkImage(
                                 item.product.imageUrl!,
                                 fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) {
-                                  return _FallbackProductTile(
-                                    quantity: item.quantity,
-                                  );
-                                },
+                                errorWidget: (context, url, error) =>
+                                    _FallbackProductTile(
+                                      quantity: item.quantity,
+                                    ),
                               )
                             : _FallbackProductTile(quantity: item.quantity),
                       ),

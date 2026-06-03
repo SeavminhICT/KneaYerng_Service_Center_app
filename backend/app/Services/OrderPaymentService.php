@@ -45,8 +45,18 @@ class OrderPaymentService
 
             $order->payment_method = $method;
             $order->payment_status = 'paid';
-            app(OrderInventoryService::class)->deductInventoryForOrder($order);
             $order->save();
+
+            // Inventory deduction is best-effort: a stock inconsistency must not
+            // roll back a payment that has already been confirmed by the gateway.
+            try {
+                app(OrderInventoryService::class)->deductInventoryForOrder($order);
+            } catch (\RuntimeException $e) {
+                Log::warning('Inventory deduction failed after payment; manual review required.', [
+                    'order_id' => $order->id,
+                    'reason'   => $e->getMessage(),
+                ]);
+            }
         });
 
         $order->refresh();

@@ -12,6 +12,7 @@ class Product extends Model
 
     public const WARRANTIES = [
         'NO_WARRANTY',
+        '1_DAYS',
         '7_DAYS',
         '14_DAYS',
         '1_MONTH',

@@ -8,6 +8,7 @@ import 'package:skeletonizer/skeletonizer.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../services/api_service.dart';
+import '../../widgets/app_network_image.dart';
 
 // ── Design tokens ─────────────────────────────────────────────────────────────
 const _primary = Color(0xFF3B6BFF);
@@ -712,10 +713,10 @@ class _ItemImage extends StatelessWidget {
         borderRadius: BorderRadius.circular(14),
       ),
       child: imageUrl != null && imageUrl!.isNotEmpty
-          ? Image.network(
+          ? AppNetworkImage(
               imageUrl!,
               fit: BoxFit.cover,
-              errorBuilder: (ctx, err, st) => const _ImageFallback(),
+              errorWidget: (ctx, url, err) => const _ImageFallback(),
             )
           : const _ImageFallback(),
     );

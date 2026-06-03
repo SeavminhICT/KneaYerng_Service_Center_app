@@ -30,6 +30,10 @@ class ApiService {
 
   static ValueListenable<int> get profileVersionListenable => _profileVersion;
 
+  /// Register a callback in main.dart to handle global 401 (token expired/invalid).
+  /// When fired, the app should clear state and navigate to the login/onboarding screen.
+  static void Function()? onUnauthorized;
+
   static Map<String, String>? _serverUpdatesCache;
   static DateTime? _serverUpdatesFetchTime;
 
@@ -960,6 +964,40 @@ class ApiService {
     await prefs.remove(_tokenKey);
     await prefs.remove(_userProfileKey);
     _profileVersion.value++;
+  }
+
+  /// Clears the local session and fires the global onUnauthorized callback
+  /// so the app can navigate to the login/onboarding screen.
+  static Future<void> _handleUnauthorized() async {
+    await _clearSession();
+    onUnauthorized?.call();
+  }
+
+  /// Checks whether the locally stored token is still accepted by the server.
+  /// Returns true when valid, false (and clears the session) when the server
+  /// returns 401.  On network errors it returns true so offline users are not
+  /// logged out unnecessarily.
+  static Future<bool> validateToken() async {
+    final token = await getToken();
+    if (token == null || token.isEmpty) return false;
+    try {
+      final res = await http
+          .get(
+            Uri.parse('$baseUrl/user'),
+            headers: {
+              'Authorization': 'Bearer $token',
+              'Accept': 'application/json',
+            },
+          )
+          .timeout(const Duration(seconds: 6));
+      if (res.statusCode == 401) {
+        await _clearSession();
+        return false;
+      }
+      return res.statusCode == 200;
+    } catch (_) {
+      return true;
+    }
   }
 
   // ================= EXTRACT PROFILE =================
@@ -2046,6 +2084,7 @@ class ApiService {
     } catch (_) {}
 
     if (res.statusCode == 401) {
+      unawaited(_handleUnauthorized());
       return const VoucherValidation(
         isValid: false,
         message: 'Please log in to apply a promo code.',
@@ -2292,6 +2331,7 @@ class ApiService {
     } catch (_) {}
 
     if (response.statusCode == 401) {
+      unawaited(_handleUnauthorized());
       return const CartApiResult(errorMessage: 'Please log in to view cart.');
     }
 
@@ -2514,6 +2554,11 @@ class ApiService {
       decoded = jsonDecode(res.body);
     } catch (_) {}
 
+    if (res.statusCode == 401) {
+      unawaited(_handleUnauthorized());
+      return const KhqrGenerateResult(errorMessage: 'Session expired. Please log in again.');
+    }
+
     if (res.statusCode != 200) {
       final message = decoded is Map && decoded['message'] is String
           ? decoded['message']
@@ -2586,6 +2631,14 @@ class ApiService {
     try {
       decoded = jsonDecode(res.body);
     } catch (_) {}
+
+    if (res.statusCode == 401) {
+      unawaited(_handleUnauthorized());
+      return const KhqrCheckResult(
+        status: 'INVALID_TRANSACTION',
+        message: 'Session expired. Please log in again.',
+      );
+    }
 
     if (decoded is! Map) {
       return const KhqrCheckResult(

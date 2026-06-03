@@ -9,7 +9,7 @@ use App\Models\OrderItem;
 use App\Models\Part;
 use App\Models\Product;
 use App\Models\User;
-use App\Support\Reports\SimplePdf;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -506,72 +506,26 @@ class AdminReportsController extends Controller
 
     private function buildPdf(string $type, Carbon $start, Carbon $end, int $threshold): string
     {
+        $rangeLabel = $start->format('d M Y').' – '.$end->format('d M Y');
+
         if ($type === 'sales') {
             $report = $this->buildSalesReport($start, $end);
-            $lines = [
-                'Sales Report',
-                'Range: '.$start->toDateString().' to '.$end->toDateString(),
-                'Total Sales: '.number_format($report['metrics']['total_sales'], 2),
-                'Total Orders: '.$report['metrics']['total_orders'],
-                'Average Order Value: '.number_format($report['metrics']['average_order_value'], 2),
-                'Paid Orders: '.$report['metrics']['paid_orders'],
-                'Unpaid Orders: '.$report['metrics']['unpaid_orders'],
-                'Failed Orders: '.$report['metrics']['failed_orders'],
-                '',
-                'Top Items',
-            ];
-
-            foreach ($report['top_items'] as $index => $item) {
-                $lines[] = ($index + 1).'. '.$item['name'].' ('.$item['item_type'].') - Qty '.$item['quantity'].', Sales '.number_format($item['sales'], 2);
-            }
-
-            return SimplePdf::fromLines($lines);
+            return Pdf::loadView('admin.reports.pdf.sales', compact('report', 'start', 'end', 'rangeLabel'))
+                ->setPaper('a4', 'portrait')
+                ->output();
         }
 
         if ($type === 'inventory') {
             $report = $this->buildInventoryReport($start, $end, $threshold);
-            $lines = [
-                'Inventory Report',
-                'Range: '.$start->toDateString().' to '.$end->toDateString(),
-                'Total Products: '.$report['metrics']['total_products'],
-                'Total Accessories: '.$report['metrics']['total_accessories'],
-                'Total Parts: '.$report['metrics']['total_parts'],
-                'Stock Units: '.$report['metrics']['stock_units'],
-                'Low Stock Threshold: '.$threshold,
-                '',
-                'Low Stock Items',
-            ];
-
-            foreach ($report['low_stock'] as $index => $item) {
-                $lines[] = ($index + 1).'. '.$item['name'].' ('.$item['type'].') - Stock '.$item['stock'];
-            }
-
-            $lines[] = '';
-            $lines[] = 'Top Movers';
-            foreach ($report['top_movers'] as $index => $item) {
-                $lines[] = ($index + 1).'. '.$item['name'].' ('.$item['item_type'].') - Qty '.$item['quantity'];
-            }
-
-            return SimplePdf::fromLines($lines);
+            return Pdf::loadView('admin.reports.pdf.inventory', compact('report', 'start', 'end', 'rangeLabel'))
+                ->setPaper('a4', 'portrait')
+                ->output();
         }
 
         $report = $this->buildCustomerReport($start, $end);
-        $lines = [
-            'Customer Report',
-            'Range: '.$start->toDateString().' to '.$end->toDateString(),
-            'Total Customers: '.$report['metrics']['total_customers'],
-            'New Customers: '.$report['metrics']['new_customers'],
-            'Active Customers: '.$report['metrics']['active_customers'],
-            'Repeat Customers: '.$report['metrics']['repeat_customers'],
-            '',
-            'Top Customers',
-        ];
-
-        foreach ($report['top_customers'] as $index => $customer) {
-            $lines[] = ($index + 1).'. '.$customer['name'].' - Orders '.$customer['orders_count'].', Spent '.number_format($customer['total_spent'], 2);
-        }
-
-        return SimplePdf::fromLines($lines);
+        return Pdf::loadView('admin.reports.pdf.customers', compact('report', 'start', 'end', 'rangeLabel'))
+            ->setPaper('a4', 'portrait')
+            ->output();
     }
 
     private function queryTopItems(Carbon $start, Carbon $end, int $limit, string $orderBy): array

@@ -17,6 +17,7 @@ RUN apk add --no-cache \
         curl \
         git \
         unzip \
+        netcat-openbsd \
         supervisor \
         libpng-dev \
         libjpeg-turbo-dev \
@@ -98,4 +99,8 @@ RUN { \
 
 EXPOSE 9000
 
-CMD ["/usr/bin/supervisord", "-n", "-c", "/etc/supervisord.conf"]
+# Entrypoint: runs migrations + caches config/routes before starting supervisord
+COPY docker/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+ENTRYPOINT ["/entrypoint.sh"]

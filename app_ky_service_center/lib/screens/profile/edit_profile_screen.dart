@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/user_profile.dart';
 import '../../services/api_service.dart';
+import '../../widgets/app_network_image.dart';
 import 'address_management_screen.dart';
 
 class EditProfileScreen extends StatefulWidget {
@@ -634,10 +635,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       ),
     );
     if (url == null || url.isEmpty) return fallback;
-    return Image.network(
+    return AppNetworkImage(
       url,
       fit: BoxFit.cover,
-      errorBuilder: (context, error, stackTrace) => fallback,
+      errorWidget: (context, _, error) => fallback,
     );
   }
 

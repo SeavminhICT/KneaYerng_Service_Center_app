@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../services/api_service.dart';
+import '../../widgets/app_network_image.dart';
 import '../../widgets/auth_guard.dart';
 
 // ── Palette ───────────────────────────────────────────────────────────────────
@@ -622,8 +623,8 @@ class WarrantyCard extends StatelessWidget {
     if (url == null || url.isEmpty) return iconWidget;
     return ClipRRect(
       borderRadius: BorderRadius.circular(14),
-      child: Image.network(url, width: 56, height: 56, fit: BoxFit.cover,
-          errorBuilder: (context, error, stack) => iconWidget),
+      child: AppNetworkImage(url, width: 56, height: 56, fit: BoxFit.cover,
+          errorWidget: (context, _, error) => iconWidget),
     );
   }
 

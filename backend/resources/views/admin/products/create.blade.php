@@ -81,16 +81,19 @@
                             <input id="country" name="country" type="text" placeholder="United States" class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200" />
                         </div>
                         <div>
-                            <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="warranty">Warranty</label>
+                            <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="warranty">
+                                Warranty
+                                <span class="ml-1 text-xs font-normal text-slate-400">— auto-tracks when order completes</span>
+                            </label>
                             <select id="warranty" name="warranty" class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200">
-                                <option value="">Select warranty</option>
-                                <option value="NO_WARRANTY">NO_WARRANTY</option>
-                                <option value="7_DAYS">7_DAYS</option>
-                                <option value="14_DAYS">14_DAYS</option>
-                                <option value="1_MONTH">1_MONTH</option>
-                                <option value="3_MONTHS">3_MONTHS</option>
-                                <option value="6_MONTHS">6_MONTHS</option>
-                                <option value="1_YEAR">1_YEAR</option>
+                                <option value="NO_WARRANTY">No Warranty</option>
+                                <option value="1_DAYS">1 Days</option>
+                                <option value="7_DAYS">7 Days</option>
+                                <option value="14_DAYS">14 Days</option>
+                                <option value="1_MONTH">1 Month</option>
+                                <option value="3_MONTHS">3 Months</option>
+                                <option value="6_MONTHS">6 Months</option>
+                                <option value="1_YEAR">1 Year</option>
                             </select>
                         </div>
                         <div class="sm:col-span-2">

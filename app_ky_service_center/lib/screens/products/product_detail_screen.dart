@@ -10,6 +10,7 @@ import '../../l10n/app_localizations.dart';
 import '../../models/cart_item.dart';
 import '../../models/product.dart';
 import '../../services/cart_service.dart';
+import '../../widgets/app_network_image.dart';
 import '../../services/favorite_service.dart';
 import '../../widgets/auth_guard.dart';
 import '../../widgets/cart_added_bottom_bar.dart';
@@ -17,7 +18,6 @@ import '../../widgets/page_transitions.dart';
 import '../cart/checkout_flow_screen.dart';
 import '../cart/cart_screen.dart';
 
-Map<String, String>? get _imageHeaders => null;
 
 // ── Design tokens ──────────────────────────────────────────────────────────
 const _white        = Color(0xFFFFFFFF);
@@ -972,13 +972,11 @@ class _GallerySection extends StatelessWidget {
                           key: ValueKey('empty'), size: 64)
                       : Padding(
                           padding: const EdgeInsets.all(20),
-                          child: Image.network(
+                          child: AppNetworkImage(
                             imageUrl!,
-                            key:      ValueKey(imageUrl),
-                            fit:      BoxFit.contain,
-                            cacheWidth: 1200,
-                            headers:  _imageHeaders,
-                            errorBuilder: (context, error, stackTrace) =>
+                            key: ValueKey(imageUrl),
+                            fit: BoxFit.contain,
+                            errorWidget: (context, url, error) =>
                                 const _ImageFallback(
                                     key: ValueKey('err'), size: 64),
                           ),
@@ -1071,11 +1069,10 @@ class _GallerySection extends StatelessWidget {
                           width: sel ? 1.5 : 1,
                         ),
                       ),
-                      child: Image.network(
+                      child: AppNetworkImage(
                         gallery[i],
-                        fit:     BoxFit.contain,
-                        headers: _imageHeaders,
-                        errorBuilder: (context, error, stackTrace) =>
+                        fit: BoxFit.contain,
+                        errorWidget: (context, url, error) =>
                             const _ImageFallback(size: 18),
                       ),
                     ),

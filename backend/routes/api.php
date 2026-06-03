@@ -15,6 +15,7 @@ use App\Http\Controllers\Api\ForgotPasswordController;
 use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\OrderTrackingController;
 use App\Http\Controllers\Api\OtpController;
+use App\Http\Controllers\Api\ProductWarrantyController;
 use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\KhqrPaymentController;
 use App\Http\Controllers\Api\MediaController;
@@ -94,6 +95,10 @@ Route::get('accessories/{accessory}', [AccessoryController::class, 'show']);
 Route::get('checkout/options', CheckoutOptionsController::class);
 
 Route::middleware('auth:sanctum')->group(function () {
+    // ── Product Warranties (customer) ─────────────────────────────────────
+    Route::get('product-warranties', [ProductWarrantyController::class, 'index']);
+    Route::get('product-warranties/{productWarranty}', [ProductWarrantyController::class, 'show']);
+
     Route::get('cart', [CartController::class, 'show']);
     Route::post('cart/items', [CartController::class, 'addItem']);
     Route::patch('cart/items/{cartItem}', [CartController::class, 'updateItem']);
@@ -138,6 +143,9 @@ Route::middleware('auth:sanctum')->group(function () {
 Route::post('payments/callback', [PaymentController::class, 'callback']);
 
 Route::middleware('admin')->group(function () {
+    Route::get('admin/product-warranties', [ProductWarrantyController::class, 'adminIndex']);
+    Route::patch('admin/product-warranties/{productWarranty}/void', [ProductWarrantyController::class, 'void']);
+
     Route::post('admin/notifications/send', [AdminNotificationController::class, 'store']);
     Route::get('admin/notifications/history', [AdminNotificationController::class, 'history']);
     Route::get('admin/notifications/recipients', [AdminNotificationController::class, 'recipients']);

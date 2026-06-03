@@ -6,6 +6,7 @@ import '../../l10n/app_localizations.dart';
 import '../../models/product.dart';
 import '../../models/search_results.dart';
 import '../../services/api_service.dart';
+import '../../widgets/app_network_image.dart';
 import '../../services/cart_service.dart';
 import '../../services/search_history_service.dart';
 import '../../widgets/auth_guard.dart';
@@ -916,10 +917,10 @@ class _ResultImage extends StatelessWidget {
               )
             : Padding(
                 padding: const EdgeInsets.all(10),
-                child: Image.network(
+                child: AppNetworkImage(
                   imageUrl!,
                   fit: BoxFit.contain,
-                  errorBuilder: (_, _, _) => const Center(
+                  errorWidget: (_, __, ___) => const Center(
                     child: Icon(
                       Icons.inventory_2_outlined,
                       color: _searchMuted,

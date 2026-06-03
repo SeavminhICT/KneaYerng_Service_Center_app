@@ -41,7 +41,9 @@ return [
         'public' => [
             'driver' => env('FILESYSTEM_DISK', 'local') === 's3' ? 's3' : 'local',
             'root' => env('FILESYSTEM_DISK', 'local') === 's3' ? '' : storage_path('app/public'),
-            'url' => env('FILESYSTEM_DISK', 'local') === 's3' ? env('AWS_URL') : env('APP_URL').'/storage',
+            'url' => env('FILESYSTEM_DISK', 'local') === 's3'
+                ? env('AWS_URL', env('APP_URL', '').'/api/media')
+                : env('APP_URL').'/storage',
             'visibility' => 'public',
             'throw' => false,
             'report' => false,
@@ -65,7 +67,7 @@ return [
             'secret' => env('AWS_SECRET_ACCESS_KEY'),
             'region' => env('AWS_DEFAULT_REGION'),
             'bucket' => env('AWS_BUCKET'),
-            'url' => env('AWS_URL'),
+            'url' => env('AWS_URL', env('APP_URL', '').'/api/media'),
             'endpoint' => env('AWS_ENDPOINT'),
             'use_path_style_endpoint' => env('AWS_USE_PATH_STYLE_ENDPOINT', false),
             'throw' => false,

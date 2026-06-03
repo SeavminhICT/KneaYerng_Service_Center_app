@@ -31,5 +31,15 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        // 419 "Page Expired" means the CSRF token is stale (usually a fresh
+        // server, an expired session, or the browser has old cookies after a
+        // deployment).  Instead of a blank error page, redirect web requests
+        // back to login so the user gets a fresh session + CSRF token.
+        $exceptions->respond(function (\Symfony\Component\HttpFoundation\Response $response) {
+            if ($response->getStatusCode() === 419) {
+                return redirect()->route('login')
+                    ->with('error', 'Your session expired. Please log in again.');
+            }
+            return $response;
+        });
     })->create();

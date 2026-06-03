@@ -7,13 +7,13 @@ import '../../theme/app_fonts.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/cart_item.dart';
 import '../../services/api_service.dart';
+import '../../widgets/app_network_image.dart';
 import '../../services/cart_service.dart';
 import '../../widgets/auth_guard.dart';
 import '../../widgets/page_transitions.dart';
 import '../support/support_chat_screen.dart';
 import 'checkout_flow_screen.dart';
 
-Map<String, String>? get _imageHeaders => null;
 
 const _surface = Color(0xFFFFFFFF);
 const _surfaceSoft = Color(0xFFF8FBFF);
@@ -600,12 +600,11 @@ class _CartItemCard extends StatelessWidget {
                           ? const _ImageFallback(size: 22)
                           : Padding(
                               padding: const EdgeInsets.all(6),
-                              child: Image.network(
+                              child: AppNetworkImage(
                                 imageUrl,
                                 fit: BoxFit.contain,
                                 alignment: Alignment.center,
-                                headers: _imageHeaders,
-                                errorBuilder: (_, _, _) =>
+                                errorWidget: (_, __, ___) =>
                                     const _ImageFallback(size: 22),
                               ),
                             ),

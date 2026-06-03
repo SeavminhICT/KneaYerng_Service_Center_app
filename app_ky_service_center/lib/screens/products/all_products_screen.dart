@@ -8,6 +8,7 @@ import '../../l10n/app_localizations.dart';
 import '../../models/product.dart';
 import '../../models/search_suggestion.dart';
 import '../../services/api_service.dart';
+import '../../widgets/app_network_image.dart';
 import '../../services/cart_service.dart';
 import '../../services/search_history_service.dart';
 import '../../widgets/auth_guard.dart';
@@ -1082,17 +1083,11 @@ class _ProductImage extends StatelessWidget {
             ? const _ImageFallback()
             : Padding(
                 padding: const EdgeInsets.all(10),
-                child: Image.network(
+                child: AppNetworkImage(
                   imageUrl!,
                   fit: BoxFit.contain,
                   alignment: Alignment.center,
-                  cacheWidth: 900,
-                  headers: _imageHeaders,
-                  errorBuilder: (_, _, _) => const _ImageFallback(),
-                  loadingBuilder: (context, child, progress) {
-                    if (progress == null) return child;
-                    return const _ImageSkeleton();
-                  },
+                  errorWidget: (_, __, ___) => const _ImageFallback(),
                 ),
               ),
       ),
@@ -1164,7 +1159,6 @@ String? _firstValue(String? first, String? second) {
   return null;
 }
 
-Map<String, String>? get _imageHeaders => null;
 
 class _SearchEmptyState extends StatelessWidget {
   const _SearchEmptyState();
@@ -1322,23 +1316,6 @@ class _ImageFallback extends StatelessWidget {
   }
 }
 
-class _ImageSkeleton extends StatelessWidget {
-  const _ImageSkeleton();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      color: _surfaceAlt,
-      child: const Center(
-        child: Icon(
-          Icons.image_outlined,
-          color: Colors.black12,
-          size: 24,
-        ),
-      ),
-    );
-  }
-}
 
 class _AddCircleButton extends StatelessWidget {
   const _AddCircleButton({required this.onTap});

@@ -108,24 +108,32 @@
     var target = document.getElementById('kh-current-datetime');
     if (!target) return;
 
-    var days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    var days   = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
     var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
     function update() {
-        var now = new Date();
-        var khStr = now.toLocaleString('en-US', { timeZone: 'Asia/Phnom_Penh' });
-        var kh = new Date(khStr);
-        
-        var h = kh.getHours();
-        var m = kh.getMinutes();
-        var ampm = h >= 12 ? 'PM' : 'AM';
+        var kh = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Phnom_Penh' }));
+        var h  = kh.getHours();
+        var m  = kh.getMinutes();
+        var s  = kh.getSeconds();
+        var ap = h >= 12 ? 'PM' : 'AM';
         h = h % 12 || 12;
-        
-        target.textContent = days[kh.getDay()] + ' ' + kh.getDate() + ' ' + months[kh.getMonth()] + ' ' + 
-            String(h).padStart(2,'0') + ':' + String(m).padStart(2,'0') + ' ' + ampm;
+
+        target.textContent =
+            days[kh.getDay()] + ' ' +
+            kh.getDate()      + ' ' +
+            months[kh.getMonth()] + ' ' +
+            String(h).padStart(2,'0') + ':' +
+            String(m).padStart(2,'0') + ':' +
+            String(s).padStart(2,'0') + ' ' + ap;
     }
 
+    // Align to the exact next second boundary, then tick every 1 s
     update();
-    setInterval(update, 10000);
+    var msUntilNextSecond = 1000 - (Date.now() % 1000);
+    setTimeout(function () {
+        update();
+        setInterval(update, 1000);
+    }, msUntilNextSecond);
 })();
 </script>

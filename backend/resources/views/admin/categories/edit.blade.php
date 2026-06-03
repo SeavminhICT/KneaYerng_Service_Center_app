@@ -5,54 +5,73 @@
 
 @section('content')
     <div class="grid gap-6 lg:grid-cols-[2fr_1fr]">
-        <form id="category-edit-form" enctype="multipart/form-data" class="space-y-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900" data-category-id="{{ $categoryId ?? '' }}">
-            <div>
-                <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Update Category</h2>
-                <p class="text-sm text-slate-500">Edit category details and sync to the API catalog.</p>
+        <form id="category-edit-form" enctype="multipart/form-data"
+              class="space-y-5 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+              data-category-id="{{ $categoryId ?? '' }}">
+
+            <div class="border-b border-slate-100 pb-4 dark:border-slate-800">
+                <h2 class="text-base font-semibold text-slate-800 dark:text-slate-100">Update Category</h2>
+                <p class="mt-0.5 text-xs text-slate-400">Edit category details and sync to the API catalog.</p>
             </div>
 
             <div>
-                <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="name">Category Name</label>
-                <input id="name" name="name" type="text" class="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200" />
-                <p id="category-name-error" class="mt-2 text-xs text-danger-600"></p>
+                <label class="text-xs font-medium text-slate-600 dark:text-slate-400" for="name">Category Name</label>
+                <input id="name" name="name" type="text"
+                       class="mt-1.5 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800 outline-none transition focus:border-slate-400 focus:bg-white dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:focus:border-slate-500 dark:focus:bg-slate-800" />
+                <p id="category-name-error" class="mt-1.5 text-xs text-slate-500"></p>
             </div>
 
             <div>
-                <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="slug">Slug</label>
-                <input id="slug" name="slug" type="text" disabled class="mt-2 w-full cursor-not-allowed rounded-xl border border-slate-200 bg-slate-100 px-3 py-2 text-sm text-slate-500 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-400" />
+                <label class="text-xs font-medium text-slate-600 dark:text-slate-400" for="slug">Slug</label>
+                <input id="slug" name="slug" type="text" disabled
+                       class="mt-1.5 w-full cursor-not-allowed rounded-lg border border-slate-200 bg-slate-100 px-3 py-2 text-sm text-slate-400 dark:border-slate-700 dark:bg-slate-800/50 dark:text-slate-500" />
             </div>
 
             <div>
-                <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="status">Status</label>
-                <select id="status" name="status" class="mt-2 w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200">
+                <label class="text-xs font-medium text-slate-600 dark:text-slate-400" for="status">Status</label>
+                <select id="status" name="status"
+                        class="mt-1.5 w-full appearance-none rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800 outline-none transition focus:border-slate-400 focus:bg-white dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:focus:border-slate-500">
                     <option value="active">Active</option>
                     <option value="inactive">Inactive</option>
                 </select>
             </div>
 
-            <div class="flex items-center gap-3">
-                <button class="inline-flex h-10 items-center rounded-xl bg-primary-600 px-4 text-sm font-semibold text-white shadow-sm">Save Changes</button>
-                <a href="{{ route('admin.categories.index') }}" class="text-sm font-semibold text-slate-500">Cancel</a>
+            <div class="flex items-center gap-3 pt-1">
+                <button type="submit"
+                        class="inline-flex h-9 items-center rounded-lg bg-slate-800 px-5 text-sm font-medium text-white transition hover:bg-slate-700 dark:bg-slate-700 dark:hover:bg-slate-600">
+                    Save Changes
+                </button>
+                <a href="{{ route('admin.categories.index') }}"
+                   class="text-sm font-medium text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                    Cancel
+                </a>
             </div>
-            <p id="category-form-error" class="text-sm text-danger-600"></p>
+            <p id="category-form-error" class="text-xs text-slate-500"></p>
         </form>
 
-        <div class="space-y-6">
-            <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-                <h3 class="text-sm font-semibold text-slate-900 dark:text-white">Category Image</h3>
-                <p class="mt-1 text-xs text-slate-500">Replace the current thumbnail if needed.</p>
-                <div class="mt-4 flex h-40 items-center justify-center rounded-xl border border-dashed border-slate-300 bg-slate-50 text-xs text-slate-500 dark:border-slate-700 dark:bg-slate-900/60" id="category-image-preview">
-                    <div id="preview-placeholder" class="text-center">
-                        <p class="font-semibold">No image uploaded</p>
+        <div class="space-y-5">
+            {{-- Image upload --}}
+            <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                <h3 class="text-xs font-semibold uppercase tracking-widest text-slate-400">Category Image</h3>
+                <p class="mt-1 text-xs text-slate-400">Replace the current thumbnail if needed.</p>
+                <div class="mt-4 flex h-36 items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800/40"
+                     id="category-image-preview">
+                    <div id="preview-placeholder" class="text-center text-xs text-slate-400">
+                        <p>No image uploaded</p>
                     </div>
-                    <img id="preview-image" src="" alt="Preview" class="hidden h-32 w-32 rounded-xl object-cover" />
+                    <img id="preview-image" src="" alt="Preview"
+                         class="hidden h-28 w-28 rounded-lg object-cover" />
                 </div>
-                <input type="file" name="image" form="category-edit-form" class="mt-4 w-full text-sm text-slate-500" />
+                <input type="file" name="image" form="category-edit-form"
+                       class="mt-3 w-full text-xs text-slate-500 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-100 file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-slate-600 hover:file:bg-slate-200 dark:file:bg-slate-700 dark:file:text-slate-300" />
             </div>
 
-            <div class="rounded-2xl border border-danger-100 bg-danger-50 p-5 text-xs text-danger-700 dark:border-danger-500/30 dark:bg-danger-500/10 dark:text-danger-100">
-                <p class="font-semibold">Danger zone</p>
-                <p class="mt-2">Deleting a category will remove it from the API catalog.</p>
+            {{-- Danger zone — plain, no heavy red --}}
+            <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                <h3 class="text-xs font-semibold uppercase tracking-widest text-slate-400">Danger Zone</h3>
+                <p class="mt-2 text-xs text-slate-500 dark:text-slate-400">
+                    Deleting a category will remove it from the API catalog and cannot be undone.
+                </p>
             </div>
         </div>
     </div>

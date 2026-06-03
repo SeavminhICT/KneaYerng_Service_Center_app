@@ -73,6 +73,18 @@ class OrderController extends Controller
     public function summary(Request $request)
     {
         $query = Order::query();
+
+        if (! $request->filled('from_date') && ! $request->filled('to_date')) {
+            $today = \Illuminate\Support\Carbon::today('Asia/Phnom_Penh');
+            $query->where(function ($builder) use ($today) {
+                $builder->whereDate('placed_at', $today)
+                    ->orWhere(function ($q) use ($today) {
+                        $q->whereNull('placed_at')
+                          ->whereDate('created_at', $today);
+                    });
+            });
+        }
+
         $this->applyOrderFilters($request, $query);
 
         $summary = $this->emptyShiftSummary();
@@ -321,19 +333,33 @@ class OrderController extends Controller
         }
 
         if ($orderType === 'delivery') {
-            app(OrderTrackingService::class)->bootstrapDeliveryOrder($order, $actor);
+            try {
+                app(OrderTrackingService::class)->bootstrapDeliveryOrder($order, $actor);
+            } catch (\Throwable $exception) {
+                Log::warning('Failed to bootstrap delivery order tracking.', [
+                    'order_id' => $order->id,
+                    'error' => $exception->getMessage(),
+                ]);
+            }
         }
 
-        $order = $order->load([
-            'items',
-            'payments',
-            'assignedStaff',
-            'approver',
-            'rejector',
-            'canceller',
-            'trackingHistories.actor',
-            'trackingHistories.assignedStaff',
-        ]);
+        try {
+            $order = $order->load([
+                'items',
+                'payments',
+                'assignedStaff',
+                'approver',
+                'rejector',
+                'canceller',
+                'trackingHistories.actor',
+                'trackingHistories.assignedStaff',
+            ]);
+        } catch (\Throwable $exception) {
+            Log::warning('Failed to eager-load order relations.', [
+                'order_id' => $order->id,
+                'error' => $exception->getMessage(),
+            ]);
+        }
 
         try {
             event(new AdminOrderCreated($order));
@@ -1020,7 +1046,7 @@ class OrderController extends Controller
             return null;
         }
 
-        $hour = (int) $placedAt->format('G');
+        $hour = (int) $placedAt->copy()->setTimezone('Asia/Phnom_Penh')->format('G');
 
         if ($hour >= 6 && $hour < 12) {
             return 'morning';

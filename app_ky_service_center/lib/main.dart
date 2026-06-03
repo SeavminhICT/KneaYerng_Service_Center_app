@@ -21,6 +21,18 @@ Future<void> main() async {
   await AppNotificationService.instance.initialize();
   await ThemeService.instance.load();
   await LanguageService.instance.load();
+
+  // When any API call receives 401 mid-session, clear the stored token and
+  // return the user to the onboarding screen.
+  ApiService.onUnauthorized = () {
+    ApiService.onUnauthorized = null; // prevent re-entry
+    AppNotificationService.instance.navigatorKey.currentState
+        ?.pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const OnboardingScreen()),
+      (_) => false,
+    );
+  };
+
   runApp(const MyApp());
 }
 
@@ -87,8 +99,11 @@ class _StartupGateState extends State<_StartupGate> {
   Future<void> _bootstrap() async {
     Widget destination = const OnboardingScreen();
     try {
-      final token = await ApiService.getToken();
-      if (token != null && token.isNotEmpty) {
+      // Validate the token against the server — this catches stale tokens
+      // from a previous database or deployment and prevents the user from
+      // landing on the home screen only to see 401 errors everywhere.
+      final isAuthenticated = await ApiService.validateToken();
+      if (isAuthenticated) {
         unawaited(CartService.instance.loadFromApi());
         final launchTarget = AppNotificationService.instance
             .consumePendingLaunchTarget();

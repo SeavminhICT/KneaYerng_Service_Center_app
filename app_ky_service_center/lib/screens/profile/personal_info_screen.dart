@@ -4,6 +4,7 @@ import 'package:intl/intl.dart'; // Recommended for date formatting
 import '../../l10n/app_localizations.dart';
 import '../../models/user_profile.dart';
 import '../../services/api_service.dart';
+import '../../widgets/app_network_image.dart';
 
 class PersonalInfoScreen extends StatefulWidget {
   final UserProfile profile;
@@ -390,10 +391,10 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
       return fallback;
     }
 
-    return Image.network(
+    return AppNetworkImage(
       normalizedUrl,
       fit: BoxFit.cover,
-      errorBuilder: (context, error, stackTrace) => fallback,
+      errorWidget: (context, _, error) => fallback,
     );
   }
 

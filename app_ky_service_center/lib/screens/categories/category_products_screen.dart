@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/product.dart';
 import '../../services/api_service.dart';
+import '../../widgets/app_network_image.dart';
 import '../../services/cart_service.dart';
 import '../products/product_detail_screen.dart';
 import '../cart/cart_screen.dart';
@@ -40,7 +41,6 @@ class CategoryProductsScreen extends StatefulWidget {
   State<CategoryProductsScreen> createState() => _CategoryProductsScreenState();
 }
 
-Map<String, String>? get _imageHeaders => null;
 
 class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
   late Future<List<Product>> _future;
@@ -390,13 +390,11 @@ class _ProductCardState extends State<_ProductCard> {
                               ? const _ImageFallback()
                               : Padding(
                                   padding: const EdgeInsets.all(10),
-                                  child: Image.network(
+                                  child: AppNetworkImage(
                                     imageUrl,
                                     fit: BoxFit.contain,
                                     alignment: Alignment.center,
-                                    cacheWidth: 700,
-                                    headers: _imageHeaders,
-                                    errorBuilder: (_, _, _) =>
+                                    errorWidget: (_, __, ___) =>
                                         const _ImageFallback(),
                                   ),
                                 ),

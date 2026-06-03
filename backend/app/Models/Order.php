@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\ProductWarranty;
 
 class Order extends Model
 {
@@ -130,5 +131,10 @@ class Order extends Model
     public function trackingNotifications()
     {
         return $this->hasMany(OrderTrackingNotification::class);
+    }
+
+    public function warranties()
+    {
+        return $this->hasMany(ProductWarranty::class);
     }
 }

@@ -126,8 +126,40 @@ Route::prefix('admin')->name('admin.')->middleware(['admin'])->group(function ()
     Route::view('/finance/payments', 'admin.finance.payments')->name('finance.payments');
     Route::view('/finance/reports', 'admin.finance.reports')->name('finance.reports');
 
+    Route::get('/customers/{user}', function (User $user) {
+        $adminEmails = (array) config('auth.admin_emails', []);
+        if (in_array($user->email, $adminEmails, true) || $user->isAdmin()) {
+            abort(403);
+        }
+        $orders     = $user->orders()->orderByDesc('id')->limit(20)->get();
+        $repairs    = $user->repairRequests()->orderByDesc('id')->limit(20)->get();
+        $totalSpent = (float) $user->orders()->sum('total_amount');
+
+        return view('admin.customers.show', [
+            'customer'   => $user,
+            'orders'     => $orders,
+            'repairs'    => $repairs,
+            'totalSpent' => $totalSpent,
+        ]);
+    })->name('customers.show');
+
+    Route::delete('/customers/{user}', function (User $user) {
+        $adminEmails = (array) config('auth.admin_emails', []);
+        if (in_array($user->email, $adminEmails, true) || $user->isAdmin()) {
+            abort(403);
+        }
+        $user->tokens()->delete();
+        $user->delete();
+
+        return redirect()->route('admin.customers.index')
+            ->with('success', 'Customer deleted successfully.');
+    })->name('customers.destroy');
+
     Route::get('/customers', function () {
         $adminEmails = (array) config('auth.admin_emails', []);
+        $search  = trim(request('search', ''));
+        $segment = request('segment', '');
+
         $baseQuery = User::query()
             ->where(function ($query) {
                 $query->whereNull('is_admin')
@@ -142,6 +174,16 @@ Route::prefix('admin')->name('admin.')->middleware(['admin'])->group(function ()
             $baseQuery->whereNotIn('email', $adminEmails);
         }
 
+        // Search by name, email or phone
+        if ($search !== '') {
+            $baseQuery->where(function ($q) use ($search) {
+                $q->where('first_name', 'like', "%{$search}%")
+                  ->orWhere('last_name',  'like', "%{$search}%")
+                  ->orWhere('email',      'like', "%{$search}%")
+                  ->orWhere('phone',      'like', "%{$search}%");
+            });
+        }
+
         $customersCount = (clone $baseQuery)->count();
         $customers = $baseQuery
             ->withCount('orders')
@@ -149,11 +191,26 @@ Route::prefix('admin')->name('admin.')->middleware(['admin'])->group(function ()
             ->orderByDesc('id')
             ->get();
 
+        // Segment filter (applied in-memory after eager loading)
+        if ($segment !== '') {
+            $customers = $customers->filter(function ($customer) use ($segment) {
+                $ordersCount = $customer->orders_count ?? 0;
+                $isVerified  = (bool) ($customer->otp_verified_at ?? $customer->email_verified_at);
+                return match ($segment) {
+                    'vip'      => $ordersCount >= 3,
+                    'new'      => $ordersCount === 0,
+                    'inactive' => ! $isVerified,
+                    default    => true,
+                };
+            });
+        }
+
         return view('admin.customers.index', [
-            'customers' => $customers,
+            'customers'      => $customers,
             'customersCount' => $customersCount,
         ]);
     })->name('customers.index');
+
     Route::get('/payments', function () {
         $payments = Payment::query()
             ->with([

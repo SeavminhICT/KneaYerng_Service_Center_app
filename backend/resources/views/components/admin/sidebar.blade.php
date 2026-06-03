@@ -40,6 +40,12 @@
                 </svg>
                 Reports
             </a>
+              <a href="{{ route('admin.support.index') }}" class="flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium {{ request()->routeIs('admin.support.*') ? $activeClass : $inactiveClass }}">
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M8 10h8M8 14h5m-7 6l-3 1 1-3V6a2 2 0 012-2h12a2 2 0 012 2v10a2 2 0 01-2 2H8z" />
+                    </svg>
+                    Support Inbox
+                </a>
         </nav>
 
         <div class="mt-6">
@@ -67,7 +73,7 @@
                     <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m6-6H6" />
                     </svg>
-                    Accessories
+                    Repair Parts
                 </a>
                 <a href="{{ route('admin.banners.index') }}" class="flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium {{ request()->routeIs('admin.banners.*') ? $activeClass : $inactiveClass }}">
                     <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
@@ -111,7 +117,7 @@
                             Tracking Order
                         </a>
                         <a href="{{ route('admin.vouchers.index') }}" class="block rounded-lg px-3 py-2 text-sm {{ request()->routeIs('admin.vouchers.*') ? $subActive : $subInactive }}">
-                            Payment Voucher
+                                Voucher
                         </a>
                     </div>
                 </div>
@@ -131,7 +137,7 @@
             </nav>
         </div>
 
-        <div class="mt-6">
+        {{-- <div class="mt-6">
             <p class="px-3 text-xs font-semibold uppercase tracking-widest text-slate-400">Repairs</p>
             <nav class="mt-3 space-y-2">
                 <a href="{{ route('admin.repairs.index') }}" class="flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium {{ request()->routeIs('admin.repairs.*') ? $activeClass : $inactiveClass }}">
@@ -140,12 +146,7 @@
                     </svg>
                     Repair Management
                 </a>
-                <a href="{{ route('admin.support.index') }}" class="flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium {{ request()->routeIs('admin.support.*') ? $activeClass : $inactiveClass }}">
-                    <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M8 10h8M8 14h5m-7 6l-3 1 1-3V6a2 2 0 012-2h12a2 2 0 012 2v10a2 2 0 01-2 2H8z" />
-                    </svg>
-                    Support Inbox
-                </a>
+              
                 <a href="{{ route('admin.technicians.index') }}" class="flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium {{ request()->routeIs('admin.technicians.*') ? $activeClass : $inactiveClass }}">
                     <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4M5 6h14M5 18h14" />
@@ -153,7 +154,7 @@
                     Technicians
                 </a>
             </nav>
-        </div>
+        </div> --}}
 
         <div class="mt-6">
             <p class="px-3 text-xs font-semibold uppercase tracking-widest text-slate-400">Inventory</p>
@@ -173,7 +174,7 @@
             </nav>
         </div>
 
-        <div class="mt-6">
+        {{-- <div class="mt-6">
             <p class="px-3 text-xs font-semibold uppercase tracking-widest text-slate-400">Finance</p>
             <nav class="mt-3 space-y-2">
                 <a href="{{ route('admin.finance.invoices') }}" class="flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium {{ request()->routeIs('admin.finance.invoices') ? $activeClass : $inactiveClass }}">
@@ -195,7 +196,7 @@
                     Revenue Reports
                 </a>
             </nav>
-        </div>
+        </div> --}}
 
         <div class="mt-6">
             <p class="px-3 text-xs font-semibold uppercase tracking-widest text-slate-400">Access</p>

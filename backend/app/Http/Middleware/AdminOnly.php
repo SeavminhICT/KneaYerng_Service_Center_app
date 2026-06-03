@@ -43,6 +43,6 @@ class AdminOnly
             return response()->json(['message' => 'Unauthenticated.'], 401);
         }
 
-        abort(401);
+        return redirect()->route('login');
     }
 }

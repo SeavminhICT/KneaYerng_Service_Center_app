@@ -25,15 +25,41 @@ class MediaController extends Controller
             $clean = substr($clean, strlen('public/storage/'));
         }
 
-        $disk = Storage::disk('public');
-        if (! $disk->exists($clean)) {
-            abort(404);
+        // 1. Try S3/R2 disk. Any connection failure (bad credentials, network
+        //    error) falls through to the local-file fallback below.
+        $disk   = null;
+        $stream = null;
+        $mime   = 'application/octet-stream';
+        $size   = 0;
+
+        try {
+            $cloudDisk = Storage::disk('public');
+            if ($cloudDisk->exists($clean)) {
+                $stream = $cloudDisk->readStream($clean);
+                if (is_resource($stream)) {
+                    $mime = $cloudDisk->mimeType($clean) ?: 'application/octet-stream';
+                    $size = $cloudDisk->size($clean);
+                    $disk = $cloudDisk;
+                }
+            }
+        } catch (\Throwable $e) {
+            // R2 / S3 unreachable — try local storage below
         }
 
-        $mime = $disk->mimeType($clean) ?: 'application/octet-stream';
-        $size = $disk->size($clean);
-        $stream = $disk->readStream($clean);
-        if (! is_resource($stream)) {
+        // 2. Local fallback: files uploaded before cloud-storage migration live
+        //    at storage/app/public/{path}.
+        if ($disk === null) {
+            $localAbsPath = storage_path('app/public/' . $clean);
+
+            if (file_exists($localAbsPath) && is_file($localAbsPath)) {
+                $mime = mime_content_type($localAbsPath) ?: 'application/octet-stream';
+                return response()->file($localAbsPath, [
+                    'Content-Type'        => $mime,
+                    'Content-Disposition' => 'inline; filename="' . basename($clean) . '"',
+                    'Cache-Control'       => 'public, max-age=86400',
+                ]);
+            }
+
             abort(404);
         }
 

@@ -44,7 +44,7 @@
             <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
                 <div class="flex flex-wrap items-center justify-between gap-3">
                     <div class="flex items-center gap-3">
-                        <select id="master-filter" class="h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-600 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300">
+                        <select id="master-filter" class="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 pl-3 pr-8 text-sm text-slate-600 focus:border-primary-500 focus:ring-primary-500 sm:w-44 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300">
                             <option value="storage_capacity">Storage Capacity</option>
                             <option value="color">Color</option>
                             <option value="condition">Condition</option>

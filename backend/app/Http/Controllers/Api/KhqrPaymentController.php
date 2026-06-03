@@ -99,50 +99,67 @@ class KhqrPaymentController extends Controller
             ], 500);
         }
 
-        $transaction = KhqrTransaction::updateOrCreate(
-            ['transaction_id' => $transactionId],
-            [
-                'order_id' => $order?->id,
-                'md5' => $transactionId,
-                'full_hash' => null,
-                'amount' => $amount,
-                'currency' => $currency,
-                'qr_string' => $qrString,
-                'status' => 'PENDING',
-                'expires_at' => $expiresAt,
-                'provider_payload' => [
-                    'source' => 'bakong_dynamic_khqr',
-                    'bill_number' => $billNumber,
-                ],
-            ]
-        );
+        try {
+            $transaction = KhqrTransaction::updateOrCreate(
+                ['transaction_id' => $transactionId],
+                [
+                    'order_id' => $order?->id,
+                    'md5' => $transactionId,
+                    'full_hash' => null,
+                    'amount' => $amount,
+                    'currency' => $currency,
+                    'qr_string' => $qrString,
+                    'status' => 'PENDING',
+                    'expires_at' => $expiresAt,
+                    'provider_payload' => [
+                        'source' => 'bakong_dynamic_khqr',
+                        'bill_number' => $billNumber,
+                    ],
+                ]
+            );
+        } catch (\Throwable $e) {
+            Log::error('Failed to save KHQR transaction record.', [
+                'error' => $e->getMessage(),
+                'transaction_id' => $transactionId,
+            ]);
+            return response()->json([
+                'message' => 'Unable to save payment record. Please run: php artisan migrate',
+            ], 500);
+        }
 
         if ($order) {
-            $payment = $order->payments()->latest()->first();
-            if (! $payment) {
-                $payment = Payment::create([
-                    'order_id' => $order->id,
-                    'method' => 'aba',
-                    'status' => 'processing',
-                    'transaction_id' => $transactionId,
-                    'provider' => 'bakong',
-                    'amount' => $amount,
-                ]);
-            } else {
-                $payment->method = 'aba';
-                $payment->status = in_array($payment->status, ['success', 'failed'], true)
-                    ? $payment->status
-                    : 'processing';
-                $payment->transaction_id = $transactionId;
-                $payment->provider = 'bakong';
-                $payment->amount = $amount;
-                $payment->save();
-            }
+            try {
+                $payment = $order->payments()->latest()->first();
+                if (! $payment) {
+                    $payment = Payment::create([
+                        'order_id' => $order->id,
+                        'method' => 'aba',
+                        'status' => 'processing',
+                        'transaction_id' => $transactionId,
+                        'provider' => 'bakong',
+                        'amount' => $amount,
+                    ]);
+                } else {
+                    $payment->method = 'aba';
+                    $payment->status = in_array($payment->status, ['success', 'failed'], true)
+                        ? $payment->status
+                        : 'processing';
+                    $payment->transaction_id = $transactionId;
+                    $payment->provider = 'bakong';
+                    $payment->amount = $amount;
+                    $payment->save();
+                }
 
-            if ($order->payment_status !== 'paid') {
-                $order->payment_method = 'aba';
-                $order->payment_status = 'unpaid';
-                $order->save();
+                if ($order->payment_status !== 'paid') {
+                    $order->payment_method = 'aba';
+                    $order->payment_status = 'unpaid';
+                    $order->save();
+                }
+            } catch (\Throwable $e) {
+                Log::error('Failed to update order payment record for KHQR.', [
+                    'error' => $e->getMessage(),
+                    'order_id' => $order->id,
+                ]);
             }
         }
 
@@ -265,7 +282,15 @@ class KhqrPaymentController extends Controller
         }
 
         if ($transaction->status === 'SUCCESS') {
-            $this->syncOrderPaymentSuccess($transaction);
+            try {
+                $this->syncOrderPaymentSuccess($transaction);
+            } catch (\Throwable $e) {
+                Log::error('Failed to sync order payment after KHQR success.', [
+                    'transaction_id' => $transaction->transaction_id,
+                    'order_id'       => $transaction->order_id,
+                    'error'          => $e->getMessage(),
+                ]);
+            }
 
             $response = [
                 'status' => 'SUCCESS',

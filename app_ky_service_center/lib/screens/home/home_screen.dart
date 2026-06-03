@@ -13,6 +13,7 @@ import '../../models/search_suggestion.dart';
 import '../../models/user_profile.dart';
 import '../../services/api_service.dart';
 import '../../services/cart_service.dart';
+import '../../widgets/app_network_image.dart';
 import '../../services/favorite_service.dart';
 import '../../services/search_history_service.dart';
 import '../../widgets/auth_guard.dart';
@@ -25,7 +26,6 @@ import '../products/all_products_screen.dart';
 import '../products/product_detail_screen.dart';
 import '../search/search_results_screen.dart';
 
-Map<String, String>? get _imageHeaders => null;
 
 const _surfaceLight = Color(0xFFFFFFFF);
 const _surfaceDark = Color(0xFF161B22);
@@ -1204,14 +1204,12 @@ class _HeroBannerSlide extends StatelessWidget {
               clipBehavior: Clip.hardEdge,
               children: [
                 if (imageUrl != null && imageUrl.isNotEmpty)
-                  Image.network(
+                  AppNetworkImage(
                     imageUrl,
                     fit: BoxFit.cover,
                     alignment: Alignment.center,
-                    headers: _imageHeaders,
-                    errorBuilder: (context, error, stackTrace) {
-                      return const _BannerImageFallback();
-                    },
+                    errorWidget: (context, url, error) =>
+                        const _BannerImageFallback(),
                   )
                 else
                   const _BannerImageFallback(),
@@ -1423,20 +1421,17 @@ class _HeroDeviceImage extends StatelessWidget {
                 )
               : Padding(
                   padding: EdgeInsets.all(isPhone ? 10 : 12),
-                  child: Image.network(
+                  child: AppNetworkImage(
                     imageUrl,
                     fit: BoxFit.contain,
                     alignment: Alignment.center,
-                    headers: _imageHeaders,
-                    errorBuilder: (context, error, stackTrace) {
-                      return Center(
-                        child: Icon(
-                          icon,
-                          size: isPhone ? 34 : 58,
-                          color: frameColor,
-                        ),
-                      );
-                    },
+                    errorWidget: (context, url, error) => Center(
+                      child: Icon(
+                        icon,
+                        size: isPhone ? 34 : 58,
+                        color: frameColor,
+                      ),
+                    ),
                   ),
                 ),
         ),
@@ -1576,11 +1571,10 @@ class _CategoryChipState extends State<_CategoryChip>
                 child: imageUrl != null && imageUrl.isNotEmpty
                     ? Padding(
                         padding: const EdgeInsets.all(10),
-                        child: Image.network(
+                        child: AppNetworkImage(
                           imageUrl,
                           fit: BoxFit.contain,
-                          headers: _imageHeaders,
-                          errorBuilder: (ctx, err, st) => Icon(
+                          errorWidget: (ctx, url, err) => Icon(
                             widget.icon,
                             color: _primary,
                             size: 26,
@@ -2437,13 +2431,11 @@ class _FlashProductCard extends StatelessWidget {
                           color: _primary,
                           size: 38,
                         )
-                      : Image.network(
+                      : AppNetworkImage(
                           imageUrl,
                           fit: BoxFit.contain,
                           alignment: Alignment.center,
-                          cacheWidth: 420,
-                          headers: _imageHeaders,
-                          errorBuilder: (context, error, stackTrace) => Icon(
+                          errorWidget: (context, url, error) => Icon(
                             Icons.broken_image_outlined,
                             color: _textMuted(context),
                             size: 42,

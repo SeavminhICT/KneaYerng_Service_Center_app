@@ -121,7 +121,6 @@ class _LoginScreenState extends State<LoginScreen> {
       setState(() => _loading = false);
 
       if (error == null) {
-        // Request OTP to Gmail for verification
         final otpResult = await ApiService.requestOtp(
           destination: email,
           type: 'email',
@@ -129,9 +128,6 @@ class _LoginScreenState extends State<LoginScreen> {
         );
         if (!mounted) return;
         setState(() => _loading = false);
-
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(otpResult.message)));
 
         if (otpResult.ok) {
           Navigator.push(
@@ -144,6 +140,9 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
             ),
           );
+        } else {
+          ScaffoldMessenger.of(context)
+              .showSnackBar(SnackBar(content: Text(otpResult.message)));
         }
         return;
       }

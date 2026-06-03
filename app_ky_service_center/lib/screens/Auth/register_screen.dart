@@ -705,23 +705,28 @@ class _RegisterScreenState extends State<RegisterScreen> {
       setState(() => _loading = false);
 
       if (error == null) {
-        // Request OTP to Gmail for verification
         final otpResult = await ApiService.requestOtp(
           destination: email,
           type: 'email',
-          purpose: 'signup',
+          purpose: 'login',
         );
         if (!mounted) return;
         setState(() => _loading = false);
 
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(otpResult.message)));
-
         if (otpResult.ok) {
           Navigator.push(
             context,
-            _buildOtpRoute(email, 'email'),
+            MaterialPageRoute(
+              builder: (_) => OtpScreen(
+                destination: email,
+                type: 'email',
+                purpose: 'login',
+              ),
+            ),
           );
+        } else {
+          ScaffoldMessenger.of(context)
+              .showSnackBar(SnackBar(content: Text(otpResult.message)));
         }
         return;
       }

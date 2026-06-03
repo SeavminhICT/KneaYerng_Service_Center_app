@@ -10,14 +10,22 @@ import '../../services/api_service.dart';
 import '../Auth/login_screen.dart';
 import '../Auth/register_screen.dart';
 
-const _supportSurface = Colors.white;
-const _supportBorder = Color(0xFFE2E8F0);
-const _supportText = Color(0xFF0F172A);
-const _supportMuted = Color(0xFF64748B);
-const _supportPrimary = Color(0xFF0F6BFF);
-const _supportAccent = Color(0xFFECF4FF);
-const _supportSuccess = Color(0xFF0F9D58);
-const _supportWarning = Color(0xFFF97316);
+// ── Palette/Theme Helper ───────────────────────────────────────────────────────
+class _SupportTheme {
+  _SupportTheme(this.context);
+  final BuildContext context;
+
+  bool get isDark => Theme.of(context).brightness == Brightness.dark;
+
+  Color get surface => isDark ? const Color(0xFF161B22) : Colors.white;
+  Color get border => isDark ? const Color(0xFF2B3442) : const Color(0xFFE2E8F0);
+  Color get text => isDark ? const Color(0xFFE6EDF7) : const Color(0xFF0F172A);
+  Color get muted => isDark ? const Color(0xFF97A2B5) : const Color(0xFF64748B);
+  Color get primary => const Color(0xFF0F6BFF);
+  Color get accent => isDark ? const Color(0xFF1D2635) : const Color(0xFFECF4FF);
+  Color get success => const Color(0xFF0F9D58);
+  Color get warning => const Color(0xFFF97316);
+}
 
 class SupportChatScreen extends StatefulWidget {
   const SupportChatScreen({
@@ -153,6 +161,7 @@ class _SupportChatScreenState extends State<SupportChatScreen> {
   @override
   Widget build(BuildContext context) {
     final conversation = _conversation;
+    final theme = _SupportTheme(context);
 
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
@@ -161,7 +170,7 @@ class _SupportChatScreenState extends State<SupportChatScreen> {
         appBar: AppBar(
           elevation: 0,
           backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-          foregroundColor: _supportText,
+          foregroundColor: theme.text,
           surfaceTintColor: Colors.transparent,
           titleSpacing: 16,
           title: Column(
@@ -169,17 +178,17 @@ class _SupportChatScreenState extends State<SupportChatScreen> {
             children: [
               Text(
                 AppLocalizations.of(context).supportChat,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w800,
-                  color: _supportText,
+                  color: theme.text,
                 ),
               ),
               Text(
                 conversation == null
                     ? 'Reply in a few minutes'
                     : _supportStatusLabel(conversation.status),
-                style: const TextStyle(fontSize: 12, color: _supportMuted),
+                style: TextStyle(fontSize: 12, color: theme.muted),
               ),
             ],
           ),
@@ -227,7 +236,7 @@ class _SupportChatScreenState extends State<SupportChatScreen> {
                       )
                     : RefreshIndicator(
                         onRefresh: () => _loadConversation(),
-                        color: _supportPrimary,
+                        color: theme.primary,
                         child: ListView.builder(
                           controller: _scrollController,
                           reverse: true,
@@ -265,13 +274,14 @@ class _SupportHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final currentConversation = conversation;
+    final theme = _SupportTheme(context);
 
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: _supportSurface,
+        color: theme.surface,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: _supportBorder),
+        border: Border.all(color: theme.border),
       ),
       child: Row(
         children: [
@@ -279,12 +289,12 @@ class _SupportHeader extends StatelessWidget {
             height: 44,
             width: 44,
             decoration: BoxDecoration(
-              color: _supportAccent,
+              color: theme.accent,
               borderRadius: BorderRadius.circular(14),
             ),
-            child: const Icon(
+            child: Icon(
               Icons.support_agent_rounded,
-              color: _supportPrimary,
+              color: theme.primary,
             ),
           ),
           const SizedBox(width: 12),
@@ -296,10 +306,10 @@ class _SupportHeader extends StatelessWidget {
                   currentConversation?.subject?.trim().isNotEmpty == true
                       ? currentConversation!.subject!.trim()
                       : 'General support inbox',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w800,
-                    color: _supportText,
+                    color: theme.text,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -307,9 +317,9 @@ class _SupportHeader extends StatelessWidget {
                   currentConversation == null
                       ? 'We help with orders, repairs, delivery, and products.'
                       : 'Context: ${_supportContextLabel(currentConversation)}',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12.5,
-                    color: _supportMuted,
+                    color: theme.muted,
                     height: 1.35,
                   ),
                 ),
@@ -320,6 +330,7 @@ class _SupportHeader extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
             decoration: BoxDecoration(
               color: _supportStatusColor(
+                context,
                 currentConversation?.status,
               ).withAlpha(24),
               borderRadius: BorderRadius.circular(999),
@@ -331,7 +342,7 @@ class _SupportHeader extends StatelessWidget {
               style: TextStyle(
                 fontSize: 11.5,
                 fontWeight: FontWeight.w700,
-                color: _supportStatusColor(currentConversation?.status),
+                color: _supportStatusColor(context, currentConversation?.status),
               ),
             ),
           ),
@@ -352,8 +363,9 @@ class _MessageBubble extends StatelessWidget {
     final align = isCustomer
         ? CrossAxisAlignment.end
         : CrossAxisAlignment.start;
-    final bubbleColor = isCustomer ? _supportPrimary : _supportSurface;
-    final textColor = isCustomer ? Colors.white : _supportText;
+    final theme = _SupportTheme(context);
+    final bubbleColor = isCustomer ? theme.primary : theme.surface;
+    final textColor = isCustomer ? Colors.white : theme.text;
     final time = message.createdAt == null
         ? ''
         : DateFormat('hh:mm a').format(message.createdAt!.toLocal());
@@ -372,7 +384,7 @@ class _MessageBubble extends StatelessWidget {
             decoration: BoxDecoration(
               color: bubbleColor,
               borderRadius: BorderRadius.circular(18),
-              border: isCustomer ? null : Border.all(color: _supportBorder),
+              border: isCustomer ? null : Border.all(color: theme.border),
               boxShadow: const [
                 BoxShadow(
                   color: Color(0x120F172A),
@@ -397,7 +409,7 @@ class _MessageBubble extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             isCustomer ? '$time  ${_deliveryLabel(message)}' : time,
-            style: const TextStyle(fontSize: 11.5, color: _supportMuted),
+            style: TextStyle(fontSize: 11.5, color: theme.muted),
           ),
         ],
       ),
@@ -413,7 +425,8 @@ class _VoiceMessageTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = isCustomer ? Colors.white : _supportText;
+    final theme = _SupportTheme(context);
+    final color = isCustomer ? Colors.white : theme.text;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -445,11 +458,12 @@ class _Composer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = _SupportTheme(context);
     return Container(
       padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
-      decoration: const BoxDecoration(
-        color: _supportSurface,
-        border: Border(top: BorderSide(color: _supportBorder)),
+      decoration: BoxDecoration(
+        color: theme.surface,
+        border: Border(top: BorderSide(color: theme.border)),
       ),
       child: SafeArea(
         top: false,
@@ -466,7 +480,7 @@ class _Composer extends StatelessWidget {
                   ),
                 );
               },
-              icon: const Icon(Icons.mic_none_rounded, color: _supportMuted),
+              icon: Icon(Icons.mic_none_rounded, color: theme.muted),
               tooltip: 'Voice message',
             ),
             Expanded(
@@ -474,7 +488,7 @@ class _Composer extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: Theme.of(context).scaffoldBackgroundColor,
                   borderRadius: BorderRadius.circular(18),
-                  border: Border.all(color: _supportBorder),
+                  border: Border.all(color: theme.border),
                 ),
                 child: TextField(
                   controller: controller,
@@ -483,12 +497,13 @@ class _Composer extends StatelessWidget {
                   textInputAction: TextInputAction.send,
                   onSubmitted: (_) => onSend(),
                   maxLength: 500,
-                  decoration: const InputDecoration(
+                  style: TextStyle(color: theme.text),
+                  decoration: InputDecoration(
                     hintText: 'Type your message...',
-                    hintStyle: TextStyle(color: _supportMuted),
+                    hintStyle: TextStyle(color: theme.muted),
                     counterText: '',
                     border: InputBorder.none,
-                    contentPadding: EdgeInsets.symmetric(
+                    contentPadding: const EdgeInsets.symmetric(
                       horizontal: 14,
                       vertical: 12,
                     ),
@@ -504,7 +519,7 @@ class _Composer extends StatelessWidget {
                 height: 48,
                 width: 48,
                 decoration: BoxDecoration(
-                  color: isSending ? _supportMuted : _supportPrimary,
+                  color: isSending ? theme.muted : theme.primary,
                   borderRadius: BorderRadius.circular(18),
                 ),
                 child: isSending
@@ -534,6 +549,7 @@ class _GuestSupportState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = _SupportTheme(context);
     return Center(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 28),
@@ -543,8 +559,8 @@ class _GuestSupportState extends StatelessWidget {
             Container(
               width: 80,
               height: 80,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
                   colors: [Color(0xFF3B63FF), Color(0xFF7C3AED)],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
@@ -561,19 +577,19 @@ class _GuestSupportState extends StatelessWidget {
             Text(
               AppLocalizations.of(context).supportChat,
               textAlign: TextAlign.center,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w800,
-                color: _supportText,
+                color: theme.text,
               ),
             ),
             const SizedBox(height: 10),
-            const Text(
+            Text(
               'Create an account or login to start\na live conversation with our team.',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 13.5,
-                color: _supportMuted,
+                color: theme.muted,
                 height: 1.5,
               ),
             ),
@@ -662,33 +678,34 @@ class _SupportErrorState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = _SupportTheme(context);
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(
+            Icon(
               Icons.chat_bubble_outline_rounded,
               size: 42,
-              color: _supportMuted,
+              color: theme.muted,
             ),
             const SizedBox(height: 12),
             Text(
               AppLocalizations.of(context).somethingWentWrong,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w800,
-                color: _supportText,
+                color: theme.text,
               ),
             ),
             const SizedBox(height: 8),
             Text(
               message,
               textAlign: TextAlign.center,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 13,
-                color: _supportMuted,
+                color: theme.muted,
                 height: 1.4,
               ),
             ),
@@ -740,19 +757,20 @@ String _supportShortStatus(String status) {
   }
 }
 
-Color _supportStatusColor(String? status) {
+Color _supportStatusColor(BuildContext context, String? status) {
+  final isDark = Theme.of(context).brightness == Brightness.dark;
   switch (status) {
     case 'waiting_for_support':
-      return _supportWarning;
+      return const Color(0xFFF97316);
     case 'resolved':
     case 'waiting_for_user':
-      return _supportSuccess;
+      return const Color(0xFF0F9D58);
     case 'closed':
-      return _supportMuted;
+      return isDark ? const Color(0xFF97A2B5) : const Color(0xFF64748B);
     case 'new':
     case 'open':
     default:
-      return _supportPrimary;
+      return const Color(0xFF0F6BFF);
   }
 }
 

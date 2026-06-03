@@ -227,7 +227,7 @@ class ApiService {
   static const String _androidEmulatorApi = 'http://10.0.2.2:8000/api';
   // ⚡ DEV: Update this whenever you restart ngrok with a new URL
   static const String _ngrokDevUrl =
-      'https://unkempt-flashcard-wieldable.ngrok-free.dev/api';
+      'https://kneayerng.seavminh.com/api';
   static String? _runtimeBaseUrl;
   static String? _autoDetectedBaseUrl;
   static String? _resolvedBaseUrl;
@@ -902,6 +902,28 @@ class ApiService {
       return UserProfile.fromMap(decoded);
     }
     return null;
+  }
+
+  // ================= WARRANTIES =================
+  static Future<List<Map<String, dynamic>>> getWarranties({String? status}) async {
+    final token = await getToken();
+    if (token == null) return [];
+    final params = <String, String>{};
+    if (status != null) params['status'] = status;
+    final uri = Uri.parse('$baseUrl/product-warranties').replace(queryParameters: params.isEmpty ? null : params);
+    try {
+      final res = await http.get(uri, headers: {
+        'Accept': 'application/json',
+        'Authorization': 'Bearer $token',
+      }).timeout(const Duration(seconds: 15));
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        if (data is Map && data['data'] is List) {
+          return List<Map<String, dynamic>>.from(data['data']);
+        }
+      }
+    } catch (_) {}
+    return [];
   }
 
   // ================= LOGOUT =================

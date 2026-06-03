@@ -15,10 +15,10 @@ class AppLocalizations {
   String _t(String en, String km) => isKhmer ? km : en;
 
   // ── Navigation ────────────────────────────────────────────────────────────
-  String get home      => _t('Home',      'ផ្ទះ');
+  String get home      => _t('Home',      'ទំព័រដើម');
   String get repair    => _t('Repair',    'ជួសជុល');
   String get orders    => _t('Orders',    'ការបញ្ជាទិញ');
-  String get favorites => _t('Favorites', 'ចំណូលចិត្ត');
+  String get favorites => _t('Favorites', 'ចូលចិត្ត');
   String get profile   => _t('Profile',   'គណនី');
 
   // ── Common ────────────────────────────────────────────────────────────────

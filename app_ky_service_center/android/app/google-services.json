@@ -14,6 +14,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "325660432558-6o3pkr7otuiajbu6tlpc5q1cobo3svtd.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.kneayerng.app_ky_service_center",
+            "certificate_hash": "fe794b45971cc04885da441ea399c3481c76557c"
+          }
+        },
+        {
           "client_id": "325660432558-38vc5uai6ohl1t8om25nv5s3tuqo14eo.apps.googleusercontent.com",
           "client_type": 3
         }

@@ -67,6 +67,8 @@ RUN composer dump-autoload --optimize
 
 # Ensure required directories exist with correct ownership
 RUN mkdir -p \
+        storage/app/public \
+        storage/app/private \
         storage/framework/sessions \
         storage/framework/views \
         storage/framework/cache \

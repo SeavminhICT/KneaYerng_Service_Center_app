@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\BannerResource;
 use App\Models\Banner;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
 class BannerController extends Controller
@@ -38,7 +39,13 @@ class BannerController extends Controller
             'cta_label' => ['nullable', 'string', 'max:100'],
         ]);
 
-        $storedPath = $request->file('image')->store('banners', 'public');
+        try {
+            $disk = Storage::build(array_merge(config('filesystems.disks.public'), ['throw' => true]));
+            $storedPath = $disk->putFile('banners', $request->file('image'));
+        } catch (\Throwable $e) {
+            Log::error('Banner image upload failed.', ['error' => $e->getMessage()]);
+            return response()->json(['message' => 'Image upload failed: '.$e->getMessage()], 500);
+        }
 
         $banner = Banner::create([
             'image' => 'storage/'.$storedPath,
@@ -66,14 +73,20 @@ class BannerController extends Controller
             'cta_label' => ['nullable', 'string', 'max:100'],
         ]);
 
-        if ($request->hasFile('image') && $banner->image) {
-            $oldImagePath = str_replace('storage/', '', $banner->image);
-            Storage::disk('public')->delete($oldImagePath);
-        }
-
         if ($request->hasFile('image')) {
-            $storedPath = $request->file('image')->store('banners', 'public');
-            $banner->image = 'storage/'.$storedPath;
+            if ($banner->image) {
+                $oldImagePath = str_replace('storage/', '', $banner->image);
+                Storage::disk('public')->delete($oldImagePath);
+            }
+
+            try {
+                $disk = Storage::build(array_merge(config('filesystems.disks.public'), ['throw' => true]));
+                $storedPath = $disk->putFile('banners', $request->file('image'));
+                $banner->image = 'storage/'.$storedPath;
+            } catch (\Throwable $e) {
+                Log::error('Banner image upload failed.', ['error' => $e->getMessage()]);
+                return response()->json(['message' => 'Image upload failed: '.$e->getMessage()], 500);
+            }
         }
 
         $banner->badge_label = $request->string('badge_label')->trim()->toString() ?: null;

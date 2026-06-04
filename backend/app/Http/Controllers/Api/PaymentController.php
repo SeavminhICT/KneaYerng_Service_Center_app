@@ -8,6 +8,7 @@ use App\Models\KhqrTransaction;
 use App\Models\Order;
 use App\Models\Payment;
 use App\Services\OrderPaymentService;
+use App\Services\KhPayService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
@@ -205,5 +206,124 @@ class PaymentController extends Controller
     private function requiresProcessing(string $method): bool
     {
         return in_array($method, ['aba', 'card', 'wallet', 'bank'], true);
+    }
+
+    public function khpayCallback(Request $request)
+    {
+        $khpay = app(KhPayService::class);
+        
+        $signature = $request->header('X-Webhook-Signature') 
+            ?? $request->header('X-Callback-Signature') 
+            ?? $request->header('X-KHPAY-Signature');
+
+        if (! $signature) {
+            Log::warning('KHPAY webhook callback missing signature header.');
+            return response()->json(['message' => 'Missing signature.'], 403);
+        }
+
+        if (! $khpay->verifyWebhookSignature($request->getContent(), $signature)) {
+            Log::warning('KHPAY webhook signature validation failed.');
+            return response()->json(['message' => 'Invalid signature.'], 403);
+        }
+
+        $event = $request->input('event');
+        $transactionId = $request->input('data.transaction_id') ?? $request->input('transaction_id');
+        $status = strtolower($request->input('data.status') ?? $request->input('status') ?? '');
+        $amount = (float) ($request->input('data.amount') ?? $request->input('amount') ?? 0);
+        $currency = $request->input('data.currency') ?? $request->input('currency') ?? 'USD';
+        $metadata = $request->input('data.metadata') ?? $request->input('metadata') ?? [];
+
+        Log::info('KHPAY Webhook received', [
+            'event' => $event,
+            'transaction_id' => $transactionId,
+            'status' => $status,
+            'amount' => $amount,
+        ]);
+
+        if (empty($transactionId)) {
+            return response()->json(['message' => 'Missing transaction_id.'], 400);
+        }
+
+        // Only process paid / success events
+        $isPaidEvent = $event === 'payment.paid' 
+            || $status === 'paid' 
+            || $status === 'success';
+
+        if (! $isPaidEvent) {
+            return response()->json(['message' => 'Webhook received but not processed (ignored status).']);
+        }
+
+
+        $khqr = KhqrTransaction::where('transaction_id', $transactionId)->first();
+        $orderId = $khqr?->order_id ?? $metadata['order_id'] ?? null;
+
+        if (! $orderId) {
+            Log::warning('KHPAY Webhook could not resolve order ID.', [
+                'transaction_id' => $transactionId,
+                'metadata' => $metadata,
+            ]);
+            return response()->json(['message' => 'Could not resolve order ID.'], 422);
+        }
+
+        $payment = Payment::where('transaction_id', $transactionId)->first();
+        if (! $payment) {
+            $payment = Payment::create([
+                'order_id' => $orderId,
+                'method' => 'aba',
+                'status' => 'processing',
+                'transaction_id' => $transactionId,
+                'provider' => 'khpay',
+                'amount' => $amount,
+                'callback_payload' => $request->all(),
+                'paid_at' => null,
+            ]);
+        }
+
+        // Apply status transition if not already succeeded
+        if ($payment->status !== 'success') {
+            $transitionError = $this->applyPaymentStatusTransition($payment, 'success');
+            if ($transitionError) {
+                Log::warning('KHPAY Webhook callback payment status transition rejected.', [
+                    'payment_id' => $payment->id,
+                    'order_id' => $payment->order_id,
+                    'error' => $transitionError,
+                ]);
+                return response()->json(['message' => $transitionError], 422);
+            }
+        }
+
+        $payment->provider = 'khpay';
+        $payment->callback_payload = $request->all();
+        $payment->save();
+
+        // Update KhqrTransaction record
+        if ($khqr) {
+            $khqr->status = 'SUCCESS';
+            $khqr->checked_at = now();
+            $khqr->paid_at = $payment->paid_at ?? now();
+            $khqr->provider_payload = $request->all();
+            $khqr->save();
+        }
+
+        $order = Order::find($orderId);
+        if ($order) {
+            app(OrderPaymentService::class)->markOrderPaid($order, $payment->method, [
+                'transaction_id' => $payment->transaction_id,
+                'provider' => 'khpay',
+                'amount' => $amount,
+                'paid_at' => $payment->paid_at ?? now(),
+            ]);
+        }
+
+        Log::info('KHPAY Webhook processed successfully.', [
+            'payment_id' => $payment->id,
+            'order_id' => $orderId,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Webhook processed successfully.',
+            'payment' => new PaymentResource($payment),
+        ]);
     }
 }

@@ -10,6 +10,7 @@ import 'screens/splash/splash_screen.dart';
 import 'services/api_service.dart';
 import 'services/app_notification_service.dart';
 import 'services/cart_service.dart';
+import 'services/favorite_service.dart';
 import 'services/language_service.dart';
 import 'services/theme_service.dart';
 import 'theme/app_theme.dart';
@@ -21,6 +22,7 @@ Future<void> main() async {
   await AppNotificationService.instance.initialize();
   await ThemeService.instance.load();
   await LanguageService.instance.load();
+  await FavoriteService.instance.load();
 
   // When any API call receives 401 mid-session, clear the stored token and
   // return the user to the onboarding screen.

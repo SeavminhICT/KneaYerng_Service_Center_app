@@ -8,6 +8,7 @@ use App\Http\Requests\Api\UpdateCategoryRequest;
 use App\Http\Resources\CategoryResource;
 use App\Models\Category;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
 class CategoryController extends Controller
@@ -37,8 +38,14 @@ class CategoryController extends Controller
 
         $imagePath = null;
         if ($request->hasFile('image')) {
-            $storedPath = $request->file('image')->store('categories', 'public');
-            $imagePath = 'storage/'.$storedPath;
+            try {
+                $disk = Storage::build(array_merge(config('filesystems.disks.public'), ['throw' => true]));
+                $storedPath = $disk->putFile('categories', $request->file('image'));
+                $imagePath = 'storage/'.$storedPath;
+            } catch (\Throwable $e) {
+                Log::error('Category image upload failed.', ['error' => $e->getMessage()]);
+                return response()->json(['message' => 'Image upload failed: '.$e->getMessage()], 500);
+            }
         }
 
         $slug = $validated['slug'] ?? $this->generateUniqueSlug($validated['name']);
@@ -87,8 +94,14 @@ class CategoryController extends Controller
                 Storage::disk('public')->delete($oldImagePath);
             }
 
-            $storedPath = $request->file('image')->store('categories', 'public');
-            $category->image = 'storage/'.$storedPath;
+            try {
+                $disk = Storage::build(array_merge(config('filesystems.disks.public'), ['throw' => true]));
+                $storedPath = $disk->putFile('categories', $request->file('image'));
+                $category->image = 'storage/'.$storedPath;
+            } catch (\Throwable $e) {
+                Log::error('Category image upload failed.', ['error' => $e->getMessage()]);
+                return response()->json(['message' => 'Image upload failed: '.$e->getMessage()], 500);
+            }
         }
 
         $category->save();

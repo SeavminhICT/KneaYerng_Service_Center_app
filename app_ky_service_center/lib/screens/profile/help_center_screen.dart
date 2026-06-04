@@ -213,15 +213,6 @@ class _HelpCenterScreenState extends State<HelpCenterScreen>
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
                     Text(
-                      isKhmer ? 'មជ្ឈមណ្ឌលជំនួយ' : 'Help Center',
-                      style: kFont(context,
-                        fontSize: 26,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
                       isKhmer ? 'តើយើងអាចជួយអ្នកបានដោយរបៀបណា?' : 'How can we help you today?',
                       style: kFont(context,
                         fontSize: 13,

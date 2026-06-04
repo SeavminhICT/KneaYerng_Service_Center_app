@@ -9,6 +9,7 @@ use App\Http\Resources\AccessoryResource;
 use App\Models\Accessory;
 use App\Models\Part;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
 class AccessoryController extends Controller
@@ -59,8 +60,14 @@ class AccessoryController extends Controller
         $validated = $request->validated();
 
         if ($request->hasFile('image')) {
-            $storedPath = $request->file('image')->store('accessories', 'public');
-            $validated['image'] = 'storage/'.$storedPath;
+            try {
+                $disk = Storage::build(array_merge(config('filesystems.disks.public'), ['throw' => true]));
+                $storedPath = $disk->putFile('accessories', $request->file('image'));
+                $validated['image'] = 'storage/'.$storedPath;
+            } catch (\Throwable $e) {
+                Log::error('Accessory image upload failed.', ['error' => $e->getMessage()]);
+                return response()->json(['message' => 'Image upload failed: '.$e->getMessage()], 500);
+            }
         }
 
         $accessory = Accessory::create($validated);
@@ -83,8 +90,15 @@ class AccessoryController extends Controller
                 $oldImagePath = str_replace('storage/', '', $accessory->image);
                 Storage::disk('public')->delete($oldImagePath);
             }
-            $storedPath = $request->file('image')->store('accessories', 'public');
-            $validated['image'] = 'storage/'.$storedPath;
+
+            try {
+                $disk = Storage::build(array_merge(config('filesystems.disks.public'), ['throw' => true]));
+                $storedPath = $disk->putFile('accessories', $request->file('image'));
+                $validated['image'] = 'storage/'.$storedPath;
+            } catch (\Throwable $e) {
+                Log::error('Accessory image upload failed.', ['error' => $e->getMessage()]);
+                return response()->json(['message' => 'Image upload failed: '.$e->getMessage()], 500);
+            }
         }
 
         $accessory->update($validated);

@@ -48,7 +48,9 @@ class AuthController extends Controller
         $avatarPath = null;
         if ($request->hasFile('avatar')) {
             $storedPath = $request->file('avatar')->store('avatars', 'public');
-            $avatarPath = 'storage/'.$storedPath;
+            if ($storedPath) {
+                $avatarPath = 'storage/'.$storedPath;
+            }
         }
 
         $user = User::create([
@@ -260,7 +262,9 @@ class AuthController extends Controller
             }
 
             $storedPath = $request->file('avatar')->store('avatars', 'public');
-            $user->avatar = 'storage/'.$storedPath;
+            if ($storedPath) {
+                $user->avatar = 'storage/'.$storedPath;
+            }
         }
 
         $user->save();

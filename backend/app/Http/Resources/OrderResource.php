@@ -33,14 +33,23 @@ class OrderResource extends JsonResource
             }
         }
 
-        $trackingService = app(OrderTrackingService::class);
-        $isTrackedDelivery = $trackingService->isTrackedDelivery($this->resource);
-        $trackingHistories = $this->relationLoaded('trackingHistories')
-            ? OrderTrackingHistoryResource::collection($this->trackingHistories)
-            : [];
-        $trackingTimeline = $isTrackedDelivery && $this->relationLoaded('trackingHistories')
-            ? $trackingService->buildTimeline($this->resource)
-            : [];
+        $isTrackedDelivery = false;
+        $trackingHistories = [];
+        $trackingTimeline  = [];
+
+        try {
+            $trackingService   = app(OrderTrackingService::class);
+            $isTrackedDelivery = $trackingService->isTrackedDelivery($this->resource);
+            $trackingHistories = $this->relationLoaded('trackingHistories')
+                ? OrderTrackingHistoryResource::collection($this->trackingHistories)
+                : [];
+            $trackingTimeline  = $isTrackedDelivery && $this->relationLoaded('trackingHistories')
+                ? $trackingService->buildTimeline($this->resource)
+                : [];
+        } catch (\Throwable $e) {
+            // Firebase / push-notification service not configured on this server.
+            // Orders still work — tracking features are simply disabled.
+        }
 
         return [
             'id' => $this->id,

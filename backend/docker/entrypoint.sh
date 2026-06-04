@@ -26,6 +26,10 @@ php artisan migrate --force
 echo "[entrypoint] Seeding admin user and default data..."
 php artisan db:seed --force --class=DatabaseSeeder
 
+echo "[entrypoint] Creating storage symlink..."
+rm -rf /var/www/html/public/storage
+php artisan storage:link
+
 echo "[entrypoint] Caching config, routes, and views..."
 php artisan config:cache
 php artisan route:cache

@@ -220,18 +220,9 @@ class _PrivacyScreenState extends State<PrivacyScreen>
                         ),
                         const SizedBox(width: 12),
                         Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                isKhmer ? 'ភាពឯកជន' : 'Privacy',
-                                style: kFont(context, fontSize: 22, fontWeight: FontWeight.w700, color: Colors.white),
-                              ),
-                              Text(
-                                isKhmer ? 'គ្រប់គ្រងទិន្នន័យ និងការអនុញ្ញាតរបស់អ្នក' : 'Control your data & permissions',
-                                style: kFont(context, fontSize: 12, color: Colors.white.withValues(alpha: 0.80)),
-                              ),
-                            ],
+                          child: Text(
+                            isKhmer ? 'គ្រប់គ្រងទិន្នន័យ និងការអនុញ្ញាតរបស់អ្នក' : 'Control your data & permissions',
+                            style: kFont(context, fontSize: 12, color: Colors.white.withValues(alpha: 0.80)),
                           ),
                         ),
                       ],

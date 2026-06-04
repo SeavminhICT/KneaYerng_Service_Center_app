@@ -6,8 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\KhqrTransaction;
 use App\Models\Order;
 use App\Models\Payment;
-use App\Services\BakongOpenApiService;
-use App\Services\KhqrGenerator;
+use App\Services\KhPayService;
 use App\Services\OrderPaymentService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -46,21 +45,7 @@ class KhqrPaymentController extends Controller
         }
 
         $amount = (float) $validated['amount'];
-        $bakongAccountId = (string) config('services.bakong.account_id', '');
-        if ($bakongAccountId === '') {
-            return response()->json([
-                'message' => 'Bakong account id is not configured.',
-            ], 503);
-        }
-        $merchantId = (string) config('services.bakong.merchant_id', 'DEMO_MERCHANT');
-        $merchantName = (string) config('services.bakong.merchant_name', 'KneaYerng Service Center');
-        $merchantCity = (string) config('services.bakong.merchant_city', 'Phnom Penh');
-        $merchantCategory = (string) config('services.bakong.merchant_category', '5999');
-        $countryCode = (string) config('services.bakong.country_code', 'KH');
-        $expiresMinutes = (int) config('services.bakong.qr_expires_minutes', 10);
-        $expiresMinutes = max(1, min(10, $expiresMinutes));
-        $expiresAt = now()->addMinutes($expiresMinutes);
-
+        
         $billNumber = null;
         if ($order?->order_number) {
             $billNumber = $order->order_number;
@@ -72,31 +57,35 @@ class KhqrPaymentController extends Controller
         $billNumber = substr(preg_replace('/\s+/', '', $billNumber), 0, 25);
 
         try {
-            $generator = app(KhqrGenerator::class);
-            $generated = $generator->generate([
-                'bakong_account_id' => $bakongAccountId,
-                'merchant_name' => $merchantName,
-                'merchant_city' => $merchantCity,
-                'merchant_category_code' => $merchantCategory,
-                'country_code' => $countryCode,
-                'merchant_id' => $merchantId,
-                'currency' => $currency,
-                'amount' => $amount,
-                'bill_number' => $billNumber,
-                'expiration_timestamp' => $expiresAt->getTimestamp() * 1000,
+            $khpay = app(KhPayService::class);
+            $response = $khpay->generateBakongQr($amount, $currency, 'Order #' . $billNumber, [
+                'callback_url' => url('api/payments/khpay-callback'),
+                'success_url' => $order ? url("checkout/success?order_id={$order->id}") : null,
+                'cancel_url' => $order ? url("checkout/cancel?order_id={$order->id}") : null,
             ]);
+
+            if (! $response['success']) {
+                return response()->json([
+                    'message' => $response['error'] ?? 'Unable to generate QR code via KHPAY.',
+                ], 422);
+            }
+
+            $data = $response['data'];
+            $transactionId = $data['transaction_id'] ?? null;
+            $qrString = $data['qr'] ?? null;
+            $md5 = $data['md5'] ?? md5($qrString);
+            $expiresAt = isset($data['expires_at']) ? now()->parse($data['expires_at']) : now()->addMinutes(10);
+            
+            if (! $transactionId || ! $qrString) {
+                return response()->json([
+                    'message' => 'KHPAY did not return transaction details.',
+                ], 500);
+            }
         } catch (\Throwable $exception) {
+            Log::error('KHPAY QR generation failed', ['error' => $exception->getMessage()]);
             return response()->json([
                 'message' => $exception->getMessage() ?: 'Unable to generate KHQR.',
             ], 422);
-        }
-
-        $transactionId = $generated['md5'] ?? null;
-        $qrString = $generated['qr'] ?? null;
-        if (! $transactionId || ! $qrString) {
-            return response()->json([
-                'message' => 'Unable to generate KHQR.',
-            ], 500);
         }
 
         try {
@@ -104,7 +93,7 @@ class KhqrPaymentController extends Controller
                 ['transaction_id' => $transactionId],
                 [
                     'order_id' => $order?->id,
-                    'md5' => $transactionId,
+                    'md5' => $md5,
                     'full_hash' => null,
                     'amount' => $amount,
                     'currency' => $currency,
@@ -112,8 +101,9 @@ class KhqrPaymentController extends Controller
                     'status' => 'PENDING',
                     'expires_at' => $expiresAt,
                     'provider_payload' => [
-                        'source' => 'bakong_dynamic_khqr',
-                        'bill_number' => $billNumber,
+                        'source' => 'khpay_bakong',
+                        'payment_url' => $data['payment_url'] ?? null,
+                        'download_qr' => $data['download_qr'] ?? null,
                     ],
                 ]
             );
@@ -123,7 +113,7 @@ class KhqrPaymentController extends Controller
                 'transaction_id' => $transactionId,
             ]);
             return response()->json([
-                'message' => 'Unable to save payment record. Please run: php artisan migrate',
+                'message' => 'Unable to save payment record.',
             ], 500);
         }
 
@@ -136,7 +126,7 @@ class KhqrPaymentController extends Controller
                         'method' => 'aba',
                         'status' => 'processing',
                         'transaction_id' => $transactionId,
-                        'provider' => 'bakong',
+                        'provider' => 'khpay',
                         'amount' => $amount,
                     ]);
                 } else {
@@ -145,7 +135,7 @@ class KhqrPaymentController extends Controller
                         ? $payment->status
                         : 'processing';
                     $payment->transaction_id = $transactionId;
-                    $payment->provider = 'bakong';
+                    $payment->provider = 'khpay';
                     $payment->amount = $amount;
                     $payment->save();
                 }
@@ -179,7 +169,6 @@ class KhqrPaymentController extends Controller
             'md' => ['nullable', 'string', 'max:64'],
         ]);
 
-        $verify = null;
         $transactionId = (string) ($validated['md5'] ?? $validated['md'] ?? '');
         if ($transactionId === '') {
             return response()->json([
@@ -217,51 +206,44 @@ class KhqrPaymentController extends Controller
             $transaction->paid_at = $payment?->paid_at ?? $orderPayment?->paid_at ?? now();
         }
 
+        $verify = null;
+        $verifyData = [];
         if (in_array($transaction->status, ['PENDING', 'UNAUTHORIZED', 'UNAVAILABLE'], true)) {
-            $bakong = app(BakongOpenApiService::class);
-            if ($transaction->full_hash) {
-                $verify = $bakong->checkTransactionByHash($transaction->full_hash);
-            } else {
-                $verify = $bakong->checkTransactionByMd5($transaction->md5 ?? $transaction->transaction_id);
-            }
+            try {
+                $khpay = app(KhPayService::class);
+                $verify = $khpay->checkTransaction($transaction->transaction_id);
 
-            $payload = $transaction->provider_payload ?? [];
-            if (! is_array($payload)) {
-                $payload = [];
-            }
-            $payload['bakong_check'] = $verify;
-            $transaction->provider_payload = $payload;
-
-            if (($verify['status'] ?? 'PENDING') === 'SUCCESS') {
-                $validation = $this->validateBakongData($transaction, $verify['data'] ?? null);
-                $payload['validation'] = $validation;
+                $payload = $transaction->provider_payload ?? [];
+                if (! is_array($payload)) {
+                    $payload = [];
+                }
+                $payload['khpay_check'] = $verify;
                 $transaction->provider_payload = $payload;
 
-                if (! empty($verify['data']['hash'])) {
-                    $transaction->full_hash = (string) $verify['data']['hash'];
-                }
+                $verifyData = isset($verify['data']) && is_array($verify['data']) ? $verify['data'] : $verify;
 
-                if ($validation['ok']) {
+                $isPaid = ($verifyData['paid'] ?? false) === true || strtolower($verifyData['status'] ?? '') === 'paid' || strtolower($verifyData['status'] ?? '') === 'success';
+
+                if ($isPaid) {
                     $transaction->status = 'SUCCESS';
                     $transaction->paid_at = now();
-                } else {
+                } elseif (isset($verifyData['status']) && in_array(strtolower($verifyData['status']), ['expired', 'timeout'], true)) {
+                    $transaction->status = 'TIMEOUT';
+                } elseif (isset($verifyData['status']) && in_array(strtolower($verifyData['status']), ['failed', 'canceled', 'rejected'], true)) {
                     $transaction->status = 'FAILED';
                 }
-            } elseif (($verify['status'] ?? 'PENDING') === 'FAILED') {
-                $transaction->status = 'FAILED';
-            } elseif (($verify['status'] ?? 'PENDING') === 'NOT_FOUND') {
-                $transaction->status = 'PENDING';
-            } elseif (($verify['status'] ?? 'PENDING') === 'UNAUTHORIZED') {
-                $transaction->status = 'UNAUTHORIZED';
-            } elseif (($verify['status'] ?? 'PENDING') === 'UNAVAILABLE') {
-                $transaction->status = 'UNAVAILABLE';
+            } catch (\Throwable $e) {
+                Log::error('Failed to check transaction with KHPAY', [
+                    'transaction_id' => $transaction->transaction_id,
+                    'error' => $e->getMessage(),
+                ]);
             }
         }
 
         if (
             $transaction->expires_at &&
             $transaction->expires_at->isPast() &&
-            in_array($transaction->status, ['PENDING', 'NOT_FOUND'], true)
+            in_array($transaction->status, ['PENDING'], true)
         ) {
             $transaction->status = 'TIMEOUT';
         }
@@ -269,17 +251,14 @@ class KhqrPaymentController extends Controller
         $transaction->checked_at = now();
         $transaction->save();
 
-        $responseData = null;
-        if (! empty($verify['data']) && is_array($verify['data'])) {
-            $responseData = [
-                'bakongHash' => $verify['data']['hash'] ?? null,
-                'fromAccountId' => $verify['data']['fromAccountId'] ?? null,
-                'toAccountId' => $verify['data']['toAccountId'] ?? null,
-                'currency' => $verify['data']['currency'] ?? null,
-                'amount' => $verify['data']['amount'] ?? null,
-                'paid_at' => $transaction->paid_at?->toISOString(),
-            ];
-        }
+        $responseData = [
+            'bakongHash' => $transaction->transaction_id,
+            'fromAccountId' => $verifyData['fromAccountId'] ?? null,
+            'toAccountId' => $verifyData['toAccountId'] ?? null,
+            'currency' => $verifyData['currency'] ?? $transaction->currency,
+            'amount' => $verifyData['amount'] ?? $transaction->amount,
+            'paid_at' => $transaction->paid_at?->toISOString(),
+        ];
 
         if ($transaction->status === 'SUCCESS') {
             try {
@@ -292,75 +271,32 @@ class KhqrPaymentController extends Controller
                 ]);
             }
 
-            $response = [
+            return response()->json([
                 'status' => 'SUCCESS',
                 'message' => 'Payment successful',
-            ];
-            if ($responseData) {
-                $response['data'] = $responseData;
-            }
-            if (config('app.debug') && isset($verify)) {
-                $response['debug'] = ['bakong' => $verify];
-            }
-            return response()->json($response);
+                'data' => $responseData,
+            ]);
         }
 
         if ($transaction->status === 'FAILED') {
-            $response = [
+            return response()->json([
                 'status' => 'FAILED',
                 'message' => 'Payment failed',
-            ];
-            if (config('app.debug') && isset($verify)) {
-                $response['debug'] = ['bakong' => $verify];
-            }
-            return response()->json($response);
+            ]);
         }
 
         if ($transaction->status === 'TIMEOUT') {
-            $response = [
+            return response()->json([
                 'status' => 'TIMEOUT',
                 'message' => 'Payment failed: QR expired.',
-            ];
-            if (config('app.debug') && isset($verify)) {
-                $response['debug'] = ['bakong' => $verify];
-            }
-            return response()->json($response);
+            ]);
         }
 
-        if ($transaction->status === 'UNAUTHORIZED') {
-            $response = [
-                'status' => 'UNAUTHORIZED',
-                'message' => 'Bakong sandbox status check is unauthorized. Check BAKONG_OPEN_TOKEN / BAKONG_TOKEN.',
-            ];
-            if (config('app.debug') && isset($verify)) {
-                $response['debug'] = ['bakong' => $verify];
-            }
-            return response()->json($response);
-        }
-
-        if ($transaction->status === 'UNAVAILABLE') {
-            $response = [
-                'status' => 'UNAVAILABLE',
-                'message' => 'Bakong status checker is not configured. Set BAKONG_OPEN_BASE_URL and BAKONG_OPEN_TOKEN.',
-            ];
-            if (config('app.debug') && isset($verify)) {
-                $response['debug'] = ['bakong' => $verify];
-            }
-            return response()->json($response);
-        }
-
-        $message = $verify['message'] ?? 'Transaction is still pending.';
-        $response = [
+        return response()->json([
             'status' => 'PENDING',
-            'message' => $message,
-        ];
-        if ($responseData) {
-            $response['data'] = $responseData;
-        }
-        if (config('app.debug') && isset($verify)) {
-            $response['debug'] = ['bakong' => $verify];
-        }
-        return response()->json($response);
+            'message' => 'Transaction is still pending.',
+            'data' => $responseData,
+        ]);
     }
 
     private function syncOrderPaymentSuccess(KhqrTransaction $transaction): void
@@ -376,94 +312,15 @@ class KhqrPaymentController extends Controller
 
         app(OrderPaymentService::class)->markOrderPaid($order, 'aba', [
             'transaction_id' => $transaction->transaction_id,
-            'provider' => 'bakong',
+            'provider' => 'khpay',
             'amount' => (float) $transaction->amount,
             'paid_at' => $transaction->paid_at ?? now(),
         ]);
 
-        Log::info('KHQR payment confirmed.', [
+        Log::info('KHQR payment confirmed via KHPAY.', [
             'transaction_id' => $transaction->transaction_id,
             'order_id' => $order->id,
             'payment_id' => $order->payments()->latest()->value('id'),
         ]);
     }
-
-    private function validateBakongData(KhqrTransaction $transaction, mixed $data): array
-    {
-        if (! is_array($data)) {
-            return [
-                'ok' => false,
-                'message' => 'Bakong response missing transaction data.',
-            ];
-        }
-
-        $expectedCurrency = $this->normalizeCurrency((string) $transaction->currency);
-        $expectedAmount = (float) $transaction->amount;
-
-        $receivedCurrency = $this->normalizeCurrency((string) ($data['currency'] ?? ''));
-        $receivedAmount = $data['amount'] ?? null;
-        if (is_string($receivedAmount) || is_int($receivedAmount) || is_float($receivedAmount)) {
-            $receivedAmount = (float) $receivedAmount;
-        } else {
-            $receivedAmount = null;
-        }
-
-        if ($receivedCurrency === '' || $receivedAmount === null) {
-            return [
-                'ok' => false,
-                'message' => 'Bakong response missing amount or currency.',
-                'expected' => [
-                    'amount' => $expectedAmount,
-                    'currency' => $expectedCurrency,
-                ],
-                'received' => [
-                    'amount' => $receivedAmount,
-                    'currency' => $receivedCurrency,
-                ],
-            ];
-        }
-
-        $amountTolerance = $expectedCurrency === 'KHR' ? 0.5 : 0.01;
-        $amountMatches = abs($expectedAmount - $receivedAmount) <= $amountTolerance;
-        $currencyMatches = $expectedCurrency === $receivedCurrency;
-
-        if (! $amountMatches || ! $currencyMatches) {
-            return [
-                'ok' => false,
-                'message' => 'Payment amount or currency mismatch.',
-                'expected' => [
-                    'amount' => $expectedAmount,
-                    'currency' => $expectedCurrency,
-                ],
-                'received' => [
-                    'amount' => $receivedAmount,
-                    'currency' => $receivedCurrency,
-                ],
-            ];
-        }
-
-        return [
-            'ok' => true,
-            'message' => 'Payment validated.',
-        ];
-    }
-
-    private function normalizeCurrency(string $currency): string
-    {
-        $currency = strtoupper(trim($currency));
-        if ($currency === '840') {
-            return 'USD';
-        }
-        if ($currency === '116') {
-            return 'KHR';
-        }
-        if ($currency === 'USD' || $currency === 'KHR') {
-            return $currency;
-        }
-        if (ctype_digit($currency)) {
-            return $currency;
-        }
-        return $currency;
-    }
-
 }

@@ -2,15 +2,19 @@
 
 namespace App\Http\Resources;
 
+use App\Http\Resources\Concerns\FormatsMediaUrl;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 class CartItemResource extends JsonResource
 {
+    use FormatsMediaUrl;
+
     public function toArray(Request $request): array
     {
         $product = $this->relationLoaded('product') ? $this->product : null;
         $variant = $this->relationLoaded('productVariant') ? $this->productVariant : null;
+        $baseUrl = $this->resolveBaseUrl($request);
 
         return [
             'id' => $this->id,
@@ -40,7 +44,7 @@ class CartItemResource extends JsonResource
                 'price' => (float) $variant->price,
                 'stock' => (int) $variant->stock,
                 'sku' => $variant->sku,
-                'image' => $variant->image,
+                'image' => $this->formatMediaUrl($variant->image, $baseUrl),
                 'is_active' => (bool) $variant->is_active,
                 'label' => $variant->label(),
             ] : null,

@@ -118,6 +118,37 @@ class Product {
   final List<ProductVariant> variants;
   final DateTime? createdAt;
 
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'name': name,
+        'price': price,
+        'sale_price': salePriceOverride,
+        'image': imageUrl,
+        'thumbnail': thumbnailUrl,
+        'image_gallery': imageGallery,
+        'category_name': categoryName,
+        'category_id': categoryId,
+        'brand': brand,
+        'description': description,
+        'sku': sku,
+        'discount': discount,
+        'rating': rating,
+        'rating_count': ratingCount,
+        'stock': stock,
+        'status': status,
+        'tag': tag,
+        'warranty': warranty,
+        'storage_capacity': storageCapacity,
+        'color': color,
+        'condition': condition,
+        'ram': ramOptions,
+        'ssd': ssd,
+        'cpu': cpu,
+        'display': display,
+        'country': country,
+        'created_at': createdAt?.toIso8601String(),
+      };
+
   bool get hasDiscount {
     if ((discount ?? 0) > 0) return true;
     if (salePriceOverride != null && salePriceOverride! < price) return true;

@@ -1,4 +1,8 @@
+import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
 import '../models/product.dart';
 
 class FavoriteService extends ChangeNotifier {
@@ -6,30 +10,66 @@ class FavoriteService extends ChangeNotifier {
 
   static final FavoriteService instance = FavoriteService._();
 
+  static const String _key = 'favorite_products_v1';
+
   final List<Product> _items = [];
 
   List<Product> get items => List.unmodifiable(_items);
 
-  bool contains(Product product) {
-    return _items.any((item) => item.id == product.id);
+  // ── Load saved favorites from disk on app startup ─────────────────────────
+  Future<void> load() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString(_key);
+      if (raw == null || raw.isEmpty) return;
+
+      final list = jsonDecode(raw) as List<dynamic>;
+      _items.clear();
+      for (final item in list) {
+        try {
+          _items.add(
+            Product.fromJson(Map<String, dynamic>.from(item as Map)),
+          );
+        } catch (_) {
+          // Skip corrupted entries
+        }
+      }
+      notifyListeners();
+    } catch (_) {
+      // SharedPreferences unavailable — start with empty list
+    }
   }
 
-  void add(Product product) {
+  bool contains(Product product) =>
+      _items.any((item) => item.id == product.id);
+
+  Future<void> add(Product product) async {
     if (contains(product)) return;
     _items.add(product);
     notifyListeners();
+    await _persist();
   }
 
-  void remove(Product product) {
+  Future<void> remove(Product product) async {
     _items.removeWhere((item) => item.id == product.id);
     notifyListeners();
+    await _persist();
   }
 
-  void toggle(Product product) {
+  Future<void> toggle(Product product) async {
     if (contains(product)) {
-      remove(product);
+      await remove(product);
     } else {
-      add(product);
+      await add(product);
     }
+  }
+
+  // ── Save to disk ──────────────────────────────────────────────────────────
+  Future<void> _persist() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final encoded = jsonEncode(_items.map((p) => p.toJson()).toList());
+      await prefs.setString(_key, encoded);
+    } catch (_) {}
   }
 }

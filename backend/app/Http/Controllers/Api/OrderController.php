@@ -362,6 +362,18 @@ class OrderController extends Controller
         }
 
         try {
+            // Delay Telegram notification for QR code payments (aba) until payment is confirmed successful.
+            if ($order->payment_status === 'paid' || !in_array($order->payment_method, ['aba'], true)) {
+                app(TelegramOrderService::class)->sendOrderMessage($order);
+            }
+        } catch (\Throwable $exception) {
+            Log::warning('Failed to send Telegram order notification.', [
+                'order_id' => $order->id,
+                'error' => $exception->getMessage(),
+            ]);
+        }
+
+        try {
             event(new AdminOrderCreated($order));
         } catch (\Throwable $exception) {
             Log::warning('Failed to broadcast admin order event.', [

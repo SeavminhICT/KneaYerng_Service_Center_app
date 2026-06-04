@@ -141,6 +141,8 @@ Route::middleware('auth:sanctum')->group(function () {
 });
 
 Route::post('payments/callback', [PaymentController::class, 'callback']);
+Route::post('payments/khpay-callback', [PaymentController::class, 'khpayCallback']);
+
 
 Route::middleware('admin')->group(function () {
     Route::get('admin/product-warranties', [ProductWarrantyController::class, 'adminIndex']);

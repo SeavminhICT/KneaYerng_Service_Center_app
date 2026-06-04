@@ -57,6 +57,17 @@ return [
         'callback_secret' => env('PAYMENT_CALLBACK_SECRET', ''),
     ],
 
+    'khpay' => [
+        'base_url' => env('KHPAY_BASE_URL', 'https://khpay.site/api/v1'),
+        'api_key' => env('KHPAY_API_KEY'),
+        'webhook_secret' => env('KHPAY_WEBHOOK_SECRET'),
+        'verify' => filter_var(env('KHPAY_VERIFY', true), FILTER_VALIDATE_BOOLEAN),
+        'test_mode' => filter_var(env('KHPAY_TEST_MODE', true), FILTER_VALIDATE_BOOLEAN),
+    ],
+
+
+
+
     'telegram' => [
         'bot_token' => env('TELEGRAM_BOT_TOKEN', ''),
         'group_chat_id' => env('TELEGRAM_GROUP_CHAT_ID', ''),

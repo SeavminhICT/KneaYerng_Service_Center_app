@@ -94,11 +94,20 @@ class User extends Authenticatable
                     return null;
                 }
 
+                // External URL (e.g. Google profile picture) — return as-is
                 if (str_starts_with($value, 'http://') || str_starts_with($value, 'https://')) {
                     return $value;
                 }
 
-                return rtrim(config('app.url'), '/').'/'.ltrim($value, '/');
+                // Strip any known storage prefix so we always get the bare key
+                $path = ltrim(str_replace('\\', '/', $value), '/');
+                if (str_starts_with($path, 'public/storage/')) {
+                    $path = substr($path, strlen('public/storage/'));
+                } elseif (str_starts_with($path, 'storage/')) {
+                    $path = substr($path, strlen('storage/'));
+                }
+
+                return rtrim(config('app.url'), '/') . '/api/media/' . $path;
             }
         );
     }

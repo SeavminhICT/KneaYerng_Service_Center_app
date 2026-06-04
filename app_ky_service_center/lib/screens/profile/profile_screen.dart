@@ -589,14 +589,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
             : const [Color(0xFFEAF2FF), Color(0xFFDDEAFF)],
         onTap: _openReviewsPreviewAction,
       ),
-      (
-        icon: Icons.insights_outlined,
-        label: 'Activity',
-        colors: isDark
-            ? const [Color(0xFF22324A), Color(0xFF1C2A3F)]
-            : const [Color(0xFFEFF7FF), Color(0xFFE5F2FF)],
-        onTap: _openOrderHistory,
-      ),
+      // (
+      //   icon: Icons.insights_outlined,
+      //   label: 'Activity',
+      //   colors: isDark
+      //       ? const [Color(0xFF22324A), Color(0xFF1C2A3F)]
+      //       : const [Color(0xFFEFF7FF), Color(0xFFE5F2FF)],
+      //   onTap: _openOrderHistory,
+      // ),
       (
         icon: Icons.shield_outlined,
         label: 'Warranty',
@@ -607,22 +607,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
           MaterialPageRoute(builder: (_) => const WarrantyScreen()),
         ),
       ),
-      (
-        icon: Icons.verified_user_outlined,
-        label: 'Security',
-        colors: isDark
-            ? const [Color(0xFF2A2F4A), Color(0xFF222741)]
-            : const [Color(0xFFF2F5FF), Color(0xFFE9EEFF)],
-        onTap: () => _showFeatureComingSoon('Security'),
-      ),
-      (
-        icon: Icons.account_balance_wallet_outlined,
-        label: 'Payment',
-        colors: isDark
-            ? const [Color(0xFF22354A), Color(0xFF1C2D40)]
-            : const [Color(0xFFEEF4FF), Color(0xFFE2ECFF)],
-        onTap: () => _showFeatureComingSoon('Payment'),
-      ),
+      // (
+      //   icon: Icons.verified_user_outlined,
+      //   label: 'Security',
+      //   colors: isDark
+      //       ? const [Color(0xFF2A2F4A), Color(0xFF222741)]
+      //       : const [Color(0xFFF2F5FF), Color(0xFFE9EEFF)],
+      //   onTap: () => _showFeatureComingSoon('Security'),
+      // ),
+      // (
+      //   icon: Icons.account_balance_wallet_outlined,
+      //   label: 'Payment',
+      //   colors: isDark
+      //       ? const [Color(0xFF22354A), Color(0xFF1C2D40)]
+      //       : const [Color(0xFFEEF4FF), Color(0xFFE2ECFF)],
+      //   onTap: () => _showFeatureComingSoon('Payment'),
+      // ),
     ];
 
     return GridView.builder(

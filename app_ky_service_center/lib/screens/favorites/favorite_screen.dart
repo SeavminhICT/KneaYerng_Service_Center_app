@@ -185,7 +185,7 @@ class _GridBody extends StatelessWidget {
         crossAxisCount: 2,
         mainAxisSpacing: 14,
         crossAxisSpacing: 14,
-        childAspectRatio: 0.72,
+        childAspectRatio: 0.62,
       ),
       itemCount: items.length,
       itemBuilder: (_, i) => _GridCard(product: items[i]),
@@ -276,36 +276,39 @@ class _GridCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        if (product.brand != null && product.brand!.isNotEmpty)
+                    Flexible(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (product.brand != null && product.brand!.isNotEmpty)
+                            Text(
+                              product.brand!,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF0F6BFF),
+                                letterSpacing: 0.3,
+                              ),
+                            ),
+                          const SizedBox(height: 3),
                           Text(
-                            product.brand!,
-                            maxLines: 1,
+                            product.name,
+                            maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w600,
-                              color: const Color(0xFF0F6BFF),
-                              letterSpacing: 0.3,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: isDark
+                                  ? const Color(0xFFE6EDF7)
+                                  : const Color(0xFF0F172A),
+                              height: 1.3,
                             ),
                           ),
-                        const SizedBox(height: 3),
-                        Text(
-                          product.name,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                            color: isDark
-                                ? const Color(0xFFE6EDF7)
-                                : const Color(0xFF0F172A),
-                            height: 1.3,
-                          ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                     _PriceBlock(
                       product: product,

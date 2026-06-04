@@ -21,20 +21,32 @@ class FirebasePushNotificationService
     public function __construct()
     {
         $credentials = (string) config('services.firebase.credentials', '');
-        $projectId = (string) config('services.firebase.project_id', '');
+        $projectId   = (string) config('services.firebase.project_id', '');
 
         if (trim($credentials) === '') {
             return;
         }
 
-        $factory = (new Factory())
-            ->withServiceAccount($this->resolveCredentialsPath($credentials));
+        try {
+            $path = $this->resolveCredentialsPath($credentials);
 
-        if (trim($projectId) !== '') {
-            $factory = $factory->withProjectId($projectId);
+            if (! file_exists($path) || ! is_readable($path)) {
+                Log::warning('FirebasePushNotificationService: credentials file not found.', ['path' => $path]);
+                return;
+            }
+
+            $factory = (new Factory())->withServiceAccount($path);
+
+            if (trim($projectId) !== '') {
+                $factory = $factory->withProjectId($projectId);
+            }
+
+            $this->messaging = $factory->createMessaging();
+        } catch (Throwable $e) {
+            Log::warning('FirebasePushNotificationService: init failed — push notifications disabled.', [
+                'error' => $e->getMessage(),
+            ]);
         }
-
-        $this->messaging = $factory->createMessaging();
     }
 
     public function sendOrderTrackingNotification(User $user, OrderTrackingNotification $notification): void

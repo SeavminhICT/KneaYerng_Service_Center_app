@@ -39,6 +39,7 @@ class Order extends Model
         'discount_value',
         'discount_amount',
         'pickup_qr_token',
+        'pickup_qr_short_code',
         'pickup_qr_generated_at',
         'pickup_qr_expires_at',
         'pickup_verified_at',

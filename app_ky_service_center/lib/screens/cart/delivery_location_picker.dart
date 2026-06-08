@@ -55,6 +55,12 @@ class _DeliveryLocationPickerState extends State<DeliveryLocationPicker> {
   StreamSubscription<Position>? _positionSubscription;
   bool _autoCentered = false;
   _MapStyle _mapStyle = _MapStyle.street;
+  final TextEditingController _searchController = TextEditingController();
+  final FocusNode _searchFocusNode = FocusNode();
+  List<Map<String, dynamic>> _searchResults = [];
+  bool _isSearching = false;
+  Timer? _searchDebounce;
+  bool _showSearchResults = false;
 
   @override
   void initState() {
@@ -70,7 +76,10 @@ class _DeliveryLocationPickerState extends State<DeliveryLocationPicker> {
   @override
   void dispose() {
     _mapMoveDebounce?.cancel();
+    _searchDebounce?.cancel();
     _positionSubscription?.cancel();
+    _searchController.dispose();
+    _searchFocusNode.dispose();
     super.dispose();
   }
 
@@ -277,12 +286,76 @@ class _DeliveryLocationPickerState extends State<DeliveryLocationPicker> {
     );
   }
 
-  void _toggleMapStyle() {
-    setState(() {
-      _mapStyle = _mapStyle == _MapStyle.street
-          ? _MapStyle.satellite
-          : _MapStyle.street;
+  void _onSearchChanged(String query) {
+    _searchDebounce?.cancel();
+    if (query.trim().isEmpty) {
+      setState(() {
+        _searchResults = [];
+        _showSearchResults = false;
+        _isSearching = false;
+      });
+      return;
+    }
+    setState(() => _isSearching = true);
+    _searchDebounce = Timer(const Duration(milliseconds: 600), () {
+      _searchPlaces(query);
     });
+  }
+
+  Future<void> _searchPlaces(String query) async {
+    if (query.trim().isEmpty) return;
+    try {
+      final uri = Uri.https('nominatim.openstreetmap.org', '/search', {
+        'format': 'jsonv2',
+        'q': query,
+        'limit': '6',
+      });
+      final res = await http
+          .get(uri, headers: {'User-Agent': _osmUserAgent, 'Accept': 'application/json'})
+          .timeout(const Duration(seconds: 8));
+      if (!mounted) return;
+      if (res.statusCode == 200) {
+        final decoded = jsonDecode(res.body);
+        if (decoded is List) {
+          setState(() {
+            _searchResults = decoded.cast<Map<String, dynamic>>();
+            _showSearchResults = _searchResults.isNotEmpty;
+            _isSearching = false;
+          });
+          return;
+        }
+      }
+    } catch (_) {}
+    if (!mounted) return;
+    setState(() {
+      _searchResults = [];
+      _showSearchResults = false;
+      _isSearching = false;
+    });
+  }
+
+  void _selectSearchResult(Map<String, dynamic> result) {
+    final lat = double.tryParse(result['lat']?.toString() ?? '');
+    final lon = double.tryParse(result['lon']?.toString() ?? '');
+    if (lat == null || lon == null) return;
+    final target = LatLng(lat, lon);
+    final address =
+        result['display_name']?.toString() ?? _formatCoordinates(target);
+    _searchController.clear();
+    _searchFocusNode.unfocus();
+    setState(() {
+      _searchResults = [];
+      _showSearchResults = false;
+      _selectedPosition = target;
+      _selectedAddress = address;
+      _isGeocoding = false;
+    });
+    _moveTo(target, zoom: 16);
+  }
+
+  void _dismissSearch() {
+    _searchFocusNode.unfocus();
+    setState(() => _showSearchResults = false);
   }
 
   List<Widget> _buildMapLayers() {
@@ -350,7 +423,10 @@ class _DeliveryLocationPickerState extends State<DeliveryLocationPicker> {
                 }
               },
               onPositionChanged: _handleMapPositionChanged,
-              onTap: (_, point) => _updateSelectedPosition(point),
+              onTap: (_, point) {
+                _dismissSearch();
+                _updateSelectedPosition(point);
+              },
             ),
             children: [
               ..._buildMapLayers(),
@@ -396,19 +472,127 @@ class _DeliveryLocationPickerState extends State<DeliveryLocationPicker> {
               ),
             ],
           ),
-          SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-              child: Align(
-                alignment: Alignment.topRight,
-                child: _MapStyleSwitch(
-                  mapStyle: _mapStyle,
-                  onStreetSelected: _mapStyle == _MapStyle.street
-                      ? null
-                      : () => setState(() => _mapStyle = _MapStyle.street),
-                  onSatelliteSelected: _mapStyle == _MapStyle.satellite
-                      ? null
-                      : () => setState(() => _mapStyle = _MapStyle.satellite),
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Expanded(
+                          child: Material(
+                            elevation: 4,
+                            borderRadius: BorderRadius.circular(12),
+                            child: TextField(
+                              controller: _searchController,
+                              focusNode: _searchFocusNode,
+                              decoration: InputDecoration(
+                                hintText: 'Search location...',
+                                prefixIcon: const Icon(Icons.search, size: 20),
+                                suffixIcon: _isSearching
+                                    ? const Padding(
+                                        padding: EdgeInsets.all(12),
+                                        child: SizedBox(
+                                          width: 18,
+                                          height: 18,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                          ),
+                                        ),
+                                      )
+                                    : _searchController.text.isNotEmpty
+                                    ? IconButton(
+                                        icon: const Icon(Icons.clear, size: 18),
+                                        onPressed: () {
+                                          _searchController.clear();
+                                          setState(() {
+                                            _searchResults = [];
+                                            _showSearchResults = false;
+                                          });
+                                        },
+                                      )
+                                    : null,
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: BorderSide.none,
+                                ),
+                                filled: true,
+                                fillColor: Colors.white,
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 10,
+                                ),
+                                isDense: true,
+                              ),
+                              onChanged: _onSearchChanged,
+                              onTap: () {
+                                if (_searchResults.isNotEmpty) {
+                                  setState(() => _showSearchResults = true);
+                                }
+                              },
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        _MapStyleSwitch(
+                          mapStyle: _mapStyle,
+                          onStreetSelected: _mapStyle == _MapStyle.street
+                              ? null
+                              : () => setState(
+                                  () => _mapStyle = _MapStyle.street,
+                                ),
+                          onSatelliteSelected: _mapStyle == _MapStyle.satellite
+                              ? null
+                              : () => setState(
+                                  () => _mapStyle = _MapStyle.satellite,
+                                ),
+                        ),
+                      ],
+                    ),
+                    if (_showSearchResults && _searchResults.isNotEmpty)
+                      Material(
+                        elevation: 6,
+                        borderRadius: const BorderRadius.vertical(
+                          bottom: Radius.circular(12),
+                        ),
+                        clipBehavior: Clip.hardEdge,
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(maxHeight: 260),
+                          child: ListView.separated(
+                            shrinkWrap: true,
+                            padding: EdgeInsets.zero,
+                            itemCount: _searchResults.length,
+                            separatorBuilder: (_, _) =>
+                                const Divider(height: 1),
+                            itemBuilder: (context, index) {
+                              final r = _searchResults[index];
+                              return ListTile(
+                                dense: true,
+                                leading: const Icon(
+                                  Icons.location_on_outlined,
+                                  size: 20,
+                                  color: Color(0xFF0F6BFF),
+                                ),
+                                title: Text(
+                                  r['display_name']?.toString() ?? '',
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(fontSize: 13),
+                                ),
+                                onTap: () => _selectSearchResult(r),
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
               ),
             ),
@@ -421,23 +605,11 @@ class _DeliveryLocationPickerState extends State<DeliveryLocationPicker> {
           Positioned(
             right: 16,
             bottom: 150,
-            child: Column(
-              children: [
-                _MapFab(
-                  heroTag: 'current-location',
-                  icon: Icons.my_location,
-                  onPressed: _isLocating ? null : _moveToCurrentLocation,
-                  isLoading: _isLocating,
-                ),
-                const SizedBox(height: 10),
-                _MapFab(
-                  heroTag: 'map-style-toggle',
-                  icon: _mapStyle == _MapStyle.street
-                      ? Icons.satellite_alt_outlined
-                      : Icons.map_outlined,
-                  onPressed: _toggleMapStyle,
-                ),
-              ],
+            child: _MapFab(
+              heroTag: 'current-location',
+              icon: Icons.my_location,
+              onPressed: _isLocating ? null : _moveToCurrentLocation,
+              isLoading: _isLocating,
             ),
           ),
           Positioned(

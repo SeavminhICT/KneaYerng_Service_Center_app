@@ -27,7 +27,7 @@
                     <div class="grid gap-4 sm:grid-cols-2">
                         <div>
                             <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="name">Product Name</label>
-                            <input id="name" name="name" type="text" placeholder="Enter Name of Product" class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200" />
+                            <input id="name" name="name" type="text" placeholder="iPhone 17 Pro Max" class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200" />
                         </div>
                         <div>
                             <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="brand">Brand</label>
@@ -81,19 +81,16 @@
                             <input id="country" name="country" type="text" placeholder="United States" class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200" />
                         </div>
                         <div>
-                            <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="warranty">
-                                Warranty
-                                <span class="ml-1 text-xs font-normal text-slate-400">— auto-tracks when order completes</span>
-                            </label>
+                            <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="warranty">Warranty</label>
                             <select id="warranty" name="warranty" class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200">
-                                <option value="NO_WARRANTY">No Warranty</option>
-                                <option value="1_DAYS">1 Days</option>
-                                <option value="7_DAYS">7 Days</option>
-                                <option value="14_DAYS">14 Days</option>
-                                <option value="1_MONTH">1 Month</option>
-                                <option value="3_MONTHS">3 Months</option>
-                                <option value="6_MONTHS">6 Months</option>
-                                <option value="1_YEAR">1 Year</option>
+                                <option value="">Select warranty</option>
+                                <option value="NO_WARRANTY">NO_WARRANTY</option>
+                                <option value="7_DAYS">7_DAYS</option>
+                                <option value="14_DAYS">14_DAYS</option>
+                                <option value="1_MONTH">1_MONTH</option>
+                                <option value="3_MONTHS">3_MONTHS</option>
+                                <option value="6_MONTHS">6_MONTHS</option>
+                                <option value="1_YEAR">1_YEAR</option>
                             </select>
                         </div>
                         <div class="sm:col-span-2">
@@ -148,19 +145,32 @@
                         <div>
                             <label class="text-xs font-semibold text-slate-600 dark:text-slate-300" for="variant-storage">Storage *</label>
                             <select id="variant-storage" class="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200">
-                                <option value="">Loading…</option>
+                                <option value="">Select</option>
+                                <option value="128GB">128GB</option>
+                                <option value="256GB">256GB</option>
+                                <option value="512GB">512GB</option>
+                                <option value="1TB">1TB</option>
                             </select>
                         </div>
                         <div>
                             <label class="text-xs font-semibold text-slate-600 dark:text-slate-300" for="variant-color">Color *</label>
                             <select id="variant-color" class="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200">
-                                <option value="">Loading…</option>
+                                <option value="">Select</option>
+                                <option value="Black">Black</option>
+                                <option value="White">White</option>
+                                <option value="Blue">Blue</option>
+                                <option value="Gold">Gold</option>
+                                <option value="Natural Titanium">Natural Titanium</option>
                             </select>
                         </div>
                         <div>
                             <label class="text-xs font-semibold text-slate-600 dark:text-slate-300" for="variant-condition">Condition *</label>
                             <select id="variant-condition" class="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200">
-                                <option value="">Loading…</option>
+                                <option value="">Select</option>
+                                <option value="New">New</option>
+                                <option value="Used">Used</option>
+                                <option value="Like New">Like New</option>
+                                <option value="Refurbished">Refurbished</option>
                             </select>
                         </div>
                         <div>
@@ -177,15 +187,11 @@
                         </div>
                         <div>
                             <label class="text-xs font-semibold text-slate-600 dark:text-slate-300" for="variant-ram">RAM</label>
-                            <select id="variant-ram" class="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200">
-                                <option value="">Loading…</option>
-                            </select>
+                            <input id="variant-ram" type="text" placeholder="8GB" class="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200" />
                         </div>
                         <div>
                             <label class="text-xs font-semibold text-slate-600 dark:text-slate-300" for="variant-ssd">SSD</label>
-                            <select id="variant-ssd" class="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200">
-                                <option value="">Loading…</option>
-                            </select>
+                            <input id="variant-ssd" type="text" placeholder="NVMe" class="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200" />
                         </div>
                         <div>
                             <label class="text-xs font-semibold text-slate-600 dark:text-slate-300" for="variant-image">Variant Image</label>
@@ -621,69 +627,8 @@
                 }
             });
 
-            function escapeAttrOption(value) {
-                return String(value || '')
-                    .replace(/&/g, '&amp;')
-                    .replace(/</g, '&lt;')
-                    .replace(/>/g, '&gt;')
-                    .replace(/"/g, '&quot;');
-            }
-
-            async function loadAttributeOptions() {
-                var selectMap = {
-                    storage_capacity: { id: 'variant-storage',   placeholder: 'Select storage' },
-                    color:            { id: 'variant-color',     placeholder: 'Select color' },
-                    condition:        { id: 'variant-condition', placeholder: 'Select condition' },
-                    ram:              { id: 'variant-ram',       placeholder: 'None' },
-                    ssd:              { id: 'variant-ssd',       placeholder: 'None' },
-                };
-
-                // Set placeholders immediately — selects never stay on "Loading…"
-                Object.keys(selectMap).forEach(function (type) {
-                    var sel = document.getElementById(selectMap[type].id);
-                    if (sel) sel.innerHTML = '<option value="">' + selectMap[type].placeholder + '</option>';
-                });
-
-                try {
-                    await window.adminApi.ensureCsrfCookie();
-                    var response = await window.adminApi.request('/api/product-attributes');
-                    if (!response.ok) return;
-                    var payload = await response.json();
-                    var list = Array.isArray(payload.data) ? payload.data : [];
-
-                    // Group values by type
-                    var grouped = {};
-                    list.forEach(function (item) {
-                        if (!grouped[item.type]) grouped[item.type] = [];
-                        grouped[item.type].push(item.value);
-                    });
-
-                    // Populate each select
-                    Object.keys(selectMap).forEach(function (type) {
-                        var cfg = selectMap[type];
-                        var sel = document.getElementById(cfg.id);
-                        if (!sel) return;
-                        var values = grouped[type] || [];
-                        if (values.length > 0) {
-                            sel.innerHTML = '<option value="">' + cfg.placeholder + '</option>' +
-                                values.map(function (v) {
-                                    var e = escapeAttrOption(v);
-                                    return '<option value="' + e + '">' + e + '</option>';
-                                }).join('');
-                        }
-                    });
-                } catch (e) {
-                    // placeholders already set above
-                }
-            }
-
             loadCategories();
             renderVariantRows();
-
-            // loadAttributeOptions must run after window.adminApi is defined by the layout
-            document.addEventListener('DOMContentLoaded', function () {
-                loadAttributeOptions();
-            });
         })();
     </script>
 @endsection

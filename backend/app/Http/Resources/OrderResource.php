@@ -93,6 +93,7 @@ class OrderResource extends JsonResource
             'pickup_ticket_id' => $ticketId,
             'pickup_ticket_status' => $ticketStatus,
             'pickup_qr_token' => $this->pickup_qr_token,
+            'pickup_qr_code' => $this->pickup_qr_short_code,
             'pickup_qr_generated_at' => $this->pickup_qr_generated_at?->toISOString(),
             'pickup_qr_expires_at' => $expiresAt?->toISOString(),
             'pickup_verified_at' => $this->pickup_verified_at?->toISOString(),

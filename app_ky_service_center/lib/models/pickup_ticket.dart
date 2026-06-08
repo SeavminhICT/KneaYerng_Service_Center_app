@@ -127,6 +127,7 @@ class PickupTicket {
     this.pickupQrExpiresAt,
     this.pickupVerifiedAt,
     this.pickupQrToken,
+    this.pickupQrCode,
     this.pickupTicketId,
     this.pickupTicketStatus,
     this.trackingTimeline = const [],
@@ -161,6 +162,7 @@ class PickupTicket {
   final DateTime? pickupQrExpiresAt;
   final DateTime? pickupVerifiedAt;
   final String? pickupQrToken;
+  final String? pickupQrCode;
   final String? pickupTicketId;
   final String? pickupTicketStatus;
   final List<PickupTicketItem> items;
@@ -297,6 +299,7 @@ class PickupTicket {
       pickupQrExpiresAt: _toDate(json['pickup_qr_expires_at']),
       pickupVerifiedAt: _toDate(json['pickup_verified_at']),
       pickupQrToken: json['pickup_qr_token']?.toString(),
+      pickupQrCode: json['pickup_qr_code']?.toString(),
       pickupTicketId: json['pickup_ticket_id']?.toString(),
       pickupTicketStatus: json['pickup_ticket_status']?.toString(),
       items: items,

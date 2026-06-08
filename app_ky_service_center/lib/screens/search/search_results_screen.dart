@@ -920,7 +920,7 @@ class _ResultImage extends StatelessWidget {
                 child: AppNetworkImage(
                   imageUrl!,
                   fit: BoxFit.contain,
-                  errorWidget: (_, __, ___) => const Center(
+                  errorWidget: (_, _, _) => const Center(
                     child: Icon(
                       Icons.inventory_2_outlined,
                       color: _searchMuted,

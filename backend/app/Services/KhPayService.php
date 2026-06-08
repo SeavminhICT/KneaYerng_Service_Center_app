@@ -80,32 +80,48 @@ class KhPayService
     }
 
     /**
-     * Check transaction status (unified for both ABA and Bakong via GET or POST)
+     * Check transaction status.
+     * - Bakong (bk_* or 32-char md5): POST /bakong/check  — the authoritative Bakong endpoint
+     * - ABA (txn_*):                  GET  /qr/check/{id} — ABA only supports GET
+     *
+     * @param string $transactionId  KHPAY transaction_id (bk_xxx / txn_xxx)
+     * @param string|null $md5       Raw md5 hash of the QR string (Bakong only)
      */
-    public function checkTransaction(string $transactionId): array
+    public function checkTransaction(string $transactionId, ?string $md5 = null): array
     {
-        // KHPAY GET check-transaction works for both ABA and Bakong
+        $isBakong = str_starts_with($transactionId, 'bk_') || strlen($transactionId) === 32;
+
+        // ── Bakong: POST /bakong/check is the correct endpoint ─────────────────
+        if ($isBakong) {
+            $body = $md5 ? ['md5' => $md5] : ['transaction_id' => $transactionId];
+
+            $response = $this->newRequest()
+                ->post("{$this->baseUrl}/bakong/check", $body);
+
+            if ($response->successful()) {
+                $json = $response->json();
+                Log::debug('KHPAY Bakong check response', ['body' => $json]);
+                return $json;
+            }
+
+            Log::warning('KHPAY POST /bakong/check failed, falling back to GET.', [
+                'transaction_id' => $transactionId,
+                'md5' => $md5,
+                'status' => $response->status(),
+                'body' => $response->body(),
+            ]);
+        }
+
+        // ── ABA / fallback: GET /qr/check/{id} ──────────────────────────────────
         $response = $this->newRequest()
             ->get("{$this->baseUrl}/qr/check/{$transactionId}");
 
         if ($response->failed()) {
-            Log::error('KHPAY GET transaction check failed.', [
+            Log::error('KHPAY GET /qr/check failed.', [
                 'transaction_id' => $transactionId,
                 'status' => $response->status(),
                 'body' => $response->body(),
             ]);
-
-            // Fallback for Bakong specifically using POST /bakong/check
-            if (str_starts_with($transactionId, 'bk_') || strlen($transactionId) === 32) {
-                $postResponse = $this->newRequest()
-                    ->post("{$this->baseUrl}/bakong/check", [
-                        'transaction_id' => $transactionId,
-                    ]);
-
-                if ($postResponse->successful()) {
-                    return $postResponse->json();
-                }
-            }
 
             return [
                 'success' => false,
@@ -115,7 +131,9 @@ class KhPayService
             ];
         }
 
-        return $response->json();
+        $json = $response->json();
+        Log::debug('KHPAY GET /qr/check response', ['body' => $json]);
+        return $json;
     }
 
     /**

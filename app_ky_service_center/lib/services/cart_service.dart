@@ -11,6 +11,7 @@ class CartService extends ChangeNotifier {
   static final CartService instance = CartService._();
 
   final List<CartItem> _items = [];
+  final Set<int> _pendingDeleteIds = {};
   int _mutationVersion = 0;
   Future<void> _syncQueue = Future<void>.value();
 
@@ -35,10 +36,11 @@ class CartService extends ChangeNotifier {
     int? variantStock,
     double? unitPrice,
   }) {
+    if (quantity <= 0) return;
     final normalizedVariant = variant?.trim();
     final existing = _items.indexWhere((item) {
       if (item.product.id != product.id) return false;
-      if (variantId != null || item.variantId != null) {
+      if (variantId != null && item.variantId != null) {
         return item.variantId == variantId;
       }
       return (item.variant ?? '') == (normalizedVariant ?? '');
@@ -59,9 +61,9 @@ class CartService extends ChangeNotifier {
       );
       _items.add(changedItem);
     }
-    final version = _markMutated();
+    _markMutated();
     notifyListeners();
-    _enqueueItemSync(changedItem, version);
+    _enqueueItemSync(changedItem);
   }
 
   void updateQuantity(CartItem item, int quantity) {
@@ -70,9 +72,9 @@ class CartService extends ChangeNotifier {
       return;
     }
     item.quantity = quantity;
-    final version = _markMutated();
+    _markMutated();
     notifyListeners();
-    _enqueueItemSync(item, version);
+    _enqueueItemSync(item);
   }
 
   void remove(CartItem item) {
@@ -81,8 +83,23 @@ class CartService extends ChangeNotifier {
     notifyListeners();
     final remoteId = item.remoteId;
     if (remoteId != null) {
-      unawaited(ApiService.removeCartItem(cartItemId: remoteId));
+      _scheduleRemoteDelete(remoteId);
     }
+  }
+
+  void _scheduleRemoteDelete(int remoteId) {
+    _pendingDeleteIds.add(remoteId);
+    _syncQueue = _syncQueue
+        .then((_) async {
+          final result = await ApiService.removeCartItem(cartItemId: remoteId);
+          // Only release the guard once the server confirms deletion.
+          // On failure, keep the ID in _pendingDeleteIds so loadFromApi()
+          // cannot restore the item the user explicitly removed.
+          if (result.isSuccess) {
+            _pendingDeleteIds.remove(remoteId);
+          }
+        })
+        .catchError((_) {});
   }
 
   double get subtotal => _items.fold(0, (sum, item) => sum + item.subtotal);
@@ -98,8 +115,8 @@ class CartService extends ChangeNotifier {
     _items.clear();
     _markMutated();
     notifyListeners();
-    if (remoteIds.isNotEmpty) {
-      unawaited(_removeRemoteItems(remoteIds));
+    for (final id in remoteIds) {
+      _scheduleRemoteDelete(id);
     }
   }
 
@@ -108,13 +125,13 @@ class CartService extends ChangeNotifier {
     return _mutationVersion;
   }
 
-  void _enqueueItemSync(CartItem item, int version) {
+  void _enqueueItemSync(CartItem item) {
     _syncQueue = _syncQueue
-        .then((_) => _syncItemNow(item, version))
+        .then((_) => _syncItemNow(item))
         .catchError((_) {});
   }
 
-  Future<void> _syncItemNow(CartItem item, int version) async {
+  Future<void> _syncItemNow(CartItem item) async {
     final current = _findCurrentItem(item);
     if (current == null) return;
 
@@ -132,22 +149,25 @@ class CartService extends ChangeNotifier {
           );
 
     if (!result.isSuccess) return;
-    if (version != _mutationVersion) {
-      if (!_items.any((local) => _isSameItem(local, item))) {
-        final staleRemoteIds = result.items
-            .where((remote) => _isSameItem(remote, item))
-            .map((remote) => remote.remoteId)
-            .whereType<int>()
-            .toList();
-        if (staleRemoteIds.isNotEmpty) {
-          unawaited(_removeRemoteItems(staleRemoteIds));
-        }
-        return;
+
+    // If the item was removed while the API call was in flight, clean up
+    // the newly created server record so it doesn't linger.
+    if (_findCurrentItem(item) == null) {
+      final staleIds = result.items
+          .where((r) => _isSameItem(r, item))
+          .map((r) => r.remoteId)
+          .whereType<int>()
+          .toList();
+      for (final id in staleIds) {
+        _scheduleRemoteDelete(id);
       }
-      _mergeRemoteIds(result.items);
       return;
     }
-    _replaceWithRemoteItems(result.items, preserveUnsynced: true);
+
+    // Only write back the server-assigned remoteId — never replace the full
+    // local cart with a single-operation server response, which may be stale
+    // (e.g. a delete that hadn't propagated yet would bring old items back).
+    _mergeRemoteIds(result.items);
   }
 
   CartItem? _findCurrentItem(CartItem item) {
@@ -194,7 +214,8 @@ class CartService extends ChangeNotifier {
 
     _items
       ..clear()
-      ..addAll(remoteItems);
+      ..addAll(remoteItems.where(
+          (item) => !_pendingDeleteIds.contains(item.remoteId)));
 
     for (final item in unsynced) {
       final alreadyPresent = _items.any((remote) => _isSameItem(remote, item));
@@ -208,15 +229,9 @@ class CartService extends ChangeNotifier {
 
   static bool _isSameItem(CartItem a, CartItem b) {
     if (a.product.id != b.product.id) return false;
-    if (a.variantId != null || b.variantId != null) {
+    if (a.variantId != null && b.variantId != null) {
       return a.variantId == b.variantId;
     }
     return (a.variant ?? '') == (b.variant ?? '');
-  }
-
-  static Future<void> _removeRemoteItems(List<int> remoteIds) async {
-    await Future.wait(
-      remoteIds.map((id) => ApiService.removeCartItem(cartItemId: id)),
-    );
   }
 }

@@ -581,9 +581,10 @@ class OrderController extends Controller
         }
 
         return response()->json([
-            'order_id' => $order->id,
+            'order_id'  => $order->id,
             'ticket_id' => $ticket['ticket_id'],
-            'token' => $ticket['token'],
+            'token'     => $ticket['token'],
+            'qr_code'   => $ticket['qr_code'],
             'issued_at' => $ticket['issued_at']?->toISOString(),
             'expires_at' => $ticket['expires_at']?->toISOString(),
         ]);
@@ -592,18 +593,41 @@ class OrderController extends Controller
     public function verifyPickupQr(Request $request)
     {
         $validated = $request->validate([
-            'token' => ['nullable', 'string'],
+            'token'     => ['nullable', 'string'],
+            'qr_code'   => ['nullable', 'string'],
             'ticket_id' => ['nullable', 'string'],
         ]);
 
-        $token = $validated['token'] ?? null;
+        $token    = $validated['token'] ?? null;
+        $qrCode   = $validated['qr_code'] ?? null;
         $ticketId = $validated['ticket_id'] ?? null;
 
-        if (! $token && ! $ticketId) {
+        // Auto-detect short QR code sent in the legacy token field
+        // (scanner captures QR content and sends it as token).
+        if (! $qrCode && $token && strlen($token) <= 24 && preg_match('/^[A-Z0-9]+$/i', $token)) {
+            $qrCode = strtoupper($token);
+            $token  = null;
+        }
+
+        if (! $token && ! $qrCode && ! $ticketId) {
             return response()->json(['message' => 'QR token or ticket id is required.'], 422);
         }
 
         $orderFromTicket = null;
+
+        // Resolve by short QR code
+        if ($qrCode && ! $token) {
+            $orderFromTicket = Order::where('pickup_qr_short_code', strtoupper($qrCode))->first();
+            if (! $orderFromTicket) {
+                return response()->json(['message' => 'QR code not found.'], 404);
+            }
+            if (! $orderFromTicket->pickup_qr_token) {
+                return response()->json(['message' => 'Ticket QR not issued.'], 422);
+            }
+            $token = $orderFromTicket->pickup_qr_token;
+        }
+
+        // Resolve by ticket_id
         if (! $token && $ticketId) {
             $ticketId = trim($ticketId);
             if ($ticketId === '') {

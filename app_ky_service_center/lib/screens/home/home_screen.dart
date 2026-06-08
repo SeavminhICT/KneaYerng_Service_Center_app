@@ -620,12 +620,12 @@ class _HomeScreenState extends State<HomeScreen> {
                     );
                   },
                 ),
-                const SizedBox(height: 24),
-                _RepairCallout(
-                  onBookRepair: () {
-                    _openSearchResults('repair');
-                  },
-                ),
+                // const SizedBox(height: 24),
+                // _RepairCallout(
+                //   onBookRepair: () {
+                //     _openSearchResults('repair');
+                //   },
+                // ),
               ],
             ),
           ),
@@ -1867,183 +1867,183 @@ class _HighlightCard extends StatelessWidget {
   }
 }
 
-class _RepairCallout extends StatelessWidget {
-  const _RepairCallout({required this.onBookRepair});
+// class _RepairCallout extends StatelessWidget {
+//   const _RepairCallout({required this.onBookRepair});
 
-  final VoidCallback onBookRepair;
+//   final VoidCallback onBookRepair;
 
-  @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final compact = constraints.maxWidth < 380;
-        final textBlock = Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'We Fix. You Relax.',
-              style: GoogleFonts.manrope(
-                color: _primary,
-                fontSize: 15,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Professional Repair\nYou Can Trust.',
-              style: kFont(context, 
-                fontSize: 26,
-                height: 1.18,
-                fontWeight: FontWeight.w700,
-                color: _textPrimary(context),
-              ),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              'From screen replacement to hardware issues, our team is ready to help with fast diagnosis and quality parts.',
-              style: GoogleFonts.manrope(
-                fontSize: 13.5,
-                height: 1.6,
-                fontWeight: FontWeight.w600,
-                color: _textMuted(context),
-              ),
-            ),
-            const SizedBox(height: 18),
-            FilledButton(
-              onPressed: onBookRepair,
-              style: FilledButton.styleFrom(
-                backgroundColor: _primary,
-                foregroundColor: Colors.white,
-                elevation: 0,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 18,
-                  vertical: 16,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(18),
-                ),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    'Book a Repair',
-                    style: GoogleFonts.manrope(fontWeight: FontWeight.w800),
-                  ),
-                  const SizedBox(width: 8),
-                  const Icon(Icons.arrow_forward_rounded, size: 18),
-                ],
-              ),
-            ),
-          ],
-        );
+//   @override
+//   Widget build(BuildContext context) {
+//     return LayoutBuilder(
+//       builder: (context, constraints) {
+//         final compact = constraints.maxWidth < 380;
+//         final textBlock = Column(
+//           crossAxisAlignment: CrossAxisAlignment.start,
+//           children: [
+//             Text(
+//               'We Fix. You Relax.',
+//               style: GoogleFonts.manrope(
+//                 color: _primary,
+//                 fontSize: 15,
+//                 fontWeight: FontWeight.w800,
+//               ),
+//             ),
+//             const SizedBox(height: 8),
+//             Text(
+//               'Professional Repair\nYou Can Trust.',
+//               style: kFont(context, 
+//                 fontSize: 26,
+//                 height: 1.18,
+//                 fontWeight: FontWeight.w700,
+//                 color: _textPrimary(context),
+//               ),
+//             ),
+//             const SizedBox(height: 10),
+//             Text(
+//               'From screen replacement to hardware issues, our team is ready to help with fast diagnosis and quality parts.',
+//               style: GoogleFonts.manrope(
+//                 fontSize: 13.5,
+//                 height: 1.6,
+//                 fontWeight: FontWeight.w600,
+//                 color: _textMuted(context),
+//               ),
+//             ),
+//             const SizedBox(height: 18),
+//             FilledButton(
+//               onPressed: onBookRepair,
+//               style: FilledButton.styleFrom(
+//                 backgroundColor: _primary,
+//                 foregroundColor: Colors.white,
+//                 elevation: 0,
+//                 padding: const EdgeInsets.symmetric(
+//                   horizontal: 18,
+//                   vertical: 16,
+//                 ),
+//                 shape: RoundedRectangleBorder(
+//                   borderRadius: BorderRadius.circular(18),
+//                 ),
+//               ),
+//               child: Row(
+//                 mainAxisSize: MainAxisSize.min,
+//                 children: [
+//                   Text(
+//                     'Book a Repair',
+//                     style: GoogleFonts.manrope(fontWeight: FontWeight.w800),
+//                   ),
+//                   const SizedBox(width: 8),
+//                   const Icon(Icons.arrow_forward_rounded, size: 18),
+//                 ],
+//               ),
+//             ),
+//           ],
+//         );
 
-        final artBlock = SizedBox(
-          width: compact ? double.infinity : 132,
-          child: AspectRatio(
-            aspectRatio: compact ? 1.6 : 0.9,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                Positioned(
-                  top: 8,
-                  right: 8,
-                  child: Container(
-                    width: 98,
-                    height: 98,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.55),
-                      borderRadius: BorderRadius.circular(28),
-                    ),
-                  ),
-                ),
-                Positioned(
-                  bottom: 18,
-                  left: compact ? 30 : 8,
-                  child: Transform.rotate(
-                    angle: -0.48,
-                    child: Container(
-                      width: 54,
-                      height: 92,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(14),
-                        boxShadow: const [
-                          BoxShadow(
-                            color: _shadow,
-                            blurRadius: 12,
-                            offset: Offset(0, 8),
-                          ),
-                        ],
-                      ),
-                      child: const Icon(
-                        Icons.phone_iphone_rounded,
-                        color: _primary,
-                        size: 30,
-                      ),
-                    ),
-                  ),
-                ),
-                Positioned(
-                  top: 34,
-                  right: compact ? 30 : 8,
-                  child: Transform.rotate(
-                    angle: 0.24,
-                    child: Container(
-                      width: 64,
-                      height: 64,
-                      decoration: BoxDecoration(
-                        color: _primary,
-                        borderRadius: BorderRadius.circular(14),
-                        boxShadow: [
-                          BoxShadow(
-                            color: _primary.withValues(alpha: 0.24),
-                            blurRadius: 16,
-                            offset: const Offset(0, 10),
-                          ),
-                        ],
-                      ),
-                      child: const Icon(
-                        Icons.build_rounded,
-                        color: Colors.white,
-                        size: 28,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
+//         final artBlock = SizedBox(
+//           width: compact ? double.infinity : 132,
+//           child: AspectRatio(
+//             aspectRatio: compact ? 1.6 : 0.9,
+//             child: Stack(
+//               alignment: Alignment.center,
+//               children: [
+//                 Positioned(
+//                   top: 8,
+//                   right: 8,
+//                   child: Container(
+//                     width: 98,
+//                     height: 98,
+//                     decoration: BoxDecoration(
+//                       color: Colors.white.withValues(alpha: 0.55),
+//                       borderRadius: BorderRadius.circular(28),
+//                     ),
+//                   ),
+//                 ),
+//                 Positioned(
+//                   bottom: 18,
+//                   left: compact ? 30 : 8,
+//                   child: Transform.rotate(
+//                     angle: -0.48,
+//                     child: Container(
+//                       width: 54,
+//                       height: 92,
+//                       decoration: BoxDecoration(
+//                         color: Colors.white,
+//                         borderRadius: BorderRadius.circular(14),
+//                         boxShadow: const [
+//                           BoxShadow(
+//                             color: _shadow,
+//                             blurRadius: 12,
+//                             offset: Offset(0, 8),
+//                           ),
+//                         ],
+//                       ),
+//                       child: const Icon(
+//                         Icons.phone_iphone_rounded,
+//                         color: _primary,
+//                         size: 30,
+//                       ),
+//                     ),
+//                   ),
+//                 ),
+//                 Positioned(
+//                   top: 34,
+//                   right: compact ? 30 : 8,
+//                   child: Transform.rotate(
+//                     angle: 0.24,
+//                     child: Container(
+//                       width: 64,
+//                       height: 64,
+//                       decoration: BoxDecoration(
+//                         color: _primary,
+//                         borderRadius: BorderRadius.circular(14),
+//                         boxShadow: [
+//                           BoxShadow(
+//                             color: _primary.withValues(alpha: 0.24),
+//                             blurRadius: 16,
+//                             offset: const Offset(0, 10),
+//                           ),
+//                         ],
+//                       ),
+//                       child: const Icon(
+//                         Icons.build_rounded,
+//                         color: Colors.white,
+//                         size: 28,
+//                       ),
+//                     ),
+//                   ),
+//                 ),
+//               ],
+//             ),
+//           ),
+//         );
 
-        return Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(18),
-            gradient: const LinearGradient(
-              colors: [Color(0xFFEFF4FF), Color(0xFFE6EEFF), Color(0xFFF5F8FF)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            border: Border.all(color: _cardBorder(context)),
-          ),
-          child: compact
-              ? Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [textBlock, const SizedBox(height: 16), artBlock],
-                )
-              : Row(
-                  children: [
-                    Expanded(child: textBlock),
-                    const SizedBox(width: 12),
-                    artBlock,
-                  ],
-                ),
-        );
-      },
-    );
-  }
-}
+//         return Container(
+//           padding: const EdgeInsets.all(20),
+//           decoration: BoxDecoration(
+//             borderRadius: BorderRadius.circular(18),
+//             gradient: const LinearGradient(
+//               colors: [Color(0xFFEFF4FF), Color(0xFFE6EEFF), Color(0xFFF5F8FF)],
+//               begin: Alignment.topLeft,
+//               end: Alignment.bottomRight,
+//             ),
+//             border: Border.all(color: _cardBorder(context)),
+//           ),
+//           child: compact
+//               ? Column(
+//                   crossAxisAlignment: CrossAxisAlignment.start,
+//                   children: [textBlock, const SizedBox(height: 16), artBlock],
+//                 )
+//               : Row(
+//                   children: [
+//                     Expanded(child: textBlock),
+//                     const SizedBox(width: 12),
+//                     artBlock,
+//                   ],
+//                 ),
+//         );
+//       },
+//     );
+//   }
+// }
 
 class _SearchSuggestionList extends StatelessWidget {
   const _SearchSuggestionList({

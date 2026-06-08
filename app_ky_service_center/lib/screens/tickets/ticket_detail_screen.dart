@@ -1,436 +1,803 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../models/pickup_ticket.dart';
 
-class TicketDetailScreen extends StatelessWidget {
+// ── Palette ──────────────────────────────────────────────────────────────────
+const _blue900  = Color(0xFF1E3A8A);
+const _blue700  = Color(0xFF1D4ED8);
+const _blue100  = Color(0xFFDBEAFE);
+const _green600 = Color(0xFF16A34A);
+const _green100 = Color(0xFFDCFCE7);
+const _amber600 = Color(0xFFD97706);
+const _red600   = Color(0xFFDC2626);
+const _red100   = Color(0xFFFEE2E2);
+const _gray900  = Color(0xFF111827);
+const _gray600  = Color(0xFF4B5563);
+const _gray400  = Color(0xFF9CA3AF);
+const _gray100  = Color(0xFFF3F4F6);
+const _white    = Color(0xFFFFFFFF);
+
+class TicketDetailScreen extends StatefulWidget {
   const TicketDetailScreen({super.key, required this.ticket});
 
   final PickupTicket ticket;
 
-  static const String _pickupLocation =
-      'KneaYerng Service Center, Phnom Penh';
-  static const String _pickupInstructions =
-      'Bring this ticket and a valid ID to the pickup counter.';
+  @override
+  State<TicketDetailScreen> createState() => _TicketDetailScreenState();
+}
+
+class _TicketDetailScreenState extends State<TicketDetailScreen>
+    with SingleTickerProviderStateMixin {
+  Timer? _countdownTimer;
+  Duration _remaining = Duration.zero;
+  late final AnimationController _pulseController;
+  late final Animation<double> _pulseAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1400),
+    )..repeat(reverse: true);
+    _pulseAnimation = Tween<double>(begin: 0.6, end: 1.0).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    );
+    _startCountdown();
+  }
+
+  void _startCountdown() {
+    final expiresAt = widget.ticket.pickupQrExpiresAt;
+    if (expiresAt == null || widget.ticket.isUsed) return;
+
+    _updateRemaining(expiresAt);
+    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted) return;
+      _updateRemaining(expiresAt);
+    });
+  }
+
+  void _updateRemaining(DateTime expiresAt) {
+    final diff = expiresAt.difference(DateTime.now());
+    setState(() {
+      _remaining = diff.isNegative ? Duration.zero : diff;
+    });
+  }
+
+  @override
+  void dispose() {
+    _countdownTimer?.cancel();
+    _pulseController.dispose();
+    super.dispose();
+  }
+
+  String _formatRemaining() {
+    if (_remaining == Duration.zero) return 'Expired';
+    final h = _remaining.inHours;
+    final m = _remaining.inMinutes.remainder(60);
+    final s = _remaining.inSeconds.remainder(60);
+    if (h > 0) return '${h}h ${m}m remaining';
+    if (m > 0) return '${m}m ${s}s remaining';
+    return '${s}s remaining';
+  }
 
   @override
   Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context);
+    final ticket = widget.ticket;
+    final l      = AppLocalizations.of(context);
+
+    // Prefer the short 12-char code; fall back to the full encrypted token
+    // for orders issued before the short-code feature was deployed.
+    final qrData = ticket.pickupQrCode?.isNotEmpty == true
+        ? ticket.pickupQrCode!
+        : (ticket.pickupQrToken ?? '');
+
     final date = ticket.placedAt != null
         ? DateFormat('MMM dd, yyyy • hh:mm a').format(ticket.placedAt!)
         : '--';
-    final amount = ticket.totalAmount ?? 0;
-    final qrToken = ticket.pickupQrToken ?? '';
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final textPrimary = isDark ? const Color(0xFFE6EDF7) : const Color(0xFF111827);
 
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      backgroundColor: _gray100,
       appBar: AppBar(
         title: Text(
           l.myTickets,
-          style: const TextStyle(fontWeight: FontWeight.w700),
+          style: const TextStyle(
+            fontWeight: FontWeight.w700,
+            fontSize: 17,
+            color: _gray900,
+          ),
         ),
-        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-        foregroundColor: textPrimary,
+        backgroundColor: _white,
+        foregroundColor: _gray900,
         elevation: 0,
+        systemOverlayStyle: SystemUiOverlayStyle.dark,
+        bottom: const PreferredSize(
+          preferredSize: Size.fromHeight(1),
+          child: Divider(height: 1, color: Color(0xFFE5E7EB)),
+        ),
       ),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(16, 20, 16, 32),
         children: [
-          _HeaderCard(
-            orderLabel: ticket.orderNumber ?? 'Order #${ticket.orderId}',
-            customerName: ticket.customerName,
-            statusLabel: ticket.statusLabel,
-            dateLabel: date,
+          // ── Header card ────────────────────────────────────────────────
+          _HeaderCard(ticket: ticket, dateLabel: date),
+          const SizedBox(height: 16),
+
+          // ── QR card ────────────────────────────────────────────────────
+          _QrCard(
+            ticket: ticket,
+            qrData: qrData,
+            remaining: _remaining,
+            formattedRemaining: _formatRemaining(),
+            pulseAnimation: _pulseAnimation,
           ),
-          const SizedBox(height: 12),
-          _QrCard(token: qrToken, ticketId: ticket.pickupTicketId),
-          const SizedBox(height: 12),
-          _SectionCard(
-            title: l.myTickets,
-            children: [
-              _InfoRow(label: 'Order ID', value: '${ticket.orderId}'),
-              _InfoRow(
-                label: 'Ticket ID',
-                value: ticket.pickupTicketId ?? '--',
-              ),
-              _InfoRow(label: 'Payment Method', value: _paymentLabel()),
-              _InfoRow(
-                label: 'Payment Status',
-                value: _paymentStatusLabel(),
-              ),
-              _InfoRow(label: 'Order Date', value: date),
+          const SizedBox(height: 16),
+
+          // ── Order details ──────────────────────────────────────────────
+          _DetailCard(
+            title: 'Order Details',
+            icon: Icons.receipt_long_rounded,
+            rows: [
+              _Row('Ticket ID',       ticket.pickupTicketId ?? '--'),
+              _Row('Order',           ticket.orderNumber ?? '#${ticket.orderId}'),
+              _Row('Payment',         _paymentLabel(ticket.paymentMethod)),
+              _Row('Payment Status',  _paymentStatusLabel(ticket.paymentStatus),
+                   valueColor: _paymentStatusColor(ticket.paymentStatus)),
+              _Row('Date',            date),
             ],
           ),
-          const SizedBox(height: 12),
-          _SectionCard(
-            title: l.quantity,
-            children: ticket.items.isEmpty
-                ? [
-                    Text(
-                      l.noData,
-                      style: TextStyle(color: isDark ? const Color(0xFF97A2B5) : const Color(0xFF6B7280)),
-                    ),
-                  ]
-                : ticket.items
-                    .map(
-                      (item) => Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 6),
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 28,
-                              height: 28,
-                              alignment: Alignment.center,
-                              decoration: BoxDecoration(
-                                color: isDark ? const Color(0xFF1D2635) : const Color(0xFFF3F4F6),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Text(
-                                '${item.quantity}',
-                                style: TextStyle(
-                                    fontWeight: FontWeight.w700,
-                                    color: textPrimary),
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Text(
-                                item.name,
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                  color: isDark ? const Color(0xFFE6EDF7) : const Color(0xFF374151),
-                                ),
-                              ),
-                            ),
-                            Text(
-                              NumberFormat.currency(symbol: '\$')
-                                  .format(item.lineTotal),
-                              style: TextStyle(
-                                  fontWeight: FontWeight.w700,
-                                  color: textPrimary),
-                            ),
-                          ],
-                        ),
-                      ),
-                    )
-                    .toList(),
-          ),
-          const SizedBox(height: 12),
-          _SectionCard(
-            title: l.total,
-            children: [
-              Row(
-                children: [
-                  Text(
-                    l.price,
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      color: isDark ? const Color(0xFFE6EDF7) : const Color(0xFF374151),
-                    ),
-                  ),
-                  const Spacer(),
-                  Text(
-                    NumberFormat.currency(symbol: '\$').format(amount),
-                    style: TextStyle(
-                      fontWeight: FontWeight.w800,
-                      fontSize: 18,
-                      color: textPrimary,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          _SectionCard(
-            title: 'Pickup Information',
-            children: const [
-              _InfoRow(label: 'Location', value: _pickupLocation),
-              _InfoRow(label: 'Instructions', value: _pickupInstructions),
+          const SizedBox(height: 16),
+
+          // ── Items ──────────────────────────────────────────────────────
+          _ItemsCard(ticket: ticket),
+          const SizedBox(height: 16),
+
+          // ── Pickup info ────────────────────────────────────────────────
+          _DetailCard(
+            title: 'Pickup Location',
+            icon: Icons.store_rounded,
+            rows: const [
+              _Row('Store',        'KneaYerng Service Center, Phnom Penh'),
+              _Row('Instructions', 'Bring this ticket and a valid ID.'),
             ],
           ),
         ],
       ),
     );
   }
-
-  String _paymentLabel() {
-    final method = (ticket.paymentMethod ?? '').toLowerCase();
-    switch (method) {
-      case 'aba':
-      case 'aba_qr':
-      case 'bakong':
-        return 'Bakong';
-      case 'cod':
-        return 'Cash on Delivery';
-      case 'cash':
-        return 'Cash';
-      case 'wallet':
-        return 'Wallet';
-      default:
-        return method.isEmpty ? 'Bakong' : method.toUpperCase();
-    }
-  }
-
-  String _paymentStatusLabel() {
-    final status = (ticket.paymentStatus ?? '').toLowerCase();
-    if (status == 'paid') return 'Paid';
-    if (status == 'unpaid') return 'Unpaid';
-    if (status == 'processing') return 'Processing';
-    if (status == 'failed') return 'Failed';
-    if (status.isEmpty) return 'Paid';
-    return status[0].toUpperCase() + status.substring(1);
-  }
 }
 
-class _HeaderCard extends StatelessWidget {
-  const _HeaderCard({
-    required this.orderLabel,
-    required this.customerName,
-    required this.statusLabel,
-    required this.dateLabel,
-  });
+// ── Header card ────────────────────────────────────────────────────────────
 
-  final String orderLabel;
-  final String customerName;
-  final String statusLabel;
+class _HeaderCard extends StatelessWidget {
+  const _HeaderCard({required this.ticket, required this.dateLabel});
+
+  final PickupTicket ticket;
   final String dateLabel;
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final cardBg = Theme.of(context).cardColor;
-    final border = isDark ? const Color(0xFF2B3442) : const Color(0xFFE6E9F0);
-    final textPrimary = isDark ? const Color(0xFFE6EDF7) : const Color(0xFF111827);
-    final textMuted = isDark ? const Color(0xFF97A2B5) : const Color(0xFF6B7280);
-
     return Container(
-      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: cardBg,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: border),
+        gradient: const LinearGradient(
+          colors: [_blue900, _blue700],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: const [
           BoxShadow(
-            color: Color(0x0F000000),
-            blurRadius: 10,
-            offset: Offset(0, 6),
+            color: Color(0x331D4ED8),
+            blurRadius: 20,
+            offset: Offset(0, 8),
           ),
         ],
       ),
+      padding: const EdgeInsets.all(20),
       child: Row(
         children: [
           Container(
-            height: 44,
-            width: 44,
+            width: 50,
+            height: 50,
             decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF1D2635) : const Color(0xFFEFF6FF),
-              borderRadius: BorderRadius.circular(12),
+              color: _white.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(14),
             ),
-            child: const Icon(
-              Icons.confirmation_number_outlined,
-              color: Color(0xFF2563EB),
-            ),
+            child: const Icon(Icons.confirmation_number_rounded,
+                color: _white, size: 26),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  orderLabel,
-                  style: TextStyle(
+                  ticket.orderNumber ?? 'Order #${ticket.orderId}',
+                  style: const TextStyle(
+                    color: _white,
                     fontWeight: FontWeight.w800,
-                    fontSize: 16,
-                    color: textPrimary,
+                    fontSize: 17,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  customerName,
+                  ticket.customerName,
                   style: TextStyle(
-                    color: textMuted,
-                    fontSize: 12,
+                    color: _white.withValues(alpha: 0.8),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   dateLabel,
                   style: TextStyle(
-                    color: textMuted.withValues(alpha: 0.8),
+                    color: _white.withValues(alpha: 0.6),
                     fontSize: 11,
                   ),
                 ),
               ],
             ),
           ),
-          _StatusPill(label: statusLabel),
+          _StatusBadge(label: ticket.statusLabel),
         ],
       ),
     );
   }
 }
 
-class _QrCard extends StatelessWidget {
-  const _QrCard({required this.token, this.ticketId});
+// ── QR card ────────────────────────────────────────────────────────────────
 
-  final String token;
-  final String? ticketId;
+class _QrCard extends StatelessWidget {
+  const _QrCard({
+    required this.ticket,
+    required this.qrData,
+    required this.remaining,
+    required this.formattedRemaining,
+    required this.pulseAnimation,
+  });
+
+  final PickupTicket ticket;
+  final String qrData;
+  final Duration remaining;
+  final String formattedRemaining;
+  final Animation<double> pulseAnimation;
 
   @override
   Widget build(BuildContext context) {
-    const qrSize = 260.0;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final cardBg = Theme.of(context).cardColor;
-    final border = isDark ? const Color(0xFF2B3442) : const Color(0xFFE6E9F0);
-    final textPrimary = isDark ? const Color(0xFFE6EDF7) : const Color(0xFF111827);
-    final textMuted = isDark ? const Color(0xFF97A2B5) : const Color(0xFF6B7280);
+    final isActive  = ticket.isActive && qrData.isNotEmpty;
+    final isUsed    = ticket.isUsed;
+    final isExpired = ticket.isExpired;
 
     return Container(
-      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: cardBg,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: border),
+        color: _white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x0F000000),
+            blurRadius: 16,
+            offset: Offset(0, 6),
+          ),
+        ],
       ),
       child: Column(
         children: [
-          Text(
-            ticketId ?? 'Pickup QR Code',
-            style: TextStyle(
-              fontWeight: FontWeight.w700,
-              color: textPrimary,
+          // ── Top label ──────────────────────────────────────────────
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+            child: Row(
+              children: [
+                const Icon(Icons.qr_code_2_rounded, color: _blue700, size: 22),
+                const SizedBox(width: 8),
+                const Expanded(
+                  child: Text(
+                    'Scan to Verify Pickup',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 15,
+                      color: _gray900,
+                    ),
+                  ),
+                ),
+                if (isActive)
+                  AnimatedBuilder(
+                    animation: pulseAnimation,
+                    builder: (_, child) => Opacity(
+                      opacity: pulseAnimation.value,
+                      child: child,
+                    ),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: _green100,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 6,
+                            height: 6,
+                            decoration: const BoxDecoration(
+                              color: _green600,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: 5),
+                          const Text(
+                            'Active',
+                            style: TextStyle(
+                              color: _green600,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                if (isUsed)
+                  _smallChip('Used', _green100, _green600),
+                if (!isUsed && isExpired)
+                  _smallChip('Expired', _red100, _red600),
+              ],
             ),
           ),
-          const SizedBox(height: 12),
-          if (token.isNotEmpty)
+
+          // ── Dashed divider ─────────────────────────────────────────
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            child: _DashedDivider(),
+          ),
+
+          // ── QR code ────────────────────────────────────────────────
+          if (qrData.isNotEmpty)
             Container(
-              padding: const EdgeInsets.all(12),
+              margin: const EdgeInsets.symmetric(horizontal: 20),
+              padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: isUsed || isExpired
+                    ? const Color(0xFFF9FAFB)
+                    : _white,
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: const Color(0xFFE5E7EB)),
+                border: Border.all(
+                  color: isActive
+                      ? _blue100
+                      : const Color(0xFFE5E7EB),
+                  width: 2,
+                ),
               ),
-              child: QrImageView(
-                data: token,
-                size: qrSize,
-                backgroundColor: Colors.white,
-                errorCorrectionLevel: QrErrorCorrectLevel.H,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  ColorFiltered(
+                    colorFilter: (isUsed || isExpired)
+                        ? const ColorFilter.matrix([
+                            0.2126, 0.7152, 0.0722, 0, 0,
+                            0.2126, 0.7152, 0.0722, 0, 0,
+                            0.2126, 0.7152, 0.0722, 0, 0,
+                            0,      0,      0,      1, 0,
+                          ])
+                        : const ColorFilter.mode(
+                            Colors.transparent, BlendMode.color),
+                    child: QrImageView(
+                      data: qrData,
+                      size: 240,
+                      backgroundColor: _white,
+                      // M-level (15 % recovery) is the sweet spot:
+                      // enough redundancy for a scratched screen,
+                      // small enough for large scannable modules.
+                      errorCorrectionLevel: QrErrorCorrectLevel.M,
+                      eyeStyle: const QrEyeStyle(
+                        eyeShape: QrEyeShape.square,
+                        color: _gray900,
+                      ),
+                      dataModuleStyle: const QrDataModuleStyle(
+                        dataModuleShape: QrDataModuleShape.square,
+                        color: _gray900,
+                      ),
+                    ),
+                  ),
+                  if (isUsed)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: _green600.withValues(alpha: 0.9),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Text(
+                        'VERIFIED',
+                        style: TextStyle(
+                          color: _white,
+                          fontWeight: FontWeight.w900,
+                          fontSize: 18,
+                          letterSpacing: 3,
+                        ),
+                      ),
+                    ),
+                  if (!isUsed && isExpired)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: _red600.withValues(alpha: 0.88),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Text(
+                        'EXPIRED',
+                        style: TextStyle(
+                          color: _white,
+                          fontWeight: FontWeight.w900,
+                          fontSize: 18,
+                          letterSpacing: 3,
+                        ),
+                      ),
+                    ),
+                ],
               ),
             )
           else
             Container(
-              height: qrSize,
-              alignment: Alignment.center,
+              margin: const EdgeInsets.symmetric(horizontal: 20),
+              height: 180,
               decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF1D2635) : const Color(0xFFF3F4F6),
+                color: _gray100,
                 borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0xFFE5E7EB)),
               ),
-              child: Text(
-                'QR not available',
-                style: TextStyle(color: textMuted),
+              child: const Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.qr_code_rounded, size: 48, color: _gray400),
+                    SizedBox(height: 10),
+                    Text(
+                      'QR not available',
+                      style: TextStyle(color: _gray400, fontWeight: FontWeight.w600),
+                    ),
+                  ],
+                ),
               ),
             ),
-          const SizedBox(height: 8),
-          Text(
-            'Scan this code at the pickup counter for verification.',
-            style: TextStyle(
-              fontSize: 12,
-              color: textMuted,
+
+          // ── Short code + countdown ─────────────────────────────────
+          if (qrData.isNotEmpty) ...[
+            const SizedBox(height: 14),
+            // Display the short code so admin can also type it manually
+            if (ticket.pickupQrCode?.isNotEmpty == true)
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 20),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 14, vertical: 8),
+                decoration: BoxDecoration(
+                  color: _gray100,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.tag_rounded,
+                        size: 14, color: _gray400),
+                    const SizedBox(width: 6),
+                    Text(
+                      ticket.pickupQrCode!,
+                      style: const TextStyle(
+                        fontFamily: 'monospace',
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: _gray600,
+                        letterSpacing: 2,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            const SizedBox(height: 10),
+          ],
+
+          // ── Bottom instructions ────────────────────────────────────
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+            child: Column(
+              children: [
+                if (isActive && remaining > Duration.zero) ...[
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.timer_outlined,
+                        size: 13,
+                        color: remaining.inMinutes < 30
+                            ? _amber600
+                            : _gray400,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        formattedRemaining,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: remaining.inMinutes < 30
+                              ? _amber600
+                              : _gray400,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                ],
+                Text(
+                  isUsed
+                      ? 'This ticket has been used and verified.'
+                      : isExpired
+                          ? 'This QR has expired. Please contact the store.'
+                          : 'Show this QR at the pickup counter.\nIncrease screen brightness for best results.',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: _gray400,
+                    height: 1.5,
+                  ),
+                ),
+              ],
             ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 6),
-          Text(
-            'Tip: increase screen brightness and keep the code steady.',
-            style: TextStyle(
-              fontSize: 11,
-              color: textMuted.withValues(alpha: 0.8),
-            ),
-            textAlign: TextAlign.center,
           ),
         ],
       ),
     );
   }
+
+  Widget _smallChip(String label, Color bg, Color fg) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: fg,
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+  }
 }
 
-class _SectionCard extends StatelessWidget {
-  const _SectionCard({required this.title, required this.children});
+// ── Items card ─────────────────────────────────────────────────────────────
 
-  final String title;
-  final List<Widget> children;
+class _ItemsCard extends StatelessWidget {
+  const _ItemsCard({required this.ticket});
+
+  final PickupTicket ticket;
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final cardBg = Theme.of(context).cardColor;
-    final border = isDark ? const Color(0xFF2B3442) : const Color(0xFFE6E9F0);
-    final textPrimary = isDark ? const Color(0xFFE6EDF7) : const Color(0xFF111827);
+    final amount = ticket.totalAmount ?? 0;
 
     return Container(
-      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: cardBg,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: border),
+        color: _white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x0A000000),
+            blurRadius: 12,
+            offset: Offset(0, 4),
+          ),
+        ],
       ),
+      padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title,
-            style: TextStyle(
-              fontWeight: FontWeight.w700,
-              color: textPrimary,
-            ),
+          Row(
+            children: [
+              const Icon(Icons.shopping_bag_outlined,
+                  color: _blue700, size: 18),
+              const SizedBox(width: 8),
+              Text(
+                'Items (${ticket.items.length})',
+                style: const TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 15,
+                  color: _gray900,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 12),
-          ...children,
+          const SizedBox(height: 14),
+          if (ticket.items.isEmpty)
+            const Text('No items', style: TextStyle(color: _gray400))
+          else ...[
+            for (final item in ticket.items) _ItemRow(item: item),
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 10),
+              child: Divider(height: 1, color: Color(0xFFE5E7EB)),
+            ),
+            Row(
+              children: [
+                const Expanded(
+                  child: Text(
+                    'Total',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 15,
+                      color: _gray900,
+                    ),
+                  ),
+                ),
+                Text(
+                  NumberFormat.currency(symbol: '\$').format(amount),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w800,
+                    fontSize: 17,
+                    color: _blue700,
+                  ),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );
   }
 }
 
-class _InfoRow extends StatelessWidget {
-  const _InfoRow({required this.label, required this.value});
+class _ItemRow extends StatelessWidget {
+  const _ItemRow({required this.item});
 
-  final String label;
-  final String value;
+  final PickupTicketItem item;
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final textPrimary = isDark ? const Color(0xFFE6EDF7) : const Color(0xFF111827);
-    final textMuted = isDark ? const Color(0xFF97A2B5) : const Color(0xFF6B7280);
-
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+      padding: const EdgeInsets.symmetric(vertical: 7),
+      child: Row(
+        children: [
+          Container(
+            width: 30,
+            height: 30,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: _blue100,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              '${item.quantity}',
+              style: const TextStyle(
+                fontWeight: FontWeight.w800,
+                color: _blue700,
+                fontSize: 12,
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              item.name,
+              style: const TextStyle(
+                fontWeight: FontWeight.w600,
+                color: _gray900,
+                fontSize: 13,
+              ),
+            ),
+          ),
+          Text(
+            NumberFormat.currency(symbol: '\$').format(item.lineTotal),
+            style: const TextStyle(
+              fontWeight: FontWeight.w700,
+              color: _gray600,
+              fontSize: 13,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Detail card ────────────────────────────────────────────────────────────
+
+class _DetailCard extends StatelessWidget {
+  const _DetailCard({
+    required this.title,
+    required this.icon,
+    required this.rows,
+  });
+
+  final String title;
+  final IconData icon;
+  final List<_Row> rows;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: _white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x0A000000),
+            blurRadius: 12,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, color: _blue700, size: 18),
+              const SizedBox(width: 8),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 15,
+                  color: _gray900,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          for (final row in rows) _RowWidget(row: row),
+        ],
+      ),
+    );
+  }
+}
+
+class _Row {
+  const _Row(this.label, this.value, {this.valueColor});
+  final String label;
+  final String value;
+  final Color? valueColor;
+}
+
+class _RowWidget extends StatelessWidget {
+  const _RowWidget({required this.row});
+
+  final _Row row;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 5),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-            width: 110,
+            width: 120,
             child: Text(
-              label,
-              style: TextStyle(
-                color: textMuted,
+              row.label,
+              style: const TextStyle(
+                color: _gray400,
                 fontWeight: FontWeight.w600,
+                fontSize: 13,
               ),
             ),
           ),
-          const SizedBox(width: 8),
           Expanded(
             child: Text(
-              value,
+              row.value,
               style: TextStyle(
-                color: textPrimary,
+                color: row.valueColor ?? _gray900,
                 fontWeight: FontWeight.w600,
+                fontSize: 13,
               ),
             ),
           ),
@@ -440,28 +807,30 @@ class _InfoRow extends StatelessWidget {
   }
 }
 
-class _StatusPill extends StatelessWidget {
-  const _StatusPill({required this.label});
+// ── Status badge ───────────────────────────────────────────────────────────
+
+class _StatusBadge extends StatelessWidget {
+  const _StatusBadge({required this.label});
 
   final String label;
 
   @override
   Widget build(BuildContext context) {
     final lower = label.toLowerCase();
-    Color bg;
-    Color fg;
-    if (lower == 'active') {
-      bg = const Color(0xFFE0EAFF);
-      fg = const Color(0xFF1D4ED8);
-    } else if (lower == 'used') {
-      bg = const Color(0xFFDCFCE7);
-      fg = const Color(0xFF15803D);
-    } else if (lower == 'expired') {
-      bg = const Color(0xFFFEE2E2);
-      fg = const Color(0xFFB91C1C);
+    late Color bg;
+    late Color fg;
+    if (lower == 'active' || lower == 'approved' || lower == 'processing') {
+      bg = const Color(0xFF1E40AF).withValues(alpha: 0.2);
+      fg = const Color(0xFFBADAFF);
+    } else if (lower == 'complete' || lower == 'used') {
+      bg = _green600.withValues(alpha: 0.2);
+      fg = const Color(0xFF86EFAC);
+    } else if (lower == 'expired' || lower == 'cancelled' || lower == 'rejected') {
+      bg = _red600.withValues(alpha: 0.2);
+      fg = const Color(0xFFFCA5A5);
     } else {
-      bg = const Color(0xFFE5E7EB);
-      fg = const Color(0xFF6B7280);
+      bg = _white.withValues(alpha: 0.15);
+      fg = _white.withValues(alpha: 0.85);
     }
 
     return Container(
@@ -479,5 +848,77 @@ class _StatusPill extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+// ── Dashed divider ─────────────────────────────────────────────────────────
+
+class _DashedDivider extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        const dashWidth = 6.0;
+        const gapWidth  = 4.0;
+        final count = (constraints.maxWidth / (dashWidth + gapWidth)).floor();
+        return Row(
+          children: List.generate(count, (_) => Padding(
+            padding: const EdgeInsets.only(right: gapWidth),
+            child: Container(
+              width: dashWidth,
+              height: 1,
+              color: const Color(0xFFE5E7EB),
+            ),
+          )),
+        );
+      },
+    );
+  }
+}
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+
+String _paymentLabel(String? method) {
+  switch ((method ?? '').toLowerCase()) {
+    case 'aba':
+    case 'aba_qr':
+    case 'bakong':
+      return 'Bakong QR';
+    case 'cod':
+      return 'Cash on Delivery';
+    case 'cash':
+      return 'Cash';
+    default:
+      final m = (method ?? '').trim();
+      return m.isEmpty ? 'Bakong QR' : m.toUpperCase();
+  }
+}
+
+String _paymentStatusLabel(String? status) {
+  switch ((status ?? '').toLowerCase()) {
+    case 'paid':
+      return 'Paid';
+    case 'unpaid':
+      return 'Unpaid';
+    case 'processing':
+      return 'Processing';
+    case 'failed':
+      return 'Failed';
+    default:
+      final s = (status ?? '').trim();
+      return s.isEmpty ? 'Paid' : '${s[0].toUpperCase()}${s.substring(1)}';
+  }
+}
+
+Color _paymentStatusColor(String? status) {
+  switch ((status ?? '').toLowerCase()) {
+    case 'paid':
+      return _green600;
+    case 'failed':
+      return _red600;
+    case 'processing':
+      return _amber600;
+    default:
+      return _gray600;
   }
 }

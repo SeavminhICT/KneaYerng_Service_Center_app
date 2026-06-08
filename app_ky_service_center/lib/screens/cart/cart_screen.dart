@@ -604,7 +604,7 @@ class _CartItemCard extends StatelessWidget {
                                 imageUrl,
                                 fit: BoxFit.contain,
                                 alignment: Alignment.center,
-                                errorWidget: (_, __, ___) =>
+                                errorWidget: (_, _, _) =>
                                     const _ImageFallback(size: 22),
                               ),
                             ),

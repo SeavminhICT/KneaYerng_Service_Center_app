@@ -15,7 +15,6 @@ import '../Auth/login_screen.dart';
 import '../notifications/admin_notification_panel_screen.dart';
 import '../notifications/notification_screen.dart';
 import 'edit_profile_screen.dart';
-import 'order_history_screen.dart';
 import 'reviews_preview_screen.dart';
 import '../../widgets/auth_guard.dart';
 import '../support/support_chat_screen.dart';
@@ -1214,13 +1213,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     await _refreshProfile();
   }
 
-  Future<void> _openOrderHistory() async {
-    await Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => const OrderHistoryScreen()),
-    );
-  }
-
   Future<void> _openReviewsPreviewAction() async {
     final submitted = await Navigator.push<bool>(
       context,
@@ -1251,12 +1243,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Review submitted successfully.')),
     );
-  }
-
-  void _showFeatureComingSoon(String feature) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text('$feature is coming soon.')));
   }
 
   int _completionPercent(UserProfile profile) {

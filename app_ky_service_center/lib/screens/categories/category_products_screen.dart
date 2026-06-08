@@ -394,7 +394,7 @@ class _ProductCardState extends State<_ProductCard> {
                                     imageUrl,
                                     fit: BoxFit.contain,
                                     alignment: Alignment.center,
-                                    errorWidget: (_, __, ___) =>
+                                    errorWidget: (_, _, _) =>
                                         const _ImageFallback(),
                                   ),
                                 ),

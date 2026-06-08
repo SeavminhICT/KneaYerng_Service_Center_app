@@ -2,7 +2,6 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../../theme/app_fonts.dart';
 import 'package:khqr_sdk/khqr_sdk.dart';
 import 'package:latlong2/latlong.dart';
@@ -559,6 +558,12 @@ class _CheckoutFlowScreenState extends State<CheckoutFlowScreen> {
 
   Future<void> _placeOrder() async {
     if (_placingOrder) return;
+    if (_items.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Your cart is empty.')),
+      );
+      return;
+    }
 
     final token = await ApiService.getToken();
     if (token == null || token.isEmpty) {

@@ -211,7 +211,11 @@ class KhqrPaymentController extends Controller
         if (in_array($transaction->status, ['PENDING', 'UNAUTHORIZED', 'UNAVAILABLE'], true)) {
             try {
                 $khpay = app(KhPayService::class);
-                $verify = $khpay->checkTransaction($transaction->transaction_id);
+                // Pass the md5 hash for Bakong so KHPAY can look up the real payment
+                $verify = $khpay->checkTransaction(
+                    $transaction->transaction_id,
+                    $transaction->md5 ?: null
+                );
 
                 $payload = $transaction->provider_payload ?? [];
                 if (! is_array($payload)) {

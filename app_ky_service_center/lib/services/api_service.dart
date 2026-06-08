@@ -2318,6 +2318,9 @@ class ApiService {
       return const CartApiResult(errorMessage: 'Unable to remove cart item.');
     }
 
+    // 404 means item is already gone from the server — treat as success.
+    if (res.statusCode == 404) return const CartApiResult(items: []);
+
     return _parseCartResponse(res, fallbackMessage: 'Unable to update cart.');
   }
 

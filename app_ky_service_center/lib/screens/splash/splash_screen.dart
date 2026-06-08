@@ -490,7 +490,7 @@ class _LoadBar extends StatelessWidget {
                   child: DecoratedBox(
                     decoration: BoxDecoration(
                       gradient: const LinearGradient(
-                        colors: [Colors.white, Color(0xFFCCBBFF)],
+                        colors: [Color.fromARGB(255, 245, 101, 101), Color(0xFFCCBBFF)],
                       ),
                       boxShadow: [
                         BoxShadow(

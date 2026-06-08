@@ -1087,7 +1087,7 @@ class _ProductImage extends StatelessWidget {
                   imageUrl!,
                   fit: BoxFit.contain,
                   alignment: Alignment.center,
-                  errorWidget: (_, __, ___) => const _ImageFallback(),
+                  errorWidget: (_, _, _) => const _ImageFallback(),
                 ),
               ),
       ),

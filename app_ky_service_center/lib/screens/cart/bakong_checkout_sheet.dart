@@ -1,7 +1,8 @@
-import 'dart:async';
+﻿import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:hugeicons/hugeicons.dart';
 import 'package:khqr_sdk/khqr_sdk.dart';
 import 'package:latlong2/latlong.dart';
 
@@ -14,6 +15,14 @@ import '../../services/cart_service.dart';
 import '../Auth/login_screen.dart';
 import '../main_navigation_screen.dart';
 import 'delivery_location_picker.dart';
+import 'widgets/bakong_bottom_actions.dart';
+import 'widgets/bakong_check_status_button.dart';
+import 'widgets/bakong_copy_actions_row.dart';
+import 'widgets/bakong_delivery_form.dart';
+import 'widgets/bakong_order_summary_card.dart';
+import 'widgets/bakong_order_type_option.dart';
+import 'widgets/bakong_status_banner.dart';
+import 'widgets/bakong_success_panel.dart';
 
 class BakongCheckoutSheet extends StatefulWidget {
   const BakongCheckoutSheet({super.key, required this.total, this.voucherCode});
@@ -693,8 +702,8 @@ class _BakongCheckoutSheetState extends State<BakongCheckoutSheet> {
               ? const Color(0xFFDC2626)
               : const Color(0xFF6B7280));
     final statusIcon = _isSuccess
-        ? Icons.check_circle_rounded
-        : (_isTerminalFailure ? Icons.error_rounded : Icons.sync_rounded);
+        ? HugeIcons.strokeRoundedCheckmarkCircle02
+        : (_isTerminalFailure ? HugeIcons.strokeRoundedAlertCircle : HugeIcons.strokeRoundedRefresh);
     final showQrCard =
         _orderType == 'pickup' || _isLoading || _isError || _khqrData != null;
 
@@ -731,7 +740,7 @@ class _BakongCheckoutSheetState extends State<BakongCheckoutSheet> {
               const SizedBox(height: 6),
               if (_isSuccess) ...[
                 const SizedBox(height: 10),
-                _BakongSuccessPanel(
+                BakongSuccessPanel(
                   amount: amount,
                   orderLabel:
                       _orderNumber ?? (_orderId == null ? '-' : '#$_orderId'),
@@ -743,57 +752,20 @@ class _BakongCheckoutSheetState extends State<BakongCheckoutSheet> {
                   style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
                 ),
                 const SizedBox(height: 12),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 10,
-                  ),
-                  decoration: BoxDecoration(
-                    color: statusColor.withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: statusColor.withValues(alpha: 0.3),
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      if (!_isSuccess && !_isTerminalFailure && _isChecking)
-                        const SizedBox(
-                          width: 14,
-                          height: 14,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      else
-                        Icon(statusIcon, color: statusColor, size: 18),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          statusText,
-                          style: TextStyle(
-                            color: statusColor,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ),
-                      if (_expiresAt != null)
-                        Text(
-                          _expiresCountdown,
-                          style: TextStyle(
-                            color: statusColor,
-                            fontWeight: FontWeight.w700,
-                            fontSize: 12,
-                          ),
-                        ),
-                    ],
-                  ),
+                BakongStatusBanner(
+                  statusText: statusText,
+                  statusColor: statusColor,
+                  statusIcon: statusIcon,
+                  isChecking: _isChecking,
+                  isSuccess: _isSuccess,
+                  isTerminalFailure: _isTerminalFailure,
+                  expiresCountdown: _expiresAt == null ? null : _expiresCountdown,
                 ),
               ],
               Row(
                 children: [
                   Expanded(
-                    child: _OrderTypeOption(
+                    child: BakongOrderTypeOption(
                       label: 'Pickup',
                       isSelected: _orderType == 'pickup',
                       onTap: _isLoading
@@ -803,7 +775,7 @@ class _BakongCheckoutSheetState extends State<BakongCheckoutSheet> {
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: _OrderTypeOption(
+                    child: BakongOrderTypeOption(
                       label: 'Delivery',
                       isSelected: _orderType == 'delivery',
                       onTap: _isLoading
@@ -815,7 +787,7 @@ class _BakongCheckoutSheetState extends State<BakongCheckoutSheet> {
               ),
               if (_orderType == 'delivery') ...[
                 const SizedBox(height: 12),
-                _DeliveryForm(
+                BakongDeliveryForm(
                   addressController: _deliveryAddressController,
                   phoneController: _deliveryPhoneController,
                   noteController: _deliveryNoteController,
@@ -877,67 +849,20 @@ class _BakongCheckoutSheetState extends State<BakongCheckoutSheet> {
               ],
               if (!_isSuccess) ...[
                 const SizedBox(height: 14),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF9FAFB),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: const Color(0xFFE5E7EB)),
-                  ),
-                  child: Column(
-                    children: [
-                      _InfoRow(label: l.total, value: '\$$total'),
-                      if (_orderNumber != null)
-                        _InfoRow(label: 'Order No.', value: _orderNumber!),
-                      if (_orderNumber == null && _orderId != null)
-                        _InfoRow(label: 'Order ID', value: _orderId.toString()),
-                      _InfoRow(
-                        label: 'Bill No.',
-                        value: _billNumber.isEmpty ? '-' : _billNumber,
-                      ),
-                      _InfoRow(
-                        label: 'Reference',
-                        value: _khqrData?.md5Hash ?? '-',
-                        valueStyle: const TextStyle(fontSize: 11),
-                      ),
-                      if (_expiresAt != null)
-                        _InfoRow(label: 'Expires In', value: _expiresCountdown),
-                    ],
-                  ),
+                BakongOrderSummaryCard(
+                  totalLabel: l.total,
+                  total: total,
+                  billNumber: _billNumber,
+                  reference: _khqrData?.md5Hash ?? '-',
+                  orderNumber: _orderNumber,
+                  orderId: _orderId,
+                  expiresCountdown: _expiresAt == null ? null : _expiresCountdown,
                 ),
                 const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: _khqrData == null ? null : _copyKhqr,
-                        style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          side: const BorderSide(color: Color(0xFF0F6BFF)),
-                          foregroundColor: const Color(0xFF0F6BFF),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        child: const Text('Copy KHQR'),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: _khqrData == null ? null : _copyReference,
-                        style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          side: const BorderSide(color: Color(0xFFE5E7EB)),
-                          foregroundColor: const Color(0xFF111827),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        child: const Text('Copy Reference'),
-                      ),
-                    ),
-                  ],
+                BakongCopyActionsRow(
+                  canCopy: _khqrData != null,
+                  onCopyKhqr: _copyKhqr,
+                  onCopyReference: _copyReference,
                 ),
               ],
               const SizedBox(height: 12),
@@ -946,401 +871,28 @@ class _BakongCheckoutSheetState extends State<BakongCheckoutSheet> {
                   !_isLoading &&
                   !_isError &&
                   _khqrData != null) ...[
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton.icon(
-                    onPressed: _isChecking
-                        ? null
-                        : () => _checkStatus(fromTimer: false),
-                    icon: _isChecking
-                        ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.refresh_rounded, size: 18),
-                    label: Text(
-                      _isChecking
-                          ? 'Checking Payment...'
-                          : 'Check Payment Status',
-                    ),
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      side: const BorderSide(color: Color(0xFF0F6BFF)),
-                      foregroundColor: const Color(0xFF0F6BFF),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                  ),
+                BakongCheckStatusButton(
+                  isChecking: _isChecking,
+                  onPressed: () => _checkStatus(fromTimer: false),
                 ),
                 const SizedBox(height: 12),
               ],
-              if (_isSuccess && _orderType == 'pickup') ...[
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: _isOpeningTicket ? null : _openTicketDetail,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF16A34A),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: Text(
-                      _isOpeningTicket ? 'Opening ticket...' : 'View Ticket',
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 8),
-              ],
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _isLoading
-                      ? null
-                      : () {
-                          if (_isSuccess && _orderId != null) {
-                            CartService.instance.clear();
-                          }
-                          Navigator.of(context).maybePop();
-                        },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF0F6BFF),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: Text(l.done),
-                ),
+              BakongBottomActions(
+                showViewTicket: _isSuccess && _orderType == 'pickup',
+                isOpeningTicket: _isOpeningTicket,
+                onViewTicket: _openTicketDetail,
+                isLoading: _isLoading,
+                onDone: () {
+                  if (_isSuccess && _orderId != null) {
+                    CartService.instance.clear();
+                  }
+                  Navigator.of(context).maybePop();
+                },
+                doneLabel: l.done,
               ),
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _BakongSuccessPanel extends StatelessWidget {
-  const _BakongSuccessPanel({
-    required this.amount,
-    required this.orderLabel,
-    required this.reference,
-  });
-
-  final double amount;
-  final String orderLabel;
-  final String reference;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(18, 22, 18, 18),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x140F172A),
-            blurRadius: 22,
-            offset: Offset(0, 10),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Container(
-            width: 88,
-            height: 88,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: const LinearGradient(
-                colors: [Color(0xFF45AEDF), Color(0xFF077CB4)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFF077CB4).withValues(alpha: 0.28),
-                  blurRadius: 24,
-                  offset: const Offset(0, 12),
-                ),
-              ],
-            ),
-            child: const Icon(Icons.check, color: Colors.white, size: 48),
-          ),
-          const SizedBox(height: 22),
-          const Text(
-            'Payment Successful',
-            style: TextStyle(
-              fontSize: 28,
-              color: Color(0xFF0F172A),
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Your payment was successful.',
-            style: TextStyle(
-              fontSize: 14,
-              color: Color(0xFF64748B),
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 18),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                amount.toStringAsFixed(2),
-                style: const TextStyle(
-                  fontSize: 44,
-                  color: Color(0xFF0F172A),
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              const SizedBox(width: 6),
-              const Padding(
-                padding: EdgeInsets.only(bottom: 6),
-                child: Text(
-                  'USD',
-                  style: TextStyle(
-                    fontSize: 15,
-                    color: Color(0xFF64748B),
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 22),
-          Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF8FAFC),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: const Color(0xFFE2E8F0)),
-            ),
-            child: Column(
-              children: [
-                _SuccessReceiptRow(label: 'Order', value: orderLabel),
-                const SizedBox(height: 10),
-                const _SuccessReceiptRow(label: 'Method', value: 'Bakong KHQR'),
-                const SizedBox(height: 10),
-                _SuccessReceiptRow(label: 'Reference', value: reference),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SuccessReceiptRow extends StatelessWidget {
-  const _SuccessReceiptRow({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 12,
-            color: Color(0xFF64748B),
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        const Spacer(),
-        Flexible(
-          child: Text(
-            value,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            textAlign: TextAlign.right,
-            style: const TextStyle(
-              fontSize: 12,
-              color: Color(0xFF0F172A),
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _OrderTypeOption extends StatelessWidget {
-  const _OrderTypeOption({
-    required this.label,
-    required this.isSelected,
-    this.onTap,
-  });
-
-  final String label;
-  final bool isSelected;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return OutlinedButton(
-      onPressed: onTap,
-      style: OutlinedButton.styleFrom(
-        backgroundColor: isSelected ? const Color(0xFF0F6BFF) : Colors.white,
-        foregroundColor: isSelected ? Colors.white : const Color(0xFF111827),
-        side: BorderSide(
-          color: isSelected ? const Color(0xFF0F6BFF) : const Color(0xFFE5E7EB),
-        ),
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      ),
-      child: Text(label, style: const TextStyle(fontWeight: FontWeight.w700)),
-    );
-  }
-}
-
-class _DeliveryForm extends StatelessWidget {
-  const _DeliveryForm({
-    required this.addressController,
-    required this.phoneController,
-    required this.noteController,
-    required this.selectedLatLng,
-    required this.onSelectLocation,
-  });
-
-  final TextEditingController addressController;
-  final TextEditingController phoneController;
-  final TextEditingController noteController;
-  final LatLng? selectedLatLng;
-  final VoidCallback onSelectLocation;
-
-  @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context);
-    InputDecoration fieldDecoration(String hint) {
-      return InputDecoration(
-        hintText: hint,
-        filled: true,
-        fillColor: const Color(0xFFF9FAFB),
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 12,
-          vertical: 12,
-        ),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
-        ),
-      );
-    }
-
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Text(
-                l.deliveryAddress,
-                style: const TextStyle(fontWeight: FontWeight.w700),
-              ),
-              const Spacer(),
-              TextButton.icon(
-                onPressed: onSelectLocation,
-                icon: const Icon(Icons.location_on_outlined, size: 16),
-                label: Text(l.selectAddress),
-              ),
-            ],
-          ),
-          TextField(
-            controller: addressController,
-            readOnly: true,
-            onTap: onSelectLocation,
-            decoration: fieldDecoration(l.selectAddress),
-          ),
-          if (selectedLatLng != null) ...[
-            const SizedBox(height: 6),
-            Text(
-              'Pinned: ${selectedLatLng!.latitude.toStringAsFixed(6)}, '
-              '${selectedLatLng!.longitude.toStringAsFixed(6)}',
-              style: const TextStyle(fontSize: 12, color: Color(0xFF6B7280)),
-            ),
-          ],
-          const SizedBox(height: 10),
-          TextField(
-            controller: phoneController,
-            keyboardType: TextInputType.phone,
-            decoration: fieldDecoration('Phone number'),
-          ),
-          const SizedBox(height: 10),
-          TextField(
-            controller: noteController,
-            maxLines: 2,
-            decoration: fieldDecoration('Delivery note (optional)'),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _InfoRow extends StatelessWidget {
-  const _InfoRow({required this.label, required this.value, this.valueStyle});
-
-  final String label;
-  final String value;
-  final TextStyle? valueStyle;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        children: [
-          Text(
-            label,
-            style: const TextStyle(
-              color: Color(0xFF6B7280),
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const Spacer(),
-          Expanded(
-            flex: 2,
-            child: Text(
-              value,
-              textAlign: TextAlign.right,
-              overflow: TextOverflow.ellipsis,
-              style:
-                  valueStyle ??
-                  const TextStyle(
-                    color: Color(0xFF111827),
-                    fontWeight: FontWeight.w600,
-                  ),
-            ),
-          ),
-        ],
       ),
     );
   }

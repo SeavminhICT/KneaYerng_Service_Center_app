@@ -5,6 +5,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:hugeicons/hugeicons.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -378,7 +379,7 @@ class AppNotificationService {
           presentBanner: true,
           presentList: true,
           interruptionLevel: InterruptionLevel.active,
-          sound: 'mixkit-bell-notification-933.wav',
+          sound: 'universfield-new-notification-056-494256.mp3',
           badgeNumber: badgeCount,
         ),
       ),
@@ -762,7 +763,7 @@ class _NotificationPermissionPrimerSheet extends StatelessWidget {
                     borderRadius: BorderRadius.circular(14),
                   ),
                   child: Icon(
-                    Icons.notifications_active_rounded,
+                    HugeIcons.strokeRoundedNotification02,
                     color: isDark
                         ? const Color(0xFFAFCBFF)
                         : const Color(0xFF2B5FD9),
@@ -792,13 +793,13 @@ class _NotificationPermissionPrimerSheet extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
                 _PrimerBenefitRow(
-                  icon: Icons.shopping_bag_outlined,
+                  icon: HugeIcons.strokeRoundedShoppingBag01,
                   label: 'New order and delivery updates',
                   isDark: isDark,
                 ),
                 const SizedBox(height: 10),
                 _PrimerBenefitRow(
-                  icon: Icons.support_agent_rounded,
+                  icon: HugeIcons.strokeRoundedCustomerService01,
                   label: 'Immediate support responses',
                   isDark: isDark,
                 ),

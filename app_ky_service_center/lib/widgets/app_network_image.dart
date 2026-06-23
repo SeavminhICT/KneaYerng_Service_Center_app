@@ -1,5 +1,7 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:hugeicons/hugeicons.dart';
+import '../services/api_service.dart';
 
 /// Drop-in replacement for [Image.network] that persists images to disk so
 /// the API is only ever hit once per URL.  Subsequent loads come from the
@@ -26,10 +28,37 @@ class AppNetworkImage extends StatelessWidget {
   /// Defaults to a grey broken-image icon.
   final Widget Function(BuildContext, String, Object)? errorWidget;
 
+  /// Replaces localhost/127.0.0.1/10.0.2.2 in cached URLs with the current
+  /// server origin so images load correctly on real devices.
+  String _resolvedUrl() {
+    try {
+      final uri = Uri.parse(url);
+      final host = uri.host.toLowerCase();
+      if (host == '127.0.0.1' || host == 'localhost' || host == '10.0.2.2') {
+        final serverOrigin = ApiService.serverOrigin;
+        final serverUri = Uri.parse(serverOrigin);
+        if (serverUri.host.isNotEmpty &&
+            serverUri.host != '127.0.0.1' &&
+            serverUri.host != 'localhost' &&
+            serverUri.host != '10.0.2.2') {
+          return uri
+              .replace(
+                scheme: serverUri.scheme,
+                host: serverUri.host,
+                port: serverUri.hasPort ? serverUri.port : null,
+              )
+              .toString();
+        }
+      }
+    } catch (_) {}
+    return url;
+  }
+
   @override
   Widget build(BuildContext context) {
+    final imageUrl = _resolvedUrl();
     return CachedNetworkImage(
-      imageUrl: url,
+      imageUrl: imageUrl,
       fit: fit,
       width: width,
       height: height,
@@ -39,7 +68,7 @@ class AppNetworkImage extends StatelessWidget {
           (context, url, error) => Container(
                 color: Colors.grey.shade200,
                 child: const Icon(
-                  Icons.broken_image_outlined,
+                  HugeIcons.strokeRoundedImageNotFound01,
                   color: Colors.grey,
                 ),
               ),

@@ -77,6 +77,7 @@ class AppLocalizations {
   // ── Home ──────────────────────────────────────────────────────────────────
   String get searchProducts   => _t('Search products...',        'ស្វែងរកផលិតផល...');
   String get categories       => _t('Categories',               'ប្រភេទ');
+  String get hotSale          => _t('Hot Sale',                 'ពិសេសប្រចាំថ្ងៃ');
   String get featuredProducts => _t('Featured Products',        'ផលិតផលពិសេស');
   String get popularProducts  => _t('Popular Products',         'ផលិតផលពេញនិយម');
   String get newArrivals      => _t('New Arrivals',             'ទំនិញថ្មី');
@@ -190,6 +191,40 @@ class AppLocalizations {
   String get welcomeDesc3      => _t('Multiple payment options.\nSafe, encrypted, and lightning fast.', 'ជម្រើសទូទាត់ច្រើន។\nសុវត្ថិភាព ការអ៊ិនគ្រីប និងរហ័ស។');
   String get chooseYourLanguage=> _t('Choose Your Language',                  'ជ្រើសរើសភាសារបស់អ្នក');
   String get languageDesc      => _t('Select your preferred language\nto get started.', 'ជ្រើសរើសភាសាដែលអ្នកចូលចិត្ត\nដើម្បីចាប់ផ្ដើម។');
+
+  // ── KHQR / Bakong Payment ─────────────────────────────────────────────────
+  String get khqrPayment          => _t('KHQR PAYMENT',                          'ការទូទាត់ KHQR');
+  String get khqrScanInstruction  => _t('Scan the KHQR with Bakong or\nany supported banking app', 'ស្កែន KHQR ជាមួយ Bakong ឬ\nកម្មវិធីធនាគារដែលគាំទ្រ');
+  String get khqrMerchant         => _t('Merchant',                               'ឈ្មោះអ្នកទទួល');
+  String get khqrAmount           => _t('Amount',                                 'ចំនួនទឹកប្រាក់');
+  String get khqrReference        => _t('Reference',                              'លេខយោង');
+  String get khqrNetwork          => _t('Network',                                'បណ្តាញ');
+  String get khqrExpiresIn        => _t('Expires In',                             'អស់សុពលភាព');
+  String get khqrCheckingAuto     => _t('Checking payment automatically...','កំពុងត្រួតពិនិត្យការទូទាត់ដោយស្វ័យប្រវត្ដ...');
+  String get khqrPendingPaused    => _t('Payment pending. Automatic check paused.', 'ការទូទាត់ចាំ។ ការត្រួតពិនិត្យស្វ័យប្រវត្ដបានផ្អាក។');
+  String get khqrNoPaymentYet     => _t('No payment detected yet.',              'មិនទាន់រកឃើញការទូទាត់ទេ។');
+  String get khqrCheckFailed      => _t('Check failed. Please check network connection.', 'ការត្រួតពិនិត្យបរាជ័យ។ សូមពិនិត្យការតភ្ជាប់បណ្ដាញ។');
+  String get khqrPaymentSuccessful=> _t('Payment Successful',                    'ការទូទាត់បានជោគជ័យ');
+  String get khqrPaymentProcessed => _t('Your payment was processed successfully.', 'ការទូទាត់របស់អ្នកបានដំណើរការដោយជោគជ័យ។');
+  String get khqrPaymentFailed    => _t('Payment Failed',                        'ការទូទាត់បរាជ័យ');
+  String get khqrPaymentExpired   => _t('Payment Expired',                       'ការទូទាត់អស់សុពលភាព');
+  String get khqrBakongError      => _t('Bakong Check Error',                    'កំហុសការត្រួតពិនិត្យ Bakong');
+  String get khqrQrExpired        => _t('QR expired. Please generate a new one.', 'QR អស់សុពលភាព។ សូមបង្កើតថ្មីម្ដងទៀត។');
+  String get khqrSandboxUnauth    => _t('Sandbox check is unauthorized. Check credentials.', 'ការត្រួតពិនិត្យ Sandbox មិនត្រូវបានអនុញ្ញាត។');
+  String get khqrSandboxUnavail   => _t('Bakong sandbox is currently unavailable.', 'Bakong Sandbox មិនអាចប្រើបានពេលនេះ។');
+  String get khqrFailedDefault    => _t('Payment failed or cancelled. Please try again.', 'ការទូទាត់បរាជ័យ ឬត្រូវបានបោះបង់។ សូមព្យាយាមម្ដងទៀត។');
+  String get khqrQrScanned        => _t('QR Code Scanned',                       'QR កូដបានស្កែន');
+  String get khqrCompleteInApp    => _t('Please complete the transaction in your bank app.', 'សូមបញ្ចប់ប្រតិបត្តិការក្នុងកម្មវិធីធនាគាររបស់អ្នក។');
+  String get khqrOrderId          => _t('Order ID',                              'លេខសម្គាល់ការបញ្ជាទិញ');
+  String get khqrPaymentMethod    => _t('Payment Method',                        'វិធីសាស្ត្រទូទាត់');
+  String get khqrReferenceCode    => _t('Reference Code',                        'លេខកូដយោង');
+  String get khqrAmountDue        => _t('Amount Due',                            'ចំនួនទឹកប្រាក់ត្រូវបង់');
+  String get khqrPdfComingSoon    => _t('PDF Receipt Coming Soon',               'វិក្កយបត្រ PDF មកដល់ឆាប់ៗ');
+  String get khqrViewPickupTicket => _t('View Pickup Ticket',                    'មើលសំបុត្រទទួលទំនិញ');
+  String get khqrOpeningTicket    => _t('Opening Pickup Ticket...',              'កំពុងបើកសំបុត្រទទួលទំនិញ...');
+  String get khqrTicketNotReady   => _t('Ticket is generating. Please try again in a moment.', 'សំបុត្រកំពុងបង្កើត។ សូមព្យាយាមម្ដងទៀតក្នុងពេលបន្ដិច។');
+  String get khqrCheckPayment     => _t('Check Payment Status',                  'ត្រួតពិនិត្យស្ថានភាពការទូទាត់');
+  String get khqrChecking         => _t('Checking Payment...',                   'កំពុងត្រួតពិនិត្យការទូទាត់...');
 }
 
 // ── Delegate ──────────────────────────────────────────────────────────────────

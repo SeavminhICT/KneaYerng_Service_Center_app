@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:hugeicons/hugeicons.dart';
 import 'package:intl/intl.dart';
 
 import '../../services/api_service.dart';
 import '../../widgets/app_network_image.dart';
 import '../../widgets/auth_guard.dart';
+import '../../widgets/circle_back_button.dart';
+import '../../widgets/empty_state_view.dart';
 
 // ── Palette ───────────────────────────────────────────────────────────────────
 const _kBlue    = Color(0xFF4A88F7);
@@ -142,17 +145,7 @@ class _WarrantyScreenState extends State<WarrantyScreen>
             children: [
               // Back + title row
               Row(children: [
-                GestureDetector(
-                  onTap: () => Navigator.of(context).maybePop(),
-                  child: Container(
-                    width: 36, height: 36,
-                    decoration: BoxDecoration(
-                        color: Colors.white.withAlpha(30),
-                        borderRadius: BorderRadius.circular(10)),
-                    child: const Icon(Icons.arrow_back_ios_new_rounded,
-                        size: 16, color: Colors.white),
-                  ),
-                ),
+                CircleBackButton(onPressed: () => Navigator.of(context).maybePop()),
                 const SizedBox(width: 12),
                 const Text('My Warranties',
                     style: TextStyle(
@@ -163,21 +156,21 @@ class _WarrantyScreenState extends State<WarrantyScreen>
               if (!_loading)
                 Row(children: [
                   _SummaryChip(
-                    icon: Icons.verified_rounded,
+                    icon: HugeIcons.strokeRoundedCheckmarkBadge01,
                     label: 'Active',
                     count: _active.length,
                     color: _kGreen,
                   ),
                   const SizedBox(width: 10),
                   _SummaryChip(
-                    icon: Icons.warning_amber_rounded,
+                    icon: HugeIcons.strokeRoundedAlert02,
                     label: 'Expiring Soon',
                     count: _expiringSoon.length,
                     color: _kAmber,
                   ),
                   const SizedBox(width: 10),
                   _SummaryChip(
-                    icon: Icons.cancel_outlined,
+                    icon: HugeIcons.strokeRoundedCancelCircle,
                     label: 'Expired',
                     count: _expired.length,
                     color: _kRed,
@@ -283,7 +276,7 @@ class _WarrantyListView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (items.isEmpty) {
-      return _EmptyState(isDark: isDark);
+      return const _EmptyState();
     }
 
     return ListView(
@@ -328,7 +321,7 @@ class _ExpiringSoonBanner extends StatelessWidget {
             decoration: BoxDecoration(
                 color: _kAmber.withAlpha(30),
                 borderRadius: BorderRadius.circular(8)),
-            child: const Icon(Icons.warning_amber_rounded, size: 18, color: _kAmber),
+            child: const Icon(HugeIcons.strokeRoundedAlert02, size: 18, color: _kAmber),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -447,7 +440,7 @@ class WarrantyCard extends StatelessWidget {
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Row(mainAxisSize: MainAxisSize.min, children: [
-                          const Icon(Icons.shield_rounded,
+                          const Icon(HugeIcons.strokeRoundedShield01,
                               size: 12, color: _kBlue),
                           const SizedBox(width: 5),
                           Text(periodLabel,
@@ -492,7 +485,7 @@ class WarrantyCard extends StatelessWidget {
                   value: startDate != null
                       ? DateFormat('dd MMM yyyy').format(startDate)
                       : '—',
-                  icon: Icons.play_circle_outline_rounded,
+                  icon: HugeIcons.strokeRoundedPlayCircle,
                   color: _kGreen,
                   isDark: isDark,
                 ),
@@ -526,8 +519,8 @@ class WarrantyCard extends StatelessWidget {
                       ? DateFormat('dd MMM yyyy').format(endDate)
                       : '—',
                   icon: isExpired
-                      ? Icons.event_busy_outlined
-                      : Icons.event_available_outlined,
+                      ? HugeIcons.strokeRoundedCalendarRemove01
+                      : HugeIcons.strokeRoundedCalendarCheckIn01,
                   color: isExpired ? _kRed : _kAmber,
                   isDark: isDark,
                   alignRight: true,
@@ -589,7 +582,7 @@ class WarrantyCard extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 10, 16, 14),
               child: Row(children: [
-                Icon(Icons.receipt_long_outlined, size: 12, color: _textMut),
+                Icon(HugeIcons.strokeRoundedInvoice01, size: 12, color: _textMut),
                 const SizedBox(width: 5),
                 Text('Order $orderNum',
                     style: TextStyle(fontSize: 11, color: _textMut)),
@@ -614,8 +607,8 @@ class WarrantyCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(14),
       ),
       child: Icon(
-        isActive ? Icons.verified_rounded
-            : isExpired ? Icons.cancel_outlined : Icons.block_outlined,
+        isActive ? HugeIcons.strokeRoundedCheckmarkBadge01
+            : isExpired ? HugeIcons.strokeRoundedCancelCircle : HugeIcons.strokeRoundedBlocked,
         color: statusColor, size: 26,
       ),
     );
@@ -683,43 +676,18 @@ class _DateBox extends StatelessWidget {
 // ── Empty state ───────────────────────────────────────────────────────────────
 
 class _EmptyState extends StatelessWidget {
-  const _EmptyState({required this.isDark});
-  final bool isDark;
+  const _EmptyState();
 
   @override
   Widget build(BuildContext context) {
-    final textMut = isDark ? const Color(0xFF475569) : const Color(0xFF94A3B8);
-    final textSub = isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1);
-
     return ListView(children: [
       const SizedBox(height: 60),
-      Center(
-        child: Column(
-          children: [
-            Container(
-              width: 90, height: 90,
-              decoration: BoxDecoration(
-                color: _kBlue.withAlpha(isDark ? 20 : 14),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(Icons.verified_user_outlined,
-                  size: 42, color: _kBlue.withAlpha(isDark ? 120 : 100)),
-            ),
-            const SizedBox(height: 20),
-            Text('No Warranties Yet',
-                style: TextStyle(
-                    fontSize: 17, fontWeight: FontWeight.w700, color: textMut)),
-            const SizedBox(height: 8),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 44),
-              child: Text(
-                'Products you purchase that include a warranty will\nappear here once your order is completed.',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 13, color: textSub, height: 1.5),
-              ),
-            ),
-          ],
-        ),
+      const EmptyStateView(
+        icon: HugeIcons.strokeRoundedShieldUser,
+        iconColor: _kBlue,
+        title: 'No Warranties Yet',
+        subtitle:
+            'Products you purchase that include a warranty will\nappear here once your order is completed.',
       ),
     ]);
   }

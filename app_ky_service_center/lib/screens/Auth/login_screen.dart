@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:hugeicons/hugeicons.dart';
 import '../../l10n/app_localizations.dart';
 import '../../services/api_service.dart';
 import '../../services/app_notification_service.dart';
@@ -255,7 +256,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         hint: l.email,
                         keyboard: TextInputType.text,
                         prefixIcon: const Icon(
-                          Icons.mail_outline_rounded,
+                          HugeIcons.strokeRoundedMail01,
                           size: 22,
                           color: _iconMuted,
                         ),
@@ -275,7 +276,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         hint: l.password,
                         obscure: obscurePassword,
                         prefixIcon: const Icon(
-                          Icons.lock_outline_rounded,
+                          HugeIcons.strokeRoundedSquareLock01,
                           size: 22,
                           color: _iconMuted,
                         ),
@@ -295,8 +296,8 @@ class _LoginScreenState extends State<LoginScreen> {
                               setState(() => obscurePassword = !obscurePassword),
                           icon: Icon(
                             obscurePassword
-                                ? Icons.visibility_off_outlined
-                                : Icons.visibility_outlined,
+                                ? HugeIcons.strokeRoundedViewOffSlash
+                                : HugeIcons.strokeRoundedView,
                             size: 22,
                             color: _iconMuted,
                           ),

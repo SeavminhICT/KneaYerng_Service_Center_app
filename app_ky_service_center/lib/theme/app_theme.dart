@@ -27,8 +27,8 @@ class AppTheme {
     required bool isDark,
   }) {
     if (isKhmer) {
-      final onBackground = isDark ? Colors.white : Colors.black;
-      final onSurface    = isDark ? Colors.white : Colors.black;
+      final onBackground = isDark ? Colors.white : Colors.black87;
+      final onSurface    = isDark ? Colors.white : Colors.black87;
       return base.copyWith(
         displayLarge:  _khmer(base.displayLarge,  weight: FontWeight.w700, textColor: onBackground),
         displayMedium: _khmer(base.displayMedium, weight: FontWeight.w700, textColor: onBackground),

@@ -104,6 +104,10 @@ return [
         'credentials' => env('FIREBASE_CREDENTIALS', ''),
     ],
 
+    'otp' => [
+        'sms_provider' => env('OTP_SMS_PROVIDER', 'unimatrix'),
+    ],
+
     'unimatrix' => [
         'base_url' => env('UNIMATRIX_BASE_URL', 'https://api.unimtx.com'),
         'access_key_id' => env('UNIMATRIX_ACCESS_KEY_ID', ''),
@@ -113,6 +117,14 @@ return [
         'timeout' => (int) env('UNIMATRIX_TIMEOUT', 15),
         'verify' => filter_var(env('UNIMATRIX_VERIFY', true), FILTER_VALIDATE_BOOLEAN),
         'ca_bundle' => env('UNIMATRIX_CA_BUNDLE', ''),
+    ],
+
+    'remove_bg' => [
+        'enabled' => filter_var(env('REMOVE_BG_ENABLED', true), FILTER_VALIDATE_BOOLEAN),
+        'api_key' => env('REMOVE_BG_API_KEY', ''),
+        'base_url' => env('REMOVE_BG_BASE_URL', 'https://api.remove.bg/v1.0/removebg'),
+        'size' => env('REMOVE_BG_SIZE', 'auto'),
+        'timeout' => (int) env('REMOVE_BG_TIMEOUT', 30),
     ],
 
 ];

@@ -102,7 +102,7 @@ class OtpService
         ]);
 
         $isLocalFallback = false;
-        if (! $sent && (config('app.env') === 'local' || config('app.debug'))) {
+        if (! $sent && (config('app.env') === 'local' || config('app.debug') || config('otp.local_fallback'))) {
             $sent = true;
             $isLocalFallback = true;
             \Illuminate\Support\Facades\Log::info(sprintf(

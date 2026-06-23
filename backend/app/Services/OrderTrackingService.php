@@ -304,9 +304,25 @@ class OrderTrackingService
     private function createNotifications(Order $order, ?string $fromStatus, string $toStatus, ?User $actor, ?string $note): void
     {
         $label = self::labels()[$toStatus] ?? $toStatus;
-        $title = 'Order '.$order->order_number.' updated';
-        $body = 'Status changed to '.$label.'.';
-        if ($note) {
+
+        if ($toStatus === self::STATUS_COMPLETED) {
+            $title = 'Order Delivered!';
+            $body = 'លោកអ្នកទទួលបានការកម្មង់';
+        } elseif ($toStatus === self::STATUS_ON_THE_WAY) {
+            $title = 'Order On the Way';
+            $body = 'Your order is on the way! 🛵';
+        } elseif ($toStatus === self::STATUS_IN_PROGRESS) {
+            $title = 'Order Processing';
+            $body = 'Your order is being processed. 🚚';
+        } elseif ($toStatus === self::STATUS_APPROVED) {
+            $title = 'Order Approved';
+            $body = 'Your order has been approved! ✅';
+        } else {
+            $title = 'Order '.$order->order_number.' updated';
+            $body = 'Status changed to '.$label.'.';
+        }
+
+        if ($note && ! in_array($toStatus, [self::STATUS_COMPLETED, self::STATUS_ON_THE_WAY, self::STATUS_IN_PROGRESS, self::STATUS_APPROVED], true)) {
             $body .= ' '.$note;
         }
 

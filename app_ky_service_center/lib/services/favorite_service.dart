@@ -56,6 +56,12 @@ class FavoriteService extends ChangeNotifier {
     await _persist();
   }
 
+  Future<void> clear() async {
+    _items.clear();
+    notifyListeners();
+    await _persist();
+  }
+
   Future<void> toggle(Product product) async {
     if (contains(product)) {
       await remove(product);

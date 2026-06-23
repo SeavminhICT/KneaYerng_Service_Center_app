@@ -2,10 +2,12 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:hugeicons/hugeicons.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../services/api_service.dart';
 import '../../theme/app_palette.dart';
+import '../../widgets/circle_back_button.dart';
 import 'otp_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -106,17 +108,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // Back button
-                      IconButton(
+                      CircleBackButton(
                         onPressed: () {
                           if (Navigator.canPop(context)) Navigator.pop(context);
                         },
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
-                        icon: const Icon(
-                          Icons.arrow_back_ios_new_rounded,
-                          color: Colors.white,
-                          size: 22,
-                        ),
                       ),
                       const SizedBox(height: 12),
                       Row(
@@ -187,7 +182,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         keyboard: TextInputType.name,
                         textCapitalization: TextCapitalization.words,
                         prefixIcon: const Icon(
-                          Icons.person_outline_rounded,
+                          HugeIcons.strokeRoundedUser,
                           size: 22,
                           color: _iconMuted,
                         ),
@@ -206,7 +201,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         hint: 'Email (Optional)',
                         keyboard: TextInputType.emailAddress,
                         prefixIcon: const Icon(
-                          Icons.mail_outline_rounded,
+                          HugeIcons.strokeRoundedMail01,
                           size: 22,
                           color: _iconMuted,
                         ),
@@ -220,7 +215,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         hint: '+855 xx xxx xxx',
                         keyboard: TextInputType.phone,
                         prefixIcon: const Icon(
-                          Icons.phone_outlined,
+                          HugeIcons.strokeRoundedSmartPhone01,
                           size: 22,
                           color: _iconMuted,
                         ),
@@ -236,7 +231,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         enableSuggestions: false,
                         autoCorrect: false,
                         prefixIcon: const Icon(
-                          Icons.lock_outline_rounded,
+                          HugeIcons.strokeRoundedSquareLock01,
                           size: 22,
                           color: _iconMuted,
                         ),
@@ -246,8 +241,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           ),
                           icon: Icon(
                             _obscurePassword
-                                ? Icons.visibility_off_outlined
-                                : Icons.visibility_outlined,
+                                ? HugeIcons.strokeRoundedViewOffSlash
+                                : HugeIcons.strokeRoundedView,
                             size: 22,
                             color: _iconMuted,
                           ),
@@ -265,7 +260,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         textInputAction: TextInputAction.done,
                         onSubmitted: _submit,
                         prefixIcon: const Icon(
-                          Icons.lock_outline_rounded,
+                          HugeIcons.strokeRoundedSquareLock01,
                           size: 22,
                           color: _iconMuted,
                         ),
@@ -275,8 +270,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           ),
                           icon: Icon(
                             _obscureConfirm
-                                ? Icons.visibility_off_outlined
-                                : Icons.visibility_outlined,
+                                ? HugeIcons.strokeRoundedViewOffSlash
+                                : HugeIcons.strokeRoundedView,
                             size: 22,
                             color: _iconMuted,
                           ),
@@ -373,7 +368,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             color: Colors.black.withAlpha(22),
                           ),
                           child: const Icon(
-                            Icons.arrow_forward_rounded,
+                            HugeIcons.strokeRoundedArrowRight01,
                             color: Colors.white,
                             size: 24,
                           ),

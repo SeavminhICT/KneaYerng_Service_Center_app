@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:hugeicons/hugeicons.dart';
 import 'package:intl/intl.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
@@ -142,7 +143,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen>
           // ── Order details ──────────────────────────────────────────────
           _DetailCard(
             title: 'Order Details',
-            icon: Icons.receipt_long_rounded,
+            icon: HugeIcons.strokeRoundedInvoice01,
             rows: [
               _Row('Ticket ID',       ticket.pickupTicketId ?? '--'),
               _Row('Order',           ticket.orderNumber ?? '#${ticket.orderId}'),
@@ -161,7 +162,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen>
           // ── Pickup info ────────────────────────────────────────────────
           _DetailCard(
             title: 'Pickup Location',
-            icon: Icons.store_rounded,
+            icon: HugeIcons.strokeRoundedStore01,
             rows: const [
               _Row('Store',        'KneaYerng Service Center, Phnom Penh'),
               _Row('Instructions', 'Bring this ticket and a valid ID.'),
@@ -209,7 +210,7 @@ class _HeaderCard extends StatelessWidget {
               color: _white.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(14),
             ),
-            child: const Icon(Icons.confirmation_number_rounded,
+            child: const Icon(HugeIcons.strokeRoundedTicket01,
                 color: _white, size: 26),
           ),
           const SizedBox(width: 14),
@@ -294,7 +295,7 @@ class _QrCard extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
             child: Row(
               children: [
-                const Icon(Icons.qr_code_2_rounded, color: _blue700, size: 22),
+                const Icon(HugeIcons.strokeRoundedQrCode01, color: _blue700, size: 22),
                 const SizedBox(width: 8),
                 const Expanded(
                   child: Text(
@@ -458,7 +459,7 @@ class _QrCard extends StatelessWidget {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.qr_code_rounded, size: 48, color: _gray400),
+                    Icon(HugeIcons.strokeRoundedQrCode01, size: 48, color: _gray400),
                     SizedBox(height: 10),
                     Text(
                       'QR not available',
@@ -485,7 +486,7 @@ class _QrCard extends StatelessWidget {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.tag_rounded,
+                    const Icon(HugeIcons.strokeRoundedTag01,
                         size: 14, color: _gray400),
                     const SizedBox(width: 6),
                     Text(
@@ -514,7 +515,7 @@ class _QrCard extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Icon(
-                        Icons.timer_outlined,
+                        HugeIcons.strokeRoundedTimer01,
                         size: 13,
                         color: remaining.inMinutes < 30
                             ? _amber600
@@ -604,7 +605,7 @@ class _ItemsCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Icon(Icons.shopping_bag_outlined,
+              const Icon(HugeIcons.strokeRoundedShoppingBag01,
                   color: _blue700, size: 18),
               const SizedBox(width: 8),
               Text(

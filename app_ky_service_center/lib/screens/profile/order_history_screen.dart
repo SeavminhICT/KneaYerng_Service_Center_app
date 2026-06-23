@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:hugeicons/hugeicons.dart';
 import 'package:intl/intl.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../models/pickup_ticket.dart';
 import '../../services/api_service.dart';
+import '../../widgets/empty_state_view.dart';
 
 class OrderHistoryScreen extends StatefulWidget {
   const OrderHistoryScreen({super.key});
@@ -162,7 +164,7 @@ class _HistoryCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: const Icon(
-                  Icons.receipt_long_outlined,
+                  HugeIcons.strokeRoundedInvoice01,
                   color: Color(0xFF2563EB),
                   size: 18,
                 ),
@@ -304,62 +306,13 @@ class _EmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final textPrimary = isDark ? const Color(0xFFE6EDF7) : const Color(0xFF111827);
-    final textMuted = isDark ? const Color(0xFF97A2B5) : const Color(0xFF6B7280);
-
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              height: 64,
-              width: 64,
-              decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF1D2635) : const Color(0xFFEFF6FF),
-                borderRadius: BorderRadius.circular(18),
-              ),
-              child: const Icon(
-                Icons.receipt_long_outlined,
-                color: Color(0xFF2563EB),
-                size: 32,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              title,
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-                color: textPrimary,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 6),
-            Text(
-              subtitle,
-              style: TextStyle(
-                fontSize: 12,
-                color: textMuted,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 16),
-            OutlinedButton(
-              onPressed: onRetry,
-              style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: Text(l.retry),
-            ),
-          ],
-        ),
-      ),
+    return EmptyStateView(
+      icon: HugeIcons.strokeRoundedInvoice01,
+      iconColor: const Color(0xFF2563EB),
+      title: title,
+      subtitle: subtitle,
+      actionLabel: l.retry,
+      onAction: onRetry,
     );
   }
 }

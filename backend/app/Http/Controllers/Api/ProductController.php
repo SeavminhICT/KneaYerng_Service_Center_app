@@ -9,6 +9,7 @@ use App\Http\Resources\ProductResource;
 use App\Models\Part;
 use App\Models\Product;
 use App\Models\ProductVariant;
+use App\Services\RemoveBgService;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Schema;
@@ -519,13 +520,30 @@ class ProductController extends Controller
         $disk = 'public';
         $extension = strtolower($file->getClientOriginalExtension() ?: $file->extension() ?: 'jpg');
         $isPng = $extension === 'png';
+
+        $raw = @file_get_contents($file->getRealPath());
+
+        $bgRemoved = $raw !== false
+            ? app(RemoveBgService::class)->removeBackground($raw)
+            : null;
+        if ($bgRemoved !== null) {
+            $raw = $bgRemoved;
+            $isPng = true;
+        }
+
         $targetExt = $isPng ? 'png' : 'jpg';
         $targetPath = trim($directory, '/').'/'.uniqid('img_', true).'.'.$targetExt;
 
-        $raw = @file_get_contents($file->getRealPath());
         $source = $raw !== false ? @imagecreatefromstring($raw) : false;
         if (! $source) {
+            if ($bgRemoved !== null) {
+                Storage::disk($disk)->put($targetPath, $bgRemoved);
+
+                return 'storage/'.$targetPath;
+            }
+
             $storedPath = $file->store($directory, $disk);
+
             return 'storage/'.$storedPath;
         }
 

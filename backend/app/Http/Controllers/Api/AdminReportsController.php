@@ -8,6 +8,7 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Part;
 use App\Models\Product;
+use App\Models\RepairRequest;
 use App\Models\User;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Database\Eloquent\Builder;
@@ -66,12 +67,28 @@ class AdminReportsController extends Controller
         ]);
     }
 
+    public function repairs(Request $request)
+    {
+        Gate::authorize('admin-access');
+
+        [$start, $end, $label, $preset] = $this->resolveRange($request);
+        $report = $this->buildRepairsReport($start, $end);
+
+        return response()->json([
+            'range'          => $this->rangePayload($start, $end, $label, $preset),
+            'metrics'        => $report['metrics'],
+            'by_status'      => $report['by_status'],
+            'by_service_type'=> $report['by_service_type'],
+            'recent'         => $report['recent'],
+        ]);
+    }
+
     public function export(Request $request)
     {
         Gate::authorize('admin-access');
 
         $validated = $request->validate([
-            'type' => ['required', 'string', 'in:sales,inventory,customers'],
+            'type' => ['required', 'string', 'in:sales,inventory,customers,repairs'],
             'format' => ['required', 'string', 'in:csv,pdf'],
             'preset' => ['nullable', 'string'],
             'start' => ['nullable', 'date_format:Y-m-d'],
@@ -93,6 +110,8 @@ class AdminReportsController extends Controller
                 [$content, $rowCount] = $this->buildSalesCsv($start, $end);
             } elseif ($type === 'inventory') {
                 [$content, $rowCount] = $this->buildInventoryCsv($threshold);
+            } elseif ($type === 'repairs') {
+                [$content, $rowCount] = $this->buildRepairsCsv($start, $end);
             } else {
                 [$content, $rowCount] = $this->buildCustomerCsv($start, $end);
             }
@@ -522,10 +541,124 @@ class AdminReportsController extends Controller
                 ->output();
         }
 
+        if ($type === 'repairs') {
+            $report = $this->buildRepairsReport($start, $end);
+            return Pdf::loadView('admin.reports.pdf.repairs', compact('report', 'start', 'end', 'rangeLabel'))
+                ->setPaper('a4', 'portrait')
+                ->output();
+        }
+
         $report = $this->buildCustomerReport($start, $end);
         return Pdf::loadView('admin.reports.pdf.customers', compact('report', 'start', 'end', 'rangeLabel'))
             ->setPaper('a4', 'portrait')
             ->output();
+    }
+
+    private function buildRepairsReport(Carbon $start, Carbon $end): array
+    {
+        $base = RepairRequest::query()->whereBetween('created_at', [$start, $end]);
+
+        $total     = (clone $base)->count();
+        $completed = (clone $base)->where('status', 'completed')->count();
+        $inProgress = (clone $base)->whereNotIn('status', ['completed'])->count();
+
+        $byStatus = (clone $base)
+            ->selectRaw('status, COUNT(*) as count')
+            ->groupBy('status')
+            ->orderBy('status')
+            ->get()
+            ->map(fn ($r) => ['status' => $r->status, 'count' => (int) $r->count])
+            ->values()
+            ->all();
+
+        $byServiceType = (clone $base)
+            ->selectRaw('service_type, COUNT(*) as count')
+            ->groupBy('service_type')
+            ->orderBy('service_type')
+            ->get()
+            ->map(fn ($r) => ['service_type' => $r->service_type, 'count' => (int) $r->count])
+            ->values()
+            ->all();
+
+        $recent = RepairRequest::query()
+            ->with(['customer:id,first_name,last_name,email', 'technician:id,name'])
+            ->whereBetween('created_at', [$start, $end])
+            ->orderByDesc('created_at')
+            ->limit(10)
+            ->get()
+            ->map(function (RepairRequest $r) {
+                $name = trim(($r->customer?->first_name ?? '').' '.($r->customer?->last_name ?? ''));
+                return [
+                    'id'             => $r->id,
+                    'device_model'   => $r->device_model,
+                    'issue_type'     => $r->issue_type,
+                    'service_type'   => $r->service_type,
+                    'status'         => $r->status,
+                    'customer_name'  => $name !== '' ? $name : ($r->customer?->email ?? 'Guest'),
+                    'technician_name'=> $r->technician?->name ?? '—',
+                    'created_at'     => $r->created_at?->toDateTimeString(),
+                ];
+            })
+            ->values()
+            ->all();
+
+        return [
+            'metrics' => [
+                'total_requests' => $total,
+                'completed'      => $completed,
+                'in_progress'    => $inProgress,
+            ],
+            'by_status'       => $byStatus,
+            'by_service_type' => $byServiceType,
+            'recent'          => $recent,
+        ];
+    }
+
+    private function buildRepairsCsv(Carbon $start, Carbon $end): array
+    {
+        $handle = fopen('php://temp', 'w+');
+        fputcsv($handle, [
+            'ID',
+            'Customer Name',
+            'Customer Email',
+            'Device Model',
+            'Issue Type',
+            'Service Type',
+            'Status',
+            'Technician',
+            'Appointment',
+            'Created At',
+        ]);
+
+        $rowCount = 0;
+        RepairRequest::query()
+            ->with(['customer:id,first_name,last_name,email', 'technician:id,name'])
+            ->whereBetween('created_at', [$start, $end])
+            ->orderByDesc('created_at')
+            ->chunk(500, function ($repairs) use ($handle, &$rowCount) {
+                foreach ($repairs as $repair) {
+                    $name = trim(($repair->customer?->first_name ?? '').' '.($repair->customer?->last_name ?? ''));
+                    fputcsv($handle, [
+                        $repair->id,
+                        $name !== '' ? $name : 'Guest',
+                        $repair->customer?->email,
+                        $repair->device_model,
+                        $repair->issue_type,
+                        $repair->service_type,
+                        $repair->status,
+                        $repair->technician?->name,
+                        $repair->appointment_datetime?->toDateTimeString(),
+                        $repair->created_at?->toDateTimeString(),
+                    ]);
+                    $rowCount += 1;
+                }
+            });
+
+        rewind($handle);
+        $content = stream_get_contents($handle);
+        fclose($handle);
+
+        return [$content, $rowCount];
     }
 
     private function queryTopItems(Carbon $start, Carbon $end, int $limit, string $orderBy): array

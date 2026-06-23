@@ -229,9 +229,10 @@ class ApiService {
   static const int _maxBaseUrlHistoryEntries = 8;
   static const String _loopbackApi = 'http://127.0.0.1:8000/api';
   static const String _androidEmulatorApi = 'http://10.0.2.2:8000/api';
-  // ⚡ DEV: Update this whenever you restart ngrok with a new URL
+  // ⚡ DEV: Hardcoded to the active ngrok tunnel — works on any device/network.
+  // Set to empty string to re-enable LAN auto-detection.
   static const String _ngrokDevUrl =
-      'https://kneayerng.seavminh.com/api';
+      'https://unkempt-flashcard-wieldable.ngrok-free.dev/api';
   static String? _runtimeBaseUrl;
   static String? _autoDetectedBaseUrl;
   static String? _resolvedBaseUrl;
@@ -1540,6 +1541,7 @@ class ApiService {
     required String firstName,
     required String lastName,
     required String email,
+    String? phone,
     String? birth,
     String? gender,
     String? avatarPath,
@@ -1569,6 +1571,9 @@ class ApiService {
       if (sanitizedEmail.isNotEmpty) {
         request.fields['email'] = sanitizedEmail;
       }
+      if (phone != null && phone.trim().isNotEmpty) {
+        request.fields['phone'] = phone.trim();
+      }
       if (birth != null && birth.isNotEmpty) {
         request.fields['birth'] = birth;
       }
@@ -1587,6 +1592,9 @@ class ApiService {
       };
       if (sanitizedEmail.isNotEmpty) {
         body['email'] = sanitizedEmail;
+      }
+      if (phone != null && phone.trim().isNotEmpty) {
+        body['phone'] = phone.trim();
       }
       if (birth != null && birth.isNotEmpty) {
         body['birth'] = birth;
@@ -1615,7 +1623,9 @@ class ApiService {
           fallbackEmail: sanitizedEmail.isNotEmpty
               ? sanitizedEmail
               : existingProfile?.email,
-          fallbackPhone: existingProfile?.phone,
+          fallbackPhone: (phone != null && phone.trim().isNotEmpty)
+              ? phone.trim()
+              : existingProfile?.phone,
           fallbackBirth: (birth != null && birth.isNotEmpty)
               ? birth
               : existingProfile?.birth,
@@ -1938,6 +1948,27 @@ class ApiService {
     } catch (e) {
       debugPrint('[ApiService] Error fetching products: $e');
       rethrow;
+    }
+  }
+
+  /// Fetches a single product directly from the server, bypassing the
+  /// list cache. Used to re-validate stale variant ids before checkout.
+  static Future<Product?> fetchProductById(int productId) async {
+    final uri = Uri.parse('$baseUrl/products/$productId');
+    try {
+      final res = await http
+          .get(uri, headers: _buildHeaders(const {'Accept': 'application/json'}))
+          .timeout(const Duration(seconds: 12));
+      if (res.statusCode != 200) return null;
+      final decoded = jsonDecode(res.body);
+      final map = decoded is Map && decoded['data'] is Map
+          ? decoded['data']
+          : decoded;
+      if (map is! Map) return null;
+      return Product.fromJson(Map<String, dynamic>.from(map));
+    } catch (e) {
+      debugPrint('[ApiService] Error fetching product $productId: $e');
+      return null;
     }
   }
 

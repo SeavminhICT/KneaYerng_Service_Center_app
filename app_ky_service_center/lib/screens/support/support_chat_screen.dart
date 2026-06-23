@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:hugeicons/hugeicons.dart';
 import 'package:intl/intl.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 
@@ -293,7 +294,7 @@ class _SupportHeader extends StatelessWidget {
               borderRadius: BorderRadius.circular(14),
             ),
             child: Icon(
-              Icons.support_agent_rounded,
+              HugeIcons.strokeRoundedCustomerSupport,
               color: theme.primary,
             ),
           ),
@@ -430,7 +431,7 @@ class _VoiceMessageTile extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(Icons.play_circle_fill_rounded, color: color, size: 22),
+        Icon(HugeIcons.strokeRoundedPlayCircle, color: color, size: 22),
         const SizedBox(width: 10),
         Text(
           'Voice message ${_formatDuration(message.mediaDurationSec)}',
@@ -480,7 +481,7 @@ class _Composer extends StatelessWidget {
                   ),
                 );
               },
-              icon: Icon(Icons.mic_none_rounded, color: theme.muted),
+              icon: Icon(HugeIcons.strokeRoundedMic01, color: theme.muted),
               tooltip: 'Voice message',
             ),
             Expanded(
@@ -514,13 +515,15 @@ class _Composer extends StatelessWidget {
             const SizedBox(width: 10),
             InkWell(
               onTap: isSending ? null : onSend,
-              borderRadius: BorderRadius.circular(18),
+              borderRadius: BorderRadius.circular(20),
               child: Container(
                 height: 48,
                 width: 48,
                 decoration: BoxDecoration(
-                  color: isSending ? theme.muted : theme.primary,
-                  borderRadius: BorderRadius.circular(18),
+                  color: isSending
+                      ? theme.muted
+                      : const Color.fromARGB(255, 39, 93, 240),
+                  borderRadius: BorderRadius.circular(20),
                 ),
                 child: isSending
                     ? const Padding(
@@ -532,7 +535,7 @@ class _Composer extends StatelessWidget {
                           ),
                         ),
                       )
-                    : const Icon(Icons.send_rounded, color: Colors.white),
+                    : const Icon(HugeIcons.strokeRoundedSent, color: Colors.white),
               ),
             ),
           ],
@@ -568,7 +571,7 @@ class _GuestSupportState extends StatelessWidget {
                 shape: BoxShape.circle,
               ),
               child: const Icon(
-                Icons.support_agent_rounded,
+                HugeIcons.strokeRoundedCustomerSupport,
                 color: Colors.white,
                 size: 38,
               ),
@@ -686,7 +689,7 @@ class _SupportErrorState extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
-              Icons.chat_bubble_outline_rounded,
+              HugeIcons.strokeRoundedMessage01,
               size: 42,
               color: theme.muted,
             ),

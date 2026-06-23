@@ -155,11 +155,14 @@ Route::middleware('admin')->group(function () {
     Route::get('admin/reports/sales', [AdminReportsController::class, 'sales']);
     Route::get('admin/reports/inventory', [AdminReportsController::class, 'inventory']);
     Route::get('admin/reports/customers', [AdminReportsController::class, 'customers']);
+    Route::get('admin/reports/repairs', [AdminReportsController::class, 'repairs']);
     Route::post('admin/reports/export', [AdminReportsController::class, 'export']);
     Route::get('admin/reports/exports', [AdminReportsController::class, 'exports']);
     Route::get('admin/reports/exports/{exportId}', [AdminReportsController::class, 'download']);
     Route::get('admin/orders/summary', [OrderController::class, 'summary']);
     Route::get('admin/orders/export', [OrderController::class, 'export']);
+    Route::get('admin/orders/export-pdf', [OrderController::class, 'exportPdf']);
+    Route::get('admin/orders/export-excel', [OrderController::class, 'exportExcel']);
     Route::post('admin/orders/{order}/notify-telegram', [TelegramOrderController::class, 'notify']);
     Route::get('admin/staff-options', [OrderTrackingController::class, 'staffOptions']);
     Route::get('admin/users', [AdminUserController::class, 'index']);

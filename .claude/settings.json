@@ -1,0 +1,38 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -s -H \"ngrok-skip-browser-warning: true\" -o /dev/null -w \"HTTP_CODE:%{http_code}\\\\n\" \"https://unkempt-flashcard-wieldable.ngrok-free.dev/api/categories?per_page=1&status=active\" --max-time 8)",
+      "Bash(php -r \"echo ini_get\\('curl.cainfo'\\).PHP_EOL; echo ini_get\\('openssl.cafile'\\).PHP_EOL;\")",
+      "Bash(tasklist)",
+      "Bash(php -r ' *)",
+      "Bash(grep -n -i \"baseUrl\\\\|http://\\\\|https://\" lib/services/api_service.dart)",
+      "Bash(curl -s -X POST http://127.0.0.1:8000/api/otp/request -H \"Content-Type: application/json\" -d '{\"type\":\"phone\",\"destination\":\"081515245\",\"purpose\":\"forgot_password\"}')",
+      "Bash(dart analyze *)",
+      "Bash(grep -n \"applyAction\\\\|function \\\\|use App\\\\\\\\\\\\\\\\\" app/Services/TelegramOrderService.php)",
+      "Bash(php -l app/Services/TelegramOrderService.php)",
+      "Bash(find / -iname \"hugeicons*\" -path \"*pub-cache*\" -maxdepth 10 2>/dev/null | head -20)",
+      "Read(//d//**)",
+      "Bash(find / -iname \"*hugeicons*\" -path \"*hosted*\" -maxdepth 12 2>/dev/null | grep -i \"hugeicons-\" | head -5)",
+      "Read(//c/Users/Asus/AppData/Local/Pub/Cache/hosted/pub.dev/hugeicons-0.0.11/lib/**)",
+      "Bash(flutter --version)",
+      "Bash(adb devices *)",
+      "Bash(grep -n \"static const IconData strokeRoundedUnlink01\\\\|static const IconData strokeRoundedLink01\\\\|static const IconData strokeRoundedUserGroup02\\\\|static const IconData strokeRoundedSent \\\\|static const IconData strokeRoundedSent;\\\\|static const IconData strokeRoundedSent$\\\\|static const IconData strokeRoundedTimeSchedule\\\\|static const IconData strokeRoundedTransactionHistory\" hugeicons.dart)",
+      "Bash(grep -n \"static const IconData strokeRoundedArrowLeft01\\\\|static const IconData strokeRoundedSetting07\\\\|static const IconData strokeRoundedFilter \\\\|static const IconData strokeRoundedFilter;\\\\|static const IconData strokeRoundedFilter$\" hugeicons.dart)",
+      "Bash(docker --version)",
+      "Bash(docker compose *)",
+      "Bash(docker info *)",
+      "Read(//c/Program Files/Docker/Docker/**)",
+      "Bash(wsl --status)",
+      "Bash(wsl -l -v)",
+      "PowerShell(wsl --install)",
+      "Bash(wsl --install)",
+      "PowerShell(Get-Process \"Docker Desktop\" -ErrorAction SilentlyContinue)",
+      "PowerShell(Stop-Process -Force)",
+      "PowerShell(Start-Process \"C:\\\\Program Files\\\\Docker\\\\Docker\\\\Docker Desktop.exe\")",
+      "Bash(curl -s http://localhost:8080/login --max-time 10)"
+    ],
+    "additionalDirectories": [
+      "C:\\php"
+    ]
+  }
+}

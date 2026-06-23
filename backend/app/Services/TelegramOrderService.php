@@ -3,11 +3,17 @@
 namespace App\Services;
 
 use App\Models\Order;
+use App\Services\OrderTrackingService;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 class TelegramOrderService
 {
+    public function __construct(
+        private readonly OrderTrackingService $trackingService
+    ) {
+    }
+
     public function handlePaymentSuccess(Order $order): void
     {
         $this->updateStatusAfterPayment($order);
@@ -156,18 +162,33 @@ class TelegramOrderService
             return false;
         }
 
-        if (! in_array($action, ['APP', 'REJ'], true)) {
+        $actionStatusMap = [
+            'APP' => OrderTrackingService::STATUS_APPROVED,
+            'REJ' => OrderTrackingService::STATUS_REJECTED,
+            'PRO' => OrderTrackingService::STATUS_IN_PROGRESS,
+            'OTW' => OrderTrackingService::STATUS_ON_THE_WAY,
+            'COM' => OrderTrackingService::STATUS_COMPLETED,
+        ];
+
+        if (! array_key_exists($action, $actionStatusMap)) {
             return false;
         }
 
-        if (in_array($order->status, ['approved', 'rejected', 'delivered'], true)) {
+        $targetStatus = $actionStatusMap[$action];
+
+        if (in_array($order->status, ['completed', 'cancelled', 'rejected'], true)) {
             return true;
         }
 
-        $status = $action === 'APP' ? 'approved' : 'rejected';
-        $order->status = $status;
-        $order->telegram_last_action = $status;
-        $order->telegram_last_action_by = $this->formatAdminLabel($telegramUser);
+        $adminLabel = $this->formatAdminLabel($telegramUser);
+
+        $this->trackingService->transition($order, $targetStatus, null, [
+            'override' => true,
+            'note' => 'Updated via Telegram by '.$adminLabel.'.',
+        ]);
+
+        $order->telegram_last_action = $order->status;
+        $order->telegram_last_action_by = $adminLabel;
         $order->telegram_last_action_at = now();
         $order->save();
 
@@ -182,7 +203,16 @@ class TelegramOrderService
 
         $order->loadMissing(['items', 'user']);
 
-        $statusLabel = $order->status === 'approved' ? '✅ Approved' : '❌ Rejected';
+        $statusLabel = match ($order->status) {
+            'approved'    => '✅ Approved',
+            'in_progress' => '⏳ Processing',
+            'on_the_way'  => '🛵 On the Way',
+            'completed'   => '✅ Completed',
+            'rejected'    => '❌ Rejected',
+            'cancelled'   => '🚫 Cancelled',
+            default       => ucfirst(str_replace('_', ' ', $order->status)),
+        };
+
         $adminLabel = $this->formatAdminLabel($telegramUser);
         $timeLabel = now()->format('Y-m-d H:i');
 
@@ -190,12 +220,15 @@ class TelegramOrderService
         $text .= "\n\nStatus: {$statusLabel}\nBy: {$adminLabel}\nTime: {$timeLabel}";
         $text = $this->truncateMessage($text);
 
+        $keyboard = $this->buildInlineKeyboard($order);
+        $replyMarkup = $keyboard ?? ['inline_keyboard' => []];
+
         $this->postTelegram('editMessageText', [
             'chat_id' => $order->telegram_chat_id,
             'message_id' => (int) $order->telegram_message_id,
             'text' => $text,
             'disable_web_page_preview' => true,
-            'reply_markup' => ['inline_keyboard' => []],
+            'reply_markup' => $replyMarkup,
         ]);
     }
 
@@ -283,16 +316,29 @@ class TelegramOrderService
             return null;
         }
 
-        if (in_array($order->status, ['approved', 'rejected', 'delivered'], true)) {
+        $status = strtolower((string) $order->status);
+
+        if (in_array($status, ['completed', 'rejected', 'cancelled', 'delivered'], true)) {
             return null;
         }
 
-        $buttons = [
-            [
+        $actionButtons = match ($status) {
+            'approved' => [
+                ['text' => '🚚 Processing', 'callback_data' => 'PRO|'.$order->id],
+            ],
+            'in_progress', 'assigned' => [
+                ['text' => '🛵 On the Way', 'callback_data' => 'OTW|'.$order->id],
+            ],
+            'on_the_way', 'arrived' => [
+                ['text' => '✅ Complete', 'callback_data' => 'COM|'.$order->id],
+            ],
+            default => [
                 ['text' => '✅ Approve', 'callback_data' => 'APP|'.$order->id],
                 ['text' => '❌ Reject', 'callback_data' => 'REJ|'.$order->id],
             ],
-        ];
+        };
+
+        $buttons = [$actionButtons];
 
         $mapLink = $this->googleMapsLink($order);
         if ($mapLink) {

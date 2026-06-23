@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:hugeicons/hugeicons.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../services/theme_service.dart';
 import '../../theme/app_fonts.dart';
+import '../../widgets/circle_back_button.dart';
 
 class PrivacyScreen extends StatefulWidget {
   const PrivacyScreen({super.key});
@@ -69,7 +71,7 @@ class _PrivacyScreenState extends State<PrivacyScreen>
   // ── Policy sections ─────────────────────────────────────────────────────────
   List<_PolicySection> _policies(bool isKhmer) => [
     _PolicySection(
-      icon: Icons.info_outline_rounded,
+      icon: HugeIcons.strokeRoundedInformationCircle,
       color: _blue,
       title: isKhmer ? 'ព័ត៌មានដែលយើងប្រមូល' : 'Information We Collect',
       body: isKhmer
@@ -77,7 +79,7 @@ class _PrivacyScreenState extends State<PrivacyScreen>
           : 'We collect information you provide directly — such as name, email, phone number, and address — when you create an account or place an order. We also collect usage data, device information, and location (if you permit) to improve your experience.',
     ),
     _PolicySection(
-      icon: Icons.share_outlined,
+      icon: HugeIcons.strokeRoundedShare01,
       color: _amber,
       title: isKhmer ? 'របៀបប្រើព័ត៌មានរបស់អ្នក' : 'How We Use Your Information',
       body: isKhmer
@@ -85,7 +87,7 @@ class _PrivacyScreenState extends State<PrivacyScreen>
           : 'Your information is used to process orders, send notifications, provide personalised recommendations, improve our services, and manage your account. We also use collected data to detect fraud and ensure legal compliance.',
     ),
     _PolicySection(
-      icon: Icons.people_outline_rounded,
+      icon: HugeIcons.strokeRoundedUserGroup,
       color: _green,
       title: isKhmer ? 'ការចែករំលែកព័ត៌មាន' : 'Information Sharing',
       body: isKhmer
@@ -93,7 +95,7 @@ class _PrivacyScreenState extends State<PrivacyScreen>
           : 'We do not sell, trade, or transfer your personal information to third parties except trusted service partners who assist in operating transactions, delivery, or analytics — and who agree to keep this information secure.',
     ),
     _PolicySection(
-      icon: Icons.lock_outline_rounded,
+      icon: HugeIcons.strokeRoundedSquareLock02,
       color: const Color(0xFF8B5CF6),
       title: isKhmer ? 'សុវត្ថិភាព' : 'Data Security',
       body: isKhmer
@@ -101,7 +103,7 @@ class _PrivacyScreenState extends State<PrivacyScreen>
           : 'We implement industry-standard security measures including TLS encryption, firewalls, and restricted access to protect your information from unauthorised access, alteration, or disclosure.',
     ),
     _PolicySection(
-      icon: Icons.cookie_outlined,
+      icon: HugeIcons.strokeRoundedCookie,
       color: const Color(0xFFEC4899),
       title: isKhmer ? 'ខូគី និងការតាមដាន' : 'Cookies & Tracking',
       body: isKhmer
@@ -109,7 +111,7 @@ class _PrivacyScreenState extends State<PrivacyScreen>
           : 'Our app uses local storage to remember logins, preferences, and session tracking to deliver a better experience. You can clear stored data or opt out of analytics tracking from the toggles above.',
     ),
     _PolicySection(
-      icon: Icons.gavel_rounded,
+      icon: HugeIcons.strokeRoundedJusticeScale01,
       color: const Color(0xFF06B6D4),
       title: isKhmer ? 'សិទ្ធិរបស់អ្នក' : 'Your Rights',
       body: isKhmer
@@ -173,9 +175,9 @@ class _PrivacyScreenState extends State<PrivacyScreen>
       pinned: true,
       backgroundColor: _isDark ? const Color(0xFF0F172A) : _blueDeep,
       systemOverlayStyle: SystemUiOverlayStyle.light,
-      leading: IconButton(
-        icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 20),
-        onPressed: () => Navigator.of(context).pop(),
+      leading: Padding(
+        padding: const EdgeInsets.all(8),
+        child: CircleBackButton(onPressed: () => Navigator.of(context).pop()),
       ),
       flexibleSpace: FlexibleSpaceBar(
         collapseMode: CollapseMode.pin,
@@ -203,29 +205,23 @@ class _PrivacyScreenState extends State<PrivacyScreen>
                   decoration: BoxDecoration(shape: BoxShape.circle,
                     color: Colors.white.withValues(alpha: 0.05)))),
               Padding(
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.end,
+                padding: const EdgeInsets.fromLTRB(20, 64, 20, 0),
+                child: Row(
                   children: [
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: const Icon(Icons.shield_outlined, color: Colors.white, size: 20),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            isKhmer ? 'គ្រប់គ្រងទិន្នន័យ និងការអនុញ្ញាតរបស់អ្នក' : 'Control your data & permissions',
-                            style: kFont(context, fontSize: 12, color: Colors.white.withValues(alpha: 0.80)),
-                          ),
-                        ),
-                      ],
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(HugeIcons.strokeRoundedShield01, color: Colors.white, size: 20),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        isKhmer ? 'គ្រប់គ្រងទិន្នន័យ និងការអនុញ្ញាតរបស់អ្នក' : 'Control your data & permissions',
+                        style: kFont(context, fontSize: 12, color: Colors.white.withValues(alpha: 0.80)),
+                      ),
                     ),
                   ],
                 ),
@@ -318,7 +314,7 @@ class _PrivacyScreenState extends State<PrivacyScreen>
               ],
             ),
           ),
-          Icon(Icons.chevron_right_rounded, color: _textMuted),
+          Icon(HugeIcons.strokeRoundedArrowRight01, color: _textMuted),
         ],
       ),
     );
@@ -328,7 +324,7 @@ class _PrivacyScreenState extends State<PrivacyScreen>
   Widget _controlsCard(bool isKhmer) {
     final items = [
       _ToggleItem(
-        icon: Icons.recommend_outlined,
+        icon: HugeIcons.strokeRoundedThumbsUp,
         color: _blue,
         title: isKhmer ? 'ការណែនាំផ្ទាល់ខ្លួន' : 'Personalised Recommendations',
         subtitle: isKhmer
@@ -341,7 +337,7 @@ class _PrivacyScreenState extends State<PrivacyScreen>
         },
       ),
       _ToggleItem(
-        icon: Icons.campaign_outlined,
+        icon: HugeIcons.strokeRoundedMegaphone01,
         color: _amber,
         title: isKhmer ? 'ទីផ្សារ និងការផ្សព្វផ្សាយ' : 'Marketing & Promotions',
         subtitle: isKhmer
@@ -354,7 +350,7 @@ class _PrivacyScreenState extends State<PrivacyScreen>
         },
       ),
       _ToggleItem(
-        icon: Icons.bar_chart_rounded,
+        icon: HugeIcons.strokeRoundedAnalytics01,
         color: _green,
         title: isKhmer ? 'ការវិភាគ & ដំណើរការ' : 'Analytics & Performance',
         subtitle: isKhmer
@@ -367,7 +363,7 @@ class _PrivacyScreenState extends State<PrivacyScreen>
         },
       ),
       _ToggleItem(
-        icon: Icons.location_on_outlined,
+        icon: HugeIcons.strokeRoundedLocation01,
         color: const Color(0xFF8B5CF6),
         title: isKhmer ? 'ទីតាំង' : 'Location Services',
         subtitle: isKhmer
@@ -460,8 +456,8 @@ class _PrivacyScreenState extends State<PrivacyScreen>
           Switch.adaptive(
             value: item.value,
             onChanged: item.onChanged,
-            activeThumbColor: item.color,
-            activeTrackColor: item.color.withValues(alpha: 0.40),
+            activeThumbColor: _blue,
+            activeTrackColor: _blue.withValues(alpha: 0.40),
             trackOutlineColor: WidgetStateProperty.all(Colors.transparent),
           ),
         ],
@@ -524,7 +520,7 @@ class _PrivacyScreenState extends State<PrivacyScreen>
                         turns: open ? 0.5 : 0,
                         duration: const Duration(milliseconds: 220),
                         child: Icon(
-                          Icons.keyboard_arrow_down_rounded,
+                          HugeIcons.strokeRoundedArrowDown01,
                           color: open ? s.color : _textMuted,
                           size: 22,
                         ),
@@ -580,7 +576,7 @@ class _PrivacyScreenState extends State<PrivacyScreen>
       child: Column(
         children: [
           _dataRow(
-            icon: Icons.download_outlined,
+            icon: HugeIcons.strokeRoundedDownload01,
             color: _blue,
             title: isKhmer ? 'ទាញយកទិន្នន័យរបស់ខ្ញុំ' : 'Download My Data',
             subtitle: isKhmer
@@ -591,7 +587,7 @@ class _PrivacyScreenState extends State<PrivacyScreen>
           ),
           Divider(height: 1, indent: 68, endIndent: 16, color: _border),
           _dataRow(
-            icon: Icons.manage_accounts_outlined,
+            icon: HugeIcons.strokeRoundedUserSettings01,
             color: _amber,
             title: isKhmer ? 'គ្រប់គ្រងការអនុញ្ញាត' : 'Manage App Permissions',
             subtitle: isKhmer
@@ -602,7 +598,7 @@ class _PrivacyScreenState extends State<PrivacyScreen>
           ),
           Divider(height: 1, indent: 68, endIndent: 16, color: _border),
           _dataRow(
-            icon: Icons.delete_outline_rounded,
+            icon: HugeIcons.strokeRoundedDelete02,
             color: _red,
             title: isKhmer ? 'លុបគណនី' : 'Delete Account',
             subtitle: isKhmer
@@ -668,7 +664,7 @@ class _PrivacyScreenState extends State<PrivacyScreen>
                   ],
                 ),
               ),
-              Icon(Icons.chevron_right_rounded, color: _textMuted, size: 20),
+              Icon(HugeIcons.strokeRoundedArrowRight01, color: _textMuted, size: 20),
             ],
           ),
         ),
@@ -679,7 +675,7 @@ class _PrivacyScreenState extends State<PrivacyScreen>
   // ── Dialogs ──────────────────────────────────────────────────────────────────
   void _showDataRequestDialog(bool isKhmer) {
     _infoDialog(
-      icon: Icons.download_outlined,
+      icon: HugeIcons.strokeRoundedDownload01,
       iconColor: _blue,
       title: isKhmer ? 'ទាញយកទិន្នន័យ' : 'Request Data Export',
       message: isKhmer
@@ -692,7 +688,7 @@ class _PrivacyScreenState extends State<PrivacyScreen>
 
   void _showPermissionsDialog(bool isKhmer) {
     _infoDialog(
-      icon: Icons.settings_outlined,
+      icon: HugeIcons.strokeRoundedSettings02,
       iconColor: _amber,
       title: isKhmer ? 'ការអនុញ្ញាត' : 'App Permissions',
       message: isKhmer
@@ -717,7 +713,7 @@ class _PrivacyScreenState extends State<PrivacyScreen>
                 color: _red.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: Icon(Icons.warning_amber_rounded, color: _red, size: 22),
+              child: Icon(HugeIcons.strokeRoundedAlertDiamond, color: _red, size: 22),
             ),
             const SizedBox(width: 12),
             Expanded(

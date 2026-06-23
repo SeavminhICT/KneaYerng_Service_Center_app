@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:hugeicons/hugeicons.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../services/api_service.dart';
@@ -334,7 +335,7 @@ class _OtpScreenState extends State<OtpScreen> {
                                     borderRadius: BorderRadius.circular(16),
                                   ),
                                   child: const Icon(
-                                    Icons.security_rounded,
+                                    HugeIcons.strokeRoundedSecurityCheck,
                                     size: 28,
                                     color: _brandBlue,
                                   ),
@@ -401,7 +402,7 @@ class _OtpScreenState extends State<OtpScreen> {
         constraints: const BoxConstraints.tightFor(width: 44, height: 44),
         splashRadius: 22,
         icon: const Icon(
-          Icons.chevron_left_rounded,
+          HugeIcons.strokeRoundedArrowLeft01,
           color: _textPrimary,
           size: 34,
         ),
@@ -552,7 +553,7 @@ class _OtpScreenState extends State<OtpScreen> {
                             color: Colors.black.withAlpha(22),
                           ),
                           child: const Icon(
-                            Icons.arrow_forward_rounded,
+                            HugeIcons.strokeRoundedArrowRight01,
                             color: Colors.white,
                             size: 24,
                           ),

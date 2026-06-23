@@ -9,7 +9,7 @@ RUN npm run build
 
 
 # ─── Stage 2: Production PHP-FPM image ───────────────────────────────────────
-FROM php:8.2-fpm-alpine AS production
+FROM php:8.4-fpm-alpine AS production
 
 # System dependencies
 RUN apk add --no-cache \
@@ -86,7 +86,7 @@ RUN { \
         echo "listen = /var/run/php-fpm.sock"; \
         echo "listen.owner = www-data"; \
         echo "listen.group = www-data"; \
-        echo "listen.mode = 0660"; \
+        echo "listen.mode = 0666"; \
     } > /usr/local/etc/php-fpm.d/zz-socket.conf
 
 # OPcache tuning for production

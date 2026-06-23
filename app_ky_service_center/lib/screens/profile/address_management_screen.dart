@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:hugeicons/hugeicons.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../models/saved_address.dart';
 import '../../services/address_book_service.dart';
+import '../../widgets/empty_state_view.dart';
 import 'address_form_screen.dart';
 
 class AddressManagementScreen extends StatefulWidget {
@@ -69,7 +71,7 @@ class _AddressManagementScreenState extends State<AddressManagementScreen> {
         actions: [
           IconButton(
             onPressed: _addAddress,
-            icon: const Icon(Icons.add_location_alt_outlined),
+            icon: const Icon(HugeIcons.strokeRoundedLocationAdd01),
           ),
         ],
       ),
@@ -137,7 +139,7 @@ class _AddressManagementScreenState extends State<AddressManagementScreen> {
         onPressed: _addAddress,
         backgroundColor: const Color(0xFF2563EB),
         foregroundColor: Colors.white,
-        icon: const Icon(Icons.add_location_alt_outlined),
+        icon: const Icon(HugeIcons.strokeRoundedLocationAdd01),
         label: Text(l.addNewAddress),
       ),
     );
@@ -191,7 +193,7 @@ class _AddressCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: const Icon(
-                  Icons.location_on_outlined,
+                  HugeIcons.strokeRoundedLocation01,
                   color: Color(0xFF2563EB),
                   size: 18,
                 ),
@@ -223,11 +225,11 @@ class _AddressCard extends StatelessWidget {
               ),
               IconButton(
                 onPressed: onEdit,
-                icon: const Icon(Icons.edit_outlined),
+                icon: const Icon(HugeIcons.strokeRoundedEdit02),
               ),
               IconButton(
                 onPressed: onDelete,
-                icon: const Icon(Icons.delete_outline),
+                icon: const Icon(HugeIcons.strokeRoundedDelete02),
               ),
             ],
           ),
@@ -270,62 +272,13 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final textPrimary = isDark ? const Color(0xFFE6EDF7) : const Color(0xFF111827);
-    final textMuted = isDark ? const Color(0xFF97A2B5) : const Color(0xFF6B7280);
-
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              height: 64,
-              width: 64,
-              decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF1D2635) : const Color(0xFFEFF6FF),
-                borderRadius: BorderRadius.circular(18),
-              ),
-              child: const Icon(
-                Icons.location_on_outlined,
-                color: Color(0xFF2563EB),
-                size: 32,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              title,
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-                color: textPrimary,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 6),
-            Text(
-              subtitle,
-              style: TextStyle(
-                fontSize: 12,
-                color: textMuted,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 16),
-            OutlinedButton(
-              onPressed: onRetry,
-              style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: Text(buttonLabel),
-            ),
-          ],
-        ),
-      ),
+    return EmptyStateView(
+      icon: HugeIcons.strokeRoundedLocation01,
+      iconColor: const Color(0xFF2563EB),
+      title: title,
+      subtitle: subtitle,
+      actionLabel: buttonLabel,
+      onAction: onRetry,
     );
   }
 }

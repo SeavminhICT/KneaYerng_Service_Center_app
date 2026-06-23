@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:hugeicons/hugeicons.dart';
 import 'package:intl/intl.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 
@@ -8,6 +9,7 @@ import '../../l10n/app_localizations.dart';
 import '../../models/pickup_ticket.dart';
 import '../../services/api_service.dart';
 import '../../services/app_notification_service.dart';
+import '../../widgets/empty_state_view.dart';
 import '../../widgets/page_transitions.dart';
 import '../tickets/ticket_detail_screen.dart';
 import 'delivery_tracking_screen.dart';
@@ -327,8 +329,8 @@ class _OrderCard extends StatelessWidget {
                     ),
                     child: Icon(
                       isDelivery
-                          ? Icons.local_shipping_rounded
-                          : Icons.qr_code_2_rounded,
+                          ? HugeIcons.strokeRoundedDeliveryTruck01
+                          : HugeIcons.strokeRoundedQrCode01,
                       color: const Color(0xFF2563EB),
                     ),
                   ),
@@ -361,7 +363,9 @@ class _OrderCard extends StatelessWidget {
               ),
               const SizedBox(height: 14),
               _InfoLine(
-                icon: isDelivery ? Icons.place_outlined : Icons.storefront_rounded,
+                icon: isDelivery
+                    ? HugeIcons.strokeRoundedLocation01
+                    : HugeIcons.strokeRoundedStore01,
                 text: isDelivery
                     ? (order.deliveryAddress?.trim().isNotEmpty == true
                           ? order.deliveryAddress!.trim()
@@ -370,7 +374,7 @@ class _OrderCard extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               _InfoLine(
-                icon: Icons.attach_money_rounded,
+                icon: HugeIcons.strokeRoundedMoney01,
                 text: NumberFormat.currency(symbol: '\$').format(amount),
               ),
               const SizedBox(height: 14),
@@ -530,44 +534,12 @@ class _EmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(
-              Icons.receipt_long_rounded,
-              size: 52,
-              color: Color(0xFF94A3B8),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              title,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-                color: _textPrimary(context),
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              subtitle,
-              textAlign: TextAlign.center,
-              style: TextStyle(color: _textMuted(context), height: 1.4),
-            ),
-            const SizedBox(height: 16),
-            OutlinedButton(
-              onPressed: () => onRetry(),
-              child: Text(
-                l.retry,
-                style: const TextStyle(fontWeight: FontWeight.w700),
-              ),
-            ),
-          ],
-        ),
-      ),
+    return EmptyStateView(
+      icon: HugeIcons.strokeRoundedInvoice01,
+      title: title,
+      subtitle: subtitle,
+      actionLabel: l.retry,
+      onAction: () => onRetry(),
     );
   }
 }

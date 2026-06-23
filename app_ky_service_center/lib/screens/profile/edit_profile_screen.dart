@@ -1,6 +1,7 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../theme/app_fonts.dart';
+import 'package:hugeicons/hugeicons.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 
@@ -8,6 +9,7 @@ import '../../l10n/app_localizations.dart';
 import '../../models/user_profile.dart';
 import '../../services/api_service.dart';
 import '../../widgets/app_network_image.dart';
+import '../../widgets/circle_back_button.dart';
 import 'address_management_screen.dart';
 
 class EditProfileScreen extends StatefulWidget {
@@ -49,6 +51,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _firstNameCtrl;
   late TextEditingController _lastNameCtrl;
+  late TextEditingController _phoneCtrl;
   late TextEditingController _birthCtrl;
   String? _gender;
   String? _avatarUrl;
@@ -63,6 +66,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _profile = widget.profile;
     _firstNameCtrl = TextEditingController(text: _profile.firstName ?? '');
     _lastNameCtrl = TextEditingController(text: _profile.lastName ?? '');
+    _phoneCtrl = TextEditingController(text: _profile.phone ?? '');
     _birthCtrl = TextEditingController(text: _profile.birth ?? '');
     _gender = _profile.gender;
     _avatarUrl = _profile.avatarUrl;
@@ -72,6 +76,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   void dispose() {
     _firstNameCtrl.dispose();
     _lastNameCtrl.dispose();
+    _phoneCtrl.dispose();
     _birthCtrl.dispose();
     super.dispose();
   }
@@ -112,25 +117,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       // Top bar
                       Row(
                         children: [
-                          GestureDetector(
-                            onTap: () => Navigator.of(context).maybePop(),
-                            child: Container(
-                              height: 38,
-                              width: 38,
-                              decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.18),
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: Colors.white.withValues(alpha: 0.3),
-                                ),
-                              ),
-                              child: const Icon(
-                                Icons.arrow_back_ios_new_rounded,
-                                color: Colors.white,
-                                size: 16,
-                              ),
-                            ),
-                          ),
+                          CircleBackButton(onPressed: () => Navigator.of(context).maybePop()),
                           const Spacer(),
                           Text(
                             l.editProfile,
@@ -183,7 +170,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                                       ),
                                     )
                                   : const Icon(
-                                      Icons.camera_alt_rounded,
+                                      HugeIcons.strokeRoundedCamera01,
                                       size: 14,
                                       color: Color(0xFF3B63FF),
                                     ),
@@ -264,8 +251,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 ),
                 child: Icon(
                   score >= 100
-                      ? Icons.verified_rounded
-                      : Icons.person_outline_rounded,
+                      ? HugeIcons.strokeRoundedCheckmarkBadge01
+                      : HugeIcons.strokeRoundedUser,
                   color: color,
                   size: 18,
                 ),
@@ -330,7 +317,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             _formField(
               controller: _firstNameCtrl,
               label: l.fullName,
-              icon: Icons.person_outline_rounded,
+              icon: HugeIcons.strokeRoundedUser,
               validator: (v) =>
                   (v == null || v.trim().isEmpty) ? l.requiredField : null,
             ),
@@ -338,9 +325,16 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             _formField(
               controller: _lastNameCtrl,
               label: l.fullName,
-              icon: Icons.badge_outlined,
+              icon: HugeIcons.strokeRoundedIdVerified,
               validator: (v) =>
                   (v == null || v.trim().isEmpty) ? l.requiredField : null,
+            ),
+            const SizedBox(height: 14),
+            _formField(
+              controller: _phoneCtrl,
+              label: l.phoneNumber,
+              icon: HugeIcons.strokeRoundedCall,
+              keyboard: TextInputType.phone,
             ),
             const SizedBox(height: 14),
             _dateField(),
@@ -364,14 +358,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       keyboardType: keyboard,
       validator: validator,
       cursorColor: _primary,
-      style: GoogleFonts.inter(
+      style: kmFont(context, GoogleFonts.inter(
         fontSize: 14,
         fontWeight: FontWeight.w600,
         color: _textPrimary,
-      ),
+      )),
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: GoogleFonts.inter(fontSize: 13, color: _textMuted),
+        labelStyle: kmFont(context, GoogleFonts.inter(fontSize: 13, color: _textMuted)),
         prefixIcon: Icon(icon, color: _primary, size: 20),
         filled: true,
         fillColor: _bg,
@@ -406,15 +400,15 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       readOnly: true,
       onTap: _selectDate,
       cursorColor: _primary,
-      style: GoogleFonts.inter(
+      style: kmFont(context, GoogleFonts.inter(
         fontSize: 14,
         fontWeight: FontWeight.w600,
         color: _textPrimary,
-      ),
+      )),
       decoration: InputDecoration(
         labelText: 'Birth Date',
-        labelStyle: GoogleFonts.inter(fontSize: 13, color: _textMuted),
-        prefixIcon: Icon(Icons.cake_outlined, color: _primary, size: 20),
+        labelStyle: kmFont(context, GoogleFonts.inter(fontSize: 13, color: _textMuted)),
+        prefixIcon: Icon(HugeIcons.strokeRoundedBirthdayCake, color: _primary, size: 20),
         filled: true,
         fillColor: _bg,
         isDense: true,
@@ -439,8 +433,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       initialValue: _gender,
       decoration: InputDecoration(
         labelText: 'Gender',
-        labelStyle: GoogleFonts.inter(fontSize: 13, color: _textMuted),
-        prefixIcon: Icon(Icons.wc_outlined, color: _primary, size: 20),
+        labelStyle: kmFont(context, GoogleFonts.inter(fontSize: 13, color: _textMuted)),
+        prefixIcon: Icon(HugeIcons.strokeRoundedFemaleSymbol, color: _primary, size: 20),
         filled: true,
         fillColor: _bg,
         isDense: true,
@@ -476,7 +470,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         child: Container(
           decoration: _cardDecoration(),
           child: _actionRow(
-            icon: Icons.location_on_outlined,
+            icon: HugeIcons.strokeRoundedLocation01,
             color: const Color(0xFF10B981),
             title: l.savedAddresses,
             subtitle: l.isKhmer ? 'ទីតាំងទទួលទំនិញ និងដឹកជញ្ជូន' : 'Pickup & delivery locations',
@@ -516,22 +510,22 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 children: [
                   Text(
                     title,
-                    style: GoogleFonts.inter(
+                    style: kmFont(context, GoogleFonts.inter(
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
                       color: _textPrimary,
-                    ),
+                    )),
                   ),
                   const SizedBox(height: 3),
                   Text(
                     subtitle,
-                    style: GoogleFonts.inter(fontSize: 12, color: _textMuted),
+                    style: kmFont(context, GoogleFonts.inter(fontSize: 12, color: _textMuted)),
                   ),
                 ],
               ),
             ),
             Icon(
-              Icons.chevron_right_rounded,
+              HugeIcons.strokeRoundedArrowRight01,
               color: _textMuted,
               size: 22,
             ),
@@ -584,10 +578,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 )
               : Text(
                   AppLocalizations.of(context).save,
-                  style: GoogleFonts.inter(
+                  style: kmFont(context, GoogleFonts.inter(
                     fontSize: 15,
                     fontWeight: FontWeight.w700,
-                  ),
+                  )),
                 ),
         ),
       ),
@@ -598,12 +592,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   Widget _buildSectionLabel(String label) {
     return Text(
       label.toUpperCase(),
-      style: GoogleFonts.inter(
+      style: kmFont(context, GoogleFonts.inter(
         fontSize: 11,
         fontWeight: FontWeight.w700,
         color: _textMuted,
         letterSpacing: 1.2,
-      ),
+      )),
     );
   }
 
@@ -627,11 +621,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     final fallback = Center(
       child: Text(
         initials,
-        style: GoogleFonts.poppins(
+        style: kmFont(context, GoogleFonts.poppins(
           color: _primary,
           fontSize: 28,
           fontWeight: FontWeight.w700,
-        ),
+        )),
       ),
     );
     if (url == null || url.isEmpty) return fallback;
@@ -709,6 +703,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         firstName: _firstNameCtrl.text.trim(),
         lastName: _lastNameCtrl.text.trim(),
         email: isValidEmail ? rawEmail : '',
+        phone: _phoneCtrl.text.trim(),
         birth: _birthCtrl.text,
         gender: _gender ?? '',
         avatarPath: null,
@@ -743,14 +738,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         content: Row(
           children: [
-            const Icon(Icons.check_circle_rounded, color: Colors.white),
+            const Icon(HugeIcons.strokeRoundedCheckmarkCircle02, color: Colors.white),
             const SizedBox(width: 10),
             Text(
               l.successfullySaved,
-              style: GoogleFonts.inter(
+              style: kmFont(context, GoogleFonts.inter(
                 fontWeight: FontWeight.w600,
                 color: Colors.white,
-              ),
+              )),
             ),
           ],
         ),
@@ -783,6 +778,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         firstName: _firstNameCtrl.text.trim(),
         lastName: _lastNameCtrl.text.trim(),
         email: isValidEmail2 ? rawEmail2 : '',
+        phone: _phoneCtrl.text.trim(),
         birth: _birthCtrl.text,
         gender: _gender ?? '',
         avatarPath: file.path,

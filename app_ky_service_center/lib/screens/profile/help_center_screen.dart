@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:hugeicons/hugeicons.dart';
 import '../../l10n/app_localizations.dart';
 import '../../services/theme_service.dart';
 import '../../theme/app_fonts.dart';
+import '../../widgets/circle_back_button.dart';
 import '../support/support_chat_screen.dart';
 
 class HelpCenterScreen extends StatefulWidget {
@@ -23,18 +25,17 @@ class _HelpCenterScreenState extends State<HelpCenterScreen>
   bool get _isDark => ThemeService.instance.isDark(context);
   Color get _bg => _isDark ? const Color(0xFF0F172A) : const Color(0xFFEEF6FD);
   Color get _surface => _isDark ? const Color(0xFF161B22) : Colors.white;
-  Color get _surfaceAlt => _isDark ? const Color(0xFF1D2635) : const Color(0xFFF6F9FF);
   Color get _border => _isDark ? const Color(0xFF2B3442) : const Color(0xFFE6ECF5);
   Color get _textPrimary => _isDark ? const Color(0xFFE6EDF7) : const Color(0xFF111827);
   Color get _textMuted => _isDark ? const Color(0xFF97A2B5) : const Color(0xFF6B7280);
 
   final List<_HelpCategory> _categories = const [
-    _HelpCategory(icon: Icons.local_shipping_outlined, label: 'Orders & Shipping', labelKm: 'ការបញ្ជាទិញ និងដឹក', color: Color(0xFF3B82F6)),
-    _HelpCategory(icon: Icons.assignment_return_outlined, label: 'Returns & Refunds', labelKm: 'ការប្រគល់ និងសង', color: Color(0xFF10B981)),
-    _HelpCategory(icon: Icons.credit_card_outlined, label: 'Payments', labelKm: 'ការទូទាត់', color: Color(0xFF8B5CF6)),
-    _HelpCategory(icon: Icons.person_outline_rounded, label: 'My Account', labelKm: 'គណនី', color: Color(0xFFF59E0B)),
-    _HelpCategory(icon: Icons.devices_outlined, label: 'Products', labelKm: 'ផលិតផល', color: Color(0xFFEC4899)),
-    _HelpCategory(icon: Icons.build_outlined, label: 'Repair Service', labelKm: 'សេវាជួសជុល', color: Color(0xFF06B6D4)),
+    _HelpCategory(icon: HugeIcons.strokeRoundedShippingTruck01, label: 'Orders & Shipping', labelKm: 'ការបញ្ជាទិញ និងដឹក', color: Color(0xFF3B82F6)),
+    _HelpCategory(icon: HugeIcons.strokeRoundedReverseWithdrawal01, label: 'Returns & Refunds', labelKm: 'ការប្រគល់ និងសង', color: Color(0xFF10B981)),
+    _HelpCategory(icon: HugeIcons.strokeRoundedCreditCard, label: 'Payments', labelKm: 'ការទូទាត់', color: Color(0xFF8B5CF6)),
+    _HelpCategory(icon: HugeIcons.strokeRoundedUser, label: 'My Account', labelKm: 'គណនី', color: Color(0xFFF59E0B)),
+    _HelpCategory(icon: HugeIcons.strokeRoundedSmartPhone01, label: 'Products', labelKm: 'ផលិតផល', color: Color(0xFFEC4899)),
+    _HelpCategory(icon: HugeIcons.strokeRoundedWrench01, label: 'Repair Service', labelKm: 'សេវាជួសជុល', color: Color(0xFF06B6D4)),
   ];
 
   final List<_Faq> _allFaqs = const [
@@ -95,6 +96,11 @@ class _HelpCenterScreenState extends State<HelpCenterScreen>
       category: 'Payments',
     ),
   ];
+
+  _HelpCategory _categoryFor(String label) => _categories.firstWhere(
+        (c) => c.label == label,
+        orElse: () => _categories.first,
+      );
 
   List<_Faq> get _filteredFaqs {
     if (_query.isEmpty) return _allFaqs;
@@ -181,9 +187,9 @@ class _HelpCenterScreenState extends State<HelpCenterScreen>
       collapsedHeight: 60,
       pinned: true,
       backgroundColor: _isDark ? const Color(0xFF0F172A) : _brandBlue,
-      leading: IconButton(
-        icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 20),
-        onPressed: () => Navigator.of(context).pop(),
+      leading: Padding(
+        padding: const EdgeInsets.all(8),
+        child: CircleBackButton(onPressed: () => Navigator.of(context).pop()),
       ),
       flexibleSpace: FlexibleSpaceBar(
         collapseMode: CollapseMode.pin,
@@ -207,11 +213,20 @@ class _HelpCenterScreenState extends State<HelpCenterScreen>
                   decoration: BoxDecoration(shape: BoxShape.circle,
                     color: Colors.white.withValues(alpha: 0.06)))),
               Padding(
-                padding: const EdgeInsets.fromLTRB(20, 60, 20, 20),
+                padding: const EdgeInsets.fromLTRB(56, 60, 20, 20),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
+                    Text(
+                      isKhmer ? 'មជ្ឈមណ្ឌលជំនួយ' : 'Help Center',
+                      style: kFont(context,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
                     Text(
                       isKhmer ? 'តើយើងអាចជួយអ្នកបានដោយរបៀបណា?' : 'How can we help you today?',
                       style: kFont(context,
@@ -226,15 +241,6 @@ class _HelpCenterScreenState extends State<HelpCenterScreen>
             ],
           ),
         ),
-        title: Text(
-          isKhmer ? 'មជ្ឈមណ្ឌលជំនួយ' : 'Help Center',
-          style: kFont(context,
-            fontSize: 16,
-            fontWeight: FontWeight.w700,
-            color: Colors.white,
-          ),
-        ),
-        titlePadding: const EdgeInsetsDirectional.only(start: 56, bottom: 16),
       ),
     );
   }
@@ -263,10 +269,10 @@ class _HelpCenterScreenState extends State<HelpCenterScreen>
         decoration: InputDecoration(
           hintText: isKhmer ? 'ស្វែងរកជំនួយ...' : 'Search for help...',
           hintStyle: kFont(context, fontSize: 14, color: _textMuted),
-          prefixIcon: Icon(Icons.search_rounded, color: _textMuted, size: 20),
+          prefixIcon: Icon(HugeIcons.strokeRoundedSearch01, color: _textMuted, size: 20),
           suffixIcon: _query.isNotEmpty
               ? IconButton(
-                  icon: Icon(Icons.close_rounded, color: _textMuted, size: 18),
+                  icon: Icon(HugeIcons.strokeRoundedCancel01, color: _textMuted, size: 18),
                   onPressed: () => setState(() {
                     _searchCtrl.clear();
                     _query = '';
@@ -355,6 +361,7 @@ class _HelpCenterScreenState extends State<HelpCenterScreen>
     final isOpen = _expandedIndex == index;
     final question = isKhmer ? faq.questionKm : faq.question;
     final answer = isKhmer ? faq.answerKm : faq.answer;
+    final cat = _categoryFor(faq.category);
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
@@ -384,15 +391,13 @@ class _HelpCenterScreenState extends State<HelpCenterScreen>
                         width: 30,
                         height: 30,
                         decoration: BoxDecoration(
-                          color: isOpen
-                              ? _brandBlue.withValues(alpha: 0.12)
-                              : _surfaceAlt,
+                          color: cat.color.withValues(alpha: isOpen ? 0.16 : 0.10),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Icon(
-                          Icons.help_outline_rounded,
+                          cat.icon,
                           size: 16,
-                          color: isOpen ? _brandBlue : _textMuted,
+                          color: cat.color,
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -411,7 +416,7 @@ class _HelpCenterScreenState extends State<HelpCenterScreen>
                         turns: isOpen ? 0.5 : 0,
                         duration: const Duration(milliseconds: 250),
                         child: Icon(
-                          Icons.keyboard_arrow_down_rounded,
+                          HugeIcons.strokeRoundedArrowDown01,
                           color: isOpen ? _brandBlue : _textMuted,
                           size: 22,
                         ),
@@ -481,7 +486,7 @@ class _HelpCenterScreenState extends State<HelpCenterScreen>
                   color: Colors.white.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(Icons.headset_mic_rounded, color: Colors.white, size: 22),
+                child: const Icon(HugeIcons.strokeRoundedHeadset, color: Colors.white, size: 22),
               ),
               const SizedBox(width: 14),
               Column(
@@ -511,7 +516,7 @@ class _HelpCenterScreenState extends State<HelpCenterScreen>
             children: [
               Expanded(
                 child: _contactButton(
-                  icon: Icons.chat_bubble_outline_rounded,
+                  icon: HugeIcons.strokeRoundedMessage01,
                   label: isKhmer ? 'ជជែក' : 'Live Chat',
                   onTap: () => Navigator.of(context).push(
                     MaterialPageRoute(
@@ -526,7 +531,7 @@ class _HelpCenterScreenState extends State<HelpCenterScreen>
               const SizedBox(width: 10),
               Expanded(
                 child: _contactButton(
-                  icon: Icons.email_outlined,
+                  icon: HugeIcons.strokeRoundedMail01,
                   label: isKhmer ? 'អ៊ីមែល' : 'Email Us',
                   onTap: () => _showContactDialog(isKhmer),
                 ),
@@ -555,7 +560,15 @@ class _HelpCenterScreenState extends State<HelpCenterScreen>
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, color: Colors.white, size: 18),
+            Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.20),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: Colors.white, size: 18),
+            ),
             const SizedBox(width: 8),
             Text(
               label,
@@ -584,7 +597,7 @@ class _HelpCenterScreenState extends State<HelpCenterScreen>
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.email_outlined, color: _brandBlue, size: 48),
+            Icon(HugeIcons.strokeRoundedMail01, color: _brandBlue, size: 48),
             const SizedBox(height: 12),
             Text(
               'support@kyservicecenter.com',

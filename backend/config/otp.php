@@ -10,4 +10,5 @@ return [
     'rate_limit_per_ip_10m' => (int) env('OTP_IP_RATE_PER_10M', 10),
     'email_subject' => env('OTP_EMAIL_SUBJECT', 'Your OTP Code'),
     'default_phone_country_code' => env('OTP_DEFAULT_PHONE_COUNTRY_CODE', '+855'),
+    'local_fallback' => filter_var(env('OTP_LOCAL_FALLBACK', false), FILTER_VALIDATE_BOOLEAN),
 ];

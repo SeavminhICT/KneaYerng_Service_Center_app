@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:hugeicons/hugeicons.dart';
 import 'package:intl/intl.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../models/pickup_ticket.dart';
 import '../../services/api_service.dart';
+import '../../widgets/empty_state_view.dart';
 import '../../widgets/page_transitions.dart';
 import 'ticket_detail_screen.dart';
 
@@ -231,7 +233,7 @@ class _TicketCard extends StatelessWidget {
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: const Icon(
-                      Icons.qr_code_2_rounded,
+                      HugeIcons.strokeRoundedQrCode01,
                       color: Color(0xFF2563EB),
                       size: 18,
                     ),
@@ -353,58 +355,13 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              height: 64,
-              width: 64,
-              decoration: BoxDecoration(
-                color: _surfaceAlt(context),
-                borderRadius: BorderRadius.circular(18),
-              ),
-              child: const Icon(
-                Icons.confirmation_number_outlined,
-                color: Color(0xFF2563EB),
-                size: 32,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              title,
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-                color: _textPrimary(context),
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 6),
-            Text(
-              subtitle,
-              style: TextStyle(fontSize: 12, color: _textMuted(context)),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 16),
-            OutlinedButton(
-              onPressed: onRetry,
-              style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 10,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: Text(AppLocalizations.of(context).retry),
-            ),
-          ],
-        ),
-      ),
+    return EmptyStateView(
+      icon: HugeIcons.strokeRoundedTicket01,
+      iconColor: const Color(0xFF2563EB),
+      title: title,
+      subtitle: subtitle,
+      actionLabel: AppLocalizations.of(context).retry,
+      onAction: onRetry,
     );
   }
 }

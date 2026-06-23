@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:hugeicons/hugeicons.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../services/api_service.dart';
@@ -206,7 +207,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                                       borderRadius: BorderRadius.circular(16),
                                     ),
                                     child: const Icon(
-                                      Icons.vpn_key_outlined,
+                                      HugeIcons.strokeRoundedSquareLockPassword,
                                       size: 28,
                                       color: _brandBlue,
                                     ),
@@ -241,7 +242,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                                   enableSuggestions: false,
                                   autoCorrect: false,
                                   prefixIcon: const Icon(
-                                    Icons.lock_outline_rounded,
+                                    HugeIcons.strokeRoundedSquareLock01,
                                     size: 24,
                                     color: _iconMuted,
                                   ),
@@ -253,8 +254,8 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                                     },
                                     icon: Icon(
                                       _obscurePassword
-                                          ? Icons.visibility_off_outlined
-                                          : Icons.visibility_outlined,
+                                          ? HugeIcons.strokeRoundedViewOffSlash
+                                          : HugeIcons.strokeRoundedView,
                                       size: 24,
                                       color: const Color(0xFFD4D0D1),
                                     ),
@@ -272,7 +273,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                                   textInputAction: TextInputAction.done,
                                   onSubmitted: _submit,
                                   prefixIcon: const Icon(
-                                    Icons.lock_outline_rounded,
+                                    HugeIcons.strokeRoundedSquareLock01,
                                     size: 24,
                                     color: _iconMuted,
                                   ),
@@ -284,8 +285,8 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                                     },
                                     icon: Icon(
                                       _obscureConfirm
-                                          ? Icons.visibility_off_outlined
-                                          : Icons.visibility_outlined,
+                                          ? HugeIcons.strokeRoundedViewOffSlash
+                                          : HugeIcons.strokeRoundedView,
                                       size: 24,
                                       color: const Color(0xFFD4D0D1),
                                     ),
@@ -465,7 +466,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                             color: Colors.black.withAlpha(22),
                           ),
                           child: const Icon(
-                            Icons.arrow_forward_rounded,
+                            HugeIcons.strokeRoundedArrowRight01,
                             color: Colors.white,
                             size: 24,
                           ),
@@ -493,7 +494,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
         constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
         splashRadius: 24,
         icon: const Icon(
-          Icons.arrow_back_ios_new_rounded,
+          HugeIcons.strokeRoundedArrowLeft01,
           color: _textPrimary,
           size: 24,
         ),

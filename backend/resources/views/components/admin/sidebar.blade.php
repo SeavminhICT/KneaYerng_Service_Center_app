@@ -20,72 +20,72 @@
     </div>
 
     <div class="flex-1 overflow-y-auto px-4 pb-6">
-        <p class="px-3 text-xs font-semibold uppercase tracking-widest text-slate-400">Overview</p>
+        <p class="px-3 text-xs font-semibold uppercase tracking-widest text-slate-400">{{ __('Overview') }}</p>
         <nav class="mt-4 space-y-2">
             <a href="{{ route('admin.dashboard') }}" class="flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium {{ request()->routeIs('admin.dashboard') ? $activeClass : $inactiveClass }}">
                 <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M3 12l9-9 9 9M4 10v10a1 1 0 001 1h5m4 0h5a1 1 0 001-1V10" />
                 </svg>
-                Dashboard
+                {{ __('Dashboard') }}
             </a>
             <a href="{{ route('admin.notifications.index') }}" class="flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium {{ request()->routeIs('admin.notifications.*') ? $activeClass : $inactiveClass }}">
                 <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.4-1.4a2 2 0 01-.6-1.42V11a6 6 0 10-12 0v3.18a2 2 0 01-.59 1.41L4 17h5m6 0a3 3 0 11-6 0m6 0H9" />
                 </svg>
-                Notifications
+                {{ __('Notifications') }}
             </a>
             <a href="{{ route('admin.reports.index') }}" class="flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium {{ request()->routeIs('admin.reports.*') ? $activeClass : $inactiveClass }}">
                 <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M9 17v-6m4 6V7m4 10v-3M4 21h16" />
                 </svg>
-                Reports
+                {{ __('Reports') }}
             </a>
               <a href="{{ route('admin.support.index') }}" class="flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium {{ request()->routeIs('admin.support.*') ? $activeClass : $inactiveClass }}">
                     <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M8 10h8M8 14h5m-7 6l-3 1 1-3V6a2 2 0 012-2h12a2 2 0 012 2v10a2 2 0 01-2 2H8z" />
                     </svg>
-                    Support Inbox
+                    {{ __('Support Inbox') }}
                 </a>
         </nav>
 
         <div class="mt-6">
-            <p class="px-3 text-xs font-semibold uppercase tracking-widest text-slate-400">Catalog</p>
+            <p class="px-3 text-xs font-semibold uppercase tracking-widest text-slate-400">{{ __('Catalog') }}</p>
             <nav class="mt-3 space-y-2">
                 <a href="{{ route('admin.categories.index') }}" class="flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium {{ request()->routeIs('admin.categories.*') ? $activeClass : $inactiveClass }}">
                     <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
                     </svg>
-                    Categories
+                    {{ __('Categories') }}
                 </a>
                 <a href="{{ route('admin.products.index') }}" class="flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium {{ request()->routeIs('admin.products.*') ? $activeClass : $inactiveClass }}">
                     <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 3l8 4-8 4-8-4 8-4zm0 8l8 4-8 4-8-4 8-4z" />
                     </svg>
-                    Products
+                    {{ __('Products') }}
                 </a>
                 <a href="{{ route('admin.product-attributes.index') }}" class="flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium {{ request()->routeIs('admin.product-attributes.*') ? $activeClass : $inactiveClass }}">
                     <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M8 7h8M8 12h8M8 17h8M4 7h.01M4 12h.01M4 17h.01" />
                     </svg>
-                    Product Master
+                    {{ __('Product Master') }}
                 </a>
                 <a href="{{ route('admin.accessories.index') }}" class="flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium {{ request()->routeIs('admin.accessories.*') ? $activeClass : $inactiveClass }}">
                     <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m6-6H6" />
                     </svg>
-                    Repair Parts
+                    {{ __('Repair Parts') }}
                 </a>
                 <a href="{{ route('admin.banners.index') }}" class="flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium {{ request()->routeIs('admin.banners.*') ? $activeClass : $inactiveClass }}">
                     <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 18H8m8 0h4M4 10h16M4 14h16" />
                     </svg>
-                    Banners
+                    {{ __('Banners') }}
                 </a>
             </nav>
         </div>
 
         <div class="mt-6">
-            <p class="px-3 text-xs font-semibold uppercase tracking-widest text-slate-400">Sales</p>
+            <p class="px-3 text-xs font-semibold uppercase tracking-widest text-slate-400">{{ __('Sales') }}</p>
             <nav class="mt-3 space-y-2">
                 @php
                     $salesOpen = request()->routeIs('admin.orders.*') || request()->routeIs('admin.vouchers.*');
@@ -100,7 +100,7 @@
                             <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M3 3h18v4H3zM5 7v13h14V7" />
                             </svg>
-                            Sales
+                            {{ __('Sales') }}
                         </div>
                         <svg class="h-4 w-4 transition-transform duration-200" :class="open ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
@@ -108,16 +108,16 @@
                     </button>
                     <div x-cloak x-show="open" class="mt-1 space-y-1 pl-4 pr-3">
                         <a href="{{ route('admin.orders.index') }}" class="block rounded-lg px-3 py-2 text-sm {{ request()->routeIs('admin.orders.index') ? $subActive : $subInactive }}">
-                            Order Dashboard
+                            {{ __('Order Dashboard') }}
                         </a>
                         <a href="{{ route('admin.orders.pickup') }}" class="block rounded-lg px-3 py-2 text-sm {{ request()->routeIs('admin.orders.pickup') ? $subActive : $subInactive }}">
-                            Checking Pick Up
+                            {{ __('Checking Pick Up') }}
                         </a>
                         <a href="{{ route('admin.orders.tracking') }}" class="block rounded-lg px-3 py-2 text-sm {{ request()->routeIs('admin.orders.tracking') ? $subActive : $subInactive }}">
-                            Tracking Order
+                            {{ __('Tracking Order') }}
                         </a>
                         <a href="{{ route('admin.vouchers.index') }}" class="block rounded-lg px-3 py-2 text-sm {{ request()->routeIs('admin.vouchers.*') ? $subActive : $subInactive }}">
-                                Voucher
+                                {{ __('Voucher') }}
                         </a>
                     </div>
                 </div>
@@ -126,13 +126,13 @@
                     <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a4 4 0 00-4-4h-1M9 20H4v-2a4 4 0 014-4h1m7-7a4 4 0 11-8 0 4 4 0 018 0zm8 0a3 3 0 11-6 0 3 3 0 016 0z" />
                     </svg>
-                    Customers
+                    {{ __('Customers') }}
                 </a>
                 <a href="{{ route('admin.payments.index') }}" class="flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium {{ request()->routeIs('admin.payments.*') ? $activeClass : $inactiveClass }}">
                     <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M3 8h18M3 12h18M5 16h14" />
                     </svg>
-                    Payments
+                    {{ __('Payments') }}
                 </a>
             </nav>
         </div>
@@ -157,19 +157,19 @@
         </div> --}}
 
         <div class="mt-6">
-            <p class="px-3 text-xs font-semibold uppercase tracking-widest text-slate-400">Inventory</p>
+            <p class="px-3 text-xs font-semibold uppercase tracking-widest text-slate-400">{{ __('Inventory') }}</p>
             <nav class="mt-3 space-y-2">
                 <a href="{{ route('admin.parts.index') }}" class="flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium {{ request()->routeIs('admin.parts.*') ? $activeClass : $inactiveClass }}">
                     <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M7 7h10M7 12h10M7 17h10M4 7h.01M4 12h.01M4 17h.01" />
                     </svg>
-                    Parts Inventory
+                    {{ __('Parts Inventory') }}
                 </a>
                 <a href="{{ route('admin.inventory.warranties') }}" class="flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium {{ request()->routeIs('admin.inventory.warranties') ? $activeClass : $inactiveClass }}">
                     <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4M4 7h16M7 21h10" />
                     </svg>
-                    Warranty Records
+                    {{ __('Warranty Records') }}
                 </a>
             </nav>
         </div>
@@ -199,20 +199,20 @@
         </div> --}}
 
         <div class="mt-6">
-            <p class="px-3 text-xs font-semibold uppercase tracking-widest text-slate-400">Access</p>
+            <p class="px-3 text-xs font-semibold uppercase tracking-widest text-slate-400">{{ __('Access') }}</p>
             <nav class="mt-3 space-y-2">
                 <a href="{{ route('admin.users.index') }}" class="flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium {{ request()->routeIs('admin.users.*') ? $activeClass : $inactiveClass }}">
                     <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 12a4 4 0 100-8 4 4 0 000 8zm6 8H6a6 6 0 0112 0z" />
                     </svg>
-                    User Management
+                    {{ __('User Management') }}
                 </a>
                 <a href="{{ route('admin.settings.index') }}" class="flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium {{ request()->routeIs('admin.settings.*') ? $activeClass : $inactiveClass }}">
                     <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.356.873 2.416 2.416a1.724 1.724 0 001.065 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.873 3.356-2.416 2.416a1.724 1.724 0 00-2.573 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.356-.873-2.416-2.416a1.724 1.724 0 00-1.065-2.573c-1.756-.426-1.756-2.924 0-3.35.492-.12.88-.51 1.065-1.066.94-1.543-.873-3.356-2.416-2.416a1.724 1.724 0 00-2.573-1.065z" />
                         <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                     </svg>
-                    Settings
+                    {{ __('Settings') }}
                 </a>
             </nav>
         </div>

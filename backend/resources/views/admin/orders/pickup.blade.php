@@ -105,6 +105,16 @@
             var pickupQrLastToken = null;
             var pickupTicketAutoTimer = null;
             var pickupTicketLastId = null;
+            var pickupSuccessAudio = new Audio('{{ asset('sounds/check.mp3') }}');
+
+            function playPickupSuccessSound() {
+                try {
+                    pickupSuccessAudio.currentTime = 0;
+                    pickupSuccessAudio.play().catch(function () {});
+                } catch (error) {
+                    console.error(error);
+                }
+            }
 
             function canUseLiveCamera() {
                 return !!(window.isSecureContext && navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
@@ -182,6 +192,7 @@
                     var order = payload.data || payload;
                     pickupQrStatus.textContent = 'Ticket verified and marked completed.';
                     renderPickupOrder(order);
+                    playPickupSuccessSound();
                 } catch (error) {
                     pickupQrStatus.textContent = 'Verification failed.';
                     renderPickupOrder(null, pickupQrStatus.textContent);
@@ -223,6 +234,7 @@
                     var order = payload.data || payload;
                     pickupQrStatus.textContent = 'Ticket verified and marked completed.';
                     renderPickupOrder(order);
+                    playPickupSuccessSound();
                 } catch (error) {
                     pickupQrStatus.textContent = 'Verification failed.';
                     renderPickupOrder(null, pickupQrStatus.textContent);

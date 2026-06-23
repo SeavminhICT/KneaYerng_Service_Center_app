@@ -96,11 +96,20 @@ class InfobipService
             $baseUrl = 'https://'.$baseUrl;
         }
 
+        $options = [
+            'verify' => (bool) config('infobip.verify', true),
+        ];
+        $caBundle = trim((string) config('infobip.ca_bundle', ''));
+        if ($caBundle !== '') {
+            $options['verify'] = $caBundle;
+        }
+
         return Http::baseUrl(rtrim($baseUrl, '/'))
             ->withHeaders([
                 'Authorization' => 'App '.$apiKey,
                 'Accept' => 'application/json',
             ])
+            ->withOptions($options)
             ->timeout(10);
     }
 }

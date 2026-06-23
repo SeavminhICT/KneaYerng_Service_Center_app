@@ -1,7 +1,8 @@
 ﻿import 'dart:async';
 
 import 'package:flutter/material.dart';
-import '../theme/app_fonts.dart';
+import 'package:flutter/services.dart';
+import 'package:hugeicons/hugeicons.dart';
 
 import '../l10n/app_localizations.dart';
 import '../models/pickup_ticket.dart';
@@ -46,7 +47,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
     with TickerProviderStateMixin {
   late int _currentIndex;
   int? _previousIndex;
-  int? _pressedNavIndex;
   bool _didOpenInitialPickupTicket = false;
   bool _didOpenInitialDeliveryTracking = false;
   late final AnimationController _tabTransitionController;
@@ -61,11 +61,11 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
   ];
 
   List<_NavItemData> _navItems(AppLocalizations l) => [
-    _NavItemData(label: l.home,      icon: Icons.home_outlined,          activeIcon: Icons.home_rounded),
-    _NavItemData(label: l.repair,    icon: Icons.build_outlined,         activeIcon: Icons.build_rounded),
-    _NavItemData(label: l.orders,    icon: Icons.receipt_long_outlined,  activeIcon: Icons.receipt_long_rounded),
-    _NavItemData(label: l.favorites, icon: Icons.favorite_border_rounded,activeIcon: Icons.favorite_rounded),
-    _NavItemData(label: l.profile,   icon: Icons.person_outline_rounded, activeIcon: Icons.person_rounded),
+    _NavItemData(label: l.home,      icon: HugeIcons.strokeRoundedHome01,         activeIcon: HugeIcons.strokeRoundedHome01),
+    _NavItemData(label: l.repair,    icon: HugeIcons.strokeRoundedWrench01,       activeIcon: HugeIcons.strokeRoundedWrench01),
+    _NavItemData(label: l.orders,    icon: HugeIcons.strokeRoundedDeliveryBox01,  activeIcon: HugeIcons.strokeRoundedDeliveryBox01),
+    _NavItemData(label: l.favorites, icon: HugeIcons.strokeRoundedFavourite,      activeIcon: HugeIcons.strokeRoundedFavourite),
+    _NavItemData(label: l.profile,   icon: HugeIcons.strokeRoundedUser,           activeIcon: HugeIcons.strokeRoundedUser),
   ];
 
   @override
@@ -113,7 +113,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
     setState(() {
       _previousIndex = _currentIndex;
       _currentIndex = index;
-      _pressedNavIndex = null;
     });
     _tabTransitionController
       ..stop()
@@ -158,7 +157,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
       floatingActionButton: _currentIndex != 4
           ? Padding(
               padding: const EdgeInsets.only(bottom: 82),
-              child: FloatingActionButton.extended(
+              child: FloatingActionButton(
                 onPressed: () => Navigator.of(context).push(
                   MaterialPageRoute(
                     builder: (_) => const SupportChatScreen(
@@ -173,14 +172,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(20),
                 ),
-                icon: const Icon(Icons.headset_mic_rounded, size: 20),
-                label: Text(
-                  AppLocalizations.of(context).support,
-                  style: kFont(context, 
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
+                child: const Icon(HugeIcons.strokeRoundedHeadset, size: 22),
               ),
             )
           : null,
@@ -198,18 +190,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
       bottomNavigationBar: _AnimatedBottomNavBar(
         items: _navItems(AppLocalizations.of(context)),
         activeIndex: _currentIndex,
-        pressedIndex: _pressedNavIndex,
-        onTapDown: (index) {
-          setState(() {
-            _pressedNavIndex = index;
-          });
-        },
-        onTapCancel: () {
-          if (_pressedNavIndex == null) return;
-          setState(() {
-            _pressedNavIndex = null;
-          });
-        },
         onTap: _onTabSelected,
       ),
     );
@@ -300,22 +280,42 @@ class _AnimatedTabStack extends StatelessWidget {
   }
 }
 
-class _AnimatedBottomNavBar extends StatelessWidget {
+class _AnimatedBottomNavBar extends StatefulWidget {
   const _AnimatedBottomNavBar({
     required this.items,
     required this.activeIndex,
-    required this.pressedIndex,
-    required this.onTapDown,
-    required this.onTapCancel,
     required this.onTap,
   });
 
   final List<_NavItemData> items;
   final int activeIndex;
-  final int? pressedIndex;
-  final ValueChanged<int> onTapDown;
-  final VoidCallback onTapCancel;
   final ValueChanged<int> onTap;
+
+  @override
+  State<_AnimatedBottomNavBar> createState() => _AnimatedBottomNavBarState();
+}
+
+class _AnimatedBottomNavBarState extends State<_AnimatedBottomNavBar> {
+  int? _slideIndex;
+
+  int _indexForDx(double dx, double width) {
+    final itemWidth = width / widget.items.length;
+    return (dx / itemWidth).floor().clamp(0, widget.items.length - 1);
+  }
+
+  void _updateSlide(Offset localPosition, double width) {
+    final index = _indexForDx(localPosition.dx, width);
+    if (_slideIndex == index) return;
+    setState(() => _slideIndex = index);
+    HapticFeedback.selectionClick();
+  }
+
+  void _endSlide() {
+    if (_slideIndex != null) {
+      widget.onTap(_slideIndex!);
+    }
+    setState(() => _slideIndex = null);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -333,10 +333,12 @@ class _AnimatedBottomNavBar extends StatelessWidget {
     final inactiveColor = isDark
         ? const Color(0xFF4A6070)
         : const Color(0xFFB0C4D0);
-    const activeLabelColor = Colors.black;
+    final activeLabelColor = isDark ? Colors.white : Colors.black;
     final inactiveLabelColor = isDark
         ? const Color(0xFF8AA0B0)
         : Colors.black54;
+
+    final highlightIndex = _slideIndex ?? widget.activeIndex;
 
     return Container(
       margin: EdgeInsets.fromLTRB(
@@ -366,29 +368,66 @@ class _AnimatedBottomNavBar extends StatelessWidget {
             ),
         ],
       ),
-      child: Row(
-        children: List.generate(items.length, (index) {
-          final item = items[index];
-          final active = index == activeIndex;
-          final pressed = index == pressedIndex;
-          return Expanded(
-            child: _BottomNavItem(
-              label: item.label,
-              icon: item.icon,
-              activeIcon: item.activeIcon,
-              active: active,
-              pressed: pressed,
-              activeColor: activeColor,
-              activeBgColor: activeBgColor,
-              inactiveColor: inactiveColor,
-              activeLabelColor: activeLabelColor,
-              inactiveLabelColor: inactiveLabelColor,
-              onTapDown: () => onTapDown(index),
-              onTapCancel: onTapCancel,
-              onTap: () => onTap(index),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final width = constraints.maxWidth;
+          final itemWidth = width / widget.items.length;
+
+          return GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onPanDown: (details) => _updateSlide(details.localPosition, width),
+            onPanUpdate: (details) => _updateSlide(details.localPosition, width),
+            onPanEnd: (_) => _endSlide(),
+            onPanCancel: () => setState(() => _slideIndex = null),
+            child: Stack(
+              alignment: Alignment.centerLeft,
+              children: [
+                AnimatedPositioned(
+                  duration: const Duration(milliseconds: 320),
+                  curve: Curves.easeOutCubic,
+                  left: highlightIndex * itemWidth + 6,
+                  top: 8,
+                  bottom: 8,
+                  width: itemWidth - 12,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: activeBgColor,
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: activeColor.withValues(alpha: 0.22),
+                          blurRadius: 14,
+                          spreadRadius: 0,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                Row(
+                  children: List.generate(widget.items.length, (index) {
+                    final item = widget.items[index];
+                    final active = index == widget.activeIndex;
+                    final pressed = index == _slideIndex && !active;
+                    return Expanded(
+                      child: _BottomNavItem(
+                        label: item.label,
+                        icon: item.icon,
+                        activeIcon: item.activeIcon,
+                        active: active,
+                        pressed: pressed || (active && _slideIndex == index),
+                        activeColor: activeColor,
+                        inactiveColor: inactiveColor,
+                        activeLabelColor: activeLabelColor,
+                        inactiveLabelColor: inactiveLabelColor,
+                      ),
+                    );
+                  }),
+                ),
+              ],
             ),
           );
-        }),
+        },
       ),
     );
   }
@@ -402,13 +441,9 @@ class _BottomNavItem extends StatelessWidget {
     required this.active,
     required this.pressed,
     required this.activeColor,
-    required this.activeBgColor,
     required this.inactiveColor,
     required this.activeLabelColor,
     required this.inactiveLabelColor,
-    required this.onTapDown,
-    required this.onTapCancel,
-    required this.onTap,
   });
 
   final String label;
@@ -417,86 +452,72 @@ class _BottomNavItem extends StatelessWidget {
   final bool active;
   final bool pressed;
   final Color activeColor;
-  final Color activeBgColor;
   final Color inactiveColor;
   final Color activeLabelColor;
   final Color inactiveLabelColor;
-  final VoidCallback onTapDown;
-  final VoidCallback onTapCancel;
-  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTapDown: (_) => onTapDown(),
-      onTapCancel: onTapCancel,
-      onTapUp: (_) => onTapCancel(),
-      onTap: onTap,
-      child: AnimatedScale(
-        duration: const Duration(milliseconds: 150),
-        curve: Curves.easeOut,
-        scale: pressed ? 0.88 : 1.0,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 300),
-              curve: Curves.easeInOut,
-              width: active ? 58 : 38,
-              height: 36,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: active ? activeBgColor : Colors.transparent,
-                borderRadius: BorderRadius.circular(18),
-                boxShadow: active
-                    ? [
-                        BoxShadow(
-                          color: activeColor.withValues(alpha: 0.22),
-                          blurRadius: 14,
-                          spreadRadius: 0,
-                          offset: const Offset(0, 4),
-                        ),
-                      ]
-                    : null,
+    return AnimatedScale(
+      duration: const Duration(milliseconds: 150),
+      curve: Curves.easeOut,
+      scale: pressed ? 0.88 : 1.0,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 220),
+            switchInCurve: Curves.easeOut,
+            switchOutCurve: Curves.easeIn,
+            transitionBuilder: (child, animation) => FadeTransition(
+              opacity: animation,
+              child: ScaleTransition(
+                scale: Tween<double>(begin: 0.85, end: 1.0).animate(animation),
+                child: child,
               ),
-              child: active
-                  ? _BrandIconGradient(
-                      child: Icon(activeIcon, size: 22),
-                    )
-                  : Icon(icon, color: inactiveColor, size: 22),
             ),
-            const SizedBox(height: 4),
-            AnimatedDefaultTextStyle(
+            child: active
+                ? _BrandIconGradient(
+                    key: const ValueKey('active'),
+                    child: Icon(activeIcon, size: 22),
+                  )
+                : Icon(
+                    icon,
+                    key: const ValueKey('inactive'),
+                    color: inactiveColor,
+                    size: 22,
+                  ),
+          ),
+          const SizedBox(height: 4),
+          AnimatedDefaultTextStyle(
+            duration: const Duration(milliseconds: 250),
+            curve: Curves.easeOut,
+            style: TextStyle(
+              color: active ? activeLabelColor : inactiveLabelColor,
+              fontSize: active ? 10.5 : 10,
+              fontWeight: active ? FontWeight.w800 : FontWeight.w600,
+              letterSpacing: active ? 0.3 : 0.1,
+              height: 1,
+            ),
+            child: AnimatedOpacity(
               duration: const Duration(milliseconds: 250),
-              curve: Curves.easeOut,
-              style: TextStyle(
-                color: active ? activeLabelColor : inactiveLabelColor,
-                fontSize: active ? 10.5 : 10,
-                fontWeight: active ? FontWeight.w800 : FontWeight.w600,
-                letterSpacing: active ? 0.3 : 0.1,
-                height: 1,
-              ),
-              child: AnimatedOpacity(
-                duration: const Duration(milliseconds: 250),
-                opacity: active ? 1.0 : 0.6,
-                child: Text(
-                  label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
+              opacity: active ? 1.0 : 0.6,
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 }
 
 class _BrandIconGradient extends StatelessWidget {
-  const _BrandIconGradient({required this.child});
+  const _BrandIconGradient({super.key, required this.child});
 
   final Widget child;
 

@@ -96,12 +96,12 @@ Future<bool> ensureLoggedIn(
                       message ??
                           'Please login or create an account\nto continue.',
                       textAlign: TextAlign.center,
-                      style: GoogleFonts.manrope(
+                      style: kmFont(context, GoogleFonts.manrope(
                         fontSize: 13.5,
                         fontWeight: FontWeight.w500,
                         color: Colors.white.withValues(alpha: 0.82),
                         height: 1.5,
-                      ),
+                      )),
                     ),
                   ],
                 ),
@@ -191,11 +191,11 @@ Future<bool> ensureLoggedIn(
                       ),
                       child: Text(
                         'Not now',
-                        style: GoogleFonts.manrope(
+                        style: kmFont(context, GoogleFonts.manrope(
                           fontSize: 13.5,
                           fontWeight: FontWeight.w600,
                           color: textSecondary,
-                        ),
+                        )),
                       ),
                     ),
                   ],

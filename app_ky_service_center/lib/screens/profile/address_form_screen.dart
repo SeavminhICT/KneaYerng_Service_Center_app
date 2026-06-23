@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:hugeicons/hugeicons.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../../l10n/app_localizations.dart';
@@ -173,7 +174,7 @@ class _AddressFormScreenState extends State<AddressFormScreen> {
                   width: double.infinity,
                   child: OutlinedButton.icon(
                     onPressed: _pickLocation,
-                    icon: const Icon(Icons.my_location),
+                    icon: const Icon(HugeIcons.strokeRoundedGps01),
                     label: Text(
                       _selectedLatLng == null
                           ? 'Pick Location'

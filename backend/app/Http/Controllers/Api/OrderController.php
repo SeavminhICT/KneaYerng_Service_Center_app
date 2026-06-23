@@ -21,6 +21,7 @@ use App\Services\OrderInventoryService;
 use App\Services\OrderTrackingService;
 use App\Services\TelegramOrderService;
 use App\Services\VoucherService;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Crypt;
@@ -174,6 +175,168 @@ class OrderController extends Controller
 
             fclose($handle);
         }, $fileName, ['Content-Type' => 'text/csv']);
+    }
+
+    public function exportPdf(Request $request)
+    {
+        $query = Order::query();
+        $this->applyOrderFilters($request, $query);
+        $query->orderByDesc('placed_at')->orderByDesc('id');
+
+        $orders = $query->select([
+            'order_number', 'customer_name', 'customer_email', 'order_type',
+            'payment_method', 'subtotal', 'delivery_fee', 'discount_amount',
+            'total_amount', 'payment_status', 'status', 'placed_at', 'created_at',
+        ])->limit(1000)->get();
+
+        $generatedAt = now()->format('d M Y, H:i') . ' ICT';
+        $fileName = 'orders-' . now()->format('Ymd-His') . '.pdf';
+
+        $pdf = Pdf::loadView('admin.orders.pdf.export', compact('orders', 'generatedAt'))
+            ->setPaper('a4', 'landscape');
+
+        return $pdf->download($fileName);
+    }
+
+    public function exportExcel(Request $request)
+    {
+        $query = Order::query();
+        $this->applyOrderFilters($request, $query);
+        $query->orderByDesc('placed_at')->orderByDesc('id');
+
+        $orders = $query->select([
+            'order_number', 'customer_name', 'customer_email', 'order_type',
+            'payment_method', 'subtotal', 'delivery_fee', 'voucher_code',
+            'discount_amount', 'total_amount', 'payment_status', 'status',
+            'placed_at', 'created_at',
+        ])->limit(5000)->get();
+
+        $fileName = 'orders-' . now()->format('Ymd-His') . '.xls';
+        $xml = $this->buildOrderExcelXml($orders);
+
+        return response($xml, 200, [
+            'Content-Type'        => 'application/vnd.ms-excel; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="' . $fileName . '"',
+            'Pragma'              => 'no-cache',
+            'Cache-Control'       => 'must-revalidate, post-check=0, pre-check=0',
+            'Expires'             => '0',
+        ]);
+    }
+
+    private function buildOrderExcelXml($orders): string
+    {
+        $now = now()->format('d M Y, H:i') . ' ICT';
+        $count = $orders->count();
+
+        $xml  = '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
+        $xml .= '<?mso-application progid="Excel.Sheet"?>' . "\n";
+        $xml .= '<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"' . "\n";
+        $xml .= ' xmlns:o="urn:schemas-microsoft-com:office:office"' . "\n";
+        $xml .= ' xmlns:x="urn:schemas-microsoft-com:office:excel"' . "\n";
+        $xml .= ' xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">' . "\n";
+
+        // ── Styles ──
+        $xml .= '<Styles>' . "\n";
+        $xml .= '<Style ss:ID="s_title"><Font ss:Bold="1" ss:Size="14" ss:Color="#1E293B"/></Style>' . "\n";
+        $xml .= '<Style ss:ID="s_meta"><Font ss:Size="9" ss:Color="#64748B"/></Style>' . "\n";
+        $xml .= '<Style ss:ID="s_hdr"><Font ss:Bold="1" ss:Color="#FFFFFF" ss:Size="9"/><Interior ss:Color="#1E293B" ss:Pattern="Solid"/><Alignment ss:Horizontal="Center" ss:Vertical="Center"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="2" ss:Color="#4F46E5"/></Borders></Style>' . "\n";
+        $xml .= '<Style ss:ID="s_odd"><Font ss:Size="9" ss:Color="#1E293B"/><Interior ss:Color="#FFFFFF" ss:Pattern="Solid"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/></Borders></Style>' . "\n";
+        $xml .= '<Style ss:ID="s_even"><Font ss:Size="9" ss:Color="#1E293B"/><Interior ss:Color="#F8FAFC" ss:Pattern="Solid"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/></Borders></Style>' . "\n";
+        $xml .= '<Style ss:ID="s_num_odd"><Font ss:Size="9" ss:Color="#1E293B"/><Interior ss:Color="#FFFFFF" ss:Pattern="Solid"/><NumberFormat ss:Format="#,##0.00"/><Alignment ss:Horizontal="Right"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/></Borders></Style>' . "\n";
+        $xml .= '<Style ss:ID="s_num_even"><Font ss:Size="9" ss:Color="#1E293B"/><Interior ss:Color="#F8FAFC" ss:Pattern="Solid"/><NumberFormat ss:Format="#,##0.00"/><Alignment ss:Horizontal="Right"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/></Borders></Style>' . "\n";
+        $xml .= '<Style ss:ID="s_foot_label"><Font ss:Bold="1" ss:Size="9" ss:Color="#0F172A"/><Interior ss:Color="#F1F5F9" ss:Pattern="Solid"/><Borders><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="2" ss:Color="#CBD5E1"/></Borders></Style>' . "\n";
+        $xml .= '<Style ss:ID="s_foot_num"><Font ss:Bold="1" ss:Size="9" ss:Color="#16A34A"/><Interior ss:Color="#F1F5F9" ss:Pattern="Solid"/><NumberFormat ss:Format="#,##0.00"/><Alignment ss:Horizontal="Right"/><Borders><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="2" ss:Color="#CBD5E1"/></Borders></Style>' . "\n";
+        $xml .= '<Style ss:ID="s_paid"><Font ss:Bold="1" ss:Size="9" ss:Color="#166534"/><Interior ss:Color="#DCFCE7" ss:Pattern="Solid"/><Alignment ss:Horizontal="Center"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/></Borders></Style>' . "\n";
+        $xml .= '<Style ss:ID="s_unpaid"><Font ss:Bold="1" ss:Size="9" ss:Color="#854D0E"/><Interior ss:Color="#FEF9C3" ss:Pattern="Solid"/><Alignment ss:Horizontal="Center"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/></Borders></Style>' . "\n";
+        $xml .= '<Style ss:ID="s_refunded"><Font ss:Bold="1" ss:Size="9" ss:Color="#5B21B6"/><Interior ss:Color="#EDE9FE" ss:Pattern="Solid"/><Alignment ss:Horizontal="Center"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/></Borders></Style>' . "\n";
+        $xml .= '<Style ss:ID="s_st_done"><Font ss:Bold="1" ss:Size="9" ss:Color="#166534"/><Alignment ss:Horizontal="Center"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/></Borders></Style>' . "\n";
+        $xml .= '<Style ss:ID="s_st_fail"><Font ss:Bold="1" ss:Size="9" ss:Color="#991B1B"/><Alignment ss:Horizontal="Center"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/></Borders></Style>' . "\n";
+        $xml .= '<Style ss:ID="s_st_prog"><Font ss:Bold="1" ss:Size="9" ss:Color="#1E40AF"/><Alignment ss:Horizontal="Center"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/></Borders></Style>' . "\n";
+        $xml .= '<Style ss:ID="s_st_def"><Font ss:Size="9" ss:Color="#475569"/><Alignment ss:Horizontal="Center"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/></Borders></Style>' . "\n";
+        $xml .= '</Styles>' . "\n";
+
+        // ── Worksheet ──
+        $xml .= '<Worksheet ss:Name="Orders">' . "\n";
+        $xml .= '<Table ss:DefaultColumnWidth="80">' . "\n";
+
+        // Column widths (13 columns total)
+        foreach ([40, 110, 120, 65, 85, 70, 65, 70, 75, 70, 80, 75, 110] as $w) {
+            $xml .= '<Column ss:Width="' . $w . '"/>' . "\n";
+        }
+
+        // Title row
+        $xml .= '<Row ss:Height="28"><Cell ss:MergeAcross="12" ss:StyleID="s_title"><Data ss:Type="String">KneaYerng Service Center — Orders Export</Data></Cell></Row>' . "\n";
+        $xml .= '<Row ss:Height="16"><Cell ss:MergeAcross="12" ss:StyleID="s_meta"><Data ss:Type="String">Generated: ' . htmlspecialchars($now) . '   |   Total records: ' . $count . '</Data></Cell></Row>' . "\n";
+        $xml .= '<Row ss:Height="8"></Row>' . "\n";
+
+        // Header row
+        $headers = ['#', 'Order Number', 'Customer Name', 'Type', 'Payment Method', 'Subtotal ($)', 'Del. Fee ($)', 'Discount ($)', 'Total ($)', 'Voucher', 'Pay Status', 'Order Status', 'Date'];
+        $xml .= '<Row ss:Height="22">' . "\n";
+        foreach ($headers as $h) {
+            $xml .= '<Cell ss:StyleID="s_hdr"><Data ss:Type="String">' . htmlspecialchars($h) . '</Data></Cell>' . "\n";
+        }
+        $xml .= '</Row>' . "\n";
+
+        // Data rows
+        $totalAmount = 0.0;
+        foreach ($orders as $i => $order) {
+            $even = ($i % 2 === 1);
+            $rowStyle = $even ? 's_even' : 's_odd';
+            $numStyle = $even ? 's_num_even' : 's_num_odd';
+
+            $payStatus = strtolower((string) ($order->payment_status ?? ''));
+            $payStyle  = match ($payStatus) {
+                'paid'             => 's_paid',
+                'unpaid', 'pending' => 's_unpaid',
+                'refunded'          => 's_refunded',
+                default             => $rowStyle,
+            };
+
+            $orderStatus = strtolower((string) ($order->status ?? ''));
+            $stStyle = match (true) {
+                \in_array($orderStatus, ['completed', 'delivered'])                                       => 's_st_done',
+                \in_array($orderStatus, ['cancelled', 'rejected'])                                        => 's_st_fail',
+                \in_array($orderStatus, ['in_progress', 'on_the_way', 'assigned', 'processing', 'approved']) => 's_st_prog',
+                default                                                                                   => 's_st_def',
+            };
+
+            $timestamp = $order->placed_at ?? $order->created_at;
+            $dateStr   = $timestamp ? $timestamp->format('d M Y H:i') : '';
+            $amount    = (float) ($order->total_amount ?? 0);
+            $totalAmount += $amount;
+
+            $xml .= '<Row ss:Height="18">' . "\n";
+            $xml .= '<Cell ss:StyleID="' . $rowStyle . '"><Data ss:Type="Number">' . ($i + 1) . '</Data></Cell>' . "\n";
+            $xml .= '<Cell ss:StyleID="' . $rowStyle . '"><Data ss:Type="String">' . htmlspecialchars((string) ($order->order_number ?? '')) . '</Data></Cell>' . "\n";
+            $xml .= '<Cell ss:StyleID="' . $rowStyle . '"><Data ss:Type="String">' . htmlspecialchars((string) ($order->customer_name ?? '')) . '</Data></Cell>' . "\n";
+            $xml .= '<Cell ss:StyleID="' . $rowStyle . '"><Data ss:Type="String">' . ucfirst((string) ($order->order_type ?? '')) . '</Data></Cell>' . "\n";
+            $xml .= '<Cell ss:StyleID="' . $rowStyle . '"><Data ss:Type="String">' . ucfirst(str_replace('_', ' ', (string) ($order->payment_method ?? ''))) . '</Data></Cell>' . "\n";
+            $xml .= '<Cell ss:StyleID="' . $numStyle . '"><Data ss:Type="Number">' . (float) ($order->subtotal ?? 0) . '</Data></Cell>' . "\n";
+            $xml .= '<Cell ss:StyleID="' . $numStyle . '"><Data ss:Type="Number">' . (float) ($order->delivery_fee ?? 0) . '</Data></Cell>' . "\n";
+            $xml .= '<Cell ss:StyleID="' . $numStyle . '"><Data ss:Type="Number">' . (float) ($order->discount_amount ?? 0) . '</Data></Cell>' . "\n";
+            $xml .= '<Cell ss:StyleID="' . $numStyle . '"><Data ss:Type="Number">' . $amount . '</Data></Cell>' . "\n";
+            $xml .= '<Cell ss:StyleID="' . $rowStyle . '"><Data ss:Type="String">' . htmlspecialchars((string) ($order->voucher_code ?? '')) . '</Data></Cell>' . "\n";
+            $xml .= '<Cell ss:StyleID="' . $payStyle . '"><Data ss:Type="String">' . ucfirst($payStatus) . '</Data></Cell>' . "\n";
+            $xml .= '<Cell ss:StyleID="' . $stStyle . '"><Data ss:Type="String">' . ucwords(str_replace('_', ' ', $orderStatus)) . '</Data></Cell>' . "\n";
+            $xml .= '<Cell ss:StyleID="' . $rowStyle . '"><Data ss:Type="String">' . $dateStr . '</Data></Cell>' . "\n";
+            $xml .= '</Row>' . "\n";
+        }
+
+        // Totals row — merges cols 0-7 (MergeAcross=7), then Total at col 8, then 4 empties
+        $xml .= '<Row ss:Height="20">' . "\n";
+        $xml .= '<Cell ss:MergeAcross="7" ss:StyleID="s_foot_label"><Data ss:Type="String">TOTAL (' . $count . ' orders)</Data></Cell>' . "\n";
+        $xml .= '<Cell ss:StyleID="s_foot_num"><Data ss:Type="Number">' . round($totalAmount, 2) . '</Data></Cell>' . "\n";
+        $xml .= '<Cell ss:StyleID="s_foot_label"><Data ss:Type="String"></Data></Cell>' . "\n";
+        $xml .= '<Cell ss:StyleID="s_foot_label"><Data ss:Type="String"></Data></Cell>' . "\n";
+        $xml .= '<Cell ss:StyleID="s_foot_label"><Data ss:Type="String"></Data></Cell>' . "\n";
+        $xml .= '<Cell ss:StyleID="s_foot_label"><Data ss:Type="String"></Data></Cell>' . "\n";
+        $xml .= '</Row>' . "\n";
+
+        $xml .= '</Table>' . "\n";
+        $xml .= '</Worksheet>' . "\n";
+        $xml .= '</Workbook>';
+
+        return $xml;
     }
 
     public function store(StoreOrderRequest $request)

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:http/http.dart' as http;
+import 'package:hugeicons/hugeicons.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../../l10n/app_localizations.dart';
@@ -463,7 +464,7 @@ class _DeliveryLocationPickerState extends State<DeliveryLocationPicker> {
                     point: _selectedPosition,
                     alignment: Alignment.topCenter,
                     child: const Icon(
-                      Icons.location_pin,
+                      HugeIcons.strokeRoundedPin02,
                       size: 46,
                       color: Color(0xFF2563EB),
                     ),
@@ -495,7 +496,7 @@ class _DeliveryLocationPickerState extends State<DeliveryLocationPicker> {
                               focusNode: _searchFocusNode,
                               decoration: InputDecoration(
                                 hintText: 'Search location...',
-                                prefixIcon: const Icon(Icons.search, size: 20),
+                                prefixIcon: const Icon(HugeIcons.strokeRoundedSearch01, size: 20),
                                 suffixIcon: _isSearching
                                     ? const Padding(
                                         padding: EdgeInsets.all(12),
@@ -509,7 +510,7 @@ class _DeliveryLocationPickerState extends State<DeliveryLocationPicker> {
                                       )
                                     : _searchController.text.isNotEmpty
                                     ? IconButton(
-                                        icon: const Icon(Icons.clear, size: 18),
+                                        icon: const Icon(HugeIcons.strokeRoundedCancel01, size: 18),
                                         onPressed: () {
                                           _searchController.clear();
                                           setState(() {
@@ -576,7 +577,7 @@ class _DeliveryLocationPickerState extends State<DeliveryLocationPicker> {
                               return ListTile(
                                 dense: true,
                                 leading: const Icon(
-                                  Icons.location_on_outlined,
+                                  HugeIcons.strokeRoundedLocation01,
                                   size: 20,
                                   color: Color(0xFF0F6BFF),
                                 ),
@@ -607,7 +608,7 @@ class _DeliveryLocationPickerState extends State<DeliveryLocationPicker> {
             bottom: 150,
             child: _MapFab(
               heroTag: 'current-location',
-              icon: Icons.my_location,
+              icon: HugeIcons.strokeRoundedGps02,
               onPressed: _isLocating ? null : _moveToCurrentLocation,
               isLoading: _isLocating,
             ),
@@ -787,14 +788,14 @@ class _MapStyleSwitch extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             _MapStyleButton(
-              icon: Icons.map_outlined,
+              icon: HugeIcons.strokeRoundedMapsLocation01,
               label: 'Map',
               selected: mapStyle == _MapStyle.street,
               onTap: onStreetSelected,
             ),
             const SizedBox(width: 4),
             _MapStyleButton(
-              icon: Icons.satellite_alt_outlined,
+              icon: HugeIcons.strokeRoundedSatellite01,
               label: 'Satellite',
               selected: mapStyle == _MapStyle.satellite,
               onTap: onSatelliteSelected,

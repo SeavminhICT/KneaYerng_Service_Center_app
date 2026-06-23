@@ -1,14 +1,17 @@
-﻿import 'dart:convert';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:hugeicons/hugeicons.dart';
 import '../../theme/app_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'package:skeletonizer/skeletonizer.dart';
 
 import '../../l10n/app_localizations.dart';
+import '../../models/product.dart';
 import '../../services/api_service.dart';
 import '../../widgets/app_network_image.dart';
+import '../products/product_detail_screen.dart';
 
 // ── Design tokens ─────────────────────────────────────────────────────────────
 const _primary = Color(0xFF3B6BFF);
@@ -20,38 +23,31 @@ const _dangerSoft = Color(0xFFFEE2E2);
 const _warning = Color(0xFFD97706);
 const _warningSoft = Color(0xFFFEF3C7);
 
-Color _bg(BuildContext ctx) =>
-    Theme.of(ctx).brightness == Brightness.dark
-        ? const Color(0xFF0D1117)
-        : const Color(0xFFF4F6FB);
+Color _bg(BuildContext ctx) => Theme.of(ctx).brightness == Brightness.dark
+    ? const Color(0xFF0D1117)
+    : const Color(0xFFF4F6FB);
 
-Color _surface(BuildContext ctx) =>
-    Theme.of(ctx).brightness == Brightness.dark
-        ? const Color(0xFF161B22)
-        : Colors.white;
+Color _surface(BuildContext ctx) => Theme.of(ctx).brightness == Brightness.dark
+    ? const Color(0xFF161B22)
+    : Colors.white;
 
-Color _ink(BuildContext ctx) =>
-    Theme.of(ctx).brightness == Brightness.dark
-        ? const Color(0xFFE6EDF7)
-        : const Color(0xFF111827);
+Color _ink(BuildContext ctx) => Theme.of(ctx).brightness == Brightness.dark
+    ? const Color(0xFFE6EDF7)
+    : const Color(0xFF111827);
 
-Color _muted(BuildContext ctx) =>
-    Theme.of(ctx).brightness == Brightness.dark
-        ? const Color(0xFF7D8FA9)
-        : const Color(0xFF64748B);
+Color _muted(BuildContext ctx) => Theme.of(ctx).brightness == Brightness.dark
+    ? const Color(0xFF7D8FA9)
+    : const Color(0xFF64748B);
 
-Color _border(BuildContext ctx) =>
-    Theme.of(ctx).brightness == Brightness.dark
-        ? const Color(0xFF2B3442)
-        : const Color(0xFFE5EAF2);
+Color _border(BuildContext ctx) => Theme.of(ctx).brightness == Brightness.dark
+    ? const Color(0xFF2B3442)
+    : const Color(0xFFE5EAF2);
 
-Color _imageBg(BuildContext ctx) =>
-    Theme.of(ctx).brightness == Brightness.dark
-        ? const Color(0xFF1D2635)
-        : const Color(0xFFF0F4FC);
+Color _imageBg(BuildContext ctx) => Theme.of(ctx).brightness == Brightness.dark
+    ? const Color(0xFF1D2635)
+    : const Color(0xFFF0F4FC);
 
-bool _isDark(BuildContext ctx) =>
-    Theme.of(ctx).brightness == Brightness.dark;
+bool _isDark(BuildContext ctx) => Theme.of(ctx).brightness == Brightness.dark;
 
 // ── Screen ────────────────────────────────────────────────────────────────────
 
@@ -71,7 +67,9 @@ class _RepairScreenState extends State<RepairScreen> {
   @override
   void initState() {
     super.initState();
-    _searchCtrl.addListener(() { if (mounted) setState(() {}); });
+    _searchCtrl.addListener(() {
+      if (mounted) setState(() {});
+    });
     _load();
   }
 
@@ -82,7 +80,10 @@ class _RepairScreenState extends State<RepairScreen> {
   }
 
   Future<void> _load() async {
-    setState(() { _loading = true; _error = null; });
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
     try {
       final res = await http.get(
         Uri.parse('${ApiService.baseUrl}/accessories'),
@@ -92,15 +93,25 @@ class _RepairScreenState extends State<RepairScreen> {
       final decoded = jsonDecode(res.body);
       final raw = decoded is Map ? decoded['data'] : null;
       final list = raw is List
-          ? raw.whereType<Map>()
-              .map((e) => _RepairAccessory.fromJson(Map<String, dynamic>.from(e)))
-              .toList()
+          ? raw
+                .whereType<Map>()
+                .map(
+                  (e) =>
+                      _RepairAccessory.fromJson(Map<String, dynamic>.from(e)),
+                )
+                .toList()
           : <_RepairAccessory>[];
       if (!mounted) return;
-      setState(() { _items = list; _loading = false; });
+      setState(() {
+        _items = list;
+        _loading = false;
+      });
     } catch (_) {
       if (!mounted) return;
-      setState(() { _loading = false; _error = 'Could not load. Pull down to retry.'; });
+      setState(() {
+        _loading = false;
+        _error = 'Could not load. Pull down to retry.';
+      });
     }
   }
 
@@ -139,9 +150,6 @@ class _RepairScreenState extends State<RepairScreen> {
               // ── Header ────────────────────────────────────────────────
               SliverToBoxAdapter(child: _Header(l: l)),
 
-              // ── Hero banner ───────────────────────────────────────────
-              const SliverToBoxAdapter(child: _HeroBanner()),
-
               // ── Search bar ────────────────────────────────────────────
               SliverToBoxAdapter(
                 child: Padding(
@@ -158,11 +166,11 @@ class _RepairScreenState extends State<RepairScreen> {
                     children: [
                       Text(
                         'Parts & Accessories',
-                        style: GoogleFonts.manrope(
+                        style: kmFont(context, GoogleFonts.manrope(
                           fontSize: 16,
                           fontWeight: FontWeight.w800,
                           color: _ink(context),
-                        ),
+                        )),
                       ),
                       const Spacer(),
                       if (!_loading && _error == null)
@@ -177,11 +185,11 @@ class _RepairScreenState extends State<RepairScreen> {
                           ),
                           child: Text(
                             '${items.length} items',
-                            style: GoogleFonts.manrope(
+                            style: kmFont(context, GoogleFonts.manrope(
                               fontSize: 12,
                               fontWeight: FontWeight.w700,
                               color: _primary,
-                            ),
+                            )),
                           ),
                         ),
                     ],
@@ -221,7 +229,7 @@ class _RepairScreenState extends State<RepairScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   sliver: SliverToBoxAdapter(
                     child: _StateCard(
-                      icon: Icons.wifi_off_rounded,
+                      icon: HugeIcons.strokeRoundedWifiOff01,
                       iconColor: _danger,
                       iconBg: _dangerSoft,
                       title: l.somethingWentWrong,
@@ -236,7 +244,7 @@ class _RepairScreenState extends State<RepairScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   sliver: SliverToBoxAdapter(
                     child: _StateCard(
-                      icon: Icons.inventory_2_outlined,
+                      icon: HugeIcons.strokeRoundedPackage,
                       iconColor: _muted(context),
                       iconBg: _imageBg(context),
                       title: l.noData,
@@ -284,21 +292,21 @@ class _Header extends StatelessWidget {
             children: [
               Text(
                 l.repairService,
-                style: GoogleFonts.manrope(
+                style: kmFont(context, GoogleFonts.manrope(
                   fontSize: 26,
                   fontWeight: FontWeight.w800,
                   color: _ink(context),
                   letterSpacing: -0.5,
-                ),
+                )),
               ),
               const SizedBox(height: 2),
               Text(
                 'Genuine parts & professional repair',
-                style: GoogleFonts.manrope(
+                style: kmFont(context, GoogleFonts.manrope(
                   fontSize: 13,
                   fontWeight: FontWeight.w500,
                   color: _muted(context),
-                ),
+                )),
               ),
             ],
           ),
@@ -311,7 +319,7 @@ class _Header extends StatelessWidget {
               borderRadius: BorderRadius.circular(14),
             ),
             child: const Icon(
-              Icons.build_circle_rounded,
+              HugeIcons.strokeRoundedWrench01,
               color: _primary,
               size: 22,
             ),
@@ -322,119 +330,6 @@ class _Header extends StatelessWidget {
   }
 }
 
-// ── Hero Banner ───────────────────────────────────────────────────────────────
-
-class _HeroBanner extends StatelessWidget {
-  const _HeroBanner();
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = _isDark(context);
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
-      child: Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20),
-          gradient: LinearGradient(
-            colors: isDark
-                ? [const Color(0xFF1B2A4A), const Color(0xFF1A3360)]
-                : [const Color(0xFF3B6BFF), const Color(0xFF6B8FFF)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.18),
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                    child: Text(
-                      'KY Service Center',
-                      style: GoogleFonts.manrope(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.white.withValues(alpha: 0.9),
-                        letterSpacing: 0.3,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    'We Fix.\nYou Relax.',
-                    style: kFont(context, 
-                      fontSize: 22,
-                      fontWeight: FontWeight.w800,
-                      color: Colors.white,
-                      height: 1.2,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Fast diagnosis · Quality parts\nProfessional repair',
-                    style: GoogleFonts.manrope(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.white.withValues(alpha: 0.8),
-                      height: 1.5,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 16),
-            // Illustration
-            Column(
-              children: [
-                Container(
-                  width: 72,
-                  height: 72,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.18),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: const Icon(
-                    Icons.build_rounded,
-                    color: Colors.white,
-                    size: 36,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Container(
-                  width: 72,
-                  height: 28,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  alignment: Alignment.center,
-                  child: Text(
-                    'Book Now',
-                    style: GoogleFonts.manrope(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w800,
-                      color: _primary,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
 
 // ── Search Bar ────────────────────────────────────────────────────────────────
 
@@ -451,7 +346,9 @@ class _SearchBar extends StatelessWidget {
         border: Border.all(color: _border(context)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: _isDark(context) ? 0.2 : 0.05),
+            color: Colors.black.withValues(
+              alpha: _isDark(context) ? 0.2 : 0.05,
+            ),
             blurRadius: 10,
             offset: const Offset(0, 3),
           ),
@@ -461,29 +358,40 @@ class _SearchBar extends StatelessWidget {
         controller: controller,
         textInputAction: TextInputAction.search,
         onTapOutside: (_) => FocusScope.of(context).unfocus(),
-        style: GoogleFonts.manrope(
+        style: kmFont(context, GoogleFonts.manrope(
           fontSize: 14,
           fontWeight: FontWeight.w600,
           color: _ink(context),
-        ),
+        )),
         decoration: InputDecoration(
           hintText: 'Search by name, brand…',
-          hintStyle: GoogleFonts.manrope(
+          hintStyle: kmFont(context, GoogleFonts.manrope(
             fontSize: 14,
             fontWeight: FontWeight.w500,
             color: _muted(context),
+          )),
+          prefixIcon: Icon(
+            HugeIcons.strokeRoundedSearch01,
+            color: _muted(context),
+            size: 22,
           ),
-          prefixIcon: Icon(Icons.search_rounded, color: _muted(context), size: 22),
           suffixIcon: controller.text.isNotEmpty
               ? IconButton(
-                  icon: Icon(Icons.close_rounded, color: _muted(context), size: 20),
+                  icon: Icon(
+                    HugeIcons.strokeRoundedCancel01,
+                    color: _muted(context),
+                    size: 20,
+                  ),
                   onPressed: controller.clear,
                 )
               : null,
           counterText: '',
           filled: true,
           fillColor: _surface(context),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 14,
+          ),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(14),
             borderSide: BorderSide.none,
@@ -514,140 +422,160 @@ class _AccessoryCard extends StatelessWidget {
     final inStock = item.stock > 0;
     final hasDiscount = item.hasDiscount;
     final warranty = (item.warranty ?? '').trim();
-    final hasWarranty = warranty.isNotEmpty && warranty.toLowerCase() != 'no warranty';
+    final hasWarranty =
+        warranty.isNotEmpty && warranty.toLowerCase() != 'no warranty';
 
-    return Container(
-      decoration: BoxDecoration(
-        color: _surface(context),
+    return Material(
+      color: _surface(context),
+      borderRadius: BorderRadius.circular(18),
+      child: InkWell(
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: _border(context)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.06),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // ── Image ──────────────────────────────────────────────────
-            _ItemImage(imageUrl: item.imageUrl),
-            const SizedBox(width: 14),
-            // ── Content ────────────────────────────────────────────────
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Brand pill
-                  if (item.brandLabel != 'Unknown')
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: _primarySoft,
-                        borderRadius: BorderRadius.circular(999),
-                      ),
-                      child: Text(
-                        item.brandLabel.toUpperCase(),
-                        style: GoogleFonts.manrope(
-                          fontSize: 9,
-                          fontWeight: FontWeight.w800,
-                          color: _primary,
-                          letterSpacing: 0.5,
-                        ),
-                      ),
-                    ),
-                  const SizedBox(height: 5),
-                  // Name
-                  Text(
-                    item.name,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.manrope(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                      color: _ink(context),
-                      height: 1.3,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  // Price row
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text(
-                        '\$${item.finalPrice.toStringAsFixed(2)}',
-                        style: GoogleFonts.manrope(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w800,
-                          color: hasDiscount ? _danger : _primary,
-                          height: 1,
-                        ),
-                      ),
-                      if (hasDiscount) ...[
-                        const SizedBox(width: 6),
-                        Text(
-                          '\$${item.basePrice.toStringAsFixed(2)}',
-                          style: GoogleFonts.manrope(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                            color: _muted(context),
-                            decoration: TextDecoration.lineThrough,
-                            decorationColor: _muted(context),
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: _dangerSoft,
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            '-${(((item.basePrice - item.finalPrice) / item.basePrice) * 100).toStringAsFixed(0)}%',
-                            style: GoogleFonts.manrope(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w800,
-                              color: _danger,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  // Bottom row: stock + warranty
-                  Row(
-                    children: [
-                      _StatusChip(
-                        label: inStock ? 'In Stock' : 'Out of Stock',
-                        color: inStock ? _success : _danger,
-                        bg: inStock ? _successSoft : _dangerSoft,
-                        icon: inStock
-                            ? Icons.check_circle_rounded
-                            : Icons.cancel_rounded,
-                      ),
-                      if (hasWarranty) ...[
-                        const SizedBox(width: 6),
-                        _StatusChip(
-                          label: warranty,
-                          color: _warning,
-                          bg: _warningSoft,
-                          icon: Icons.shield_rounded,
-                        ),
-                      ],
-                    ],
-                  ),
-                ],
+        onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => ProductDetailScreen(
+                product: Product.fromJson(item.raw),
+                showCartActions: false,
               ),
             ),
-          ],
+          );
+        },
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: _border(context)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.06),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // ── Image ──────────────────────────────────────────────────
+                _ItemImage(imageUrl: item.imageUrl),
+                const SizedBox(width: 14),
+                // ── Content ────────────────────────────────────────────────
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Brand pill
+                      if (item.brandLabel != 'Unknown')
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 3,
+                          ),
+                          decoration: BoxDecoration(
+                            color: _primarySoft,
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Text(
+                            item.brandLabel.toUpperCase(),
+                            style: kmFont(context, GoogleFonts.manrope(
+                              fontSize: 9,
+                              fontWeight: FontWeight.w800,
+                              color: _primary,
+                              letterSpacing: 0.5,
+                            )),
+                          ),
+                        ),
+                      const SizedBox(height: 5),
+                      // Name
+                      Text(
+                        item.name,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: kmFont(context, GoogleFonts.manrope(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          color: _ink(context),
+                          height: 1.3,
+                        )),
+                      ),
+                      const SizedBox(height: 8),
+                      // Price row
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(
+                            '\$${item.finalPrice.toStringAsFixed(2)}',
+                            style: kmFont(context, GoogleFonts.manrope(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w800,
+                              color: hasDiscount ? _danger : _primary,
+                              height: 1,
+                            )),
+                          ),
+                          if (hasDiscount) ...[
+                            const SizedBox(width: 6),
+                            Text(
+                              '\$${item.basePrice.toStringAsFixed(2)}',
+                              style: kmFont(context, GoogleFonts.manrope(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                                color: _muted(context),
+                                decoration: TextDecoration.lineThrough,
+                                decorationColor: _muted(context),
+                              )),
+                            ),
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: _dangerSoft,
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                '-${(((item.basePrice - item.finalPrice) / item.basePrice) * 100).toStringAsFixed(0)}%',
+                                style: kmFont(context, GoogleFonts.manrope(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w800,
+                                  color: _danger,
+                                )),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      // Bottom row: stock + warranty
+                      Row(
+                        children: [
+                          _StatusChip(
+                            label: inStock ? 'In Stock' : 'Out of Stock',
+                            color: inStock ? _success : _danger,
+                            bg: inStock ? _successSoft : _dangerSoft,
+                            icon: inStock
+                                ? HugeIcons.strokeRoundedCheckmarkCircle02
+                                : HugeIcons.strokeRoundedCancelCircle,
+                          ),
+                          if (hasWarranty) ...[
+                            const SizedBox(width: 6),
+                            _StatusChip(
+                              label: warranty,
+                              color: _warning,
+                              bg: _warningSoft,
+                              icon: HugeIcons.strokeRoundedShield01,
+                            ),
+                          ],
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -684,11 +612,11 @@ class _StatusChip extends StatelessWidget {
           const SizedBox(width: 4),
           Text(
             label,
-            style: GoogleFonts.manrope(
+            style: kmFont(context, GoogleFonts.manrope(
               fontSize: 11,
               fontWeight: FontWeight.w700,
               color: color,
-            ),
+            )),
           ),
         ],
       ),
@@ -730,7 +658,7 @@ class _ImageFallback extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: Icon(
-        Icons.build_circle_outlined,
+        HugeIcons.strokeRoundedWrench01,
         size: 32,
         color: _muted(context),
       ),
@@ -773,31 +701,28 @@ class _StateCard extends StatelessWidget {
           Container(
             width: 72,
             height: 72,
-            decoration: BoxDecoration(
-              color: iconBg,
-              shape: BoxShape.circle,
-            ),
+            decoration: BoxDecoration(color: iconBg, shape: BoxShape.circle),
             child: Icon(icon, color: iconColor, size: 32),
           ),
           const SizedBox(height: 16),
           Text(
             title,
-            style: GoogleFonts.manrope(
+            style: kmFont(context, GoogleFonts.manrope(
               fontSize: 17,
               fontWeight: FontWeight.w800,
               color: _ink(context),
-            ),
+            )),
           ),
           const SizedBox(height: 6),
           Text(
             subtitle,
             textAlign: TextAlign.center,
-            style: GoogleFonts.manrope(
+            style: kmFont(context, GoogleFonts.manrope(
               fontSize: 13,
               fontWeight: FontWeight.w500,
               color: _muted(context),
               height: 1.5,
-            ),
+            )),
           ),
           if (buttonLabel != null && onButton != null) ...[
             const SizedBox(height: 20),
@@ -816,7 +741,7 @@ class _StateCard extends StatelessWidget {
                 ),
                 child: Text(
                   buttonLabel!,
-                  style: GoogleFonts.manrope(fontWeight: FontWeight.w700),
+                  style: kmFont(context, GoogleFonts.manrope(fontWeight: FontWeight.w700)),
                 ),
               ),
             ),
@@ -840,6 +765,7 @@ class _RepairAccessory {
     this.warranty,
     this.createdAt,
     this.imageUrl,
+    this.raw = const {},
   });
 
   final int id;
@@ -851,6 +777,7 @@ class _RepairAccessory {
   final String? warranty;
   final DateTime? createdAt;
   final String? imageUrl;
+  final Map<String, dynamic> raw;
 
   bool get hasDiscount => basePrice > 0 && finalPrice < basePrice;
 
@@ -863,8 +790,15 @@ class _RepairAccessory {
     final image = ApiService.normalizeMediaUrl(
       json['image'] ?? json['thumbnail'] ?? json['photo'] ?? json['image_url'],
     );
-    final base = _d(json['price'] ?? json['regular_price'] ?? json['original_price']);
-    final final_ = _d(json['final_price'] ?? json['sale_price'] ?? json['selling_price'] ?? base);
+    final base = _d(
+      json['price'] ?? json['regular_price'] ?? json['original_price'],
+    );
+    final final_ = _d(
+      json['final_price'] ??
+          json['sale_price'] ??
+          json['selling_price'] ??
+          base,
+    );
 
     return _RepairAccessory(
       id: _i(json['id']),
@@ -876,6 +810,7 @@ class _RepairAccessory {
       warranty: json['warranty']?.toString(),
       createdAt: DateTime.tryParse((json['created_at'] ?? '').toString()),
       imageUrl: image,
+      raw: json,
     );
   }
 

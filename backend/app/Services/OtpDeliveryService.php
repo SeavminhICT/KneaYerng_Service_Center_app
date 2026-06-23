@@ -7,8 +7,11 @@ use Illuminate\Support\Facades\Mail;
 
 class OtpDeliveryService
 {
-    public function __construct(private UnimatrixOtpService $unimatrix)
-    {
+    public function __construct(
+        private UnimatrixOtpService $unimatrix,
+        private InfobipService $infobip,
+        private TwilioOtpService $twilio,
+    ) {
     }
 
     public function send(string $destinationType, string $destination, string $message, array $context = []): bool
@@ -18,6 +21,18 @@ class OtpDeliveryService
         }
 
         if ($destinationType === 'phone') {
+            $provider = strtolower(trim((string) config('services.otp.sms_provider', 'unimatrix')));
+
+            if ($provider === 'infobip') {
+                return $this->sendViaInfobip($destination, $message);
+            }
+
+            if ($provider === 'twilio') {
+                $to = str_starts_with($destination, '+') ? $destination : '+'.$destination;
+
+                return $this->twilio->sendSms($to, $message);
+            }
+
             $code = (string) ($context['code'] ?? '');
             if ($code !== '') {
                 return $this->unimatrix->sendOtpCode(
@@ -36,6 +51,21 @@ class OtpDeliveryService
         ]);
 
         return false;
+    }
+
+    private function sendViaInfobip(string $phone, string $message): bool
+    {
+        $to = ltrim($phone, '+');
+
+        try {
+            return $this->infobip->sendSms($to, $message);
+        } catch (\Throwable $exception) {
+            Log::warning('Infobip OTP SMS send failed.', [
+                'message' => $exception->getMessage(),
+            ]);
+
+            return false;
+        }
     }
 
     public function sendEmail(string $email, string $message, array $context = []): bool

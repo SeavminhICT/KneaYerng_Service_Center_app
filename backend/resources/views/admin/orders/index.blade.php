@@ -47,8 +47,61 @@
                 <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Order List</h2>
                 <p class="text-sm text-slate-500">Monitor fulfillment, payment status, and delivery progress.</p>
             </div>
-            <div class="flex items-center gap-3">
-                <button id="order-export" class="inline-flex h-10 items-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-600 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300">Export CSV</button>
+            <div class="relative flex items-center gap-3" id="export-dropdown-wrap">
+                <button id="export-dropdown-btn" class="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-600 shadow-sm transition hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800">
+                    <svg class="h-4 w-4 opacity-70" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                    Export
+                    <svg class="h-3 w-3 opacity-50" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                    </svg>
+                </button>
+                <div id="export-dropdown-menu" class="absolute right-0 top-12 z-50 hidden w-52 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg dark:border-slate-800 dark:bg-slate-900">
+                    <div class="px-3 py-2 text-xs font-semibold uppercase tracking-widest text-slate-400">Export as</div>
+                    <div class="border-t border-slate-100 dark:border-slate-800">
+                        <button id="order-export-csv" class="flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm text-slate-600 transition hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800">
+                            {{-- CSV: document with corner-fold + data rows --}}
+                            <svg class="h-7 w-7 flex-shrink-0" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M4 4C4 2.9 4.9 2 6 2H14L22 10V24C22 25.1 21.1 26 20 26H6C4.9 26 4 25.1 4 24V4Z" fill="#64748B"/>
+                                <path d="M14 2L22 10H16C14.9 10 14 9.1 14 8V2Z" fill="#334155"/>
+                                <rect x="7" y="13" width="12" height="1.5" rx="0.75" fill="white" opacity="0.9"/>
+                                <rect x="7" y="16.5" width="12" height="1.5" rx="0.75" fill="white" opacity="0.8"/>
+                                <rect x="7" y="20" width="8" height="1.5" rx="0.75" fill="white" opacity="0.65"/>
+                            </svg>
+                            <span>
+                                <span class="block font-medium">CSV Spreadsheet</span>
+                                <span class="block text-xs text-slate-400">All columns, unlimited rows</span>
+                            </span>
+                        </button>
+                        <button id="order-export-excel" class="flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm text-slate-600 transition hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800">
+                            {{-- Excel: green rounded square with white × (Microsoft Excel logo style) --}}
+                            <svg class="h-7 w-7 flex-shrink-0" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <rect width="28" height="28" rx="5" fill="#1D6F42"/>
+                                <rect x="5" y="11.75" width="18" height="4.5" rx="2.25" transform="rotate(45 14 14)" fill="white"/>
+                                <rect x="5" y="11.75" width="18" height="4.5" rx="2.25" transform="rotate(-45 14 14)" fill="white"/>
+                            </svg>
+                            <span>
+                                <span class="block font-medium">Excel Workbook</span>
+                                <span class="block text-xs text-slate-400">Styled cells, up to 5 000 rows</span>
+                            </span>
+                        </button>
+                        <button id="order-export-pdf" class="flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm text-slate-600 transition hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800">
+                            {{-- PDF: red document with corner-fold + PDF label band --}}
+                            <svg class="h-7 w-7 flex-shrink-0" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M4 4C4 2.9 4.9 2 6 2H14L22 10V24C22 25.1 21.1 26 20 26H6C4.9 26 4 25.1 4 24V4Z" fill="#DC2626"/>
+                                <path d="M14 2L22 10H16C14.9 10 14 9.1 14 8V2Z" fill="#991B1B"/>
+                                <rect x="4" y="12" width="18" height="7" fill="#B91C1C"/>
+                                <text x="13" y="17.5" font-family="Arial, sans-serif" font-size="5.8" font-weight="bold" fill="white" text-anchor="middle">PDF</text>
+                                <rect x="7" y="21.5" width="11" height="1.5" rx="0.75" fill="white" opacity="0.65"/>
+                            </svg>
+                            <span>
+                                <span class="block font-medium">PDF Report</span>
+                                <span class="block text-xs text-slate-400">Print-ready, up to 1 000 rows</span>
+                            </span>
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -153,7 +206,8 @@
             var nextButton = document.getElementById('order-next');
             var info = document.getElementById('order-pagination-info');
             var rows = document.getElementById('order-rows');
-            var exportButton = document.getElementById('order-export');
+            var exportDropdownBtn  = document.getElementById('export-dropdown-btn');
+            var exportDropdownMenu = document.getElementById('export-dropdown-menu');
             var shiftSummarySubtitle = document.getElementById('shift-summary-subtitle');
             var currencyFormatter = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
             var latestOrders = [];
@@ -712,14 +766,49 @@
                 currentPage += 1;
                 loadOrders();
             });
-            if (exportButton) {
-                exportButton.addEventListener('click', function () {
-                    var query = buildOrderQuery();
-                    var url = '/api/admin/orders/export';
-                    if (query.toString()) {
-                        url += '?' + query.toString();
-                    }
-                    window.location.href = url;
+            function buildExportUrl(endpoint) {
+                var query = buildOrderQuery();
+                var url = '/api/admin/orders/' + endpoint;
+                if (query.toString()) {
+                    url += '?' + query.toString();
+                }
+                return url;
+            }
+
+            function closeExportDropdown() {
+                exportDropdownMenu.classList.add('hidden');
+            }
+
+            if (exportDropdownBtn) {
+                exportDropdownBtn.addEventListener('click', function (e) {
+                    e.stopPropagation();
+                    exportDropdownMenu.classList.toggle('hidden');
+                });
+            }
+
+            document.addEventListener('click', closeExportDropdown);
+
+            var csvBtn = document.getElementById('order-export-csv');
+            if (csvBtn) {
+                csvBtn.addEventListener('click', function () {
+                    window.location.href = buildExportUrl('export');
+                    closeExportDropdown();
+                });
+            }
+
+            var excelBtn = document.getElementById('order-export-excel');
+            if (excelBtn) {
+                excelBtn.addEventListener('click', function () {
+                    window.location.href = buildExportUrl('export-excel');
+                    closeExportDropdown();
+                });
+            }
+
+            var pdfBtn = document.getElementById('order-export-pdf');
+            if (pdfBtn) {
+                pdfBtn.addEventListener('click', function () {
+                    window.location.href = buildExportUrl('export-pdf');
+                    closeExportDropdown();
                 });
             }
 

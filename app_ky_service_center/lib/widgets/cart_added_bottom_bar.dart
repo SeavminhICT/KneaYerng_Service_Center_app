@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:hugeicons/hugeicons.dart';
 
 import '../screens/cart/cart_screen.dart';
 import '../services/cart_service.dart';
@@ -16,15 +17,14 @@ Future<void> showCartAddedBottomBar(BuildContext context) async {
   final controller = messenger.showSnackBar(
     SnackBar(
       duration: const Duration(seconds: 3),
-      behavior: SnackBarBehavior.floating,
+      behavior: SnackBarBehavior.fixed,
       backgroundColor: Colors.transparent,
       elevation: 0,
-      margin: const EdgeInsets.fromLTRB(16, 0, 16, 78),
       padding: EdgeInsets.zero,
       content: Material(
         color: Colors.transparent,
         child: InkWell(
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
           onTap: () {
             messenger.hideCurrentSnackBar();
             Navigator.of(
@@ -33,7 +33,7 @@ Future<void> showCartAddedBottomBar(BuildContext context) async {
           },
           child: Ink(
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(24),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
               gradient: const LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
@@ -63,7 +63,7 @@ Future<void> showCartAddedBottomBar(BuildContext context) async {
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(
-                      Icons.shopping_cart_checkout_rounded,
+                      HugeIcons.strokeRoundedShoppingCartCheckOut01,
                       color: Colors.white,
                       size: 22,
                     ),
@@ -112,7 +112,7 @@ Future<void> showCartAddedBottomBar(BuildContext context) async {
                       ),
                       const SizedBox(height: 1),
                       Icon(
-                        Icons.chevron_right_rounded,
+                        HugeIcons.strokeRoundedArrowRight01,
                         color: Colors.white.withAlpha((0.92 * 255).round()),
                         size: 24,
                       ),

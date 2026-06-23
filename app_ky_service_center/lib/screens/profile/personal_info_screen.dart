@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:hugeicons/hugeicons.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart'; // Recommended for date formatting
 import '../../l10n/app_localizations.dart';
@@ -134,18 +135,18 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
                   const SizedBox(height: 8),
                   _animatedEntry(
                     2,
-                    _field(l.fullName, _firstNameCtrl, Icons.person_outline),
+                    _field(l.fullName, _firstNameCtrl, HugeIcons.strokeRoundedUser),
                   ),
                   _animatedEntry(
                     3,
-                    _field(l.fullName, _lastNameCtrl, Icons.badge_outlined),
+                    _field(l.fullName, _lastNameCtrl, HugeIcons.strokeRoundedIdVerified),
                   ),
                   _animatedEntry(
                     4,
                     _dateField(
                       'Birth Date',
                       _birthCtrl,
-                      Icons.calendar_month_outlined,
+                      HugeIcons.strokeRoundedCalendar01,
                     ),
                   ),
                   _animatedEntry(5, _genderDropdown(l)),
@@ -285,7 +286,7 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
                         : const Icon(
-                            Icons.edit_rounded,
+                            HugeIcons.strokeRoundedEdit01,
                             size: 14,
                             color: Colors.black54,
                           ),
@@ -437,7 +438,7 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
       padding: const EdgeInsets.only(bottom: 16),
       child: DropdownButtonFormField<String>(
         initialValue: _gender,
-        decoration: _inputDecoration('Gender', Icons.wc_outlined),
+        decoration: _inputDecoration('Gender', HugeIcons.strokeRoundedFemaleSymbol),
         items: const [
           DropdownMenuItem(value: 'male', child: Text('Male')),
           DropdownMenuItem(value: 'female', child: Text('Female')),
@@ -517,7 +518,7 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
                     ],
                   ),
                   child: const Icon(
-                    Icons.check_rounded,
+                    HugeIcons.strokeRoundedTick01,
                     color: Colors.white,
                     size: 34,
                   ),

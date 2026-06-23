@@ -43,6 +43,7 @@
                     <option value="sales">Sales</option>
                     <option value="customers">Customers</option>
                     <option value="inventory">Inventory</option>
+                    <option value="repairs">Repair Requests</option>
                 </select>
             </div>
 
@@ -275,6 +276,84 @@
         </div>
     </div>
 
+    {{-- ── Repairs panel ──────────────────────────────────────────────────── --}}
+    <div id="repairs-panel" class="hidden space-y-6">
+
+        {{-- KPI cards --}}
+        <div class="grid gap-4 sm:grid-cols-3">
+            <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                <div class="flex items-center justify-between">
+                    <p class="text-xs font-semibold uppercase tracking-widest text-slate-400">Total Requests</p>
+                    <span class="flex h-8 w-8 items-center justify-center rounded-xl bg-indigo-100 dark:bg-indigo-500/10">
+                        <svg class="h-4 w-4 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                    </span>
+                </div>
+                <p id="r-total" class="mt-3 text-2xl font-bold text-slate-900 dark:text-white">--</p>
+            </div>
+            <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                <div class="flex items-center justify-between">
+                    <p class="text-xs font-semibold uppercase tracking-widest text-slate-400">Completed</p>
+                    <span class="flex h-8 w-8 items-center justify-center rounded-xl bg-green-100 dark:bg-green-500/10">
+                        <svg class="h-4 w-4 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    </span>
+                </div>
+                <p id="r-completed" class="mt-3 text-2xl font-bold text-green-600 dark:text-green-400">--</p>
+            </div>
+            <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                <div class="flex items-center justify-between">
+                    <p class="text-xs font-semibold uppercase tracking-widest text-slate-400">In Progress</p>
+                    <span class="flex h-8 w-8 items-center justify-center rounded-xl bg-amber-100 dark:bg-amber-500/10">
+                        <svg class="h-4 w-4 text-amber-600 dark:text-amber-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    </span>
+                </div>
+                <p id="r-inprogress" class="mt-3 text-2xl font-bold text-amber-600 dark:text-amber-400">--</p>
+            </div>
+        </div>
+
+        {{-- Status + Service Type breakdown --}}
+        <div class="grid gap-6 xl:grid-cols-2">
+
+            {{-- By Status --}}
+            <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                <h3 class="mb-4 text-sm font-semibold text-slate-800 dark:text-white">Requests by Status</h3>
+                <div id="r-status-list" class="space-y-2">
+                    <p class="text-xs text-slate-400">Click Generate to load data.</p>
+                </div>
+            </div>
+
+            {{-- By Service Type --}}
+            <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                <h3 class="mb-4 text-sm font-semibold text-slate-800 dark:text-white">Requests by Service Type</h3>
+                <div id="r-service-list" class="space-y-2">
+                    <p class="text-xs text-slate-400">Click Generate to load data.</p>
+                </div>
+            </div>
+        </div>
+
+        {{-- Recent requests table --}}
+        <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+            <h3 class="mb-4 text-sm font-semibold text-slate-800 dark:text-white">Recent Repair Requests</h3>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-sm">
+                    <thead class="text-xs uppercase tracking-widest text-slate-400">
+                        <tr>
+                            <th class="px-4 py-3">#</th>
+                            <th class="px-4 py-3">Customer</th>
+                            <th class="px-4 py-3">Device / Issue</th>
+                            <th class="px-4 py-3">Service</th>
+                            <th class="px-4 py-3">Technician</th>
+                            <th class="px-4 py-3">Status</th>
+                            <th class="px-4 py-3 text-right">Date</th>
+                        </tr>
+                    </thead>
+                    <tbody id="r-recent-body" class="divide-y divide-slate-100 text-slate-600 dark:divide-slate-800 dark:text-slate-300">
+                        <tr><td colspan="7" class="px-4 py-6 text-center text-xs text-slate-400">Click Generate to load data.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
     {{-- ── Recent exports ─────────────────────────────────────────────────── --}}
     <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
         <div class="flex items-center justify-between gap-3">
@@ -307,7 +386,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // ── Panels ───────────────────────────────────────────────────────────────
     function showPanel(name) {
-        ['sales','customers','inventory'].forEach(function (p) {
+        ['sales','customers','inventory','repairs'].forEach(function (p) {
             $(p + '-panel').classList.toggle('hidden', p !== name);
         });
     }
@@ -351,6 +430,7 @@ document.addEventListener('DOMContentLoaded', function () {
             if (type === 'sales')      renderSales(data);
             if (type === 'customers')  renderCustomers(data);
             if (type === 'inventory')  renderInventory(data);
+            if (type === 'repairs')    renderRepairs(data);
 
             showPanel(type);
         } catch (e) {
@@ -490,6 +570,88 @@ document.addEventListener('DOMContentLoaded', function () {
                 + '<td class="px-4 py-3"><span class="rounded-full bg-slate-100 px-2 py-0.5 text-xs dark:bg-slate-800">' + esc(item.type || '—') + '</span></td>'
                 + '<td class="px-4 py-3 text-xs text-slate-500">' + esc(item.sku || '—') + '</td>'
                 + '<td class="px-4 py-3 text-right font-bold ' + stockColor + '">' + (item.stock ?? 0) + '</td>'
+                + '</tr>';
+        }).join('');
+    }
+
+    // ── Repairs ───────────────────────────────────────────────────────────────
+    function renderRepairs(data) {
+        var m = data.metrics || {};
+        $('r-total').textContent      = m.total_requests ?? 0;
+        $('r-completed').textContent  = m.completed ?? 0;
+        $('r-inprogress').textContent = m.in_progress ?? 0;
+
+        var total = m.total_requests || 0;
+
+        var statusColors = {
+            received: 'bg-blue-100 text-blue-700 dark:bg-blue-500/10 dark:text-blue-300',
+            diagnosing: 'bg-purple-100 text-purple-700 dark:bg-purple-500/10 dark:text-purple-300',
+            waiting_approval: 'bg-amber-100 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300',
+            in_repair: 'bg-orange-100 text-orange-700 dark:bg-orange-500/10 dark:text-orange-300',
+            qc: 'bg-violet-100 text-violet-700 dark:bg-violet-500/10 dark:text-violet-300',
+            ready: 'bg-green-100 text-green-700 dark:bg-green-500/10 dark:text-green-300',
+            completed: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300',
+        };
+        var serviceLabels = { drop_off: 'Drop-off', pickup: 'Pickup', on_site: 'On-site' };
+
+        // By status
+        var byStatus = data.by_status || [];
+        if (!byStatus.length) {
+            $('r-status-list').innerHTML = '<p class="text-xs text-slate-400">No data.</p>';
+        } else {
+            $('r-status-list').innerHTML = byStatus.map(function (row) {
+                var pct = total > 0 ? Math.round(row.count / total * 100) : 0;
+                var colorClass = statusColors[row.status] || 'bg-slate-100 text-slate-700';
+                var label = row.status.replace(/_/g, ' ').replace(/\b\w/g, function(c){ return c.toUpperCase(); });
+                return '<div class="flex items-center justify-between gap-3">'
+                    + '<span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ' + colorClass + '">' + esc(label) + '</span>'
+                    + '<div class="flex flex-1 items-center gap-2">'
+                    + '<div class="h-2 flex-1 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">'
+                    + '<div class="h-full rounded-full bg-indigo-500 transition-all duration-700" style="width:' + pct + '%"></div>'
+                    + '</div>'
+                    + '<span class="w-8 text-right text-xs font-semibold text-slate-700 dark:text-slate-300">' + row.count + '</span>'
+                    + '</div></div>';
+            }).join('');
+        }
+
+        // By service type
+        var byService = data.by_service_type || [];
+        if (!byService.length) {
+            $('r-service-list').innerHTML = '<p class="text-xs text-slate-400">No data.</p>';
+        } else {
+            $('r-service-list').innerHTML = byService.map(function (row) {
+                var pct = total > 0 ? Math.round(row.count / total * 100) : 0;
+                var label = serviceLabels[row.service_type] || row.service_type;
+                return '<div class="flex items-center justify-between gap-3">'
+                    + '<span class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-300">' + esc(label) + '</span>'
+                    + '<div class="flex flex-1 items-center gap-2">'
+                    + '<div class="h-2 flex-1 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">'
+                    + '<div class="h-full rounded-full bg-violet-500 transition-all duration-700" style="width:' + pct + '%"></div>'
+                    + '</div>'
+                    + '<span class="w-8 text-right text-xs font-semibold text-slate-700 dark:text-slate-300">' + row.count + '</span>'
+                    + '</div></div>';
+            }).join('');
+        }
+
+        // Recent table
+        var recent = data.recent || [];
+        if (!recent.length) {
+            $('r-recent-body').innerHTML = '<tr><td colspan="7" class="px-4 py-6 text-center text-xs text-slate-400">No repair requests for this period.</td></tr>';
+            return;
+        }
+        $('r-recent-body').innerHTML = recent.map(function (r, i) {
+            var statusLabel = (r.status || '').replace(/_/g, ' ').replace(/\b\w/g, function(c){ return c.toUpperCase(); });
+            var svcLabel    = serviceLabels[r.service_type] || r.service_type;
+            var colorClass  = statusColors[r.status] || 'bg-slate-100 text-slate-700';
+            var date        = r.created_at ? r.created_at.slice(0, 10) : '—';
+            return '<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/40">'
+                + '<td class="px-4 py-3 text-xs font-semibold text-slate-400">' + (i + 1) + '</td>'
+                + '<td class="px-4 py-3 font-medium text-slate-900 dark:text-white">' + esc(r.customer_name || '—') + '</td>'
+                + '<td class="px-4 py-3 text-xs text-slate-500">' + esc((r.device_model || '—') + ' / ' + (r.issue_type || '—')) + '</td>'
+                + '<td class="px-4 py-3"><span class="rounded-full bg-slate-100 px-2 py-0.5 text-xs dark:bg-slate-800">' + esc(svcLabel) + '</span></td>'
+                + '<td class="px-4 py-3 text-xs text-slate-500">' + esc(r.technician_name || '—') + '</td>'
+                + '<td class="px-4 py-3"><span class="rounded-full px-2 py-0.5 text-xs font-semibold ' + colorClass + '">' + esc(statusLabel) + '</span></td>'
+                + '<td class="px-4 py-3 text-right text-xs text-slate-500">' + esc(date) + '</td>'
                 + '</tr>';
         }).join('');
     }

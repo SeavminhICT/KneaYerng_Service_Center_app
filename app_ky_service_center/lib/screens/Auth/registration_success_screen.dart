@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:hugeicons/hugeicons.dart';
 import '../../l10n/app_localizations.dart';
 import '../../theme/app_palette.dart';
 import '../../widgets/page_transitions.dart';
@@ -88,7 +89,7 @@ class RegistrationSuccessScreen extends StatelessWidget {
                               border: Border.all(color: AppPalette.border),
                             ),
                             child: IconButton(
-                              icon: const Icon(Icons.close),
+                              icon: const Icon(HugeIcons.strokeRoundedCancel01),
                               tooltip: l.cancel,
                               onPressed: () {
                                 Navigator.pushReplacement(
@@ -141,7 +142,7 @@ class RegistrationSuccessScreen extends StatelessWidget {
                               shape: BoxShape.circle,
                             ),
                             child: const Icon(
-                              Icons.check_rounded,
+                              HugeIcons.strokeRoundedTick01,
                               color: AppPalette.success,
                               size: 52,
                             ),

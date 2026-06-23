@@ -1,0 +1,789 @@
+╔════════════════════════════════════════════════════════════════════════════╗
+║                    ឯកសារចងក្រងលម្អិតលក្ខណៈដទ្ឋានទិន្នន័យ                          ║
+║                             DATA DICTIONARY                               ║
+║                   KneaYerng Service Center Application                    ║
+║                     ប្រព័ន្ធផ្គត់ផ្គង់ឧបករណ៍សេវាកម្ម KneaYerng              ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+ឯកសារនេះត្រូវបានរៀបចំឡើងដើម្បីជួយឱ្យការគ្រប់គ្រង និងរៀបចំទិន្នន័យប្រព័ន្ធ ឱ្យបានត្រឹមត្រូវ
+នៅក្នុងការថែទាំបច្ចេកទេស។ ឯកសារលម្អិតលក្ខណៈដទ្ឋានទិន្នន័យពិពណ៌នាអំពី External Entity,
+Data Store, Data Flow, Process, Data Element សម្រាប់ប្រព័ន្ធលម្អិត។
+
+This document is prepared to assist in the management and organization of system data for proper
+technical maintenance. The Data Dictionary describes External Entities, Data Stores, Data Flows,
+Processes, and Data Elements for the complete system.
+
+═══════════════════════════════════════════════════════════════════════════════
+
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃          DATA DICTIONARY FORM - EXTERNAL ENTITY                           ┃
+┃              ឯកសារចងក្រងលម្អិត - ធាតុខាងក្រៅ (១)                      ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ SYSTEM: ប្រព័ន្ធផ្គត់ផ្គង់ឧបករណ៍សេវាកម្ម KneaYerng Service Center              │
+│ SUBSYSTEM: User Management System                                          │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ LABEL: Users / អតិថិជន                                                    │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ ALIAS NAME: Customer, End-user, Platform User / អ្នកប្រើប្រាស់ក្លឹงគឺង      │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ DESCRIPTION (ការពិពណ៌នា):                                                  │
+│ Entity representing all users who access the KneaYerng Service Center      │
+│ application. Includes customers, administrators, and support staff.        │
+│ Can perform authentication, profile management, order placement, and       │
+│ customer support interactions.                                             │
+│                                                                             │
+│ ធាតុតំណាងឱ្យអ្នកប្រើប្រាស់ទាំងអស់ដែលចូលប្រើប្រាស់កម្មវិធី KneaYerng      │
+│ រួមទាំងអតិថិជន ឧបត្យកាធិការ និងបុគ្គលិកគាំព្របច្ចេកទេស។ អាចអនុវត្ត         │
+│ ការលេងលេងឈានដល់គណនី ការគ្រប់គ្រងប្រវត្តិ ការដាក់ទិញ និងអន្តរកម្ម              │
+│ គាំព្របច្ចេកទេស។                                                           │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ INPUT DATA FLOW (លំហូរទិន្នន័យចូលក្នុង):                                     │
+│                                                                             │
+│ • Sign-up data: email, password, first_name, last_name, phone, birth     │
+│ • Profile edits: updated profile information, avatar upload               │
+│ • Login credentials: email/password or social login (Google, Firebase)    │
+│ • Role assignment: admin role assignment by system admins                 │
+│ • Account settings: preferences, language, notification settings          │
+│ • Address data: delivery addresses with coordinates and phone numbers     │
+│ • Geo-updates: GPS location updates for delivery tracking                 │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ OUTPUT DATA FLOW (លំហូរទិន្នន័យចេញក្រៅ):                                    │
+│                                                                             │
+│ • Orders: order placement, order status, order history                    │
+│ • Reviews & Ratings: product reviews, ratings, comments                   │
+│ • Wishlist/Favorites: favorite product lists                              │
+│ • Search queries: search history and search patterns                      │
+│ • Support chats: support ticket creation, chat conversations              │
+│ • Payment transactions: transaction records and payment history           │
+│ • Delivery addresses: saved addresses for order shipping                  │
+│ • Shop ownership: seller/vendor management (if applicable)                │
+│ • Audit trails: user activities and access logs for compliance           │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+═══════════════════════════════════════════════════════════════════════════════
+
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃          DATA DICTIONARY FORM - EXTERNAL ENTITY                           ┃
+┃              ឯកសារចងក្រងលម្អិត - ធាតុខាងក្រៅ (២)                      ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ SYSTEM: ប្រព័ន្ធផ្គត់ផ្គង់ឧបករណ៍សេវាកម្ម KneaYerng Service Center              │
+│ SUBSYSTEM: Product Management System                                       │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ LABEL: Products / ផលិតផល                                                  │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ ALIAS NAME: Goods, Items, Merchandise / ទំនិញ ឧបករណ៍ ឯកសារលម្អិត           │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ DESCRIPTION (ការពិពណ៌នា):                                                  │
+│ External entity representing product suppliers providing inventory         │
+│ and product information to the KneaYerng Service Center platform.        │
+│ Includes product details, pricing, stock levels, images, categories,      │
+│ specifications, and warranty information.                                 │
+│                                                                             │
+│ ធាតុខាងក្រៅតំណាងឱ្យក្រុមផ្គត់ផ្គង់ផលិតផល ដែលផ្តល់នូវស្តុក និង             │
+│ ព័ត៌មានផលិតផលឱ្យក្ាមវិធី KneaYerng រួមទាំងព័ត៌មានលម្អិត ថ្លៃ              │
+│ ស្តុក រូបភាព ប្រភេទ លក្ខណៈពិសេស និងប័ណ្ណលម្អិត។                           │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ INPUT DATA FLOW (លំហូរទិន្នន័យចូលក្នុង):                                     │
+│                                                                             │
+│ • Product Information: product name, brand, category, description         │
+│ • Pricing Data: base price, sale price, discount, currency               │
+│ • Stock Levels: inventory quantity, warehouse location, stock status      │
+│ • Product Images: product photos, thumbnails, image gallery              │
+│ • Specifications: storage capacity, color, condition, RAM, SSD, CPU,    │
+│   display, warranty period                                                │
+│ • Category Information: category assignment, product classification       │
+│ • SKU & Codes: product codes, barcodes, serial numbers                   │
+│ • Supplier Data: supplier information, sourcing details                  │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ OUTPUT DATA FLOW (លំហូរទិន្នន័យចេញក្រៅ):                                    │
+│                                                                             │
+│ • Product Listings: displayed products on home page, category pages      │
+│ • Search Results: products matching customer search queries               │
+│ • Product Details: detailed view with specifications and images          │
+│ • Recommendations: personalized product recommendations                  │
+│ • Stock Notifications: low stock alerts, restock notifications           │
+│ • Price Updates: price changes, discount updates, sale notifications    │
+│ • Inventory Data: stock levels for cart validation                       │
+│ • Rating Data: average ratings, review counts, customer feedback        │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+═══════════════════════════════════════════════════════════════════════════════
+
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃          DATA DICTIONARY FORM - EXTERNAL ENTITY                           ┃
+┃              ឯកសារចងក្រងលម្អិត - ធាតុខាងក្រៅ (៣)                      ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ SYSTEM: ប្រព័ន្ធផ្គត់ផ្គង់ឧបករណ៍សេវាកម្ម KneaYerng Service Center              │
+│ SUBSYSTEM: Payment & Transaction System                                    │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ LABEL: Payment Gateway / ច្រកច្រមច្រើងលុយ                                  │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ ALIAS NAME: Bakong Payment, Payment Processor, Transaction Handler        │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ DESCRIPTION (ការពិពណ៌នា):                                                  │
+│ External service entity that processes all financial transactions and     │
+│ payment operations. Handles payment initiation, processing, confirmation, │
+│ and receipt generation. Supports multiple payment methods including       │
+│ Bakong, credit cards, and digital wallets.                               │
+│                                                                             │
+│ ធាតុសេវាកម្មខាងក្រៅដែលដោះស្រាយប្រតិបត្តិការហិរញ្ញវត្ថុ និងកិច្ចការ            │
+│ ទូទាត់ប្រាក់ ដោះស្រាយការចាប់ផ្តើមទូទាត់ ដំណើរការ ការបញ្ជាក់ និង           │
+│ ការបង្កើតប័ណ្ណយល់ព្រម ឆ្នូតវិធីដ្ឋានមួយចំនួនរួមទាំង Bakong              │
+│ កាតឥណទាន និងកាបូលឌីជីថល។                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ INPUT DATA FLOW (លំហូរទិន្នន័យចូលក្នុង):                                     │
+│                                                                             │
+│ • Payment Request: order total, order ID, customer information            │
+│ • Payment Method: selected payment type (Bakong, cash, bank transfer)    │
+│ • Customer Data: name, email, phone, billing address                     │
+│ • Transaction Details: currency, amount, transaction reference           │
+│ • Merchant Information: business ID, merchant account details            │
+│ • Security Data: authentication tokens, encryption keys                  │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ OUTPUT DATA FLOW (លំហូរទិន្នន័យចេញក្រៅ):                                    │
+│                                                                             │
+│ • Payment Status: transaction success/failure, payment confirmation       │
+│ • Transaction ID: unique reference number for tracking                    │
+│ • Receipt Data: invoice details, payment receipt                          │
+│ • Error Messages: payment failure reasons, error codes                    │
+│ • Transaction Logs: transaction history, audit trail                      │
+│ • Refund Status: refund confirmations, credit reversals                  │
+│ • Settlement Reports: daily/monthly settlement statements                 │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+═══════════════════════════════════════════════════════════════════════════════
+
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃          DATA DICTIONARY FORM - EXTERNAL ENTITY                           ┃
+┃              ឯកសារចងក្រងលម្អិត - ធាតុខាងក្រៅ (៤)                      ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ SYSTEM: ប្រព័ន្ធផ្គត់ផ្គង់ឧបករណ៍សេវាកម្ម KneaYerng Service Center              │
+│ SUBSYSTEM: Authentication & Cloud Services                                 │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ LABEL: Firebase Services / សេវាកម្ម Firebase                               │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ ALIAS NAME: Firebase Auth, Firebase Cloud, FCM, Firebase Messaging       │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ DESCRIPTION (ការពិពណ៌នា):                                                  │
+│ Cloud platform providing authentication services, push notifications,     │
+│ and real-time data synchronization. Manages user authentication,          │
+│ device tokens, and FCM (Firebase Cloud Messaging) for delivering         │
+│ notifications to users.                                                   │
+│                                                                             │
+│ ឈានដល់រដ្ឋផ្តល់សេវាកម្មស្ដីពីការផ្ទៀងផ្ទាត់ ការផ្សាយពាក្យដែលបាន           │
+│ ផ្រើ និងការផ្សាយទិន្នន័យក្នុងពេលវេលាជាក់ស្តែង។ គ្រប់គ្រងការផ្ទៀងផ្ទាត់    │
+│ អ្នកប្រើប្រាស់ ឬកម្មានីយកម្ម និង FCM សម្រាប់ការផ្សាយការប្រកាស។            │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ INPUT DATA FLOW (លំហូរទិន្នន័យចូលក្នុង):                                     │
+│                                                                             │
+│ • User Credentials: email, password, phone number for authentication     │
+│ • Social Login: Google account data, Facebook account data               │
+│ • Device Registration: device ID, device token, device type              │
+│ • Authentication Requests: login/register/logout operations              │
+│ • Token Refresh: refresh token for session renewal                       │
+│ • User Metadata: user profile, preferences, settings                     │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ OUTPUT DATA FLOW (លំហូរទិន្នន័យចេញក្រៅ):                                    │
+│                                                                             │
+│ • Authentication Tokens: JWT token, refresh token, session ID            │
+│ • User Verification: email verification status, phone verification       │
+│ • Push Notifications: order updates, promotional messages, alerts        │
+│ • Device Token Status: token validity, expiration information            │
+│ • Session Data: active sessions, login history, last login time         │
+│ • Authentication Events: login attempts, failed logins, account changes │
+│ • Real-time Updates: live data synchronization for orders and chats     │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+═══════════════════════════════════════════════════════════════════════════════
+
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃          DATA DICTIONARY FORM - EXTERNAL ENTITY                           ┃
+┃              ឯកសារចងក្រងលម្អិត - ធាតុខាងក្រៅ (៥)                      ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ SYSTEM: ប្រព័ន្ធផ្គត់ផ្គង់ឧបករណ៍សេវាកម្ម KneaYerng Service Center              │
+│ SUBSYSTEM: Delivery & Logistics System                                     │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ LABEL: Delivery Partners / ដឹកជញ្ជូនលទ្ធផល                                 │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ ALIAS NAME: Logistics Provider, Courier, Delivery Service, Logistics     │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ DESCRIPTION (ការពិពណ៌នា):                                                  │
+│ External service entity responsible for handling delivery and pickup      │
+│ operations. Manages order delivery, tracking updates, staff assignment,   │
+│ and delivery confirmation. Provides real-time location tracking and      │
+│ delivery status updates to customers and order management system.        │
+│                                                                             │
+│ ធាតុសេវាកម្មខាងក្រៅដែលទទួលខុសត្រូវលើការដឹកជញ្ជូន និងប្រតិបត្តិការទាក់ទង। │
+│ គ្រប់គ្រងការដឹកជញ្ជូននូវលម្អិត ការដាក់ស្នើក្រុមគ្រប់គ្រងលម្អិត និង              │
+│ការផ្ទៃម្នាក់ឯង។ ផ្តល់នូវការតាមដានទីតាំងក្នុងរបៀបពិតលក្ష្ណៈ និង             │
+│ការកំឡុងពេលដឹកជញ្ជូនដល់អតិថិជន និងប្រព័ន្ធគ្រប់គ្រងលម្អិត។                   │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ INPUT DATA FLOW (លំហូរទិន្នន័យចូលក្នុង):                                     │
+│                                                                             │
+│ • Order Information: order ID, customer details, delivery address         │
+│ • Delivery Instructions: special handling, delivery notes, preferences    │
+│ • Package Details: weight, dimensions, contents description              │
+│ • Delivery Address: street address, postal code, GPS coordinates         │
+│ • Contact Information: phone number, email, alternative contact          │
+│ • Pick-up Details: pickup location, pickup time window                   │
+│ • Staff Assignment: delivery personnel, vehicle information              │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ OUTPUT DATA FLOW (លំហូរទិន្នន័យចេញក្រៅ):                                    │
+│                                                                             │
+│ • Delivery Status: order status updates (picked up, in transit, delivered)│
+│ • Location Tracking: current location, GPS coordinates, route updates    │
+│ • Estimated Time: ETA, delivery window, arrival notification             │
+│ • Proof of Delivery: signature, timestamp, delivery confirmation         │
+│ • Staff Information: driver name, contact number, vehicle details        │
+│ • Tracking History: status timeline, location history, timestamps        │
+│ • Delivery Confirmation: delivery receipt, customer acknowledgment       │
+│ • Exception Reports: delayed delivery, delivery attempt failures         │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+═══════════════════════════════════════════════════════════════════════════════
+
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃          DATA DICTIONARY FORM - DATA STORE                                ┃
+┃              ឯកសារចងក្រងលម្អិត - ឃ្លាំងទិន្នន័យ (១)                      ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ SYSTEM: ប្រព័ន្ធផ្គត់ផ្គង់ឧបករណ៍សេវាកម្ម KneaYerng Service Center              │
+│ SUBSYSTEM: Data Storage System                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ LABEL: User Profile Store / ឃ្លាំងព័ត៌មានលម្អិតបុគ្គល                      │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ TYPE: Database Table + Local Cache (SharedPreferences)                    │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ DESCRIPTION (ការពិពណ៌នា):                                                  │
+│ Centralized storage for user account information including authentication │
+│ data, profile details, preferences, and role information. Data persists  │
+│ across sessions and synchronizes between mobile app and backend server.  │
+│                                                                             │
+│ ឃ្លាំងផ្ដុំក្នុងការរក្សាទុកព័ត៌មានគណនីអ្នកប្រើប្រាស់រួមទាំងទិន្នន័យ             │
+│ ផ្ទៀងផ្ទាត់ ព័ត៌មានលម្អិតប្រវត្តិ ចំណូលចិត្ត និងព័ត៌មាននាទីតួនាទី។               │
+│ ទិន្នន័យរំដោះលើពេលវេលា និងធ្វើឱ្យសមស្របរវាងកម្មវិធីលើលំហ និង              │
+│ម៉ាស៊ីនម៉ាស៊ីនចាប់ផ្តើម។                                                      │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ DATA ELEMENTS STORED (ធាតុទិន្នន័យដែលរក្សាទុក):                              │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  user_id          │ Integer    │ Unique user identifier                   │
+│  email            │ String     │ User email address (unique)              │
+│  phone            │ String     │ Phone number (unique)                    │
+│  first_name       │ String     │ User first name                          │
+│  last_name        │ String     │ User last name                           │
+│  birth            │ Date       │ Date of birth (YYYY-MM-DD)              │
+│  gender           │ String     │ Gender (M/F/Other)                      │
+│  avatar_url       │ String     │ Profile picture URL                     │
+│  role             │ String     │ User role (customer/admin)               │
+│  is_admin         │ Boolean    │ Admin status flag                        │
+│  auth_token       │ String     │ Firebase authentication token            │
+│  created_at       │ DateTime   │ Account creation timestamp               │
+│  updated_at       │ DateTime   │ Last profile update timestamp            │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ RETENTION PERIOD: Account lifetime + 6 months after deletion              │
+│ UPDATE FREQUENCY: On login/register, profile edit                        │
+│ ACCESS CONTROL: User own data, Admin full access                        │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+═══════════════════════════════════════════════════════════════════════════════
+
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃          DATA DICTIONARY FORM - DATA STORE                                ┃
+┃              ឯកសារចងក្រងលម្អិត - ឃ្លាំងទិន្នន័យ (២)                      ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ SYSTEM: ប្រព័ន្ធផ្គត់ផ្គង់ឧបករណ៍សេវាកម្ម KneaYerng Service Center              │
+│ SUBSYSTEM: Data Storage System                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ LABEL: Products Store / ឃ្លាំងផលិតផល                                       │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ TYPE: Database Table + Cache (Network + Local)                            │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ DESCRIPTION (ការពិពណ៌នា):                                                  │
+│ Comprehensive product information repository containing all product      │
+│ details, pricing, inventory levels, images, specifications, variants,    │
+│ and ratings. Data is cached locally for faster browsing and search,     │
+│ and synchronized with backend database in real-time.                    │
+│                                                                             │
+│ ឃ្លាំងព័ត៌មានផលិតផលលម្អិតដែលមាននូវលម្អិតផលិតផល ថ្លៃដូលលែ           │
+│ ស្តុក រូបភាព លក្ខណៈពិសេស វ៉ារ្យ៉ង់ និងការវាយតម្លៃ។ ទិន្នន័យ             │
+│ ផ្ដុំក្នុងផ្នែកក្រោយសម្រាប់ការក្រឡេកមើលលឿន និងការស្វាគមន៍               │
+│ ដូចដែលទិន្នន័យត្រូវបានធ្វើឱ្យសមស្របក្នុងពេលវេលាក្នុងម៉ាស៊ីន               │
+│ ម៉ាស៊ីនចាប់ផ្តើម។                                                            │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ DATA ELEMENTS STORED (ធាតុទិន្នន័យដែលរក្សាទុក):                              │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  product_id       │ Integer    │ Unique product identifier                │
+│  name             │ String     │ Product name                             │
+│  price            │ Double     │ Base product price                       │
+│  sale_price       │ Double     │ Discounted price (optional)              │
+│  image_url        │ String     │ Primary product image URL                │
+│  thumbnail_url    │ String     │ Thumbnail image URL                     │
+│  image_gallery    │ List       │ Multiple product images                  │
+│  category_id      │ Integer    │ Category reference                       │
+│  category_name    │ String     │ Category name                            │
+│  brand            │ String     │ Product brand                            │
+│  description      │ Text       │ Detailed product description             │
+│  sku              │ String     │ Stock keeping unit                       │
+│  discount         │ Double     │ Discount amount                          │
+│  rating           │ Double     │ Average rating (0-5)                     │
+│  rating_count     │ Integer    │ Number of ratings                        │
+│  stock            │ Integer    │ Available inventory                      │
+│  status           │ String     │ Product status (active/inactive)         │
+│  warranty         │ String     │ Warranty period                          │
+│  specs            │ JSON       │ Storage, color, condition, RAM, SSD, CPU│
+│  variants         │ List       │ Product variants with pricing/stock      │
+│  created_at       │ DateTime   │ Product creation timestamp               │
+│  updated_at       │ DateTime   │ Last update timestamp                    │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ RETENTION PERIOD: Until product is discontinued + 24 months               │
+│ UPDATE FREQUENCY: Real-time (stock, price), daily (description)         │
+│ ACCESS CONTROL: Public read, Admin write                                │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+═══════════════════════════════════════════════════════════════════════════════
+
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃          DATA DICTIONARY FORM - DATA STORE                                ┃
+┃              ឯកសារចងក្រងលម្អិត - ឃ្លាំងទិន្នន័យ (៣)                      ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ SYSTEM: ប្រព័ន្ធផ្គត់ផ្គង់ឧបករណ៍សេវាកម្ម KneaYerng Service Center              │
+│ SUBSYSTEM: Data Storage System                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ LABEL: Shopping Cart Store / ឃ្លាំងក្រាប់រទេការ                             │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ TYPE: Local Storage (SharedPreferences/Database)                          │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ DESCRIPTION (ការពិពណ៌នា):                                                  │
+│ Temporary storage containing items selected by user for purchase.        │
+│ Stores product details, quantities, selected variants, pricing, and     │
+│ calculated totals. Data persists until checkout completion or manual    │
+│ cart clearing. Not shared across devices.                                │
+│                                                                             │
+│ ឃ្លាំងបច្ចេកទេសដែលមាននូវគ្រឿងដែលជ្រើសរើសដោយអ្នកប្រើប្រាស់ក្នុង            │
+│ ការទិញ។ រក្សាទុកលម្អិតផលិតផល បរិមាណ វ៉ារ្យ៉ង់ដែលបានជ្រើស              │
+│ ថ្លៃ និងសរុបដែលបានគណនា។ ទិន្នន័យយូរដល់ដល់សាលារៀន               │
+│ ឬការលុបក្រាប់រទេការរៀងរាល់ដង។ មិនផ្លាស់ប្តូរលើឧបករណ៍ទេ។               │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ DATA ELEMENTS STORED (ធាតុទិន្នន័យដែលរក្សាទុក):                              │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  cart_item_id     │ String     │ Unique cart item identifier              │
+│  product_id       │ Integer    │ Product reference                        │
+│  product_name     │ String     │ Product name                             │
+│  quantity         │ Integer    │ Item quantity (1-10000)                  │
+│  unit_price       │ Double     │ Price per unit                           │
+│  line_total       │ Double     │ quantity × unit_price                    │
+│  variant_id       │ Integer    │ Selected variant (if applicable)         │
+│  variant_label    │ String     │ Variant description                      │
+│  variant_image    │ String     │ Variant image URL                        │
+│  variant_stock    │ Integer    │ Available stock for variant              │
+│  product_image    │ String     │ Product image URL                        │
+│  added_at         │ DateTime   │ Time item was added to cart              │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ CART SUMMARY                                                                │
+│  subtotal         │ Double     │ Sum of all line totals                   │
+│  delivery_fee     │ Double     │ Shipping cost                            │
+│  discount_amount  │ Double     │ Applied discount/coupon                  │
+│  total_amount     │ Double     │ Final checkout amount                    │
+│  item_count       │ Integer    │ Number of items in cart                  │
+│  created_at       │ DateTime   │ Cart creation time                       │
+│  updated_at       │ DateTime   │ Last modification time                   │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ RETENTION PERIOD: Session only, cleared after checkout                   │
+│ UPDATE FREQUENCY: On each item add/remove/quantity change               │
+│ ACCESS CONTROL: User specific (not shared)                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+═══════════════════════════════════════════════════════════════════════════════
+
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃          DATA DICTIONARY FORM - DATA STORE                                ┃
+┃              ឯកសារចងក្រងលម្អិត - ឃ្លាំងទិន្នន័យ (៤)                      ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ SYSTEM: ប្រព័ន្ធផ្គត់ផ្គង់ឧបករណ៍សេវាកម្ម KneaYerng Service Center              │
+│ SUBSYSTEM: Data Storage System                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ LABEL: Orders Store / ឃ្លាំងលម្អិតបញ្ជាទិញ                                  │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ TYPE: Database Table (Backend)                                            │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ DESCRIPTION (ការពិពណ៌នា):                                                  │
+│ Persistent storage for all customer orders including order details,      │
+│ items, pricing, delivery information, payment status, tracking data,     │
+│ and order history. Each order maintains audit trail with status history  │
+│ and tracking updates for complete order lifecycle management.            │
+│                                                                             │
+│ ឃ្លាំងរក្សាទុកថាមពលសម្រាប់លម្អិតបញ្ជាទិញរួមទាំងលម្អិតបញ្ជាទិញ              │
+│ គ្រឿង ថ្លៃ ព័ត៌មាននៃការដឹកជញ្ជូន ស្ថានភាពទូទាត់ប្រាក់ និង            │
+│ ទិន្នន័យតាមដាន។ ឆានលម្អិតបញ្ជាទិញរក្សាទុក ដាច្ច គ្របក្រឡេក             │
+│ ឈានដល់ប្រវត្តិលម្អិត និងការធ្វើឱ្យទាន់សម័យ ពេលវេលាដូច់ស្តាច។          │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ DATA ELEMENTS STORED (ធាតុទិន្នន័យដែលរក្សាទុក):                              │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ ORDER HEADER INFORMATION                                                    │
+│  order_id         │ Integer    │ Unique order identifier                  │
+│  order_number     │ String     │ Human-readable order number              │
+│  customer_id      │ Integer    │ Customer reference                       │
+│  order_type       │ String     │ Delivery or Pickup                       │
+│  status           │ String     │ Current order status                     │
+│  payment_method   │ String     │ Payment type (Bakong, cash, bank)       │
+│  payment_status   │ String     │ Payment state (pending, completed)       │
+│                                                                             │
+│ ORDER FINANCIAL INFORMATION                                                │
+│  subtotal         │ Double     │ Items total                              │
+│  delivery_fee     │ Double     │ Shipping cost                            │
+│  discount_amount  │ Double     │ Total discount applied                   │
+│  tax_amount       │ Double     │ Tax (if applicable)                      │
+│  total_amount     │ Double     │ Final amount                             │
+│  currency         │ String     │ Currency code (USD/KHR)                 │
+│                                                                             │
+│ DELIVERY INFORMATION                                                        │
+│  delivery_address │ String     │ Full delivery address                    │
+│  delivery_phone   │ String     │ Recipient phone number                   │
+│  delivery_note    │ Text       │ Special delivery instructions            │
+│  latitude         │ Double     │ GPS latitude                             │
+│  longitude        │ Double     │ GPS longitude                            │
+│                                                                             │
+│ TIMESTAMPS                                                                  │
+│  placed_at        │ DateTime   │ Order placement time                     │
+│  approved_at      │ DateTime   │ Order approval time                      │
+│  rejected_at      │ DateTime   │ Rejection time (if applicable)          │
+│  cancelled_at     │ DateTime   │ Cancellation time (if applicable)       │
+│  delivered_at     │ DateTime   │ Delivery completion time                 │
+│  updated_at       │ DateTime   │ Last update time                         │
+│                                                                             │
+│ ASSIGNMENT & TRACKING                                                       │
+│  assigned_staff_id│ Integer    │ Assigned staff member                    │
+│  assigned_staff   │ String     │ Staff name                               │
+│  tracking_number  │ String     │ Carrier tracking number                  │
+│  qr_code          │ String     │ Pickup QR code                           │
+│  qr_token         │ String     │ QR token for verification                │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ RETENTION PERIOD: Indefinite (archived after 7 years)                   │
+│ UPDATE FREQUENCY: On status changes, delivery updates, payment confirm  │
+│ ACCESS CONTROL: User view own, Admin full access, Staff delivery only   │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+═══════════════════════════════════════════════════════════════════════════════
+
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃          DATA DICTIONARY FORM - PROCESS                                   ┃
+┃              ឯកសារចងក្រងលម្អិត - ដំណើរការ (១)                          ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ SYSTEM: ប្រព័ន្ធផ្គត់ផ្គង់ឧបករណ៍សេវាកម្ម KneaYerng Service Center              │
+│ SUBSYSTEM: User Management                                                 │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ LABEL: User Registration / ដំណើរការចុះឈ្មោះអ្នកប្រើប្រាស់                  │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ PROCESS NUMBER: P1.0                                                       │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ DESCRIPTION (ការពិពណ៌នា):                                                  │
+│ Complete user account creation process with validation, authentication,   │
+│ and database setup. Includes email verification and initial profile      │
+│ setup.                                                                     │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ INPUTS (ការបញ្ចូលទិន្នន័យ):                                                  │
+│  • Email address (required, must be unique)                              │
+│  • Password (required, min 8 chars, strong validation)                  │
+│  • First name (required, 2-50 chars)                                    │
+│  • Last name (optional, 2-50 chars)                                     │
+│  • Phone number (optional)                                              │
+│  • Terms & conditions agreement (required)                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ PROCESSING STEPS (ដំណាលដំណើរ):                                            │
+│                                                                             │
+│ STEP 1: INPUT VALIDATION (ផ្ទៀងផ្ទាត់ការបញ្ចូល)                              │
+│   - Validate email format (RFC 5322)                                     │
+│   - Check email uniqueness in system                                     │
+│   - Validate password strength requirements                              │
+│   - Validate name fields (non-empty, valid characters)                   │
+│   - Verify terms acceptance                                              │
+│   ✓ If valid → Continue to Step 2                                       │
+│   ✗ If invalid → Return validation error message                        │
+│                                                                             │
+│ STEP 2: PASSWORD HASHING (ការលេងលេងលេងលេង)                              │
+│   - Apply bcrypt hashing to password                                     │
+│   - Generate salt for security                                            │
+│   - Store only hashed password, never plaintext                          │
+│   → Continue to Step 3                                                   │
+│                                                                             │
+│ STEP 3: FIREBASE AUTHENTICATION                                          │
+│   - Create Firebase user account                                         │
+│   - Generate authentication token                                        │
+│   - Set up user session                                                  │
+│   ✓ If successful → Continue to Step 4                                  │
+│   ✗ If failed → Rollback and return error                               │
+│                                                                             │
+│ STEP 4: DATABASE RECORD CREATION                                         │
+│   - Create user record in main database                                  │
+│   - Store: user_id, email, password_hash, name, phone, role            │
+│   - Set default role as 'customer'                                       │
+│   - Initialize user preferences/settings                                 │
+│   - Set email_verified = false                                           │
+│   → Continue to Step 5                                                   │
+│                                                                             │
+│ STEP 5: VERIFICATION EMAIL                                               │
+│   - Generate verification token                                          │
+│   - Send verification email with link                                    │
+│   - Set email expiration (24-48 hours)                                   │
+│   → Continue to Step 6                                                   │
+│                                                                             │
+│ STEP 6: RESPONSE & LOGIN                                                 │
+│   - Auto-login user                                                      │
+│   - Generate JWT token                                                   │
+│   - Store token in secure cache                                          │
+│   - Initialize user profile in app                                       │
+│   - Redirect to home screen                                              │
+│   → Registration Complete                                                │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ OUTPUTS (លទ្ធផល):                                                         │
+│  • User account created                                                  │
+│  • Verification email sent                                               │
+│  • Authentication token generated                                        │
+│  • User profile initialized                                              │
+│  • Success notification to user                                          │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ ERROR HANDLING (ការគ្រប់គ្រងកំហុស):                                        │
+│                                                                             │
+│ ERROR: Invalid Email Format                                               │
+│   → Display: "Please enter a valid email address"                        │
+│   → Action: Allow user to correct and retry                             │
+│                                                                             │
+│ ERROR: Email Already Exists                                               │
+│   → Display: "Email already registered. Please login or use another     │
+│     email address"                                                        │
+│   → Action: Provide link to login page                                   │
+│                                                                             │
+│ ERROR: Weak Password                                                       │
+│   → Display: "Password must be at least 8 characters with uppercase,    │
+│     lowercase, numbers, and special characters"                         │
+│   → Action: Allow user to create stronger password                      │
+│                                                                             │
+│ ERROR: Firebase Authentication Failure                                    │
+│   → Display: "Registration failed. Please try again later."             │
+│   → Action: Log error, retry operation, contact support if persistent  │
+│                                                                             │
+│ ERROR: Database Error                                                      │
+│   → Display: "Registration failed. Please try again."                   │
+│   → Action: Rollback transaction, clean up partial records              │
+│   → Log: Full error details for debugging                               │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+═══════════════════════════════════════════════════════════════════════════════
+
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃          DATA DICTIONARY FORM - PROCESS                                   ┃
+┃              ឯកសារចងក្រងលម្អិត - ដំណើរការ (២)                          ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ SYSTEM: ប្រព័ន្ធផ្គត់ផ្គង់ឧបករណ៍សេវាកម្ម KneaYerng Service Center              │
+│ SUBSYSTEM: Order Management                                                │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ LABEL: Order Processing & Checkout / ដំណើរការលម្អិតបញ្ជាទិញ               │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ PROCESS NUMBER: P2.0                                                       │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ DESCRIPTION (ការពិពណ៌នា):                                                  │
+│ Complete checkout process converting shopping cart to confirmed order.   │
+│ Includes cart validation, delivery setup, payment processing, and order  │
+│ creation with QR code generation for pickup/delivery tracking.          │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ INPUTS (ការបញ្ចូលទិន្នន័យ):                                                  │
+│  • Cart items (product_id, quantity, variant_id)                         │
+│  • Delivery address (address, phone, coordinates)                        │
+│  • Delivery method (home delivery, pickup)                               │
+│  • Payment method (Bakong, cash, bank transfer)                         │
+│  • Discount/coupon code (optional)                                       │
+│  • Delivery notes (optional)                                             │
+│  • Customer confirmation                                                 │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ PROCESSING STEPS (ដំណាលដំណើរ):                                            │
+│                                                                             │
+│ STEP 1: CART VALIDATION (ផ្ទៀងផ្ទាត់ក្រាប់រទេការ)                         │
+│   - Verify cart not empty                                                │
+│   - Check each item in stock                                             │
+│   - Validate quantities don't exceed available stock                     │
+│   - Verify prices current and correct                                    │
+│   - Check product still active (not discontinued)                        │
+│   ✓ If valid → Continue to Step 2                                       │
+│   ✗ If invalid → Return error, allow cart correction                    │
+│                                                                             │
+│ STEP 2: DELIVERY ADDRESS VALIDATION                                      │
+│   - Verify address provided                                              │
+│   - Validate phone number format                                         │
+│   - Check delivery location within service area                          │
+│   - Extract/validate GPS coordinates                                     │
+│   ✓ If valid → Continue to Step 3                                       │
+│   ✗ If invalid → Request address correction                             │
+│                                                                             │
+│ STEP 3: CALCULATE TOTALS (គណនាលទ្ធផលរួម)                                 │
+│   - Calculate subtotal (sum of all line items)                           │
+│   - Calculate delivery fee based on zone                                 │
+│   - Apply discount/coupon if valid                                       │
+│   - Calculate tax (if applicable)                                        │
+│   - Calculate final total amount                                         │
+│   → Continue to Step 4                                                   │
+│                                                                             │
+│ STEP 4: PAYMENT PROCESSING                                               │
+│   ├─ If Bakong selected:                                                 │
+│   │  - Initialize Bakong payment gateway                                │
+│   │  - Generate payment QR code                                         │
+│   │  - Display payment screen                                           │
+│   │  - Wait for user to scan/confirm payment                           │
+│   │  - Verify payment with Bakong                                       │
+│   │                                                                      │
+│   ├─ If Cash selected:                                                   │
+│   │  - Mark payment as pending (pay on delivery)                       │
+│   │  - Continue to Step 5                                              │
+│   │                                                                      │
+│   └─ If Bank Transfer selected:                                          │
+│      - Display bank account details                                     │
+│      - Wait for manual verification (24-48 hours)                       │
+│      - Set payment status as pending                                    │
+│                                                                             │
+│   ✓ If payment successful → Continue to Step 5                          │
+│   ✗ If payment failed → Allow retry or cancel                           │
+│                                                                             │
+│ STEP 5: ORDER CREATION (បង្កើតលម្អិតបញ្ជាទិញ)                               │
+│   - Generate unique order number                                         │
+│   - Create order record in database                                      │
+│   - Insert all order items                                               │
+│   - Store delivery information                                           │
+│   - Record payment information                                           │
+│   - Set order status = 'pending'                                         │
+│   - Set timestamp created_at = NOW()                                     │
+│   → Continue to Step 6                                                   │
+│                                                                             │
+│ STEP 6: INVENTORY UPDATE (ធ្វើឱ្យទាន់សម័យស្តុក)                           │
+│   - Deduct quantities from stock for each item                           │
+│   - Update product variant stock levels                                  │
+│   - Flag low stock items for reorder                                     │
+│   → Continue to Step 7                                                   │
+│                                                                             │
+│ STEP 7: QR CODE GENERATION & ASSIGNMENT                                  │
+│   - Generate unique QR token for order                                   │
+│   - Encode order details in QR code                                      │
+│   - Set QR expiration (24-72 hours depending on delivery type)          │
+│   - Store QR code in order record                                        │
+│   → Continue to Step 8                                                   │
+│                                                                             │
+│ STEP 8: NOTIFICATIONS & CONFIRMATIONS                                    │
+│   - Send order confirmation email to customer                            │
+│   - Send SMS notification (if phone available)                           │
+│   - Send push notification to app                                        │
+│   - Alert support/operations team                                        │
+│   - Notify logistics partner (if applicable)                             │
+│   → Continue to Step 9                                                   │
+│                                                                             │
+│ STEP 9: CLEAR CART & RESPONSE                                            │
+│   - Delete all items from user's shopping cart                           │
+│   - Display order confirmation page                                      │
+│   - Show order number and QR code                                        │
+│   - Provide tracking information                                         │
+│   - Redirect to order tracking page                                      │
+│   → Checkout Complete                                                    │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ OUTPUTS (លទ្ធផល):                                                         │
+│  • Order record created                                                  │
+│  • Order confirmation email sent                                         │
+│  • QR code generated                                                     │
+│  • Inventory updated                                                     │
+│  • Payment confirmed (or pending)                                        │
+│  • Notifications sent to stakeholders                                    │
+│  • Order tracking available                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+╔════════════════════════════════════════════════════════════════════════════╗
+║                                                                            ║
+║                    End of Data Dictionary Form                            ║
+║                  ឯកសារចងក្រងលម្អិតលក្ខណៈដទ្ឋានទិន្នន័យបានរៀបចំហើយ        ║
+║                                                                            ║
+║                    Document Prepared: 2025-06-19                          ║
+║                    Version: 2.0 (Print Format)                            ║
+║                    Status: Ready for Print & Distribution                 ║
+║                    Prepared by: System Documentation Team                 ║
+║                                                                            ║
+╚════════════════════════════════════════════════════════════════════════════╝

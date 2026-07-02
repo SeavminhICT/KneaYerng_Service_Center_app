@@ -1,35 +1,35 @@
 @extends('layouts.admin')
 
-@section('title', 'Revenue Reports')
-@section('page-title', 'Revenue Reports')
+@section('title', __('Revenue Reports'))
+@section('page-title', __('Revenue Reports'))
 
 @section('content')
     <div class="space-y-6">
         <div>
-            <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Revenue Reports</h2>
-            <p class="text-sm text-slate-500">Summary of repair revenue and payment performance.</p>
+            <h2 class="text-lg font-semibold text-slate-900 dark:text-white">{{ __('Revenue Reports') }}</h2>
+            <p class="text-sm text-slate-500">{{ __('Summary of repair revenue and payment performance.') }}</p>
         </div>
 
         <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
             <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-                <p class="text-xs font-semibold uppercase tracking-widest text-slate-400">Total invoiced</p>
+                <p class="text-xs font-semibold uppercase tracking-widest text-slate-400">{{ __('Total invoiced') }}</p>
                 <p id="report-invoiced" class="mt-3 text-2xl font-semibold text-slate-900 dark:text-white">--</p>
-                <p class="mt-2 text-xs text-slate-500">Last 30 days</p>
+                <p class="mt-2 text-xs text-slate-500">{{ __('Last 30 days') }}</p>
             </div>
             <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-                <p class="text-xs font-semibold uppercase tracking-widest text-slate-400">Payments received</p>
+                <p class="text-xs font-semibold uppercase tracking-widest text-slate-400">{{ __('Payments received') }}</p>
                 <p id="report-paid" class="mt-3 text-2xl font-semibold text-slate-900 dark:text-white">--</p>
-                <p class="mt-2 text-xs text-slate-500">Last 30 days</p>
+                <p class="mt-2 text-xs text-slate-500">{{ __('Last 30 days') }}</p>
             </div>
             <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-                <p class="text-xs font-semibold uppercase tracking-widest text-slate-400">Outstanding balance</p>
+                <p class="text-xs font-semibold uppercase tracking-widest text-slate-400">{{ __('Outstanding balance') }}</p>
                 <p id="report-outstanding" class="mt-3 text-2xl font-semibold text-slate-900 dark:text-white">--</p>
-                <p class="mt-2 text-xs text-slate-500">Last 30 days</p>
+                <p class="mt-2 text-xs text-slate-500">{{ __('Last 30 days') }}</p>
             </div>
         </div>
 
         <div class="rounded-2xl border border-slate-200 bg-white p-6 text-sm text-slate-500 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-            Revenue charts will appear here once invoice data accumulates.
+            {{ __('Revenue charts will appear here once invoice data accumulates.') }}
         </div>
     </div>
 

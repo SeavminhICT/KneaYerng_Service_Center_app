@@ -167,11 +167,14 @@ Route::prefix('admin')->name('admin.')->middleware(['admin'])->group(function ()
             })
             ->where(function ($query) {
                 $query->whereNull('role')
-                    ->orWhere('role', '!=', 'admin');
+                    ->orWhere('role', 'user');
             });
 
         if (! empty($adminEmails)) {
-            $baseQuery->whereNotIn('email', $adminEmails);
+            $baseQuery->where(function ($query) use ($adminEmails) {
+                $query->whereNull('email')
+                    ->orWhereNotIn('email', $adminEmails);
+            });
         }
 
         // Search by name, email or phone
@@ -261,6 +264,9 @@ Route::prefix('admin')->name('admin.')->middleware(['admin'])->group(function ()
     Route::view('/reports', 'admin.reports.index')->name('reports.index');
     Route::view('/settings', 'admin.settings.index')->name('settings.index');
     Route::view('/users', 'admin.users.index')->name('users.index');
+    Route::view('/roles', 'admin.roles.index')->name('roles.index');
+    Route::view('/permissions', 'admin.permissions.index')->name('permissions.index');
+    Route::view('/roles/assign-permissions', 'admin.roles.assign-permissions')->name('roles.assign-permissions');
 });
 
 Route::middleware('auth')->group(function () {

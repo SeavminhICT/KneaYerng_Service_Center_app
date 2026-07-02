@@ -1,7 +1,7 @@
 ﻿@extends('layouts.admin')
 
-@section('title', 'Order Details')
-@section('page-title', 'Order Details')
+@section('title', __('Order Details'))
+@section('page-title', __('Order Details'))
 
 @section('content')
     <div class="grid gap-6 lg:grid-cols-[2fr_1fr]" id="order-detail" data-order-id="{{ $orderId ?? '' }}">
@@ -9,8 +9,8 @@
             <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
                 <div class="flex flex-wrap items-center justify-between gap-3">
                     <div>
-                        <p class="text-xs uppercase tracking-widest text-slate-400" id="order-number">Order</p>
-                        <h2 class="text-lg font-semibold text-slate-900 dark:text-white" id="order-customer">Customer</h2>
+                        <p class="text-xs uppercase tracking-widest text-slate-400" id="order-number">{{ __('Order') }}</p>
+                        <h2 class="text-lg font-semibold text-slate-900 dark:text-white" id="order-customer">{{ __('Customer') }}</h2>
                         <p class="text-sm text-slate-500" id="order-meta">--</p>
                     </div>
                     <span class="rounded-full bg-primary-50 px-3 py-1 text-xs font-semibold text-primary-700 dark:bg-primary-500/10 dark:text-primary-100" id="order-status">--</span>
@@ -20,10 +20,10 @@
                     <table class="w-full text-left text-sm">
                         <thead class="text-xs uppercase tracking-widest text-slate-400">
                             <tr>
-                                <th class="px-4 py-3">Item</th>
-                                <th class="px-4 py-3">Qty</th>
-                                <th class="px-4 py-3">Price</th>
-                                <th class="px-4 py-3 text-right">Total</th>
+                                <th class="px-4 py-3">{{ __('Item') }}</th>
+                                <th class="px-4 py-3">{{ __('Qty') }}</th>
+                                <th class="px-4 py-3">{{ __('Price') }}</th>
+                                <th class="px-4 py-3 text-right">{{ __('Total') }}</th>
                             </tr>
                         </thead>
                         <tbody id="order-items" class="divide-y divide-slate-200 text-slate-600 dark:divide-slate-800 dark:text-slate-300"></tbody>
@@ -34,7 +34,7 @@
 
         <div class="space-y-6">
             <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-                <h3 class="text-sm font-semibold text-slate-900 dark:text-white">Customer</h3>
+                <h3 class="text-sm font-semibold text-slate-900 dark:text-white">{{ __('Customer') }}</h3>
                 <div class="mt-4 space-y-3 text-sm text-slate-600 dark:text-slate-300">
                     <p class="font-semibold text-slate-900 dark:text-white" id="customer-name">--</p>
                     <p id="customer-email">--</p>
@@ -42,48 +42,48 @@
             </div>
 
             <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-                <h3 class="text-sm font-semibold text-slate-900 dark:text-white">Order Workflow</h3>
+                <h3 class="text-sm font-semibold text-slate-900 dark:text-white">{{ __('Order Workflow') }}</h3>
                 <div class="mt-4 space-y-3 text-sm text-slate-600 dark:text-slate-300">
                     <div class="flex items-center justify-between">
-                        <span>Type</span>
+                        <span>{{ __('Type') }}</span>
                         <span class="font-semibold text-slate-900 dark:text-white" id="order-type">--</span>
                     </div>
                     <div class="flex items-center justify-between">
-                        <span>Current</span>
+                        <span>{{ __('Current') }}</span>
                         <span class="font-semibold text-slate-900 dark:text-white" id="order-status-current">--</span>
                     </div>
                     <div class="flex items-center justify-between">
-                        <span>Assigned Staff</span>
+                        <span>{{ __('Assigned Staff') }}</span>
                         <span class="font-semibold text-slate-900 dark:text-white" id="assigned-staff-name">--</span>
                     </div>
                     <div class="mt-4">
-                        <label class="block text-xs font-semibold uppercase tracking-widest text-slate-400">Admin actions</label>
+                        <label class="block text-xs font-semibold uppercase tracking-widest text-slate-400">{{ __('Admin actions') }}</label>
                         <div class="mt-2 flex flex-wrap items-center gap-3">
-                            <button type="button" id="order-approve" class="inline-flex h-10 items-center rounded-xl bg-success-600 px-4 text-xs font-semibold text-white shadow-sm hover:bg-success-700 disabled:cursor-not-allowed disabled:bg-slate-300 dark:disabled:bg-slate-700">Approve</button>
-                            <button type="button" id="order-reject" class="inline-flex h-10 items-center rounded-xl bg-danger-600 px-4 text-xs font-semibold text-white shadow-sm hover:bg-danger-700 disabled:cursor-not-allowed disabled:bg-slate-300 dark:disabled:bg-slate-700">Reject</button>
+                            <button type="button" id="order-approve" class="inline-flex h-10 items-center rounded-xl bg-success-600 px-4 text-xs font-semibold text-white shadow-sm hover:bg-success-700 disabled:cursor-not-allowed disabled:bg-slate-300 dark:disabled:bg-slate-700">{{ __('Approve') }}</button>
+                            <button type="button" id="order-reject" class="inline-flex h-10 items-center rounded-xl bg-danger-600 px-4 text-xs font-semibold text-white shadow-sm hover:bg-danger-700 disabled:cursor-not-allowed disabled:bg-slate-300 dark:disabled:bg-slate-700">{{ __('Reject') }}</button>
                         </div>
-                        <textarea id="order-action-note" rows="3" placeholder="Reason or admin note" class="mt-3 w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-700 shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200"></textarea>
+                        <textarea id="order-action-note" rows="3" placeholder="{{ __('Reason or admin note') }}" class="mt-3 w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-700 shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200"></textarea>
                     </div>
                     <div class="mt-4">
-                        <label class="block text-xs font-semibold uppercase tracking-widest text-slate-400">Assign staff (optional)</label>
+                        <label class="block text-xs font-semibold uppercase tracking-widest text-slate-400">{{ __('Assign staff (optional)') }}</label>
                         <div class="mt-2 flex flex-wrap items-center gap-3">
                             <select id="assigned-staff-select" class="h-10 min-w-[180px] flex-1 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700 shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200">
-                                <option value="">Select staff</option>
+                                <option value="">{{ __('Select staff') }}</option>
                             </select>
-                            <button type="button" id="assigned-staff-save" class="inline-flex h-10 items-center rounded-xl bg-primary-600 px-4 text-xs font-semibold text-white shadow-sm hover:bg-primary-700 disabled:cursor-not-allowed disabled:bg-slate-300 dark:disabled:bg-slate-700">Assign</button>
+                            <button type="button" id="assigned-staff-save" class="inline-flex h-10 items-center rounded-xl bg-primary-600 px-4 text-xs font-semibold text-white shadow-sm hover:bg-primary-700 disabled:cursor-not-allowed disabled:bg-slate-300 dark:disabled:bg-slate-700">{{ __('Assign') }}</button>
                         </div>
                         <p id="assigned-staff-note" class="mt-2 text-xs text-slate-500"></p>
                     </div>
                     <div class="mt-4">
-                        <label class="block text-xs font-semibold uppercase tracking-widest text-slate-400">Manual status update</label>
+                        <label class="block text-xs font-semibold uppercase tracking-widest text-slate-400">{{ __('Manual status update') }}</label>
                         <div class="mt-2 flex flex-wrap items-center gap-3">
                             <select id="order-status-select" class="h-10 min-w-[180px] flex-1 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700 shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200">
                             </select>
-                            <button type="button" id="order-status-save" class="inline-flex h-10 items-center rounded-xl bg-primary-600 px-4 text-xs font-semibold text-white shadow-sm hover:bg-primary-700 disabled:cursor-not-allowed disabled:bg-slate-300 dark:disabled:bg-slate-700">Save</button>
+                            <button type="button" id="order-status-save" class="inline-flex h-10 items-center rounded-xl bg-primary-600 px-4 text-xs font-semibold text-white shadow-sm hover:bg-primary-700 disabled:cursor-not-allowed disabled:bg-slate-300 dark:disabled:bg-slate-700">{{ __('Save') }}</button>
                         </div>
                         <label class="mt-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-slate-400">
                             <input id="order-status-override" type="checkbox" class="rounded border-slate-300 text-primary-600 focus:ring-primary-500" />
-                            Admin override
+                            {{ __('Admin override') }}
                         </label>
                         <p id="order-status-note" class="mt-2 text-xs text-slate-500"></p>
                     </div>
@@ -91,42 +91,42 @@
             </div>
 
             <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-                <h3 class="text-sm font-semibold text-slate-900 dark:text-white">Tracking History</h3>
+                <h3 class="text-sm font-semibold text-slate-900 dark:text-white">{{ __('Tracking History') }}</h3>
                 <div id="tracking-history" class="mt-4 space-y-3 text-sm text-slate-600 dark:text-slate-300">
-                    <p class="text-sm text-slate-500">Loading tracking history...</p>
+                    <p class="text-sm text-slate-500">{{ __('Loading tracking history...') }}</p>
                 </div>
             </div>
 
             <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-                <h3 class="text-sm font-semibold text-slate-900 dark:text-white">Delivery</h3>
+                <h3 class="text-sm font-semibold text-slate-900 dark:text-white">{{ __('Delivery') }}</h3>
                 <div class="mt-4 space-y-3 text-sm text-slate-600 dark:text-slate-300">
                     <div class="flex items-center justify-between gap-3">
-                        <span>Address</span>
+                        <span>{{ __('Address') }}</span>
                         <span class="max-w-[220px] text-right font-semibold text-slate-900 dark:text-white" id="delivery-address">--</span>
                     </div>
                     <div class="flex items-center justify-between gap-3">
-                        <span>Phone</span>
+                        <span>{{ __('Phone') }}</span>
                         <span class="font-semibold text-slate-900 dark:text-white" id="delivery-phone">--</span>
                     </div>
                     <div class="flex items-start justify-between gap-3">
-                        <span class="pt-0.5">Note</span>
+                        <span class="pt-0.5">{{ __('Note') }}</span>
                         <span class="max-w-[220px] text-right font-semibold text-slate-900 dark:text-white" id="delivery-note">--</span>
                     </div>
                 </div>
             </div>
 
             <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-                <h3 class="text-sm font-semibold text-slate-900 dark:text-white">Payment Summary</h3>
+                <h3 class="text-sm font-semibold text-slate-900 dark:text-white">{{ __('Payment Summary') }}</h3>
                 <div class="mt-4 space-y-2 text-sm text-slate-600 dark:text-slate-300">
                     <div class="flex items-center justify-between font-semibold text-slate-900 dark:text-white">
-                        <span>Total</span>
+                        <span>{{ __('Total') }}</span>
                         <span id="order-total">--</span>
                     </div>
                     <div class="mt-3">
                         <span class="rounded-full bg-success-50 px-2 py-1 text-xs font-semibold text-success-700 dark:bg-success-500/10 dark:text-success-100" id="order-payment">--</span>
                     </div>
                     <div class="mt-4">
-                        <label class="block text-xs font-semibold uppercase tracking-widest text-slate-400">Manage payment status</label>
+                        <label class="block text-xs font-semibold uppercase tracking-widest text-slate-400">{{ __('Manage payment status') }}</label>
                         <div class="mt-2 flex flex-wrap items-center gap-3">
                             <select id="payment-status-select" class="h-10 min-w-[160px] flex-1 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700 shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200">
                                 <option value="unpaid">unpaid</option>
@@ -168,7 +168,7 @@
             var trackingHistory = document.getElementById('tracking-history');
             var staffOptions = [];
             var readErrorMessage = async function (response, fallback) {
-                var defaultMessage = fallback || 'Request failed.';
+                var defaultMessage = fallback || '{{ __('Request failed.') }}';
                 if (!response) {
                     return defaultMessage;
                 }
@@ -213,22 +213,22 @@
 
                 var normalized = String(status).toLowerCase();
                 var labels = {
-                    created: 'Pending',
-                    pending: 'Pending',
-                    pending_confirmation: 'Pending',
-                    pending_approval: 'Pending',
-                    approved: 'Approved',
-                    assigned: 'Processing',
-                    in_progress: 'Processing',
-                    processing: 'Processing',
-                    ready: 'Processing',
-                    on_the_way: 'On the Way',
-                    arrived: 'On the Way',
-                    out_for_delivery: 'On the Way',
-                    delivered: 'Complete',
-                    completed: 'Complete',
-                    cancelled: 'Cancelled',
-                    rejected: 'Rejected'
+                    created: '{{ __('Pending') }}',
+                    pending: '{{ __('Pending') }}',
+                    pending_confirmation: '{{ __('Pending') }}',
+                    pending_approval: '{{ __('Pending') }}',
+                    approved: '{{ __('Approved') }}',
+                    assigned: '{{ __('Processing') }}',
+                    in_progress: '{{ __('Processing') }}',
+                    processing: '{{ __('Processing') }}',
+                    ready: '{{ __('Processing') }}',
+                    on_the_way: '{{ __('On the Way') }}',
+                    arrived: '{{ __('On the Way') }}',
+                    out_for_delivery: '{{ __('On the Way') }}',
+                    delivered: '{{ __('Complete') }}',
+                    completed: '{{ __('Complete') }}',
+                    cancelled: '{{ __('Cancelled') }}',
+                    rejected: '{{ __('Rejected') }}'
                 };
 
                 if (labels[normalized]) {
@@ -286,21 +286,21 @@
             var getOrderStatusOptions = function (orderType) {
                 if (orderType === 'delivery') {
                     return [
-                        { value: 'pending_approval', label: 'Pending' },
-                        { value: 'approved', label: 'Approved' },
-                        { value: 'in_progress', label: 'Processing' },
-                        { value: 'on_the_way', label: 'On the Way' },
-                        { value: 'completed', label: 'Complete' },
-                        { value: 'cancelled', label: 'Cancelled' },
-                        { value: 'rejected', label: 'Rejected' }
+                        { value: 'pending_approval', label: '{{ __('Pending') }}' },
+                        { value: 'approved', label: '{{ __('Approved') }}' },
+                        { value: 'in_progress', label: '{{ __('Processing') }}' },
+                        { value: 'on_the_way', label: '{{ __('On the Way') }}' },
+                        { value: 'completed', label: '{{ __('Complete') }}' },
+                        { value: 'cancelled', label: '{{ __('Cancelled') }}' },
+                        { value: 'rejected', label: '{{ __('Rejected') }}' }
                     ];
                 }
 
                 return [
-                    { value: 'pending', label: 'Pending' },
-                    { value: 'ready', label: 'Ready' },
-                    { value: 'completed', label: 'Complete' },
-                    { value: 'cancelled', label: 'Cancelled' }
+                    { value: 'pending', label: '{{ __('Pending') }}' },
+                    { value: 'ready', label: '{{ __('Ready') }}' },
+                    { value: 'completed', label: '{{ __('Complete') }}' },
+                    { value: 'cancelled', label: '{{ __('Cancelled') }}' }
                 ];
             };
             var currentPaymentStatus = 'pending';
@@ -374,14 +374,14 @@
                 }
                 orderStatusSave.disabled = true;
                 if (orderType === 'delivery') {
-                    orderStatusNote.textContent = 'Follow the delivery workflow or use admin override when needed.';
+                    orderStatusNote.textContent = '{{ __('Follow the delivery workflow or use admin override when needed.') }}';
                 } else {
-                    orderStatusNote.textContent = 'Update the pickup order progress here.';
+                    orderStatusNote.textContent = '{{ __('Update the pickup order progress here.') }}';
                 }
             }
 
             function renderStaffOptions(selectedId) {
-                assignedStaffSelect.innerHTML = '<option value="">Select staff</option>' + staffOptions.map(function (staff) {
+                assignedStaffSelect.innerHTML = '<option value="">{{ __('Select staff') }}</option>' + staffOptions.map(function (staff) {
                     var selected = Number(selectedId) === Number(staff.id) ? ' selected' : '';
                     return '<option value="' + staff.id + '"' + selected + '>' + staff.name + ' (' + (staff.role || 'staff') + ')</option>';
                 }).join('');
@@ -391,7 +391,7 @@
             function renderTrackingHistory(order) {
                 var history = Array.isArray(order.tracking_history) ? order.tracking_history : [];
                 if (!history.length) {
-                    trackingHistory.innerHTML = '<p class="text-sm text-slate-500">No tracking updates yet.</p>';
+                    trackingHistory.innerHTML = '<p class="text-sm text-slate-500">{{ __('No tracking updates yet.') }}</p>';
                     return;
                 }
 
@@ -404,7 +404,7 @@
                         meta.push(entry.changed_by_role);
                     }
                     if (entry.assigned_staff_name) {
-                        meta.push('Staff: ' + entry.assigned_staff_name);
+                        meta.push('{{ __('Staff:') }} ' + entry.assigned_staff_name);
                     }
 
                     return `
@@ -415,7 +415,7 @@
                             </div>
                             ${meta.length ? `<p class="mt-2 text-xs text-slate-500">${meta.join(' • ')}</p>` : ''}
                             ${entry.note ? `<p class="mt-2 text-sm text-slate-600 dark:text-slate-300">${entry.note}</p>` : ''}
-                            ${entry.override_used ? '<span class="mt-2 inline-flex rounded-full bg-warning-50 px-2 py-1 text-[11px] font-semibold text-warning-700 dark:bg-warning-500/10 dark:text-warning-100">Override</span>' : ''}
+                            ${entry.override_used ? '<span class="mt-2 inline-flex rounded-full bg-warning-50 px-2 py-1 text-[11px] font-semibold text-warning-700 dark:bg-warning-500/10 dark:text-warning-100">{{ __('Override') }}</span>' : ''}
                         </div>
                     `;
                 }).join('');
@@ -426,7 +426,7 @@
                 currentPaymentStatus = normalizePaymentStatus(order.payment_status);
                 currentOrderStatus = normalizeOrderStatus(order.status, (order.order_type || 'pickup').toLowerCase());
 
-                document.getElementById('order-number').textContent = order.order_number || 'Order';
+                document.getElementById('order-number').textContent = order.order_number || '{{ __('Order') }}';
                 document.getElementById('order-customer').textContent = order.customer_name || '--';
                 document.getElementById('order-meta').textContent = order.placed_at ? new Date(order.placed_at).toLocaleString() : '--';
                 setOrderBadge(currentOrderStatus);
@@ -435,7 +435,7 @@
                 document.getElementById('order-type').textContent = order.order_type ? order.order_type.toUpperCase() : '--';
                 document.getElementById('order-status-current').textContent = formatStatusLabel(currentOrderStatus);
                 assignedStaffName.textContent = order.assigned_staff_name || '--';
-                document.getElementById('delivery-address').textContent = order.delivery_address || (order.order_type === 'pickup' ? 'Pickup order' : '--');
+                document.getElementById('delivery-address').textContent = order.delivery_address || (order.order_type === 'pickup' ? '{{ __('Pickup order') }}' : '--');
                 document.getElementById('delivery-phone').textContent = order.delivery_phone || '--';
                 document.getElementById('delivery-note').textContent = order.delivery_note || '--';
                 document.getElementById('order-total').textContent = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(order.total_amount || 0);
@@ -454,8 +454,8 @@
                 orderApprove.disabled = !canApprove;
                 orderReject.disabled = !canReject;
                 orderActionNote.placeholder = currentOrderStatus === 'pending_approval'
-                    ? 'Reason or admin note'
-                    : 'Optional admin note';
+                    ? '{{ __('Reason or admin note') }}'
+                    : '{{ __('Optional admin note') }}';
 
                 var items = order.items || [];
                 var rows = items.map(function (item) {
@@ -470,7 +470,7 @@
                     `;
                 }).join('');
 
-                document.getElementById('order-items').innerHTML = rows || '<tr><td class="px-4 py-6 text-center text-sm text-slate-500" colspan="4">No items found.</td></tr>';
+                document.getElementById('order-items').innerHTML = rows || '<tr><td class="px-4 py-6 text-center text-sm text-slate-500" colspan="4">{{ __('No items found.') }}</td></tr>';
             }
 
             async function loadOrder(options) {
@@ -538,13 +538,13 @@
             paymentStatusSelect.addEventListener('change', function (event) {
                 var newStatus = event.target.value;
                 paymentStatusSave.disabled = newStatus === currentPaymentStatus;
-                paymentStatusNote.textContent = newStatus === currentPaymentStatus ? '' : 'Unsaved changes';
+                paymentStatusNote.textContent = newStatus === currentPaymentStatus ? '' : '{{ __('Unsaved changes') }}';
             });
 
             orderStatusSelect.addEventListener('change', function (event) {
                 var newStatus = event.target.value;
                 orderStatusSave.disabled = newStatus === currentOrderStatus;
-                orderStatusNote.textContent = newStatus === currentOrderStatus ? '' : 'Unsaved changes';
+                orderStatusNote.textContent = newStatus === currentOrderStatus ? '' : '{{ __('Unsaved changes') }}';
             });
 
             paymentStatusSave.addEventListener('click', async function () {
@@ -557,7 +557,7 @@
                 isMutating = true;
                 try {
                     paymentStatusSave.disabled = true;
-                    paymentStatusNote.textContent = 'Saving...';
+                    paymentStatusNote.textContent = '{{ __('Saving...') }}';
                     await window.adminApi.ensureCsrfCookie();
                     var updateResponse = await window.adminApi.request('/api/orders/' + orderId, {
                         method: 'PATCH',
@@ -568,16 +568,16 @@
                     if (!updateResponse.ok) {
                         paymentStatusSelect.value = previousStatus;
                         paymentStatusSave.disabled = false;
-                        paymentStatusNote.textContent = 'Save failed.';
+                        paymentStatusNote.textContent = '{{ __('Save failed.') }}';
                         return;
                     }
 
                     await loadOrder();
-                    paymentStatusNote.textContent = 'Saved.';
+                    paymentStatusNote.textContent = '{{ __('Saved.') }}';
                 } catch (error) {
                     paymentStatusSelect.value = previousStatus;
                     paymentStatusSave.disabled = false;
-                    paymentStatusNote.textContent = 'Save failed.';
+                    paymentStatusNote.textContent = '{{ __('Save failed.') }}';
                     console.error(error);
                 } finally {
                     isMutating = false;
@@ -595,7 +595,7 @@
                 isMutating = true;
                 try {
                     orderStatusSave.disabled = true;
-                    orderStatusNote.textContent = 'Saving...';
+                    orderStatusNote.textContent = '{{ __('Saving...') }}';
                     await window.adminApi.ensureCsrfCookie();
                     var updateResponse = await window.adminApi.request(isDelivery ? '/api/admin/orders/' + orderId + '/tracking-status' : '/api/orders/' + orderId, {
                         method: isDelivery ? 'POST' : 'PATCH',
@@ -610,16 +610,16 @@
                     if (!updateResponse.ok) {
                         orderStatusSelect.value = previousStatus;
                         orderStatusSave.disabled = false;
-                        orderStatusNote.textContent = await readErrorMessage(updateResponse, 'Save failed.');
+                        orderStatusNote.textContent = await readErrorMessage(updateResponse, '{{ __('Save failed.') }}');
                         return;
                     }
 
                     await loadOrder();
-                    orderStatusNote.textContent = 'Saved.';
+                    orderStatusNote.textContent = '{{ __('Saved.') }}';
                 } catch (error) {
                     orderStatusSelect.value = previousStatus;
                     orderStatusSave.disabled = false;
-                    orderStatusNote.textContent = 'Save failed.';
+                    orderStatusNote.textContent = '{{ __('Save failed.') }}';
                     console.error(error);
                 } finally {
                     isMutating = false;
@@ -629,14 +629,14 @@
             assignedStaffSave.addEventListener('click', async function () {
                 var staffId = assignedStaffSelect.value;
                 if (!staffId) {
-                    assignedStaffNote.textContent = 'Select a staff member first.';
+                    assignedStaffNote.textContent = '{{ __('Select a staff member first.') }}';
                     return;
                 }
 
                 isMutating = true;
                 try {
                     assignedStaffSave.disabled = true;
-                    assignedStaffNote.textContent = 'Assigning...';
+                    assignedStaffNote.textContent = '{{ __('Assigning...') }}';
                     await window.adminApi.ensureCsrfCookie();
                     var response = await window.adminApi.request('/api/admin/orders/' + orderId + '/assign', {
                         method: 'POST',
@@ -650,15 +650,15 @@
 
                     if (!response.ok) {
                         assignedStaffSave.disabled = false;
-                        assignedStaffNote.textContent = await readErrorMessage(response, 'Assignment failed.');
+                        assignedStaffNote.textContent = await readErrorMessage(response, '{{ __('Assignment failed.') }}');
                         return;
                     }
 
                     await loadOrder();
-                    assignedStaffNote.textContent = 'Assigned.';
+                    assignedStaffNote.textContent = '{{ __('Assigned.') }}';
                 } catch (error) {
                     assignedStaffSave.disabled = false;
-                    assignedStaffNote.textContent = 'Assignment failed.';
+                    assignedStaffNote.textContent = '{{ __('Assignment failed.') }}';
                     console.error(error);
                 } finally {
                     isMutating = false;
@@ -669,21 +669,21 @@
                 isMutating = true;
                 try {
                     orderApprove.disabled = true;
-                    orderStatusNote.textContent = 'Approving...';
+                    orderStatusNote.textContent = '{{ __('Approving...') }}';
                     await window.adminApi.ensureCsrfCookie();
                     var response = await window.adminApi.request('/api/admin/orders/' + orderId + '/approve', {
                         method: 'POST'
                     });
                     if (!response.ok) {
                         orderApprove.disabled = false;
-                        orderStatusNote.textContent = await readErrorMessage(response, 'Approve failed.');
+                        orderStatusNote.textContent = await readErrorMessage(response, '{{ __('Approve failed.') }}');
                         return;
                     }
                     await loadOrder();
-                    orderStatusNote.textContent = 'Approved.';
+                    orderStatusNote.textContent = '{{ __('Approved.') }}';
                 } catch (error) {
                     orderApprove.disabled = false;
-                    orderStatusNote.textContent = 'Approve failed.';
+                    orderStatusNote.textContent = '{{ __('Approve failed.') }}';
                     console.error(error);
                 } finally {
                     isMutating = false;
@@ -692,14 +692,14 @@
 
             orderReject.addEventListener('click', async function () {
                 if (!orderActionNote.value.trim()) {
-                    orderStatusNote.textContent = 'Add a reason before rejecting.';
+                    orderStatusNote.textContent = '{{ __('Add a reason before rejecting.') }}';
                     return;
                 }
 
                 isMutating = true;
                 try {
                     orderReject.disabled = true;
-                    orderStatusNote.textContent = 'Rejecting...';
+                    orderStatusNote.textContent = '{{ __('Rejecting...') }}';
                     await window.adminApi.ensureCsrfCookie();
                     var response = await window.adminApi.request('/api/admin/orders/' + orderId + '/reject', {
                         method: 'POST',
@@ -708,14 +708,14 @@
                     });
                     if (!response.ok) {
                         orderReject.disabled = false;
-                        orderStatusNote.textContent = await readErrorMessage(response, 'Reject failed.');
+                        orderStatusNote.textContent = await readErrorMessage(response, '{{ __('Reject failed.') }}');
                         return;
                     }
                     await loadOrder();
-                    orderStatusNote.textContent = 'Rejected.';
+                    orderStatusNote.textContent = '{{ __('Rejected.') }}';
                 } catch (error) {
                     orderReject.disabled = false;
-                    orderStatusNote.textContent = 'Reject failed.';
+                    orderStatusNote.textContent = '{{ __('Reject failed.') }}';
                     console.error(error);
                 } finally {
                     isMutating = false;

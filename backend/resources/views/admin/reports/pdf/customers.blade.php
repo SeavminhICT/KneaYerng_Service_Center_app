@@ -1,7 +1,7 @@
 @php
     $metrics      = $report['metrics']       ?? [];
     $topCustomers = $report['top_customers'] ?? [];
-    $reportType   = 'Customer Report';
+    $reportType   = __('Customer Report');
     $rangeLabel   = $rangeLabel ?? '';
 @endphp
 @extends('admin.reports.pdf._layout')
@@ -9,23 +9,23 @@
 @section('body')
 
     {{-- KPIs --}}
-    <div class="section-title">Customer Metrics</div>
+    <div class="section-title">{{ __('Customer Metrics') }}</div>
     <table class="kpi-table">
         <tr>
             <td class="kpi-cell">
-                <div class="kpi-label">Total Customers</div>
+                <div class="kpi-label">{{ __('Total Customers') }}</div>
                 <div class="kpi-value kpi-accent">{{ number_format($metrics['total_customers'] ?? 0) }}</div>
             </td>
             <td class="kpi-cell">
-                <div class="kpi-label">New This Period</div>
+                <div class="kpi-label">{{ __('New This Period') }}</div>
                 <div class="kpi-value kpi-green">{{ number_format($metrics['new_customers'] ?? 0) }}</div>
             </td>
             <td class="kpi-cell">
-                <div class="kpi-label">Active Customers</div>
+                <div class="kpi-label">{{ __('Active Customers') }}</div>
                 <div class="kpi-value">{{ number_format($metrics['active_customers'] ?? 0) }}</div>
             </td>
             <td class="kpi-cell">
-                <div class="kpi-label">Repeat Customers</div>
+                <div class="kpi-label">{{ __('Repeat Customers') }}</div>
                 <div class="kpi-value kpi-amber">{{ number_format($metrics['repeat_customers'] ?? 0) }}</div>
             </td>
         </tr>
@@ -43,39 +43,39 @@
         <tr>
             <td>
                 <div class="box">
-                    <div class="box-title">Retention Rate (Active / Total)</div>
+                    <div class="box-title">{{ __('Retention Rate (Active / Total)') }}</div>
                     <div style="font-size:22px;font-weight:bold;color:{{ $retentionRate >= 50 ? '#16a34a' : '#d97706' }}">{{ $retentionRate }}%</div>
                     <div class="progress-bg" style="margin-top:8px">
                         <div class="progress-fill" style="width:{{ min($retentionRate,100) }}%;background:{{ $retentionRate >= 50 ? '#16a34a' : '#d97706' }}"></div>
                     </div>
-                    <div style="font-size:8px;color:#64748b;margin-top:4px">{{ $active }} active out of {{ $total }} total customers</div>
+                    <div style="font-size:8px;color:#64748b;margin-top:4px">{{ $active }} {{ __('active out of') }} {{ $total }} {{ __('total customers') }}</div>
                 </div>
             </td>
             <td>
                 <div class="box">
-                    <div class="box-title">Repeat Purchase Rate</div>
+                    <div class="box-title">{{ __('Repeat Purchase Rate') }}</div>
                     <div style="font-size:22px;font-weight:bold;color:{{ $repeatRate >= 30 ? '#16a34a' : '#d97706' }}">{{ $repeatRate }}%</div>
                     <div class="progress-bg" style="margin-top:8px">
                         <div class="progress-fill" style="width:{{ min($repeatRate,100) }}%;background:{{ $repeatRate >= 30 ? '#16a34a' : '#d97706' }}"></div>
                     </div>
-                    <div style="font-size:8px;color:#64748b;margin-top:4px">{{ $repeat }} repeat out of {{ $active }} active customers</div>
+                    <div style="font-size:8px;color:#64748b;margin-top:4px">{{ $repeat }} {{ __('repeat out of') }} {{ $active }} {{ __('active customers') }}</div>
                 </div>
             </td>
         </tr>
     </table>
 
     {{-- Top Customers --}}
-    <div class="section-title">Top Customers by Spending</div>
+    <div class="section-title">{{ __('Top Customers by Spending') }}</div>
     <table class="data-table">
         <thead>
             <tr>
                 <th style="width:30px">#</th>
-                <th>Customer Name</th>
-                <th>Email</th>
-                <th>Phone</th>
-                <th class="text-right">Orders</th>
-                <th class="text-right">Total Spent</th>
-                <th class="text-right">Avg/Order</th>
+                <th>{{ __('Customer Name') }}</th>
+                <th>{{ __('Email') }}</th>
+                <th>{{ __('Phone') }}</th>
+                <th class="text-right">{{ __('Orders') }}</th>
+                <th class="text-right">{{ __('Total Spent') }}</th>
+                <th class="text-right">{{ __('Avg/Order') }}</th>
             </tr>
         </thead>
         <tbody>
@@ -91,13 +91,13 @@
                     <td class="text-right text-muted">${{ number_format($avg, 2) }}</td>
                 </tr>
             @empty
-                <tr><td colspan="7" style="text-align:center;color:#94a3b8;padding:14px">No customer activity in this period.</td></tr>
+                <tr><td colspan="7" style="text-align:center;color:#94a3b8;padding:14px">{{ __('No customer activity in this period.') }}</td></tr>
             @endforelse
         </tbody>
         @if (count($topCustomers))
         <tfoot>
             <tr>
-                <td colspan="4">Totals (shown)</td>
+                <td colspan="4">{{ __('Totals (shown)') }}</td>
                 <td class="text-right">{{ number_format(collect($topCustomers)->sum('orders_count')) }}</td>
                 <td class="text-right">${{ number_format(collect($topCustomers)->sum('total_spent'), 2) }}</td>
                 <td></td>

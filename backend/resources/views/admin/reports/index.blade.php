@@ -1,7 +1,7 @@
 @extends('layouts.admin')
 
-@section('title', 'Sales Report')
-@section('page-title', 'Sales Report')
+@section('title', __('Sales Report'))
+@section('page-title', __('Sales Report'))
 
 @section('content')
 <div class="space-y-6" id="report-root">
@@ -12,44 +12,44 @@
 
             {{-- Preset --}}
             <div class="flex-1 min-w-[160px]">
-                <label class="text-xs font-semibold uppercase tracking-widest text-slate-400">Date Range</label>
+                <label class="text-xs font-semibold uppercase tracking-widest text-slate-400">{{ __('Date Range') }}</label>
                 <select id="report-preset" class="mt-2 h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200">
-                    <option value="last_7_days">Last 7 days</option>
-                    <option value="last_30_days" selected>Last 30 days</option>
-                    <option value="last_90_days">Last 90 days</option>
-                    <option value="this_month">This month</option>
-                    <option value="last_month">Last month</option>
-                    <option value="year_to_date">Year to date</option>
-                    <option value="custom">Custom range</option>
+                    <option value="last_7_days">{{ __('Last 7 days') }}</option>
+                    <option value="last_30_days" selected>{{ __('Last 30 days') }}</option>
+                    <option value="last_90_days">{{ __('Last 90 days') }}</option>
+                    <option value="this_month">{{ __('This month') }}</option>
+                    <option value="last_month">{{ __('Last month') }}</option>
+                    <option value="year_to_date">{{ __('Year to date') }}</option>
+                    <option value="custom">{{ __('Custom range') }}</option>
                 </select>
             </div>
 
             {{-- Custom start --}}
             <div id="custom-start-wrap" class="hidden flex-1 min-w-[130px]">
-                <label class="text-xs font-semibold uppercase tracking-widest text-slate-400">From</label>
+                <label class="text-xs font-semibold uppercase tracking-widest text-slate-400">{{ __('From') }}</label>
                 <input id="report-start" type="date" class="mt-2 h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200" />
             </div>
 
             {{-- Custom end --}}
             <div id="custom-end-wrap" class="hidden flex-1 min-w-[130px]">
-                <label class="text-xs font-semibold uppercase tracking-widest text-slate-400">To</label>
+                <label class="text-xs font-semibold uppercase tracking-widest text-slate-400">{{ __('To') }}</label>
                 <input id="report-end" type="date" class="mt-2 h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200" />
             </div>
 
             {{-- Report type --}}
             <div class="flex-1 min-w-[150px]">
-                <label class="text-xs font-semibold uppercase tracking-widest text-slate-400">Report Type</label>
+                <label class="text-xs font-semibold uppercase tracking-widest text-slate-400">{{ __('Report Type') }}</label>
                 <select id="report-type" class="mt-2 h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200">
-                    <option value="sales">Sales</option>
-                    <option value="customers">Customers</option>
-                    <option value="inventory">Inventory</option>
-                    <option value="repairs">Repair Requests</option>
+                    <option value="sales">{{ __('Sales') }}</option>
+                    <option value="customers">{{ __('Customers') }}</option>
+                    <option value="inventory">{{ __('Inventory') }}</option>
+                    <option value="repairs">{{ __('Repair Requests') }}</option>
                 </select>
             </div>
 
             {{-- Export format --}}
             <div>
-                <label class="text-xs font-semibold uppercase tracking-widest text-slate-400">Export As</label>
+                <label class="text-xs font-semibold uppercase tracking-widest text-slate-400">{{ __('Export As') }}</label>
                 <div class="mt-2 flex items-center gap-3 h-10 text-sm text-slate-600 dark:text-slate-300">
                     <label class="inline-flex items-center gap-1.5 cursor-pointer">
                         <input id="format-csv" type="checkbox" class="rounded border-slate-300 text-primary-600 focus:ring-primary-500" checked />
@@ -69,28 +69,28 @@
                     <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414A1 1 0 0119 9.414V19a2 2 0 01-2 2z"/>
                     </svg>
-                    Generate
+                    {{ __('Generate') }}
                 </button>
                 <button id="btn-export"
                         class="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-600 shadow-sm hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 disabled:opacity-50">
                     <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
                     </svg>
-                    Export
+                    {{ __('Export') }}
                 </button>
             </div>
         </div>
 
         {{-- Range label --}}
         <p id="range-label" class="mt-3 text-xs text-slate-500 hidden">
-            Showing data for: <span id="range-label-text" class="font-semibold text-slate-700 dark:text-slate-200"></span>
+            {{ __('Showing data for:') }} <span id="range-label-text" class="font-semibold text-slate-700 dark:text-slate-200"></span>
         </p>
     </div>
 
     {{-- ── Loading spinner ─────────────────────────────────────────────────── --}}
     <div id="report-loading" class="hidden flex items-center justify-center py-16">
         <div class="h-8 w-8 animate-spin rounded-full border-4 border-primary-200 border-t-primary-600"></div>
-        <span class="ml-3 text-sm font-medium text-slate-500">Generating report...</span>
+        <span class="ml-3 text-sm font-medium text-slate-500">{{ __('Generating report...') }}</span>
     </div>
 
     {{-- ── Sales panel ─────────────────────────────────────────────────────── --}}
@@ -100,7 +100,7 @@
         <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
                 <div class="flex items-center justify-between">
-                    <p class="text-xs font-semibold uppercase tracking-widest text-slate-400">Total Revenue</p>
+                    <p class="text-xs font-semibold uppercase tracking-widest text-slate-400">{{ __('Total Revenue') }}</p>
                     <span class="flex h-8 w-8 items-center justify-center rounded-xl bg-green-100 dark:bg-green-500/10">
                         <svg class="h-4 w-4 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                     </span>
@@ -109,7 +109,7 @@
             </div>
             <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
                 <div class="flex items-center justify-between">
-                    <p class="text-xs font-semibold uppercase tracking-widest text-slate-400">Total Orders</p>
+                    <p class="text-xs font-semibold uppercase tracking-widest text-slate-400">{{ __('Total Orders') }}</p>
                     <span class="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-100 dark:bg-blue-500/10">
                         <svg class="h-4 w-4 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
                     </span>
@@ -118,7 +118,7 @@
             </div>
             <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
                 <div class="flex items-center justify-between">
-                    <p class="text-xs font-semibold uppercase tracking-widest text-slate-400">Avg Order Value</p>
+                    <p class="text-xs font-semibold uppercase tracking-widest text-slate-400">{{ __('Avg Order Value') }}</p>
                     <span class="flex h-8 w-8 items-center justify-center rounded-xl bg-purple-100 dark:bg-purple-500/10">
                         <svg class="h-4 w-4 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
                     </span>
@@ -127,7 +127,7 @@
             </div>
             <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
                 <div class="flex items-center justify-between">
-                    <p class="text-xs font-semibold uppercase tracking-widest text-slate-400">Paid Orders</p>
+                    <p class="text-xs font-semibold uppercase tracking-widest text-slate-400">{{ __('Paid Orders') }}</p>
                     <span class="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-100 dark:bg-emerald-500/10">
                         <svg class="h-4 w-4 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                     </span>
@@ -141,7 +141,7 @@
 
             {{-- Daily revenue chart --}}
             <div class="xl:col-span-2 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-                <h3 class="text-sm font-semibold text-slate-800 dark:text-white">Daily Revenue</h3>
+                <h3 class="text-sm font-semibold text-slate-800 dark:text-white">{{ __('Daily Revenue') }}</h3>
                 <p id="chart-range" class="mt-0.5 text-xs text-slate-400">--</p>
                 <div class="mt-4 h-64">
                     <canvas id="sales-chart"></canvas>
@@ -150,32 +150,32 @@
 
             {{-- Payment breakdown --}}
             <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-                <h3 class="text-sm font-semibold text-slate-800 dark:text-white">Payment Breakdown</h3>
+                <h3 class="text-sm font-semibold text-slate-800 dark:text-white">{{ __('Payment Breakdown') }}</h3>
                 <div class="mt-4 space-y-3">
                     <div class="flex items-center justify-between rounded-xl bg-green-50 px-4 py-3 dark:bg-green-500/10">
                         <div class="flex items-center gap-2">
                             <span class="h-2.5 w-2.5 rounded-full bg-green-500"></span>
-                            <span class="text-sm font-medium text-slate-700 dark:text-slate-300">Paid</span>
+                            <span class="text-sm font-medium text-slate-700 dark:text-slate-300">{{ __('Paid') }}</span>
                         </div>
                         <span id="pay-paid" class="text-sm font-bold text-slate-900 dark:text-white">--</span>
                     </div>
                     <div class="flex items-center justify-between rounded-xl bg-yellow-50 px-4 py-3 dark:bg-yellow-500/10">
                         <div class="flex items-center gap-2">
                             <span class="h-2.5 w-2.5 rounded-full bg-yellow-400"></span>
-                            <span class="text-sm font-medium text-slate-700 dark:text-slate-300">Unpaid</span>
+                            <span class="text-sm font-medium text-slate-700 dark:text-slate-300">{{ __('Unpaid') }}</span>
                         </div>
                         <span id="pay-unpaid" class="text-sm font-bold text-slate-900 dark:text-white">--</span>
                     </div>
                     <div class="flex items-center justify-between rounded-xl bg-red-50 px-4 py-3 dark:bg-red-500/10">
                         <div class="flex items-center gap-2">
                             <span class="h-2.5 w-2.5 rounded-full bg-red-400"></span>
-                            <span class="text-sm font-medium text-slate-700 dark:text-slate-300">Failed</span>
+                            <span class="text-sm font-medium text-slate-700 dark:text-slate-300">{{ __('Failed') }}</span>
                         </div>
                         <span id="pay-failed" class="text-sm font-bold text-slate-900 dark:text-white">--</span>
                     </div>
                 </div>
                 <div class="mt-5">
-                    <p class="text-xs font-semibold uppercase tracking-widest text-slate-400">Payment Rate</p>
+                    <p class="text-xs font-semibold uppercase tracking-widest text-slate-400">{{ __('Payment Rate') }}</p>
                     <div class="mt-2 h-2.5 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
                         <div id="pay-rate-bar" class="h-full rounded-full bg-green-500 transition-all duration-700" style="width:0%"></div>
                     </div>
@@ -186,20 +186,20 @@
 
         {{-- Top products table --}}
         <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-            <h3 class="mb-4 text-sm font-semibold text-slate-800 dark:text-white">Top Products by Revenue</h3>
+            <h3 class="mb-4 text-sm font-semibold text-slate-800 dark:text-white">{{ __('Top Products by Revenue') }}</h3>
             <div class="overflow-x-auto">
                 <table class="w-full text-left text-sm">
                     <thead class="text-xs uppercase tracking-widest text-slate-400">
                         <tr>
                             <th class="px-4 py-3">#</th>
-                            <th class="px-4 py-3">Product</th>
-                            <th class="px-4 py-3">Type</th>
-                            <th class="px-4 py-3">Qty Sold</th>
-                            <th class="px-4 py-3 text-right">Revenue</th>
+                            <th class="px-4 py-3">{{ __('Product') }}</th>
+                            <th class="px-4 py-3">{{ __('Type') }}</th>
+                            <th class="px-4 py-3">{{ __('Qty Sold') }}</th>
+                            <th class="px-4 py-3 text-right">{{ __('Revenue') }}</th>
                         </tr>
                     </thead>
                     <tbody id="top-products-body" class="divide-y divide-slate-100 text-slate-600 dark:divide-slate-800 dark:text-slate-300">
-                        <tr><td colspan="5" class="px-4 py-6 text-center text-xs text-slate-400">Click Generate to load data.</td></tr>
+                        <tr><td colspan="5" class="px-4 py-6 text-center text-xs text-slate-400">{{ __('Click Generate to load data.') }}</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -210,31 +210,31 @@
     <div id="customers-panel" class="hidden space-y-6">
         <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-                <p class="text-xs font-semibold uppercase tracking-widest text-slate-400">Total Customers</p>
+                <p class="text-xs font-semibold uppercase tracking-widest text-slate-400">{{ __('Total Customers') }}</p>
                 <p id="c-total" class="mt-3 text-2xl font-bold text-slate-900 dark:text-white">--</p>
             </div>
             <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-                <p class="text-xs font-semibold uppercase tracking-widest text-slate-400">New Customers</p>
+                <p class="text-xs font-semibold uppercase tracking-widest text-slate-400">{{ __('New Customers') }}</p>
                 <p id="c-new" class="mt-3 text-2xl font-bold text-slate-900 dark:text-white">--</p>
             </div>
             <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-                <p class="text-xs font-semibold uppercase tracking-widest text-slate-400">Active Customers</p>
+                <p class="text-xs font-semibold uppercase tracking-widest text-slate-400">{{ __('Active Customers') }}</p>
                 <p id="c-active" class="mt-3 text-2xl font-bold text-slate-900 dark:text-white">--</p>
             </div>
             <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-                <p class="text-xs font-semibold uppercase tracking-widest text-slate-400">Repeat Customers</p>
+                <p class="text-xs font-semibold uppercase tracking-widest text-slate-400">{{ __('Repeat Customers') }}</p>
                 <p id="c-repeat" class="mt-3 text-2xl font-bold text-slate-900 dark:text-white">--</p>
             </div>
         </div>
         <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-            <h3 class="mb-4 text-sm font-semibold text-slate-800 dark:text-white">Top Customers</h3>
+            <h3 class="mb-4 text-sm font-semibold text-slate-800 dark:text-white">{{ __('Top Customers') }}</h3>
             <div class="overflow-x-auto">
                 <table class="w-full text-left text-sm">
                     <thead class="text-xs uppercase tracking-widest text-slate-400">
-                        <tr><th class="px-4 py-3">#</th><th class="px-4 py-3">Name</th><th class="px-4 py-3">Email</th><th class="px-4 py-3">Orders</th><th class="px-4 py-3 text-right">Total Spent</th></tr>
+                        <tr><th class="px-4 py-3">#</th><th class="px-4 py-3">{{ __('Name') }}</th><th class="px-4 py-3">{{ __('Email') }}</th><th class="px-4 py-3">{{ __('Orders') }}</th><th class="px-4 py-3 text-right">{{ __('Total Spent') }}</th></tr>
                     </thead>
                     <tbody id="top-customers-body" class="divide-y divide-slate-100 text-slate-600 dark:divide-slate-800 dark:text-slate-300">
-                        <tr><td colspan="5" class="px-4 py-6 text-center text-xs text-slate-400">Click Generate to load data.</td></tr>
+                        <tr><td colspan="5" class="px-4 py-6 text-center text-xs text-slate-400">{{ __('Click Generate to load data.') }}</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -245,31 +245,31 @@
     <div id="inventory-panel" class="hidden space-y-6">
         <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-                <p class="text-xs font-semibold uppercase tracking-widest text-slate-400">Products</p>
+                <p class="text-xs font-semibold uppercase tracking-widest text-slate-400">{{ __('Products') }}</p>
                 <p id="inv-products" class="mt-3 text-2xl font-bold text-slate-900 dark:text-white">--</p>
             </div>
             <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-                <p class="text-xs font-semibold uppercase tracking-widest text-slate-400">Accessories</p>
+                <p class="text-xs font-semibold uppercase tracking-widest text-slate-400">{{ __('Accessories') }}</p>
                 <p id="inv-accessories" class="mt-3 text-2xl font-bold text-slate-900 dark:text-white">--</p>
             </div>
             <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-                <p class="text-xs font-semibold uppercase tracking-widest text-slate-400">Parts</p>
+                <p class="text-xs font-semibold uppercase tracking-widest text-slate-400">{{ __('Parts') }}</p>
                 <p id="inv-parts" class="mt-3 text-2xl font-bold text-slate-900 dark:text-white">--</p>
             </div>
             <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-                <p class="text-xs font-semibold uppercase tracking-widest text-slate-400">Low Stock</p>
+                <p class="text-xs font-semibold uppercase tracking-widest text-slate-400">{{ __('Low Stock') }}</p>
                 <p id="inv-low" class="mt-3 text-2xl font-bold text-red-500">--</p>
             </div>
         </div>
         <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-            <h3 class="mb-4 text-sm font-semibold text-slate-800 dark:text-white">Low Stock Items</h3>
+            <h3 class="mb-4 text-sm font-semibold text-slate-800 dark:text-white">{{ __('Low Stock Items') }}</h3>
             <div class="overflow-x-auto">
                 <table class="w-full text-left text-sm">
                     <thead class="text-xs uppercase tracking-widest text-slate-400">
-                        <tr><th class="px-4 py-3">#</th><th class="px-4 py-3">Name</th><th class="px-4 py-3">Type</th><th class="px-4 py-3">SKU</th><th class="px-4 py-3 text-right">Stock</th></tr>
+                        <tr><th class="px-4 py-3">#</th><th class="px-4 py-3">{{ __('Name') }}</th><th class="px-4 py-3">{{ __('Type') }}</th><th class="px-4 py-3">{{ __('SKU') }}</th><th class="px-4 py-3 text-right">{{ __('Stock') }}</th></tr>
                     </thead>
                     <tbody id="low-stock-body" class="divide-y divide-slate-100 text-slate-600 dark:divide-slate-800 dark:text-slate-300">
-                        <tr><td colspan="5" class="px-4 py-6 text-center text-xs text-slate-400">Click Generate to load data.</td></tr>
+                        <tr><td colspan="5" class="px-4 py-6 text-center text-xs text-slate-400">{{ __('Click Generate to load data.') }}</td></tr>
                     </tbody>
                 </table>
             </div>

@@ -3,7 +3,7 @@
 
         <div class="flex items-center gap-4">
             <button type="button" class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm transition-all duration-200 ease-out hover:-translate-y-0.5 hover:text-slate-900 hover:shadow-md active:translate-y-0 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/70 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 lg:hidden motion-reduce:transition-none" @click="sidebarOpen = true">
-                <span class="sr-only">Open sidebar</span>
+                <span class="sr-only">{{ __('Open sidebar') }}</span>
                 <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
                 </svg>
@@ -39,7 +39,7 @@
                 <button type="button"
                     @click="toggle()"
                     class="relative inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm transition-all duration-200 ease-out hover:-translate-y-0.5 hover:text-slate-900 hover:shadow-md hover:shadow-primary-500/15 active:translate-y-0 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/70 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 motion-reduce:transition-none">
-                    <span class="sr-only">Notifications</span>
+                    <span class="sr-only">{{ __('Notifications') }}</span>
                     <svg class="h-5 w-5 shrink-0" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.4-1.4A2 2 0 0118 14V9a6 6 0 00-5-5.92V2a1 1 0 00-2 0v1.08A6 6 0 006 9v5a2 2 0 01-.6 1.6L4 17h5m6 0a3 3 0 11-6 0h6z" />
                     </svg>
@@ -65,7 +65,7 @@
                     {{-- Header --}}
                     <div class="flex items-center justify-between border-b border-slate-100 px-4 py-3 dark:border-slate-800">
                         <div class="flex items-center gap-2">
-                            <span class="text-sm font-semibold text-slate-800 dark:text-white">Notifications</span>
+                            <span class="text-sm font-semibold text-slate-800 dark:text-white">{{ __('Notifications') }}</span>
                             <span x-show="unreadCount > 0"
                                 x-text="unreadCount > 99 ? '99+' : unreadCount"
                                 class="inline-flex items-center justify-center rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] font-bold leading-none text-white"></span>
@@ -85,7 +85,7 @@
                             <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
                             </svg>
-                            Orders
+                            {{ __('Orders') }}
                             <span x-show="newOrdersCount > 0" x-text="newOrdersCount"
                                 class="inline-flex items-center justify-center rounded-full bg-primary-100 px-1.5 text-[10px] font-bold text-primary-700 dark:bg-primary-500/20 dark:text-primary-300"></span>
                         </button>
@@ -95,7 +95,7 @@
                             <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/>
                             </svg>
-                            Feedback
+                            {{ __('Feedback') }}
                             <span x-show="unreadFeedbackCount > 0" x-text="unreadFeedbackCount"
                                 class="inline-flex items-center justify-center rounded-full bg-amber-100 px-1.5 text-[10px] font-bold text-amber-700 dark:bg-amber-500/20 dark:text-amber-300"></span>
                         </button>
@@ -116,7 +116,7 @@
                                     <svg class="h-8 w-8 text-slate-300 dark:text-slate-700" fill="none" stroke="currentColor" stroke-width="1.4" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
                                     </svg>
-                                    <p class="mt-2 text-xs font-medium text-slate-400">No recent orders</p>
+                                    <p class="mt-2 text-xs font-medium text-slate-400">{{ __('No recent orders') }}</p>
                                 </div>
                             </template>
                             <template x-for="order in orders" :key="order.id">
@@ -160,7 +160,7 @@
                             {{-- View all --}}
                             <a href="/admin/orders"
                                 class="flex items-center justify-center gap-1 border-t border-slate-100 py-3 text-xs font-semibold text-primary-600 hover:text-primary-700 dark:border-slate-800 dark:text-primary-400">
-                                View all orders
+                                {{ __('View all orders') }}
                                 <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
                                 </svg>
@@ -174,7 +174,7 @@
                                     <svg class="h-8 w-8 text-slate-300 dark:text-slate-700" fill="none" stroke="currentColor" stroke-width="1.4" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/>
                                     </svg>
-                                    <p class="mt-2 text-xs font-medium text-slate-400">No feedback yet</p>
+                                    <p class="mt-2 text-xs font-medium text-slate-400">{{ __('No feedback yet') }}</p>
                                 </div>
                             </template>
                             <template x-for="conv in conversations" :key="conv.id">
@@ -188,13 +188,13 @@
                                     <div class="min-w-0 flex-1">
                                         <div class="flex items-center gap-2">
                                             <p class="truncate text-xs font-semibold text-slate-800 dark:text-white"
-                                                x-text="conv.customer ? conv.customer.name : 'Unknown user'"></p>
+                                                x-text="conv.customer ? conv.customer.name : '{{ __('Unknown user') }}'"></p>
                                             <span x-show="conv.admin_unread_count > 0"
                                                 :x-text="conv.admin_unread_count"
                                                 class="inline-flex items-center justify-center rounded-full bg-primary-600 px-1.5 text-[10px] font-bold leading-4 text-white"></span>
                                         </div>
                                         <p class="mt-0.5 truncate text-[11px] text-slate-500"
-                                            x-text="conv.last_message || conv.subject || 'Support conversation'"></p>
+                                            x-text="conv.last_message || conv.subject || '{{ __('Support conversation') }}'"></p>
                                         <span class="mt-1 inline-block rounded-full px-1.5 py-0.5 text-[10px] font-semibold"
                                             :class="{
                                                 'bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-300': conv.status === 'resolved',
@@ -213,7 +213,7 @@
                             {{-- View all --}}
                             <a href="/admin/support"
                                 class="flex items-center justify-center gap-1 border-t border-slate-100 py-3 text-xs font-semibold text-primary-600 hover:text-primary-700 dark:border-slate-800 dark:text-primary-400">
-                                View all support
+                                {{ __('View all support') }}
                                 <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
                                 </svg>
@@ -234,10 +234,10 @@
                 </button>
                 <div class="absolute right-0 mt-2 w-36 rounded-2xl border border-slate-200 bg-white p-2 text-sm shadow-xl dark:border-slate-800 dark:bg-slate-900" x-show="langOpen" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 -translate-y-1 scale-95" x-transition:enter-end="opacity-100 translate-y-0 scale-100" x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100 translate-y-0 scale-100" x-transition:leave-end="opacity-0 -translate-y-1 scale-95" x-cloak @click.outside="langOpen = false">
                     <a href="{{ route('locale.set', 'en') }}" class="flex items-center gap-3 rounded-xl px-3 py-2 text-slate-600 transition-all duration-200 ease-out hover:translate-x-1 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 {{ app()->getLocale() === 'en' ? 'bg-slate-50 font-semibold dark:bg-slate-800/50' : '' }}">
-                        <span class="text-base leading-none">🇬🇧</span> English
+                        <span class="text-base leading-none">🇬🇧</span> {{ __('English') }}
                     </a>
                     <a href="{{ route('locale.set', 'km') }}" class="flex items-center gap-3 rounded-xl px-3 py-2 text-slate-600 transition-all duration-200 ease-out hover:translate-x-1 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 {{ app()->getLocale() === 'km' ? 'bg-slate-50 font-semibold dark:bg-slate-800/50' : '' }}">
-                        <span class="text-base leading-none">🇰🇭</span> ភាសាខ្មែរ
+                        <span class="text-base leading-none">🇰🇭</span> {{ __('Khmer') }}
                     </a>
                 </div>
             </div>
@@ -378,10 +378,10 @@ function adminNotifPanel() {
         timeAgo(iso) {
             if (!iso) return '';
             var diff = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
-            if (diff < 60) return 'just now';
-            if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
-            if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
-            return Math.floor(diff / 86400) + 'd ago';
+            if (diff < 60) return '{{ __('just now') }}';
+            if (diff < 3600) return Math.floor(diff / 60) + '{{ __('m ago') }}';
+            if (diff < 86400) return Math.floor(diff / 3600) + '{{ __('h ago') }}';
+            return Math.floor(diff / 86400) + '{{ __('d ago') }}';
         },
     };
 }

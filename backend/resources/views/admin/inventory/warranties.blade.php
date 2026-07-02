@@ -1,7 +1,7 @@
 @extends('layouts.admin')
 
-@section('title', 'Warranty Tracking')
-@section('page-title', 'Warranty Tracking')
+@section('title', __('Warranty Tracking'))
+@section('page-title', __('Warranty Tracking'))
 
 @section('content')
 <div class="space-y-6">
@@ -9,15 +9,15 @@
     {{-- ── Header ── --}}
     <div class="flex flex-wrap items-center justify-between gap-3">
         <div>
-            <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Product Warranties</h2>
-            <p class="text-sm text-slate-500">Warranties issued to customers for purchased products from the mobile app.</p>
+            <h2 class="text-lg font-semibold text-slate-900 dark:text-white">{{ __('Product Warranties') }}</h2>
+            <p class="text-sm text-slate-500">{{ __('Warranties issued to customers for purchased products from the mobile app.') }}</p>
         </div>
         <div class="flex items-center gap-3">
             <span id="stat-active"   class="inline-flex items-center gap-1.5 rounded-full bg-green-50 px-3 py-1 text-xs font-semibold text-green-700 dark:bg-green-500/10 dark:text-green-300">
-                <span class="h-1.5 w-1.5 rounded-full bg-green-500"></span> Active: <span id="count-active">--</span>
+                <span class="h-1.5 w-1.5 rounded-full bg-green-500"></span> {{ __('Active') }}: <span id="count-active">--</span>
             </span>
             <span id="stat-expired"  class="inline-flex items-center gap-1.5 rounded-full bg-red-50 px-3 py-1 text-xs font-semibold text-red-700 dark:bg-red-500/10 dark:text-red-300">
-                <span class="h-1.5 w-1.5 rounded-full bg-red-500"></span> Expired: <span id="count-expired">--</span>
+                <span class="h-1.5 w-1.5 rounded-full bg-red-500"></span> {{ __('Expired') }}: <span id="count-expired">--</span>
             </span>
         </div>
     </div>
@@ -26,7 +26,7 @@
     <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
         <div class="flex flex-wrap items-center gap-3">
             <div class="relative flex-1 min-w-[200px]">
-                <input id="search-input" type="text" placeholder="Search product or customer email..."
+                <input id="search-input" type="text" placeholder="{{ __('Search product or customer email...') }}"
                     class="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 pr-9 text-sm text-slate-700 placeholder:text-slate-400 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200" />
                 <svg class="absolute right-3 top-3 h-4 w-4 text-slate-400" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35m1.6-5.15a7 7 0 11-14 0 7 7 0 0114 0z"/>
@@ -34,17 +34,17 @@
             </div>
             <select id="status-filter"
                 class="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-600 focus:border-primary-500 focus:ring-primary-500 sm:w-36 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300">
-                <option value="">All Statuses</option>
-                <option value="active">Active</option>
-                <option value="expired">Expired</option>
-                <option value="void">Void</option>
+                <option value="">{{ __('All Statuses') }}</option>
+                <option value="active">{{ __('Active') }}</option>
+                <option value="expired">{{ __('Expired') }}</option>
+                <option value="void">{{ __('Void') }}</option>
             </select>
             <button id="btn-refresh"
                 class="inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-600 hover:bg-slate-50 sm:w-auto dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
                 <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
                 </svg>
-                Refresh
+                {{ __('Refresh') }}
             </button>
         </div>
 
@@ -53,19 +53,19 @@
             <table class="w-full text-left text-sm">
                 <thead class="text-xs uppercase tracking-widest text-slate-400">
                     <tr>
-                        <th class="px-4 py-3">Product</th>
-                        <th class="px-4 py-3">Customer</th>
-                        <th class="px-4 py-3">Order</th>
-                        <th class="px-4 py-3">Period</th>
-                        <th class="px-4 py-3">Start</th>
-                        <th class="px-4 py-3">Expires</th>
-                        <th class="px-4 py-3">Remaining</th>
-                        <th class="px-4 py-3">Status</th>
-                        <th class="px-4 py-3 text-right">Action</th>
+                        <th class="px-4 py-3">{{ __('Product') }}</th>
+                        <th class="px-4 py-3">{{ __('Customer') }}</th>
+                        <th class="px-4 py-3">{{ __('Order') }}</th>
+                        <th class="px-4 py-3">{{ __('Period') }}</th>
+                        <th class="px-4 py-3">{{ __('Start') }}</th>
+                        <th class="px-4 py-3">{{ __('Expires') }}</th>
+                        <th class="px-4 py-3">{{ __('Remaining') }}</th>
+                        <th class="px-4 py-3">{{ __('Status') }}</th>
+                        <th class="px-4 py-3 text-right">{{ __('Action') }}</th>
                     </tr>
                 </thead>
                 <tbody id="warranty-rows" class="divide-y divide-slate-100 text-slate-600 dark:divide-slate-800 dark:text-slate-300">
-                    <tr><td colspan="9" class="px-4 py-8 text-center text-sm text-slate-400">Loading...</td></tr>
+                    <tr><td colspan="9" class="px-4 py-8 text-center text-sm text-slate-400">{{ __('Loading...') }}</td></tr>
                 </tbody>
             </table>
         </div>
@@ -77,13 +77,13 @@
     {{-- ── Void modal ── --}}
     <div id="void-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/40 backdrop-blur-sm">
         <div class="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-slate-800 dark:bg-slate-900">
-            <h3 class="text-base font-semibold text-slate-900 dark:text-white">Void Warranty</h3>
-            <p class="mt-1 text-sm text-slate-500">This will mark the warranty as void. The customer will no longer see it as active.</p>
-            <textarea id="void-notes" rows="3" placeholder="Reason (optional)..."
+            <h3 class="text-base font-semibold text-slate-900 dark:text-white">{{ __('Void Warranty') }}</h3>
+            <p class="mt-1 text-sm text-slate-500">{{ __('This will mark the warranty as void. The customer will no longer see it as active.') }}</p>
+            <textarea id="void-notes" rows="3" placeholder="{{ __('Reason (optional)...') }}"
                 class="mt-4 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200"></textarea>
             <div class="mt-4 flex justify-end gap-3">
-                <button id="void-cancel" class="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300">Cancel</button>
-                <button id="void-confirm" class="rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700">Void Warranty</button>
+                <button id="void-cancel" class="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300">{{ __('Cancel') }}</button>
+                <button id="void-confirm" class="rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700">{{ __('Void Warranty') }}</button>
             </div>
         </div>
     </div>
@@ -94,6 +94,20 @@
 document.addEventListener('DOMContentLoaded', function () {
     var currentPage = 1;
     var voidId = null;
+
+    var i18n = {
+        expired: @json(__('Expired')),
+        voided: @json(__('Voided')),
+        loading: @json(__('Loading...')),
+        failedToLoad: @json(__('Failed to load warranties.')),
+        noWarrantiesFound: @json(__('No warranties found.')),
+        voidBtn: @json(__('Void')),
+        page: @json(__('Page')),
+        of: @json(__('of')),
+        total: @json(__('total')),
+        prev: @json(__('Prev')),
+        next: @json(__('Next')),
+    };
 
     var searchInput  = document.getElementById('search-input');
     var statusFilter = document.getElementById('status-filter');
@@ -117,7 +131,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function daysBar(pct, days, status) {
         if (status === 'expired' || status === 'void') {
-            return '<span class="text-xs text-slate-400">' + (status === 'expired' ? 'Expired' : 'Voided') + '</span>';
+            return '<span class="text-xs text-slate-400">' + (status === 'expired' ? i18n.expired : i18n.voided) + '</span>';
         }
         var color = days > 30 ? 'bg-green-500' : days > 7 ? 'bg-yellow-400' : 'bg-red-500';
         return '<div class="flex items-center gap-2">'
@@ -133,11 +147,11 @@ document.addEventListener('DOMContentLoaded', function () {
         if (statusFilter.value) params.set('status', statusFilter.value);
         if (searchInput.value.trim()) params.set('search', searchInput.value.trim());
 
-        rowsEl.innerHTML = '<tr><td colspan="9" class="px-4 py-8 text-center text-sm text-slate-400">Loading...</td></tr>';
+        rowsEl.innerHTML = '<tr><td colspan="9" class="px-4 py-8 text-center text-sm text-slate-400">' + i18n.loading + '</td></tr>';
 
         var res = await window.adminApi.request('/api/admin/product-warranties?' + params);
         if (!res.ok) {
-            rowsEl.innerHTML = '<tr><td colspan="9" class="px-4 py-8 text-center text-sm text-red-500">Failed to load warranties.</td></tr>';
+            rowsEl.innerHTML = '<tr><td colspan="9" class="px-4 py-8 text-center text-sm text-red-500">' + i18n.failedToLoad + '</td></tr>';
             return;
         }
         var json = await res.json();
@@ -145,7 +159,7 @@ document.addEventListener('DOMContentLoaded', function () {
         var meta = json.meta || {};
 
         if (!list.length) {
-            rowsEl.innerHTML = '<tr><td colspan="9" class="px-4 py-8 text-center text-sm text-slate-400">No warranties found.</td></tr>';
+            rowsEl.innerHTML = '<tr><td colspan="9" class="px-4 py-8 text-center text-sm text-slate-400">' + i18n.noWarrantiesFound + '</td></tr>';
             pagination.innerHTML = '';
             return;
         }
@@ -166,17 +180,17 @@ document.addEventListener('DOMContentLoaded', function () {
                 + '<td class="px-4 py-3">' + daysBar(w.progress_percent, w.days_remaining, w.status) + '</td>'
                 + '<td class="px-4 py-3">' + statusBadge(w.status) + '</td>'
                 + '<td class="px-4 py-3 text-right">'
-                + (canVoid ? '<button onclick="openVoid(' + w.id + ')" class="rounded-lg border border-red-200 px-3 py-1 text-xs font-semibold text-red-600 hover:bg-red-50 dark:border-red-900/50 dark:text-red-400">Void</button>' : '<span class="text-xs text-slate-300 dark:text-slate-600">—</span>')
+                + (canVoid ? '<button onclick="openVoid(' + w.id + ')" class="rounded-lg border border-red-200 px-3 py-1 text-xs font-semibold text-red-600 hover:bg-red-50 dark:border-red-900/50 dark:text-red-400">' + i18n.voidBtn + '</button>' : '<span class="text-xs text-slate-300 dark:text-slate-600">—</span>')
                 + '</td>'
                 + '</tr>';
         }).join('');
 
         // Pagination
         if (meta.last_page > 1) {
-            pagination.innerHTML = '<span class="text-xs text-slate-500">Page ' + meta.current_page + ' of ' + meta.last_page + ' · ' + meta.total + ' total</span>'
+            pagination.innerHTML = '<span class="text-xs text-slate-500">' + i18n.page + ' ' + meta.current_page + ' ' + i18n.of + ' ' + meta.last_page + ' · ' + meta.total + ' ' + i18n.total + '</span>'
                 + '<div class="flex gap-2">'
-                + (meta.current_page > 1 ? '<button onclick="goPage(' + (meta.current_page - 1) + ')" class="rounded-lg border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-50 dark:border-slate-700">Prev</button>' : '')
-                + (meta.current_page < meta.last_page ? '<button onclick="goPage(' + (meta.current_page + 1) + ')" class="rounded-lg border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-50 dark:border-slate-700">Next</button>' : '')
+                + (meta.current_page > 1 ? '<button onclick="goPage(' + (meta.current_page - 1) + ')" class="rounded-lg border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-50 dark:border-slate-700">' + i18n.prev + '</button>' : '')
+                + (meta.current_page < meta.last_page ? '<button onclick="goPage(' + (meta.current_page + 1) + ')" class="rounded-lg border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-50 dark:border-slate-700">' + i18n.next + '</button>' : '')
                 + '</div>';
         } else {
             pagination.innerHTML = '';

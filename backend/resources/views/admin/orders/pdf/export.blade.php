@@ -170,7 +170,7 @@
                 <div class="company-sub">Mobile App Sales Platform · Phnom Penh, Cambodia</div>
             </td>
             <td style="text-align:right;vertical-align:top">
-                <span class="report-badge">Orders Export</span>
+                <span class="report-badge">{{ __('Orders Export') }}</span>
             </td>
         </tr>
     </table>
@@ -178,9 +178,9 @@
     <div class="header-meta">
         <table style="width:100%;border-collapse:collapse">
             <tr>
-                <td>Records: <span>{{ number_format($totalOrders) }}</span></td>
-                <td style="text-align:center">Total Revenue: <span>${{ number_format($totalRevenue, 2) }}</span></td>
-                <td style="text-align:right">Generated: <span>{{ $generatedAt }}</span></td>
+                <td>{{ __('Records') }}: <span>{{ number_format($totalOrders) }}</span></td>
+                <td style="text-align:center">{{ __('Total Revenue') }}: <span>${{ number_format($totalRevenue, 2) }}</span></td>
+                <td style="text-align:right">{{ __('Generated') }}: <span>{{ $generatedAt }}</span></td>
             </tr>
         </table>
     </div>
@@ -193,15 +193,15 @@
     <table class="kpi-table">
         <tr>
             <td class="kpi-cell">
-                <div class="kpi-label">Total Orders</div>
+                <div class="kpi-label">{{ __('Total Orders') }}</div>
                 <div class="kpi-value kpi-accent">{{ number_format($totalOrders) }}</div>
             </td>
             <td class="kpi-cell">
-                <div class="kpi-label">Total Revenue</div>
+                <div class="kpi-label">{{ __('Total Revenue') }}</div>
                 <div class="kpi-value kpi-green">${{ number_format($totalRevenue, 2) }}</div>
             </td>
             <td class="kpi-cell">
-                <div class="kpi-label">Paid Orders</div>
+                <div class="kpi-label">{{ __('Paid Orders') }}</div>
                 <div class="kpi-value kpi-green">{{ number_format($paidOrders) }}
                     @if($totalOrders > 0)
                         <span style="font-size:10px;color:#64748b;font-weight:normal">({{ round($paidOrders / $totalOrders * 100, 1) }}%)</span>
@@ -209,29 +209,29 @@
                 </div>
             </td>
             <td class="kpi-cell">
-                <div class="kpi-label">Completed</div>
+                <div class="kpi-label">{{ __('Completed') }}</div>
                 <div class="kpi-value">{{ number_format($completedOrders) }}</div>
             </td>
         </tr>
     </table>
 
     {{-- Orders Table --}}
-    <div class="section-title">Order List</div>
+    <div class="section-title">{{ __('Order List') }}</div>
     <table class="data-table">
         <thead>
             <tr>
                 <th style="width:22px">#</th>
-                <th style="width:90px">Order #</th>
-                <th style="width:85px">Customer</th>
-                <th style="width:48px" class="center">Type</th>
-                <th style="width:60px">Payment</th>
-                <th style="width:58px" class="right">Subtotal</th>
-                <th style="width:50px" class="right">Del. Fee</th>
-                <th style="width:55px" class="right">Discount</th>
-                <th style="width:62px" class="right">Total</th>
-                <th style="width:62px" class="center">Pay Status</th>
-                <th style="width:72px" class="center">Order Status</th>
-                <th style="width:90px">Date</th>
+                <th style="width:90px">{{ __('Order #') }}</th>
+                <th style="width:85px">{{ __('Customer') }}</th>
+                <th style="width:48px" class="center">{{ __('Type') }}</th>
+                <th style="width:60px">{{ __('Payment') }}</th>
+                <th style="width:58px" class="right">{{ __('Subtotal') }}</th>
+                <th style="width:50px" class="right">{{ __('Del. Fee') }}</th>
+                <th style="width:55px" class="right">{{ __('Discount') }}</th>
+                <th style="width:62px" class="right">{{ __('Total') }}</th>
+                <th style="width:62px" class="center">{{ __('Pay Status') }}</th>
+                <th style="width:72px" class="center">{{ __('Order Status') }}</th>
+                <th style="width:90px">{{ __('Date') }}</th>
             </tr>
         </thead>
         <tbody>
@@ -271,7 +271,7 @@
             @empty
                 <tr>
                     <td colspan="12" style="text-align:center;color:#94a3b8;padding:20px">
-                        No orders found for the selected filters.
+                        {{ __('No orders found for the selected filters.') }}
                     </td>
                 </tr>
             @endforelse
@@ -279,7 +279,7 @@
         @if($totalOrders > 0)
         <tfoot>
             <tr>
-                <td colspan="5">Total ({{ number_format($totalOrders) }} orders)</td>
+                <td colspan="5">{{ __('Total') }} ({{ number_format($totalOrders) }} {{ __('orders') }})</td>
                 <td class="right">${{ number_format($orders->sum('subtotal'), 2) }}</td>
                 <td class="right">${{ number_format($orders->sum('delivery_fee'), 2) }}</td>
                 <td class="right">${{ number_format($orders->sum('discount_amount'), 2) }}</td>
@@ -296,8 +296,8 @@
 <div class="footer">
     <table style="width:100%;border-collapse:collapse">
         <tr>
-            <td>KneaYerng Service Center — Confidential Export</td>
-            <td style="text-align:center">Generated via Admin Portal</td>
+            <td>KneaYerng Service Center — {{ __('Confidential Export') }}</td>
+            <td style="text-align:center">{{ __('Generated via Admin Portal') }}</td>
             <td style="text-align:right">{{ $generatedAt }}</td>
         </tr>
     </table>

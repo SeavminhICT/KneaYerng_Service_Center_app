@@ -23,7 +23,12 @@ class UpdateVoucherRequest extends FormRequest
             'discount_value' => ['sometimes', 'required', 'numeric', 'min:0'],
             'min_order_amount' => ['sometimes', 'required', 'numeric', 'min:0'],
             'starts_at' => ['sometimes', 'nullable', 'date'],
-            'expires_at' => ['sometimes', 'nullable', 'date', 'after_or_equal:starts_at'],
+            'expires_at' => array_filter([
+                'sometimes',
+                'nullable',
+                'date',
+                $this->filled('starts_at') ? 'after_or_equal:starts_at' : null,
+            ]),
             'usage_limit_total' => ['sometimes', 'nullable', 'integer', 'min:1'],
             'usage_limit_per_user' => ['sometimes', 'nullable', 'integer', 'min:1'],
             'is_active' => ['sometimes', 'boolean'],

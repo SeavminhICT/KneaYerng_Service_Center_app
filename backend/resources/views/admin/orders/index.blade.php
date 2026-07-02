@@ -8,34 +8,34 @@
         <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
             <div class="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                    <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Order Counts by Shift</h2>
-                    <p id="shift-summary-subtitle" class="text-sm text-slate-500">Track order volume and totals for the current filters.</p>
+                    <h2 class="text-lg font-semibold text-slate-900 dark:text-white">{{ __('Order Counts by Shift') }}</h2>
+                    <p id="shift-summary-subtitle" class="text-sm text-slate-500">{{ __('Track order volume and totals for the current filters.') }}</p>
                 </div>
-                <span class="text-xs font-semibold uppercase tracking-widest text-slate-400">Live</span>
+                <span class="text-xs font-semibold uppercase tracking-widest text-slate-400">{{ __('Live') }}</span>
             </div>
             <div class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950/40">
-                    <p class="text-xs font-semibold uppercase tracking-widest text-slate-400">Morning Shift</p>
+                    <p class="text-xs font-semibold uppercase tracking-widest text-slate-400">{{ __('Morning Shift') }}</p>
                     <p id="shift-morning-count" class="mt-3 text-2xl font-semibold text-slate-900 dark:text-white">--</p>
-                    <p class="mt-2 text-xs text-slate-500">Amount <span id="shift-morning-amount" class="font-semibold text-slate-700 dark:text-slate-200">--</span></p>
+                    <p class="mt-2 text-xs text-slate-500">{{ __('Amount') }} <span id="shift-morning-amount" class="font-semibold text-slate-700 dark:text-slate-200">--</span></p>
                     <p class="mt-1 text-xs text-slate-400">06:00-11:59</p>
                 </div>
                 <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950/40">
-                    <p class="text-xs font-semibold uppercase tracking-widest text-slate-400">Afternoon Shift</p>
+                    <p class="text-xs font-semibold uppercase tracking-widest text-slate-400">{{ __('Afternoon Shift') }}</p>
                     <p id="shift-afternoon-count" class="mt-3 text-2xl font-semibold text-slate-900 dark:text-white">--</p>
-                    <p class="mt-2 text-xs text-slate-500">Amount <span id="shift-afternoon-amount" class="font-semibold text-slate-700 dark:text-slate-200">--</span></p>
+                    <p class="mt-2 text-xs text-slate-500">{{ __('Amount') }} <span id="shift-afternoon-amount" class="font-semibold text-slate-700 dark:text-slate-200">--</span></p>
                     <p class="mt-1 text-xs text-slate-400">12:00-17:59</p>
                 </div>
                 <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950/40">
-                    <p class="text-xs font-semibold uppercase tracking-widest text-slate-400">Evening Shift</p>
+                    <p class="text-xs font-semibold uppercase tracking-widest text-slate-400">{{ __('Evening Shift') }}</p>
                     <p id="shift-evening-count" class="mt-3 text-2xl font-semibold text-slate-900 dark:text-white">--</p>
-                    <p class="mt-2 text-xs text-slate-500">Amount <span id="shift-evening-amount" class="font-semibold text-slate-700 dark:text-slate-200">--</span></p>
+                    <p class="mt-2 text-xs text-slate-500">{{ __('Amount') }} <span id="shift-evening-amount" class="font-semibold text-slate-700 dark:text-slate-200">--</span></p>
                     <p class="mt-1 text-xs text-slate-400">18:00-21:59</p>
                 </div>
                 <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950/40">
-                    <p class="text-xs font-semibold uppercase tracking-widest text-slate-400">Night Shift</p>
+                    <p class="text-xs font-semibold uppercase tracking-widest text-slate-400">{{ __('Night Shift') }}</p>
                     <p id="shift-night-count" class="mt-3 text-2xl font-semibold text-slate-900 dark:text-white">--</p>
-                    <p class="mt-2 text-xs text-slate-500">Amount <span id="shift-night-amount" class="font-semibold text-slate-700 dark:text-slate-200">--</span></p>
+                    <p class="mt-2 text-xs text-slate-500">{{ __('Amount') }} <span id="shift-night-amount" class="font-semibold text-slate-700 dark:text-slate-200">--</span></p>
                     <p class="mt-1 text-xs text-slate-400">22:00-05:59</p>
                 </div>
             </div>
@@ -44,21 +44,21 @@
 
         <div class="flex flex-wrap items-center justify-between gap-4">
             <div>
-                <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Order List</h2>
-                <p class="text-sm text-slate-500">Monitor fulfillment, payment status, and delivery progress.</p>
+                <h2 class="text-lg font-semibold text-slate-900 dark:text-white">{{ __('Order List') }}</h2>
+                <p class="text-sm text-slate-500">{{ __('Monitor fulfillment, payment status, and delivery progress.') }}</p>
             </div>
             <div class="relative flex items-center gap-3" id="export-dropdown-wrap">
                 <button id="export-dropdown-btn" class="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-600 shadow-sm transition hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800">
                     <svg class="h-4 w-4 opacity-70" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                     </svg>
-                    Export
+                    {{ __('Export') }}
                     <svg class="h-3 w-3 opacity-50" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
                     </svg>
                 </button>
                 <div id="export-dropdown-menu" class="absolute right-0 top-12 z-50 hidden w-52 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg dark:border-slate-800 dark:bg-slate-900">
-                    <div class="px-3 py-2 text-xs font-semibold uppercase tracking-widest text-slate-400">Export as</div>
+                    <div class="px-3 py-2 text-xs font-semibold uppercase tracking-widest text-slate-400">{{ __('Export as') }}</div>
                     <div class="border-t border-slate-100 dark:border-slate-800">
                         <button id="order-export-csv" class="flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm text-slate-600 transition hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800">
                             {{-- CSV: document with corner-fold + data rows --}}
@@ -70,8 +70,8 @@
                                 <rect x="7" y="20" width="8" height="1.5" rx="0.75" fill="white" opacity="0.65"/>
                             </svg>
                             <span>
-                                <span class="block font-medium">CSV Spreadsheet</span>
-                                <span class="block text-xs text-slate-400">All columns, unlimited rows</span>
+                                <span class="block font-medium">{{ __('CSV Spreadsheet') }}</span>
+                                <span class="block text-xs text-slate-400">{{ __('All columns, unlimited rows') }}</span>
                             </span>
                         </button>
                         <button id="order-export-excel" class="flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm text-slate-600 transition hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800">
@@ -82,8 +82,8 @@
                                 <rect x="5" y="11.75" width="18" height="4.5" rx="2.25" transform="rotate(-45 14 14)" fill="white"/>
                             </svg>
                             <span>
-                                <span class="block font-medium">Excel Workbook</span>
-                                <span class="block text-xs text-slate-400">Styled cells, up to 5 000 rows</span>
+                                <span class="block font-medium">{{ __('Excel Workbook') }}</span>
+                                <span class="block text-xs text-slate-400">{{ __('Styled cells, up to 5 000 rows') }}</span>
                             </span>
                         </button>
                         <button id="order-export-pdf" class="flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm text-slate-600 transition hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800">
@@ -96,8 +96,8 @@
                                 <rect x="7" y="21.5" width="11" height="1.5" rx="0.75" fill="white" opacity="0.65"/>
                             </svg>
                             <span>
-                                <span class="block font-medium">PDF Report</span>
-                                <span class="block text-xs text-slate-400">Print-ready, up to 1 000 rows</span>
+                                <span class="block font-medium">{{ __('PDF Report') }}</span>
+                                <span class="block text-xs text-slate-400">{{ __('Print-ready, up to 1 000 rows') }}</span>
                             </span>
                         </button>
                     </div>
@@ -109,35 +109,35 @@
             <div class="flex flex-wrap items-center justify-between gap-3">
                 <div class="flex flex-wrap items-center gap-3">
                     <select id="order-status-filter" class="h-10 w-44 rounded-xl border border-slate-200 bg-slate-50 pl-3 pr-8 text-sm text-slate-600 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300">
-                        <option>All statuses</option>
-                        <option>Created</option>
-                        <option>Pending Approval</option>
-                        <option>Approved</option>
-                        <option>Assigned</option>
-                        <option>In Progress</option>
-                        <option>On The Way</option>
-                        <option>Arrived</option>
-                        <option>Processing</option>
-                        <option>Completed</option>
-                        <option>Cancelled</option>
-                        <option>Rejected</option>
+                        <option>{{ __('All statuses') }}</option>
+                        <option>{{ __('Created') }}</option>
+                        <option>{{ __('Pending Approval') }}</option>
+                        <option>{{ __('Approved') }}</option>
+                        <option>{{ __('Assigned') }}</option>
+                        <option>{{ __('In Progress') }}</option>
+                        <option>{{ __('On The Way') }}</option>
+                        <option>{{ __('Arrived') }}</option>
+                        <option>{{ __('Processing') }}</option>
+                        <option>{{ __('Completed') }}</option>
+                        <option>{{ __('Cancelled') }}</option>
+                        <option>{{ __('Rejected') }}</option>
                     </select>
                     <select id="order-type-filter" class="h-10 w-36 rounded-xl border border-slate-200 bg-slate-50 pl-3 pr-8 text-sm text-slate-600 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300">
-                        <option>All types</option>
-                        <option value="pickup">Pickup</option>
-                        <option value="delivery">Delivery</option>
+                        <option>{{ __('All types') }}</option>
+                        <option value="pickup">{{ __('Pickup') }}</option>
+                        <option value="delivery">{{ __('Delivery') }}</option>
                     </select>
                     <select id="order-payment-filter" class="h-10 w-36 rounded-xl border border-slate-200 bg-slate-50 pl-3 pr-8 text-sm text-slate-600 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300">
-                        <option>Payment</option>
-                        <option>Paid</option>
-                        <option>Unpaid</option>
-                        <option>Refunded</option>
+                        <option>{{ __('Payment') }}</option>
+                        <option>{{ __('Paid') }}</option>
+                        <option>{{ __('Unpaid') }}</option>
+                        <option>{{ __('Refunded') }}</option>
                     </select>
                     <input id="order-from-date" type="date" class="h-10 w-36 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-600 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300" />
                     <input id="order-to-date" type="date" class="h-10 w-36 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-600 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300" />
                 </div>
                 <div class="relative">
-                    <input id="order-search" type="text" placeholder="Search orders" class="h-10 w-60 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700 placeholder:text-slate-400 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200" />
+                    <input id="order-search" type="text" placeholder="{{ __('Search orders') }}" class="h-10 w-60 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700 placeholder:text-slate-400 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200" />
                     <svg class="absolute right-3 top-3 h-4 w-4 text-slate-400" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35m1.6-5.15a7 7 0 11-14 0 7 7 0 0114 0z" />
                     </svg>
@@ -150,16 +150,16 @@
                         <tr>
                             <th class="px-4 py-3">
                                 <button class="inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-widest text-slate-400">
-                                    Order ID
+                                    {{ __('Order ID') }}
                                     <svg class="h-3 w-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M8 9l4-4 4 4M16 15l-4 4-4-4" />
                                     </svg>
                                 </button>
                             </th>
-                            <th class="px-4 py-3">Customer</th>
+                            <th class="px-4 py-3">{{ __('Customer') }}</th>
                             <th class="px-4 py-3">
                                 <button class="inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-widest text-slate-400">
-                                    Date
+                                    {{ __('Date') }}
                                     <svg class="h-3 w-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M8 9l4-4 4 4M16 15l-4 4-4-4" />
                                     </svg>
@@ -167,15 +167,15 @@
                             </th>
                             <th class="px-4 py-3">
                                 <button class="inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-widest text-slate-400">
-                                    Total
+                                    {{ __('Total') }}
                                     <svg class="h-3 w-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M8 9l4-4 4 4M16 15l-4 4-4-4" />
                                     </svg>
                                 </button>
                             </th>
-                            <th class="px-4 py-3">Payment</th>
-                            <th class="px-4 py-3">Status</th>
-                            <th class="px-4 py-3 text-right">Action</th>
+                            <th class="px-4 py-3">{{ __('Payment') }}</th>
+                            <th class="px-4 py-3">{{ __('Status') }}</th>
+                            <th class="px-4 py-3 text-right">{{ __('Action') }}</th>
                         </tr>
                     </thead>
                     <tbody id="order-rows" class="divide-y divide-slate-200 text-slate-600 dark:divide-slate-800 dark:text-slate-300"></tbody>
@@ -183,10 +183,10 @@
             </div>
 
             <div class="mt-4 flex items-center justify-between text-xs text-slate-500">
-                <p id="order-pagination-info">Loading orders...</p>
+                <p id="order-pagination-info">{{ __('Loading orders...') }}</p>
                 <div class="flex items-center gap-2">
-                    <button id="order-prev" class="rounded-lg border border-slate-200 px-3 py-1 text-slate-600 dark:border-slate-800 dark:text-slate-300">Previous</button>
-                    <button id="order-next" class="rounded-lg border border-slate-200 bg-slate-100 px-3 py-1 text-slate-900 dark:border-slate-800 dark:bg-slate-900">Next</button>
+                    <button id="order-prev" class="rounded-lg border border-slate-200 px-3 py-1 text-slate-600 dark:border-slate-800 dark:text-slate-300">{{ __('Previous') }}</button>
+                    <button id="order-next" class="rounded-lg border border-slate-200 bg-slate-100 px-3 py-1 text-slate-900 dark:border-slate-800 dark:bg-slate-900">{{ __('Next') }}</button>
                 </div>
             </div>
         </div>
@@ -243,21 +243,21 @@
 
                 var normalized = String(status).toLowerCase();
                 var labels = {
-                    created: 'Created',
-                    pending_approval: 'Pending Approval',
-                    approved: 'Approved',
-                    assigned: 'Assigned',
-                    in_progress: 'In Progress',
-                    on_the_way: 'On the Way',
-                    arrived: 'Arrived',
-                    completed: 'Completed',
-                    cancelled: 'Cancelled',
-                    rejected: 'Rejected',
-                    processing: 'Processing',
-                    pending: 'Pending',
-                    ready: 'Ready',
-                    out_for_delivery: 'Out for Delivery',
-                    delivered: 'Delivered'
+                    created: '{{ __('Created') }}',
+                    pending_approval: '{{ __('Pending Approval') }}',
+                    approved: '{{ __('Approved') }}',
+                    assigned: '{{ __('Assigned') }}',
+                    in_progress: '{{ __('In Progress') }}',
+                    on_the_way: '{{ __('On the Way') }}',
+                    arrived: '{{ __('Arrived') }}',
+                    completed: '{{ __('Completed') }}',
+                    cancelled: '{{ __('Cancelled') }}',
+                    rejected: '{{ __('Rejected') }}',
+                    processing: '{{ __('Processing') }}',
+                    pending: '{{ __('Pending') }}',
+                    ready: '{{ __('Ready') }}',
+                    out_for_delivery: '{{ __('Out for Delivery') }}',
+                    delivered: '{{ __('Delivered') }}'
                 };
 
                 return labels[normalized] || normalized.split('_').map(function (part) {

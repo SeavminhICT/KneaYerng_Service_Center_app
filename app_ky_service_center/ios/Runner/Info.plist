@@ -48,6 +48,12 @@
 	<string>Allow access to your location to select a delivery address.</string>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>Allow access to your local network to connect to your development server.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Allow access to your microphone to record voice messages in support chat.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Allow access to your camera to take photos for support chat and reviews.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Allow access to your photo library to attach images in support chat.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

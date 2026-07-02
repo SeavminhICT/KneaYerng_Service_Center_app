@@ -28,6 +28,7 @@ class User extends Authenticatable
         'password',
         'avatar',
         'role',
+        'status',
         'is_admin',
         'otp_code',
         'otp_expires_at',
@@ -55,6 +56,7 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'is_admin' => 'boolean',
             'otp_expires_at' => 'datetime',
             'otp_verified_at' => 'datetime',
         ];
@@ -164,5 +166,26 @@ class User extends Authenticatable
     public function isStaff(): bool
     {
         return in_array($this->role, ['staff', 'technician'], true);
+    }
+
+    public function roles()
+    {
+        return $this->belongsToMany(Role::class, 'user_roles');
+    }
+
+    public function hasRole(string $roleName): bool
+    {
+        return $this->roles()->where('name', $roleName)->exists();
+    }
+
+    public function hasPermission(string $permissionName): bool
+    {
+        if ($this->isAdmin()) {
+            return true;
+        }
+
+        return $this->roles()
+            ->whereHas('permissions', fn ($query) => $query->where('name', $permissionName))
+            ->exists();
     }
 }

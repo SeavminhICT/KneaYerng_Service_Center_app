@@ -240,7 +240,7 @@
                     <div class="company-sub">Mobile App Sales Platform · Phnom Penh, Cambodia</div>
                 </td>
                 <td style="text-align:right;vertical-align:top">
-                    <span class="report-badge">{{ strtoupper($reportType ?? 'Report') }}</span>
+                    <span class="report-badge">{{ strtoupper($reportType ?? __('Report')) }}</span>
                 </td>
             </tr>
         </table>
@@ -248,9 +248,9 @@
         <div class="header-meta">
             <table style="width:100%;border-collapse:collapse">
                 <tr>
-                    <td>Period: <span>{{ $rangeLabel ?? '—' }}</span></td>
-                    <td style="text-align:center">From: <span>{{ $start->format('d M Y') }}</span> &nbsp;→&nbsp; To: <span>{{ $end->format('d M Y') }}</span></td>
-                    <td style="text-align:right">Generated: <span>{{ now()->format('d M Y, H:i') }} ICT</span></td>
+                    <td>{{ __('Period') }}: <span>{{ $rangeLabel ?? '—' }}</span></td>
+                    <td style="text-align:center">{{ __('From') }}: <span>{{ $start->format('d M Y') }}</span> &nbsp;→&nbsp; {{ __('To') }}: <span>{{ $end->format('d M Y') }}</span></td>
+                    <td style="text-align:right">{{ __('Generated') }}: <span>{{ now()->format('d M Y, H:i') }} ICT</span></td>
                 </tr>
             </table>
         </div>
@@ -265,9 +265,9 @@
     <div class="footer">
         <table style="width:100%;border-collapse:collapse">
             <tr>
-                <td>KneaYerng Service Center — Confidential Report</td>
-                <td style="text-align:center">Generated via Admin Portal</td>
-                <td style="text-align:right">Page 1</td>
+                <td>KneaYerng Service Center — {{ __('Confidential Report') }}</td>
+                <td style="text-align:center">{{ __('Generated via Admin Portal') }}</td>
+                <td style="text-align:right">{{ __('Page') }} 1</td>
             </tr>
         </table>
     </div>

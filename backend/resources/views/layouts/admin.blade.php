@@ -5,7 +5,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="csrf-token" content="{{ csrf_token() }}">
 
-        <title>@yield('title', 'Admin') - {{ config('app.name', 'Laravel') }}</title>
+        <title>@yield('title', __('Admin')) - {{ config('app.name', 'Laravel') }}</title>
 
         <link rel="preconnect" href="https://fonts.bunny.net">
         <link href="https://fonts.bunny.net/css?family=inter:400,500,600,700&display=swap" rel="stylesheet" />
@@ -110,7 +110,7 @@
                     var close = document.createElement('button');
                     close.type = 'button';
                     close.className = 'text-xs font-semibold uppercase tracking-widest text-slate-500 hover:text-slate-700 dark:text-slate-300 dark:hover:text-slate-100';
-                    close.textContent = 'Close';
+                    close.textContent = '{{ __('Close') }}';
                     close.addEventListener('click', function (event) {
                         event.stopPropagation();
                         removeToast(toast, 200);
@@ -181,7 +181,7 @@
                     if (file.size <= window.adminMaxUploadBytes) {
                         return true;
                     }
-                    var message = (label || 'File') + ' must be 5MB or smaller.';
+                    var message = (label || '{{ __('File') }}') + ' {{ __('must be 5MB or smaller.') }}';
                     if (window.adminToast) {
                         window.adminToast(message, { type: 'error' });
                     }
@@ -200,7 +200,7 @@
                 window.addEventListener('admin:realtime-order-created', function (event) {
                     var payload = event && event.detail ? event.detail : {};
                     var order = payload.order || {};
-                    var message = order.message || 'New order received.';
+                    var message = order.message || '{{ __('New order received.') }}';
 
                     if (typeof window.adminToast === 'function') {
                         window.adminToast(message, { type: 'success', duration: 5200 });
@@ -216,7 +216,7 @@
                     var conversation = payload.conversation || {};
                     var message = payload.message && payload.message.message
                         ? payload.message.message
-                        : 'New support message received.';
+                        : '{{ __('New support message received.') }}';
                     var supportUrl = '/admin/support';
 
                     if (conversation.id) {
@@ -272,7 +272,7 @@
                 window.adminSwalSuccess = function (title, text) {
                     return window.Swal.fire({
                         icon: 'success',
-                        title: title || 'Success',
+                        title: title || '{{ __('Success') }}',
                         text: text || '',
                         confirmButtonColor: '#2563eb',
                     });
@@ -280,7 +280,7 @@
                 window.adminSwalError = function (title, text) {
                     return window.Swal.fire({
                         icon: 'error',
-                        title: title || 'Error',
+                        title: title || '{{ __('Error') }}',
                         text: text || '',
                         confirmButtonColor: '#dc2626',
                     });
@@ -288,12 +288,12 @@
                 window.adminSwalConfirm = function (title, text, confirmText) {
                     return window.Swal.fire({
                         icon: 'warning',
-                        title: title || 'Are you sure?',
-                        text: text || 'This action cannot be undone.',
+                        title: title || '{{ __('Are you sure?') }}',
+                        text: text || '{{ __('This action cannot be undone.') }}',
                         showCancelButton: true,
                         confirmButtonColor: '#dc2626',
                         cancelButtonColor: '#64748b',
-                        confirmButtonText: confirmText || 'Yes, delete it',
+                        confirmButtonText: confirmText || '{{ __('Yes, delete it') }}',
                     });
                 };
 

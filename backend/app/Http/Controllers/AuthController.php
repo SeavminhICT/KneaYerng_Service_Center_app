@@ -60,6 +60,9 @@ class AuthController extends Controller
             'phone' => $normalizedPhone,
             'password' => Hash::make($validated['password']),
             'avatar' => $avatarPath,
+            'role' => 'user',
+            'status' => 'active',
+            'is_admin' => false,
             'otp_verified_at' => null,
         ]);
 

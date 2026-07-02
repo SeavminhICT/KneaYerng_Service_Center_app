@@ -393,25 +393,17 @@ class ApiService {
   }) async {
     http.Response res;
     try {
-      res = await http
-          .post(
-            Uri.parse('$baseUrl/auth/register'),
-            headers: const {
-              'Accept': 'application/json',
-              'Content-Type': 'application/json',
-            },
-            body: jsonEncode({
-              'first_name': firstName,
-              'last_name': lastName,
-              if (email != null && email.trim().isNotEmpty)
-                'email': email.trim(),
-              if (phone != null && phone.trim().isNotEmpty)
-                'phone': phone.trim(),
-              'password': password,
-              'password_confirmation': confirmPassword,
-            }),
-          )
-          .timeout(const Duration(seconds: 15));
+      res = await _postJsonWithConnectRetry(
+        Uri.parse('$baseUrl/auth/register'),
+        {
+          'first_name': firstName,
+          'last_name': lastName,
+          if (email != null && email.trim().isNotEmpty) 'email': email.trim(),
+          if (phone != null && phone.trim().isNotEmpty) 'phone': phone.trim(),
+          'password': password,
+          'password_confirmation': confirmPassword,
+        },
+      );
     } on TimeoutException {
       return _buildNetworkErrorMessage();
     } catch (error) {
@@ -425,25 +417,9 @@ class ApiService {
     } catch (_) {}
 
     if (res.statusCode == 200 || res.statusCode == 201) {
-      final token = data is Map
-          ? (data['token'] ?? data['access_token'])
-          : null;
-      if (token != null) {
-        await _saveToken(token);
-      }
-
-      final profile = _extractUserProfile(
-        data is Map
-            ? Map<String, dynamic>.from(data)
-            : const <String, dynamic>{},
-        fallbackFirstName: firstName,
-        fallbackLastName: lastName,
-        fallbackEmail: email,
-      );
-
-      if (profile != null) {
-        await _saveUserProfile(profile);
-      }
+      // Registration creates a pending account. The authenticated session and
+      // profile are established only after OTP verification succeeds.
+      await _clearSession();
       return null;
     }
 
@@ -462,22 +438,16 @@ class ApiService {
   }) async {
     http.Response res;
     try {
-      res = await http
-          .post(
-            Uri.parse('$baseUrl/otp/request'),
-            headers: const {
-              'Accept': 'application/json',
-              'Content-Type': 'application/json',
-            },
-            body: jsonEncode({
-              'destination': destination,
-              'type': type,
-              'purpose': purpose,
-              if (deviceId != null && deviceId.trim().isNotEmpty)
-                'device_id': deviceId.trim(),
-            }),
-          )
-          .timeout(const Duration(seconds: 15));
+      res = await _postJsonWithConnectRetry(
+        Uri.parse('$baseUrl/otp/request'),
+        {
+          'destination': destination,
+          'type': type,
+          'purpose': purpose,
+          if (deviceId != null && deviceId.trim().isNotEmpty)
+            'device_id': deviceId.trim(),
+        },
+      );
     } catch (_) {
       return const OtpRequestResult(
         ok: false,
@@ -514,21 +484,15 @@ class ApiService {
   }) async {
     http.Response res;
     try {
-      res = await http
-          .post(
-            Uri.parse('$baseUrl/otp/verify'),
-            headers: const {
-              'Accept': 'application/json',
-              'Content-Type': 'application/json',
-            },
-            body: jsonEncode({
-              'destination': destination,
-              'type': type,
-              'purpose': purpose,
-              'otp': otp,
-            }),
-          )
-          .timeout(const Duration(seconds: 15));
+      res = await _postJsonWithConnectRetry(
+        Uri.parse('$baseUrl/otp/verify'),
+        {
+          'destination': destination,
+          'type': type,
+          'purpose': purpose,
+          'otp': otp,
+        },
+      );
     } catch (_) {
       return const OtpVerifyResult(
         ok: false,
@@ -549,18 +513,27 @@ class ApiService {
     }
 
     final map = Map<String, dynamic>.from(decoded);
-    final token = map['token']?.toString();
-    if (token != null && token.isNotEmpty) {
-      await _saveToken(token);
-    }
+    final ok = res.statusCode >= 200 && res.statusCode < 300;
+    final token = ok ? map['token']?.toString() : null;
+    if (ok) {
+      if (token != null && token.isNotEmpty) {
+        await _saveToken(token);
+      }
 
-    final profile = _extractUserProfile(map, fallbackEmail: destination);
-    if (profile != null) {
-      await _saveUserProfile(profile);
+      if (_containsUserPayload(map)) {
+        final profile = _extractUserProfile(
+          map,
+          fallbackEmail: type == 'email' ? destination : null,
+          fallbackPhone: type == 'phone' ? destination : null,
+        );
+        if (profile != null) {
+          await _saveUserProfile(profile);
+        }
+      }
     }
 
     return OtpVerifyResult(
-      ok: res.statusCode >= 200 && res.statusCode < 300,
+      ok: ok,
       message: map['message']?.toString() ?? 'OTP verification completed.',
       token: token,
       resetToken: (map['resetPasswordToken'] ?? map['reset_token'])?.toString(),
@@ -609,18 +582,26 @@ class ApiService {
     }
 
     final map = Map<String, dynamic>.from(decoded);
-    final token = map['token']?.toString();
-    if (token != null && token.isNotEmpty) {
-      await _saveToken(token);
-    }
+    final ok = res.statusCode >= 200 && res.statusCode < 300;
+    final token = ok ? map['token']?.toString() : null;
+    if (ok) {
+      if (token != null && token.isNotEmpty) {
+        await _saveToken(token);
+      }
 
-    final profile = _extractUserProfile(map, fallbackEmail: destination);
-    if (profile != null) {
-      await _saveUserProfile(profile);
+      if (_containsUserPayload(map)) {
+        final profile = _extractUserProfile(
+          map,
+          fallbackPhone: destination,
+        );
+        if (profile != null) {
+          await _saveUserProfile(profile);
+        }
+      }
     }
 
     return OtpVerifyResult(
-      ok: res.statusCode >= 200 && res.statusCode < 300,
+      ok: ok,
       message: map['message']?.toString() ?? 'OTP verification completed.',
       token: token,
       resetToken: (map['resetPasswordToken'] ?? map['reset_token'])?.toString(),
@@ -902,11 +883,54 @@ class ApiService {
 
     if (raw == null || raw.isEmpty) return null;
 
-    final decoded = jsonDecode(raw);
-    if (decoded is Map<String, dynamic>) {
-      return UserProfile.fromMap(decoded);
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is Map<String, dynamic>) {
+        return UserProfile.fromMap(decoded);
+      }
+    } catch (_) {
+      await prefs.remove(_userProfileKey);
     }
     return null;
+  }
+
+  static Future<UserProfile?> refreshUserProfile() async {
+    final token = await getToken();
+    if (token == null || token.isEmpty) {
+      return null;
+    }
+
+    final cached = await getUserProfile();
+    try {
+      final response = await http
+          .get(
+            Uri.parse('$baseUrl/user'),
+            headers: _buildHeaders({'Authorization': 'Bearer $token'}),
+          )
+          .timeout(const Duration(seconds: 8));
+
+      if (response.statusCode == 401) {
+        await _clearSession();
+        return null;
+      }
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final decoded = jsonDecode(response.body);
+        if (decoded is Map) {
+          final profile = _extractUserProfile(
+            Map<String, dynamic>.from(decoded),
+          );
+          if (profile != null) {
+            await _saveUserProfile(profile);
+            return profile;
+          }
+        }
+      }
+    } catch (error) {
+      debugPrint('Profile refresh failed: $error');
+    }
+
+    return cached;
   }
 
   // ================= WARRANTIES =================
@@ -1032,7 +1056,7 @@ class ApiService {
     return UserProfile(
       firstName: user['first_name'] ?? fallbackFirstName,
       lastName: user['last_name'] ?? fallbackLastName,
-      email: user['email'] ?? fallbackEmail,
+      email: _normalizeOptionalEmail(user['email'] ?? fallbackEmail),
       phone: user['phone'] ?? fallbackPhone,
       birth: user['birth'] ?? fallbackBirth,
       gender: user['gender'] ?? fallbackGender,
@@ -1040,6 +1064,19 @@ class ApiService {
       role: role,
       isAdmin: isAdmin,
     );
+  }
+
+  static bool _containsUserPayload(Map<String, dynamic> data) {
+    return data['user'] is Map ||
+        (data['data'] is Map && data['data']['user'] is Map);
+  }
+
+  static String? _normalizeOptionalEmail(dynamic value) {
+    final email = value?.toString().trim() ?? '';
+    if (email.isEmpty) return null;
+
+    final validEmail = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
+    return validEmail.hasMatch(email) ? email : null;
   }
 
   static String? normalizeMediaUrl(dynamic value) {
@@ -1253,6 +1290,49 @@ class ApiService {
     }
 
     return null;
+  }
+
+  static Future<http.Response> _postJsonWithConnectRetry(
+    Uri uri,
+    Map<String, dynamic> body, {
+    int maxAttempts = 3,
+  }) async {
+    for (var attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        return await http
+            .post(
+              uri,
+              headers: _buildHeaders(const {
+                'Content-Type': 'application/json',
+              }),
+              body: jsonEncode(body),
+            )
+            .timeout(const Duration(seconds: 15));
+      } catch (error) {
+        final canRetry =
+            attempt < maxAttempts && _isRetryableConnectFailure(error);
+        if (!canRetry) {
+          rethrow;
+        }
+
+        debugPrint(
+          '[ApiService] Connection unavailable for $uri; '
+          'retrying (${attempt + 1}/$maxAttempts).',
+        );
+        await Future<void>.delayed(Duration(milliseconds: 600 * attempt));
+      }
+    }
+
+    throw StateError('HTTP retry loop completed without a response.');
+  }
+
+  static bool _isRetryableConnectFailure(Object error) {
+    final message = error.toString().toLowerCase();
+    return message.contains('network is unreachable') ||
+        message.contains('errno = 101') ||
+        message.contains('no route to host') ||
+        message.contains('failed host lookup') ||
+        message.contains('connection refused');
   }
 
   /// Returns headers that include the ngrok bypass header when the current
@@ -1763,10 +1843,52 @@ class ApiService {
     return SupportConversation.fromJson(data);
   }
 
+  static Future<String> uploadSupportMedia({
+    required String filePath,
+    required String type,
+  }) async {
+    final token = await getToken();
+    if (token == null || token.isEmpty) {
+      throw Exception('Authentication required');
+    }
+
+    final request = http.MultipartRequest(
+      'POST',
+      Uri.parse('$baseUrl/support/upload'),
+    );
+    request.headers['Authorization'] = 'Bearer $token';
+    request.headers['Accept'] = 'application/json';
+    request.fields['type'] = type;
+    request.files.add(await http.MultipartFile.fromPath('file', filePath));
+
+    final streamed = await request.send().timeout(const Duration(seconds: 40));
+    final res = await http.Response.fromStream(streamed);
+
+    dynamic decoded;
+    try {
+      decoded = jsonDecode(res.body);
+    } catch (_) {}
+
+    if (res.statusCode != 201) {
+      if (decoded is Map && decoded['message'] is String) {
+        throw Exception(decoded['message']);
+      }
+      throw Exception('Failed to upload media');
+    }
+
+    final mediaUrl = decoded is Map ? decoded['media_url']?.toString() : null;
+    if (mediaUrl == null || mediaUrl.isEmpty) {
+      throw Exception('Invalid media upload response');
+    }
+    return mediaUrl;
+  }
+
   static Future<SupportChatMessage> sendSupportMessage({
     required int conversationId,
-    required String body,
+    String body = '',
     String messageType = 'text',
+    String? mediaUrl,
+    int? mediaDurationSec,
   }) async {
     final token = await getToken();
     if (token == null || token.isEmpty) {
@@ -1785,6 +1907,8 @@ class ApiService {
             'conversation_id': conversationId,
             'message_type': messageType,
             'body': body.trim(),
+            if (mediaUrl != null) 'media_url': mediaUrl,
+            if (mediaDurationSec != null) 'media_duration_sec': mediaDurationSec,
           }),
         )
         .timeout(const Duration(seconds: 18));
@@ -2452,9 +2576,10 @@ class ApiService {
       return const OrderCreateResult(errorMessage: 'Your cart is empty.');
     }
 
+    final normalizedCustomerEmail = _normalizeOptionalEmail(customerEmail);
     final body = <String, dynamic>{
       'customer_name': customerName,
-      'customer_email': customerEmail,
+      'customer_email': ?normalizedCustomerEmail,
       'order_type': orderType,
       'payment_method': paymentMethod,
       'payment_status': paymentStatus,

@@ -20,7 +20,11 @@ class StoreVoucherRequest extends FormRequest
             'discount_value' => ['required', 'numeric', 'min:0'],
             'min_order_amount' => ['nullable', 'numeric', 'min:0'],
             'starts_at' => ['nullable', 'date'],
-            'expires_at' => ['nullable', 'date', 'after_or_equal:starts_at'],
+            'expires_at' => array_filter([
+                'nullable',
+                'date',
+                $this->filled('starts_at') ? 'after_or_equal:starts_at' : null,
+            ]),
             'usage_limit_total' => ['nullable', 'integer', 'min:1'],
             'usage_limit_per_user' => ['nullable', 'integer', 'min:1'],
             'is_active' => ['nullable', 'boolean'],

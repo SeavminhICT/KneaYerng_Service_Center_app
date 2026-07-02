@@ -40,6 +40,8 @@ use App\Http\Controllers\Api\VoucherController;
 use App\Http\Controllers\Api\VoucherValidationController;
 use App\Http\Controllers\Api\PartController;
 use App\Http\Controllers\Api\ProductAttributeOptionController;
+use App\Http\Controllers\Api\PermissionController;
+use App\Http\Controllers\Api\RoleController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -136,6 +138,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('notifications', [RepairNotificationController::class, 'index']);
     Route::get('support/conversation', [SupportChatController::class, 'showOrCreateConversation']);
     Route::post('support/messages', [SupportChatController::class, 'storeCustomerMessage']);
+    Route::post('support/upload', [SupportChatController::class, 'uploadMedia']);
     Route::post('support/read', [SupportChatController::class, 'markCustomerRead']);
     Route::get('support/unread-count', [SupportChatController::class, 'customerUnreadCount']);
 });
@@ -167,6 +170,30 @@ Route::middleware('admin')->group(function () {
     Route::get('admin/staff-options', [OrderTrackingController::class, 'staffOptions']);
     Route::get('admin/users', [AdminUserController::class, 'index']);
     Route::post('admin/users', [AdminUserController::class, 'store']);
+    Route::get('admin/users/{user}', [AdminUserController::class, 'show']);
+    Route::put('admin/users/{user}', [AdminUserController::class, 'update']);
+    Route::delete('admin/users/{user}', [AdminUserController::class, 'destroy']);
+    Route::patch('admin/users/{user}/status', [AdminUserController::class, 'updateStatus']);
+
+    Route::get('users', [AdminUserController::class, 'index'])->middleware('permission:view_user');
+    Route::post('users', [AdminUserController::class, 'store'])->middleware('permission:create_user');
+    Route::get('users/{user}', [AdminUserController::class, 'show'])->middleware('permission:view_user');
+    Route::put('users/{user}', [AdminUserController::class, 'update'])->middleware('permission:update_user');
+    Route::delete('users/{user}', [AdminUserController::class, 'destroy'])->middleware('permission:delete_user');
+
+    Route::get('roles', [RoleController::class, 'index'])->middleware('permission:view_role');
+    Route::post('roles', [RoleController::class, 'store'])->middleware('permission:create_role');
+    Route::get('roles/{role}', [RoleController::class, 'show'])->middleware('permission:view_role');
+    Route::put('roles/{role}', [RoleController::class, 'update'])->middleware('permission:update_role');
+    Route::delete('roles/{role}', [RoleController::class, 'destroy'])->middleware('permission:delete_role');
+    Route::get('roles/{role}/permissions', [RoleController::class, 'permissions'])->middleware('permission:view_role');
+    Route::put('roles/{role}/permissions', [RoleController::class, 'updatePermissions'])->middleware('permission:update_role');
+
+    Route::get('permissions', [PermissionController::class, 'index'])->middleware('permission:view_permission');
+    Route::post('permissions', [PermissionController::class, 'store'])->middleware('permission:create_permission');
+    Route::get('permissions/{permission}', [PermissionController::class, 'show'])->middleware('permission:view_permission');
+    Route::put('permissions/{permission}', [PermissionController::class, 'update'])->middleware('permission:update_permission');
+    Route::delete('permissions/{permission}', [PermissionController::class, 'destroy'])->middleware('permission:delete_permission');
     Route::post('admin/orders/{order}/approve', [OrderTrackingController::class, 'approve']);
     Route::post('admin/orders/{order}/reject', [OrderTrackingController::class, 'reject']);
     Route::post('admin/orders/{order}/assign', [OrderTrackingController::class, 'assign']);
@@ -205,6 +232,7 @@ Route::middleware('admin')->group(function () {
     Route::get('admin/support/conversations', [SupportChatController::class, 'adminIndex']);
     Route::get('admin/support/conversations/{conversation}', [SupportChatController::class, 'adminShow']);
     Route::post('admin/support/conversations/{conversation}/messages', [SupportChatController::class, 'adminStoreMessage']);
+    Route::post('admin/support/upload', [SupportChatController::class, 'uploadMedia']);
     Route::post('admin/support/conversations/{conversation}/status', [SupportChatController::class, 'adminUpdateStatus']);
     Route::post('admin/support/conversations/{conversation}/assign', [SupportChatController::class, 'adminAssign']);
 });

@@ -1,7 +1,7 @@
 ﻿@extends('layouts.admin')
 
-@section('title', 'Dashboard')
-@section('page-title', 'Dashboard')
+@section('title', __('Dashboard'))
+@section('page-title', __('Dashboard'))
 
 @section('content')
     <section class="space-y-6">
@@ -73,7 +73,7 @@
                     </table>
                 </div>
                 <div class="mt-4 flex items-center justify-between text-xs text-slate-500">
-                    <p>Showing 1-3 of 128 orders</p>
+                    <p>{{ __('Showing 1-3 of 128 orders') }}</p>
                     <div class="flex items-center gap-2">
                         <button class="rounded-lg border border-slate-200 px-3 py-1 text-slate-600 dark:border-slate-800 dark:text-slate-300">{{ __('Previous') }}</button>
                         <button class="rounded-lg border border-slate-200 bg-slate-100 px-3 py-1 text-slate-900 dark:border-slate-800 dark:bg-slate-900">{{ __('Next') }}</button>
@@ -117,6 +117,24 @@
     </section>
 
     <script>
+        const i18n = {
+            week: @json(__('Week')),
+            orders: @json(__('orders')),
+            sku: @json(__('SKU')),
+            noSku: @json(__('No SKU')),
+            left: @json(__('left')),
+            noLowStock: @json(__('No low stock items right now.')),
+            unableLowStock: @json(__('Unable to load low stock items.')),
+            noRecentOrders: @json(__('No recent orders.')),
+            view: @json(__('View')),
+            paymentStatusLabels: {
+                unpaid: @json(__('unpaid')),
+                paid: @json(__('paid')),
+                failed: @json(__('failed')),
+                refunded: @json(__('refunded')),
+            },
+        };
+
         document.addEventListener('DOMContentLoaded', async function () {
             function formatCurrency(value) {
                 return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value || 0);
@@ -159,7 +177,7 @@
                     const bar = document.createElement('div');
                     bar.className = 'self-end rounded-lg bg-primary-500/80 shadow-sm';
                     bar.style.height = height + '%';
-                    bar.setAttribute('title', (entry.label || 'Week') + ' · ' + formatCurrency(total) + ' · ' + count + ' orders');
+                    bar.setAttribute('title', (entry.label || i18n.week) + ' · ' + formatCurrency(total) + ' · ' + count + ' ' + i18n.orders);
                     bars.appendChild(bar);
 
                     const label = document.createElement('div');
@@ -194,22 +212,22 @@
                 if (lowStockResponse.ok) {
                     const lowStockData = await lowStockResponse.json();
                     if (!lowStockData.data.length) {
-                        lowStockList.textContent = 'No low stock items right now.';
+                        lowStockList.textContent = i18n.noLowStock;
                     } else {
                         lowStockList.innerHTML = lowStockData.data.map(function (item) {
                             return `
                                 <div class="flex items-center justify-between rounded-xl border border-warning-100 bg-warning-50 px-3 py-3 text-sm dark:border-warning-500/20 dark:bg-warning-500/10">
                                     <div>
                                         <p class="font-semibold text-slate-900 dark:text-white">${item.name}</p>
-                                        <p class="text-xs text-slate-500">${item.sku ? 'SKU: ' + item.sku : 'No SKU'}</p>
+                                        <p class="text-xs text-slate-500">${item.sku ? i18n.sku + ': ' + item.sku : i18n.noSku}</p>
                                     </div>
-                                    <span class="text-xs font-semibold text-warning-700">${item.stock} left</span>
+                                    <span class="text-xs font-semibold text-warning-700">${item.stock} ${i18n.left}</span>
                                 </div>
                             `;
                         }).join('');
                     }
                 } else {
-                    lowStockList.textContent = 'Unable to load low stock items.';
+                    lowStockList.textContent = i18n.unableLowStock;
                 }
             } catch (error) {
                 console.error(error);
@@ -248,7 +266,7 @@
 
                         const paymentSelectOptions = paymentOptions.map(function (status) {
                             const selected = status === normalizedPaymentStatus ? 'selected' : '';
-                            return `<option value="${status}" ${selected}>${status}</option>`;
+                            return `<option value="${status}" ${selected}>${i18n.paymentStatusLabels[status] || status}</option>`;
                         }).join('');
 
                         return `
@@ -258,20 +276,20 @@
                                 <td class="px-4 py-3">${order.placed_at ? new Date(order.placed_at).toLocaleDateString() : '-'}</td>
                                 <td class="px-4 py-3">${new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(order.total_amount || 0)}</td>
                                 <td class="px-4 py-3">
-                                    <span class="payment-badge rounded-full px-2 py-1 text-xs font-semibold ${paymentClass}" data-order-id="${order.id}">${normalizedPaymentStatus}</span>
+                                    <span class="payment-badge rounded-full px-2 py-1 text-xs font-semibold ${paymentClass}" data-order-id="${order.id}">${i18n.paymentStatusLabels[normalizedPaymentStatus] || normalizedPaymentStatus}</span>
                                 </td>
                                 <td class="px-4 py-3 text-right">
                                     <div class="flex items-center justify-end gap-2">
                                         <select class="payment-status-select h-9 rounded-lg border border-slate-200 bg-white px-2 text-xs text-slate-700 shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200" data-order-id="${order.id}" data-current="${normalizedPaymentStatus}">
                                             ${paymentSelectOptions}
                                         </select>
-                                        <a href="/admin/orders/${order.id}" class="text-xs font-semibold text-primary-600">View</a>
+                                        <a href="/admin/orders/${order.id}" class="text-xs font-semibold text-primary-600">${i18n.view}</a>
                                     </div>
                                 </td>
                             </tr>
                         `;
                     }).join('');
-                    document.getElementById('recent-orders-body').innerHTML = rows || '<tr><td class="px-4 py-6 text-center text-sm text-slate-500" colspan="6">No recent orders.</td></tr>';
+                    document.getElementById('recent-orders-body').innerHTML = rows || ('<tr><td class="px-4 py-6 text-center text-sm text-slate-500" colspan="6">' + i18n.noRecentOrders + '</td></tr>');
 
                     document.querySelectorAll('.payment-status-select').forEach(function (select) {
                         select.addEventListener('change', async function (event) {
@@ -296,7 +314,7 @@
                                 target.dataset.current = newStatus;
                                 const badge = document.querySelector('.payment-badge[data-order-id="' + orderId + '"]');
                                 if (badge) {
-                                    badge.textContent = newStatus;
+                                    badge.textContent = i18n.paymentStatusLabels[newStatus] || newStatus;
                                     badge.className = 'payment-badge rounded-full px-2 py-1 text-xs font-semibold ' + (
                                         newStatus === 'paid'
                                             ? 'bg-success-50 text-success-700 dark:bg-success-500/10 dark:text-success-100'

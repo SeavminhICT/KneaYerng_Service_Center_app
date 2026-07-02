@@ -95,11 +95,30 @@
 
                 <!-- Fixed Message Input Area at Bottom -->
                 <div class="border-t border-slate-100 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+                    <input type="file" id="image-input" accept="image/*" class="hidden" />
                     <form id="reply-form" class="flex items-end gap-3">
-                        <div class="flex-1">
+                        <button type="button" id="image-btn" title="Send image" class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-200">
+                            <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M21 6.75a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM3 6.75v10.5A2.25 2.25 0 005.25 19.5h13.5A2.25 2.25 0 0021 17.25V6.75A2.25 2.25 0 0018.75 4.5H5.25A2.25 2.25 0 003 6.75z" />
+                            </svg>
+                        </button>
+                        <button type="button" id="mic-btn" title="Record voice message" class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-200">
+                            <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 01-3-3V4.5a3 3 0 116 0v8.25a3 3 0 01-3 3z" />
+                            </svg>
+                        </button>
+
+                        <div id="recording-indicator" class="hidden flex-1 items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2.5 text-sm font-semibold text-red-600 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-300">
+                            <span class="h-2.5 w-2.5 animate-pulse rounded-full bg-red-500"></span>
+                            <span>Recording...</span>
+                            <span id="recording-timer" class="ml-1">0:00</span>
+                            <button type="button" id="cancel-recording-btn" class="ml-auto text-xs font-bold uppercase text-red-500 hover:text-red-700">Cancel</button>
+                        </div>
+
+                        <div id="text-input-wrapper" class="flex-1">
                             <textarea id="message-input" rows="1" placeholder="Write your message..." class="block w-full max-h-32 resize-none rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200"></textarea>
                         </div>
-                        <button type="submit" class="flex h-11 w-11 items-center justify-center rounded-xl bg-primary-600 text-white shadow-lg shadow-primary-500/20 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all active:scale-95 disabled:opacity-50">
+                        <button type="submit" id="send-btn" class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary-600 text-white shadow-lg shadow-primary-500/20 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all active:scale-95 disabled:opacity-50">
                             <svg class="h-5 w-5 rotate-90" fill="currentColor" viewBox="0 0 24 24">
                                 <path d="M3.4 20.4l17.45-7.48a1 1 0 000-1.84L3.4 3.6a1 1 0 00-1.39 1.3l2.84 7.1h7.43v2h-7.43L2.01 19.1a1 1 0 001.39 1.3z" />
                             </svg>
@@ -135,7 +154,25 @@ document.addEventListener('DOMContentLoaded', function() {
     const statusSelect = document.getElementById('chat-status-select');
     const searchInput = document.getElementById('chat-search');
     const enableBrowserAlertsBtn = document.getElementById('enable-browser-alerts-btn');
+    const imageInput = document.getElementById('image-input');
+    const imageBtn = document.getElementById('image-btn');
+    const micBtn = document.getElementById('mic-btn');
+    const sendBtn = document.getElementById('send-btn');
+    const recordingIndicator = document.getElementById('recording-indicator');
+    const recordingTimerEl = document.getElementById('recording-timer');
+    const textInputWrapper = document.getElementById('text-input-wrapper');
+    const cancelRecordingBtn = document.getElementById('cancel-recording-btn');
     let soundUnlocked = false;
+    let mediaRecorder = null;
+    let recordedChunks = [];
+    let recordingStartedAt = 0;
+    let recordingTimerInterval = null;
+    let recordingStream = null;
+
+    function resolveMediaUrl(mediaUrl) {
+        if (!mediaUrl) return '';
+        return '/api/media/' + mediaUrl.replace(/^\/+/, '');
+    }
 
     function updateAlertButtonState() {
         if (!enableBrowserAlertsBtn) {
@@ -288,6 +325,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
         if (message.message_type === 'voice') {
             return 'Sent a voice message';
+        }
+
+        if (message.message_type === 'image') {
+            return 'Sent a photo';
         }
 
         if ((message.body || '').trim() !== '') {
@@ -556,12 +597,22 @@ document.addEventListener('DOMContentLoaded', function() {
         const html = messages.map(m => {
             const isSupport = m.sender_type === 'support';
             const time = new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            
+
+            let bodyHtml;
+            if (m.message_type === 'image' && m.media_url) {
+                const src = resolveMediaUrl(m.media_url);
+                bodyHtml = `<img src="${src}" onclick="window.open('${src}', '_blank')" class="max-w-[220px] max-h-[220px] cursor-pointer rounded-lg object-cover" />`;
+            } else if (m.message_type === 'voice' && m.media_url) {
+                bodyHtml = `<audio controls preload="none" class="max-w-[220px]" src="${resolveMediaUrl(m.media_url)}"></audio>`;
+            } else {
+                bodyHtml = `<p class="text-[14px] leading-relaxed whitespace-pre-wrap">${m.body || ''}</p>`;
+            }
+
             return `
                 <div class="flex ${isSupport ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-2 duration-300">
                     <div class="max-w-[70%] ${isSupport ? 'order-1' : ''}">
                         <div class="relative rounded-2xl px-5 py-3 shadow-sm ${isSupport ? 'bg-primary-600 text-white rounded-br-none' : 'bg-white text-slate-700 dark:bg-slate-800 dark:text-slate-200 rounded-bl-none'}">
-                            <p class="text-[14px] leading-relaxed whitespace-pre-wrap">${m.body || ''}</p>
+                            ${bodyHtml}
                         </div>
                         <div class="mt-1.5 flex items-center gap-2 ${isSupport ? 'justify-end' : 'justify-start'}">
                             <span class="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">${time}</span>
@@ -586,12 +637,176 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 100);
     }
 
+    async function uploadSupportMedia(file, type) {
+        await window.adminApi.ensureCsrfCookie();
+        const formData = new FormData();
+        formData.append('type', type);
+        formData.append('file', file);
+        const response = await window.adminApi.request('/api/admin/support/upload', {
+            method: 'POST',
+            body: formData,
+        });
+        if (!response.ok) {
+            throw new Error('Media upload failed.');
+        }
+        const result = await response.json();
+        return result.media_url;
+    }
+
+    async function sendMediaMessage(messageType, mediaUrl, durationSec) {
+        if (!activeConversationId) return;
+        const payload = { message_type: messageType, media_url: mediaUrl };
+        if (durationSec) {
+            payload.media_duration_sec = durationSec;
+        }
+        const response = await window.adminApi.request(`/api/admin/support/conversations/${activeConversationId}/messages`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        });
+        if (response.ok) {
+            scrollChatToBottom();
+            await fetchChatMessages(activeConversationId, true);
+            fetchConversations();
+        } else if (typeof window.adminToast === 'function') {
+            window.adminToast('Failed to send message.', { type: 'error' });
+        }
+    }
+
+    imageBtn.addEventListener('click', () => {
+        if (!activeConversationId) return;
+        imageInput.click();
+    });
+
+    imageInput.addEventListener('change', async () => {
+        const file = imageInput.files && imageInput.files[0];
+        imageInput.value = '';
+        if (!file || !activeConversationId) return;
+
+        imageBtn.disabled = true;
+        try {
+            const mediaUrl = await uploadSupportMedia(file, 'image');
+            await sendMediaMessage('image', mediaUrl, null);
+        } catch (err) {
+            console.error('Image upload failed:', err);
+            if (typeof window.adminToast === 'function') {
+                window.adminToast('Failed to upload image.', { type: 'error' });
+            }
+        } finally {
+            imageBtn.disabled = false;
+        }
+    });
+
+    function updateRecordingTimer() {
+        const elapsed = Math.floor((Date.now() - recordingStartedAt) / 1000);
+        const minutes = Math.floor(elapsed / 60);
+        const seconds = elapsed % 60;
+        recordingTimerEl.textContent = `${minutes}:${String(seconds).padStart(2, '0')}`;
+    }
+
+    function setRecordingUiActive(active) {
+        recordingIndicator.classList.toggle('hidden', !active);
+        recordingIndicator.classList.toggle('flex', active);
+        textInputWrapper.classList.toggle('hidden', active);
+        imageBtn.classList.toggle('hidden', active);
+        micBtn.classList.toggle('text-red-500', active);
+    }
+
+    async function startRecording() {
+        if (!activeConversationId || mediaRecorder) return;
+        try {
+            recordingStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        } catch (err) {
+            console.error('Microphone permission denied:', err);
+            if (typeof window.adminToast === 'function') {
+                window.adminToast('Microphone permission is required to record voice messages.', { type: 'error' });
+            }
+            return;
+        }
+
+        recordedChunks = [];
+        mediaRecorder = new MediaRecorder(recordingStream);
+        mediaRecorder.addEventListener('dataavailable', (event) => {
+            if (event.data && event.data.size > 0) {
+                recordedChunks.push(event.data);
+            }
+        });
+
+        recordingStartedAt = Date.now();
+        recordingTimerEl.textContent = '0:00';
+        setRecordingUiActive(true);
+        recordingTimerInterval = setInterval(updateRecordingTimer, 500);
+        mediaRecorder.start();
+    }
+
+    function teardownRecording() {
+        if (recordingTimerInterval) {
+            clearInterval(recordingTimerInterval);
+            recordingTimerInterval = null;
+        }
+        if (recordingStream) {
+            recordingStream.getTracks().forEach(track => track.stop());
+            recordingStream = null;
+        }
+        mediaRecorder = null;
+        setRecordingUiActive(false);
+    }
+
+    async function stopRecording(shouldSend) {
+        if (!mediaRecorder) return;
+
+        const recorder = mediaRecorder;
+        const durationSec = Math.max(1, Math.round((Date.now() - recordingStartedAt) / 1000));
+
+        const stopped = new Promise(resolve => {
+            recorder.addEventListener('stop', resolve, { once: true });
+        });
+        recorder.stop();
+        await stopped;
+
+        const mimeType = recorder.mimeType || 'audio/webm';
+        teardownRecording();
+
+        if (!shouldSend) {
+            recordedChunks = [];
+            return;
+        }
+
+        const blob = new Blob(recordedChunks, { type: mimeType });
+        recordedChunks = [];
+        const extension = mimeType.includes('mp4') ? 'mp4' : (mimeType.includes('ogg') ? 'ogg' : 'webm');
+        const file = new File([blob], `voice-message.${extension}`, { type: mimeType });
+
+        try {
+            const mediaUrl = await uploadSupportMedia(file, 'voice');
+            await sendMediaMessage('voice', mediaUrl, durationSec);
+        } catch (err) {
+            console.error('Voice upload failed:', err);
+            if (typeof window.adminToast === 'function') {
+                window.adminToast('Failed to upload voice message.', { type: 'error' });
+            }
+        }
+    }
+
+    micBtn.addEventListener('click', () => {
+        if (!activeConversationId) return;
+        if (mediaRecorder) {
+            stopRecording(true);
+        } else {
+            startRecording();
+        }
+    });
+
+    cancelRecordingBtn.addEventListener('click', () => {
+        stopRecording(false);
+    });
+
     replyForm.addEventListener('submit', async function(e) {
         e.preventDefault();
         const body = messageInput.value.trim();
         if (!body || !activeConversationId) return;
 
-        const btn = replyForm.querySelector('button');
+        const btn = sendBtn;
         btn.disabled = true;
 
         try {

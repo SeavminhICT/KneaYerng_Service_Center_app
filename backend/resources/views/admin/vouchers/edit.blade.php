@@ -7,90 +7,90 @@
     <div class="grid gap-6 lg:grid-cols-[2fr_1fr]">
         <form id="voucher-edit-form" class="space-y-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900" data-voucher-id="{{ $voucherId ?? '' }}">
             <div>
-                <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Update Voucher</h2>
-                <p class="text-sm text-slate-500">Edit the voucher configuration and limits.</p>
+                <h2 class="text-lg font-semibold text-slate-900 dark:text-white">{{ __('Update Voucher') }}</h2>
+                <p class="text-sm text-slate-500">{{ __('Edit the voucher configuration and limits.') }}</p>
             </div>
 
             <div class="grid gap-4 sm:grid-cols-2">
                 <div>
-                    <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="code">Voucher Code</label>
+                    <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="code">{{ __('Voucher Code') }}</label>
                     <input id="code" name="code" type="text" class="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200" />
                     <p id="voucher-code-error" class="mt-2 text-xs text-danger-600"></p>
                 </div>
                 <div>
-                    <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="name">Name</label>
+                    <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="name">{{ __('Name') }}</label>
                     <input id="name" name="name" type="text" class="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200" />
                 </div>
             </div>
 
             <div class="grid gap-4 sm:grid-cols-3">
                 <div>
-                    <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="discount_type">Discount Type</label>
+                    <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="discount_type">{{ __('Discount Type') }}</label>
                     <select id="discount_type" name="discount_type" class="mt-2 w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200">
-                        <option value="percent">Percent</option>
-                        <option value="fixed">Fixed amount</option>
+                        <option value="percent">{{ __('Percent') }}</option>
+                        <option value="fixed">{{ __('Fixed amount') }}</option>
                     </select>
                 </div>
                 <div>
-                    <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="discount_value">Discount Value</label>
+                    <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="discount_value">{{ __('Discount Value') }}</label>
                     <input id="discount_value" name="discount_value" type="number" step="0.01" min="0" class="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200" />
                     <p id="voucher-discount-error" class="mt-2 text-xs text-danger-600"></p>
                 </div>
                 <div>
-                    <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="min_order_amount">Minimum Order</label>
+                    <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="min_order_amount">{{ __('Minimum Order') }}</label>
                     <input id="min_order_amount" name="min_order_amount" type="number" step="0.01" min="0" class="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200" />
                 </div>
             </div>
 
             <div class="grid gap-4 sm:grid-cols-2">
                 <div>
-                    <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="starts_at">Starts At</label>
+                    <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="starts_at">{{ __('Starts At') }}</label>
                     <input id="starts_at" name="starts_at" type="datetime-local" class="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200" />
                 </div>
                 <div>
-                    <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="expires_at">Expires At</label>
+                    <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="expires_at">{{ __('Expires At') }}</label>
                     <input id="expires_at" name="expires_at" type="datetime-local" class="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200" />
                 </div>
             </div>
 
             <div class="grid gap-4 sm:grid-cols-2">
                 <div>
-                    <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="usage_limit_total">Usage Limit (Total)</label>
-                    <input id="usage_limit_total" name="usage_limit_total" type="number" min="1" placeholder="No limit" class="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200" />
+                    <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="usage_limit_total">{{ __('Usage Limit (Total)') }}</label>
+                    <input id="usage_limit_total" name="usage_limit_total" type="number" min="1" placeholder="{{ __('No limit') }}" class="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200" />
                 </div>
                 <div>
-                    <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="usage_limit_per_user">Usage Limit (Per User)</label>
-                    <input id="usage_limit_per_user" name="usage_limit_per_user" type="number" min="1" placeholder="No limit" class="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200" />
+                    <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="usage_limit_per_user">{{ __('Usage Limit (Per User)') }}</label>
+                    <input id="usage_limit_per_user" name="usage_limit_per_user" type="number" min="1" placeholder="{{ __('No limit') }}" class="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200" />
                 </div>
             </div>
 
             <div class="grid gap-4 sm:grid-cols-2">
                 <div class="flex items-center gap-3">
                     <input id="is_active" name="is_active" type="checkbox" class="h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500" />
-                    <label for="is_active" class="text-sm font-semibold text-slate-700 dark:text-slate-200">Active</label>
+                    <label for="is_active" class="text-sm font-semibold text-slate-700 dark:text-slate-200">{{ __('Active') }}</label>
                 </div>
                 <div class="flex items-center gap-3">
                     <input id="is_stackable" name="is_stackable" type="checkbox" class="h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500" />
-                    <label for="is_stackable" class="text-sm font-semibold text-slate-700 dark:text-slate-200">Stackable with other vouchers</label>
+                    <label for="is_stackable" class="text-sm font-semibold text-slate-700 dark:text-slate-200">{{ __('Stackable with other vouchers') }}</label>
                 </div>
             </div>
 
             <div>
-                <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="description">Description</label>
+                <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="description">{{ __('Description') }}</label>
                 <textarea id="description" name="description" rows="3" class="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200"></textarea>
             </div>
 
             <div class="flex items-center gap-3">
-                <button class="inline-flex h-10 items-center rounded-xl bg-primary-600 px-4 text-sm font-semibold text-white shadow-sm">Save Changes</button>
-                <a href="{{ route('admin.vouchers.index') }}" class="text-sm font-semibold text-slate-500">Cancel</a>
+                <button class="inline-flex h-10 items-center rounded-xl bg-primary-600 px-4 text-sm font-semibold text-white shadow-sm">{{ __('Save Changes') }}</button>
+                <a href="{{ route('admin.vouchers.index') }}" class="text-sm font-semibold text-slate-500">{{ __('Cancel') }}</a>
             </div>
             <p id="voucher-form-error" class="text-sm text-danger-600"></p>
         </form>
 
         <div class="space-y-6">
             <div class="rounded-2xl border border-danger-100 bg-danger-50 p-5 text-xs text-danger-700 dark:border-danger-500/30 dark:bg-danger-500/10 dark:text-danger-100">
-                <p class="font-semibold">Delete voucher</p>
-                <p class="mt-2">Deleting will permanently remove the voucher and its redemptions.</p>
+                <p class="font-semibold">{{ __('Delete voucher') }}</p>
+                <p class="mt-2">{{ __('Deleting will permanently remove the voucher and its redemptions.') }}</p>
             </div>
         </div>
     </div>

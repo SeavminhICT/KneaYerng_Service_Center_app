@@ -13,6 +13,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 
 class SupportChatController extends Controller
@@ -85,7 +86,7 @@ class SupportChatController extends Controller
 
         $validated = $request->validate([
             'conversation_id' => ['required', 'integer', 'exists:support_conversations,id'],
-            'message_type' => ['nullable', 'in:text,emoji,voice'],
+            'message_type' => ['nullable', 'in:text,emoji,voice,image'],
             'body' => ['nullable', 'string', 'max:5000'],
             'media_url' => ['nullable', 'string', 'max:2048'],
             'media_duration_sec' => ['nullable', 'integer', 'min:1', 'max:600'],
@@ -234,7 +235,7 @@ class SupportChatController extends Controller
         abort_unless($user, 401);
 
         $validated = $request->validate([
-            'message_type' => ['nullable', 'in:text,emoji,voice'],
+            'message_type' => ['nullable', 'in:text,emoji,voice,image'],
             'body' => ['nullable', 'string', 'max:5000'],
             'media_url' => ['nullable', 'string', 'max:2048'],
             'media_duration_sec' => ['nullable', 'integer', 'min:1', 'max:600'],
@@ -369,10 +370,37 @@ class SupportChatController extends Controller
             ]);
         }
 
-        if ($messageType === 'voice' && blank($payload['media_url'] ?? null)) {
+        if (in_array($messageType, ['voice', 'image'], true) && blank($payload['media_url'] ?? null)) {
             throw ValidationException::withMessages([
-                'media_url' => ['Voice message media_url is required.'],
+                'media_url' => ['Media url is required for this message type.'],
             ]);
         }
+    }
+
+    public function uploadMedia(Request $request)
+    {
+        $user = $request->user() ?? $request->user('sanctum') ?? auth('web')->user();
+
+        abort_unless($user, 401);
+
+        $validated = $request->validate([
+            'type' => ['required', 'in:image,voice'],
+            'file' => ['required', 'file', 'max:20480'],
+        ]);
+
+        $directory = $validated['type'] === 'voice' ? 'support_chat/voice' : 'support_chat/images';
+
+        try {
+            $disk = Storage::build(array_merge(config('filesystems.disks.public'), ['throw' => true]));
+            $storedPath = $disk->putFile($directory, $request->file('file'));
+        } catch (\Throwable $exception) {
+            Log::error('Support chat media upload failed.', ['error' => $exception->getMessage()]);
+
+            return response()->json(['message' => 'Media upload failed.'], 500);
+        }
+
+        return response()->json([
+            'media_url' => 'storage/'.$storedPath,
+        ], 201);
     }
 }

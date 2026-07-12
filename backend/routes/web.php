@@ -15,7 +15,7 @@ Route::redirect('/', '/login');
 Route::get('/dashboard', function () {
     $user = request()->user();
 
-    if ($user instanceof User && $user->isAdmin()) {
+    if ($user instanceof User && $user->canAccessAdminPanel()) {
         return redirect()->route('admin.dashboard');
     }
 
@@ -31,6 +31,8 @@ Route::get('language/{locale}', function ($locale) {
 
 
 Route::prefix('admin')->name('admin.')->middleware(['admin'])->group(function () {
+    // Landing page for every web admin user; the statistics inside the page
+    // only render for roles holding view_dashboard.
     Route::view('/dashboard', 'admin.dashboard')->name('dashboard');
     Route::get('/notifications', function () {
         $adminEmails = (array) config('auth.admin_emails', []);
@@ -55,18 +57,18 @@ Route::prefix('admin')->name('admin.')->middleware(['admin'])->group(function ()
                 ->orderBy('last_name')
                 ->get(),
         ]);
-    })->name('notifications.index');
-    Route::post('/notifications/send', [AdminNotificationController::class, 'store'])->name('notifications.store');
+    })->name('notifications.index')->middleware('permission:view_notification');
+    Route::post('/notifications/send', [AdminNotificationController::class, 'store'])->name('notifications.store')->middleware('permission:create_notification');
 
-    Route::view('/categories', 'admin.categories.index')->name('categories.index');
-    Route::view('/categories/create', 'admin.categories.create')->name('categories.create');
+    Route::view('/categories', 'admin.categories.index')->name('categories.index')->middleware('permission:view_category');
+    Route::view('/categories/create', 'admin.categories.create')->name('categories.create')->middleware('permission:create_category');
     Route::get('/categories/{category}/edit', function (\App\Models\Category $category) {
         return view('admin.categories.edit', ['categoryId' => $category->id]);
-    })->name('categories.edit');
+    })->name('categories.edit')->middleware('permission:update_category');
 
-    Route::view('/banners', 'admin.banners.index')->name('banners.index');
+    Route::view('/banners', 'admin.banners.index')->name('banners.index')->middleware('permission:view_banner');
 
-    Route::view('/products', 'admin.products.index')->name('products.index');
+    Route::view('/products', 'admin.products.index')->name('products.index')->middleware('permission:view_product');
     Route::get('/products/create', function () {
         return view('admin.products.create', [
             'categories' => \App\Models\Category::query()
@@ -74,7 +76,7 @@ Route::prefix('admin')->name('admin.')->middleware(['admin'])->group(function ()
                 ->orderBy('id')
                 ->get(['id', 'name']),
         ]);
-    })->name('products.create');
+    })->name('products.create')->middleware('permission:create_product');
     Route::get('/products/{product}/edit', function (\App\Models\Product $product) {
         return view('admin.products.edit', [
             'product' => $product,
@@ -84,43 +86,43 @@ Route::prefix('admin')->name('admin.')->middleware(['admin'])->group(function ()
                 ->orderBy('id')
                 ->get(['id', 'name']),
         ]);
-    })->name('products.edit');
-    Route::view('/product-attributes', 'admin.product-attributes.index')->name('product-attributes.index');
+    })->name('products.edit')->middleware('permission:update_product');
+    Route::view('/product-attributes', 'admin.product-attributes.index')->name('product-attributes.index')->middleware('permission:view_product_master');
 
-    Route::view('/accessories', 'admin.accessories.index')->name('accessories.index');
-    Route::view('/accessories/create', 'admin.accessories.create')->name('accessories.create');
+    Route::view('/accessories', 'admin.accessories.index')->name('accessories.index')->middleware('permission:view_accessory');
+    Route::view('/accessories/create', 'admin.accessories.create')->name('accessories.create')->middleware('permission:create_accessory');
     Route::get('/accessories/{accessory}/edit', function (\App\Models\Accessory $accessory) {
         return view('admin.accessories.edit', ['accessoryId' => $accessory->id]);
-    })->name('accessories.edit');
+    })->name('accessories.edit')->middleware('permission:update_accessory');
 
-    Route::view('/orders', 'admin.orders.index')->name('orders.index');
-    Route::view('/orders/pickup', 'admin.orders.pickup')->name('orders.pickup');
-    Route::view('/orders/tracking', 'admin.orders.tracking')->name('orders.tracking');
+    Route::view('/orders', 'admin.orders.index')->name('orders.index')->middleware('permission:view_order');
+    Route::view('/orders/pickup', 'admin.orders.pickup')->name('orders.pickup')->middleware('permission:view_checking_pickup');
+    Route::view('/orders/tracking', 'admin.orders.tracking')->name('orders.tracking')->middleware('permission:view_tracking_order');
     Route::get('/orders/{order}', function (\App\Models\Order $order) {
         return view('admin.orders.show', ['orderId' => $order->id]);
-    })->name('orders.show');
+    })->name('orders.show')->middleware('permission:view_order,view_checking_pickup,view_tracking_order');
 
     Route::view('/repairs', 'admin.repairs.index')->name('repairs.index');
     Route::get('/repairs/{repair}', function (\App\Models\RepairRequest $repair) {
         return view('admin.repairs.show', ['repairId' => $repair->id]);
     })->name('repairs.show');
-    Route::view('/support', 'admin.support.index')->name('support.index');
+    Route::view('/support', 'admin.support.index')->name('support.index')->middleware('permission:view_support_inbox');
 
     Route::view('/technicians', 'admin.technicians.index')->name('technicians.index');
 
-    Route::view('/vouchers', 'admin.vouchers.index')->name('vouchers.index');
-    Route::view('/vouchers/create', 'admin.vouchers.create')->name('vouchers.create');
+    Route::view('/vouchers', 'admin.vouchers.index')->name('vouchers.index')->middleware('permission:view_voucher');
+    Route::view('/vouchers/create', 'admin.vouchers.create')->name('vouchers.create')->middleware('permission:create_voucher');
     Route::get('/vouchers/{voucher}/edit', function (Voucher $voucher) {
         return view('admin.vouchers.edit', ['voucherId' => $voucher->id]);
-    })->name('vouchers.edit');
+    })->name('vouchers.edit')->middleware('permission:update_voucher');
 
-    Route::view('/parts', 'admin.parts.index')->name('parts.index');
-    Route::view('/parts/create', 'admin.parts.create')->name('parts.create');
+    Route::view('/parts', 'admin.parts.index')->name('parts.index')->middleware('permission:view_parts_inventory');
+    Route::view('/parts/create', 'admin.parts.create')->name('parts.create')->middleware('permission:create_parts_inventory');
     Route::get('/parts/{part}/edit', function (Part $part) {
         return view('admin.parts.edit', ['partId' => $part->id]);
-    })->name('parts.edit');
+    })->name('parts.edit')->middleware('permission:update_parts_inventory');
 
-    Route::view('/inventory/warranties', 'admin.inventory.warranties')->name('inventory.warranties');
+    Route::view('/inventory/warranties', 'admin.inventory.warranties')->name('inventory.warranties')->middleware('permission:view_warranty_tracking');
 
     Route::view('/finance/invoices', 'admin.finance.invoices')->name('finance.invoices');
     Route::view('/finance/payments', 'admin.finance.payments')->name('finance.payments');
@@ -141,7 +143,7 @@ Route::prefix('admin')->name('admin.')->middleware(['admin'])->group(function ()
             'repairs'    => $repairs,
             'totalSpent' => $totalSpent,
         ]);
-    })->name('customers.show');
+    })->name('customers.show')->middleware('permission:view_customer');
 
     Route::delete('/customers/{user}', function (User $user) {
         $adminEmails = (array) config('auth.admin_emails', []);
@@ -153,7 +155,7 @@ Route::prefix('admin')->name('admin.')->middleware(['admin'])->group(function ()
 
         return redirect()->route('admin.customers.index')
             ->with('success', 'Customer deleted successfully.');
-    })->name('customers.destroy');
+    })->name('customers.destroy')->middleware('permission:delete_customer');
 
     Route::get('/customers', function () {
         $adminEmails = (array) config('auth.admin_emails', []);
@@ -167,11 +169,14 @@ Route::prefix('admin')->name('admin.')->middleware(['admin'])->group(function ()
             })
             ->where(function ($query) {
                 $query->whereNull('role')
-                    ->orWhere('role', '!=', 'admin');
+                    ->orWhere('role', 'user');
             });
 
         if (! empty($adminEmails)) {
-            $baseQuery->whereNotIn('email', $adminEmails);
+            $baseQuery->where(function ($query) use ($adminEmails) {
+                $query->whereNull('email')
+                    ->orWhereNotIn('email', $adminEmails);
+            });
         }
 
         // Search by name, email or phone
@@ -209,7 +214,7 @@ Route::prefix('admin')->name('admin.')->middleware(['admin'])->group(function ()
             'customers'      => $customers,
             'customersCount' => $customersCount,
         ]);
-    })->name('customers.index');
+    })->name('customers.index')->middleware('permission:view_customer');
 
     Route::get('/payments', function () {
         $payments = Payment::query()
@@ -257,10 +262,14 @@ Route::prefix('admin')->name('admin.')->middleware(['admin'])->group(function ()
             'khqrPendingCount' => $khqrPendingCount,
             'payments' => $payments,
         ]);
-    })->name('payments.index');
-    Route::view('/reports', 'admin.reports.index')->name('reports.index');
-    Route::view('/settings', 'admin.settings.index')->name('settings.index');
-    Route::view('/users', 'admin.users.index')->name('users.index');
+    })->name('payments.index')->middleware('permission:view_payment');
+    Route::view('/reports', 'admin.reports.index')->name('reports.index')->middleware('permission:view_sales_report');
+    Route::view('/settings', 'admin.settings.index')->name('settings.index')->middleware('permission:view_setting');
+    Route::view('/users', 'admin.users.index')->name('users.index')->middleware('permission:view_user');
+    Route::view('/roles', 'admin.roles.index')->name('roles.index')->middleware('permission:view_role');
+    Route::view('/permissions', 'admin.permissions.index')->name('permissions.index')->middleware('permission:view_permission');
+    // Permission assignment now lives on the combined Roles & Permissions page.
+    Route::redirect('/roles/assign-permissions', '/admin/roles')->name('roles.assign-permissions');
 });
 
 Route::middleware('auth')->group(function () {

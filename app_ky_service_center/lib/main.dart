@@ -104,7 +104,8 @@ class _StartupGateState extends State<_StartupGate> {
       // Validate the token against the server — this catches stale tokens
       // from a previous database or deployment and prevents the user from
       // landing on the home screen only to see 401 errors everywhere.
-      final isAuthenticated = await ApiService.validateToken();
+      final isAuthenticated = await ApiService.validateToken()
+          .timeout(const Duration(seconds: 8), onTimeout: () => false);
       if (isAuthenticated) {
         unawaited(CartService.instance.loadFromApi());
         final launchTarget = AppNotificationService.instance

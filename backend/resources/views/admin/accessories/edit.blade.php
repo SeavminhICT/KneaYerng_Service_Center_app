@@ -1,23 +1,23 @@
 @extends('layouts.admin')
 
-@section('title', 'Edit Accessory')
-@section('page-title', 'Edit Accessory')
+@section('title', __('Edit Accessory'))
+@section('page-title', __('Edit Accessory'))
 
 @section('content')
     <div class="grid gap-6 lg:grid-cols-[2fr_1fr]">
         <form id="accessory-edit-form" class="space-y-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900" data-accessory-id="{{ $accessoryId ?? '' }}">
             <div>
-                <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Update Accessory</h2>
-                <p class="text-sm text-slate-500">Update accessory and repair part details.</p>
+                <h2 class="text-lg font-semibold text-slate-900 dark:text-white">{{ __('Update Accessory') }}</h2>
+                <p class="text-sm text-slate-500">{{ __('Update accessory and repair part details.') }}</p>
             </div>
 
             <div class="grid gap-4 sm:grid-cols-2">
                 <div>
-                    <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="name">Name</label>
+                    <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="name">{{ __('Name') }}</label>
                     <input id="name" name="name" type="text" class="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200" />
                 </div>
                 <div>
-                    <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="brand">Brand</label>
+                    <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="brand">{{ __('Brand') }}</label>
                     <select id="brand" name="brand" class="mt-2 w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200">
                         <option value="IPHONE">IPHONE</option>
                         <option value="SAMSUNG">SAMSUNG</option>
@@ -27,19 +27,19 @@
 
             <div class="grid gap-4 sm:grid-cols-2">
                 <div>
-                    <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="price">Price</label>
+                    <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="price">{{ __('Price') }}</label>
                     <input id="price" name="price" type="number" step="0.01" min="0" class="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200" />
                 </div>
                 <div>
-                    <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="stock">Parts Stock</label>
+                    <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="stock">{{ __('Parts Stock') }}</label>
                     <input id="stock" name="stock" type="number" min="0" class="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200" />
                 </div>
                 <div>
-                    <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="discount">Discount</label>
+                    <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="discount">{{ __('Discount') }}</label>
                     <div class="mt-2 grid grid-cols-2 gap-2">
                         <select id="discount_type" class="h-10 w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200">
-                            <option value="amount" selected>Amount</option>
-                            <option value="percent">Percent</option>
+                            <option value="amount" selected>{{ __('Amount') }}</option>
+                            <option value="percent">{{ __('Percent') }}</option>
                         </select>
                         <input id="discount_percent" type="number" step="0.01" min="0" max="100" placeholder="10%" class="hidden h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200" />
                     </div>
@@ -50,7 +50,7 @@
 
             <div class="grid gap-4 sm:grid-cols-2">
                 <div>
-                    <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="warranty">Warranty</label>
+                    <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="warranty">{{ __('Warranty') }}</label>
                     <select id="warranty" name="warranty" class="mt-2 w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200">
                         <option value="NO_WARRANTY">NO_WARRANTY</option>
                         <option value="7_DAYS">7_DAYS</option>
@@ -62,9 +62,9 @@
                     </select>
                 </div>
                 <div>
-                    <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="tag">Tag</label>
+                    <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="tag">{{ __('Tag') }}</label>
                     <select id="tag" name="tag" class="mt-2 w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200">
-                        <option value="">No tag</option>
+                        <option value="">{{ __('No tag') }}</option>
                         @foreach (\App\Models\Accessory::TAGS as $tag)
                             <option value="{{ $tag }}">
                                 {{ \Illuminate\Support\Str::title(str_replace('_', ' ', strtolower($tag))) }}
@@ -75,33 +75,33 @@
             </div>
 
             <div>
-                <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="description">Description</label>
+                <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="description">{{ __('Description') }}</label>
                 <textarea id="description" name="description" rows="4" class="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200"></textarea>
             </div>
 
             <div class="flex items-center gap-3">
-                <button class="inline-flex h-10 items-center rounded-xl bg-primary-600 px-4 text-sm font-semibold text-white shadow-sm">Save Changes</button>
-                <a href="{{ route('admin.accessories.index') }}" class="text-sm font-semibold text-slate-500">Cancel</a>
+                <button class="inline-flex h-10 items-center rounded-xl bg-primary-600 px-4 text-sm font-semibold text-white shadow-sm">{{ __('Save Changes') }}</button>
+                <a href="{{ route('admin.accessories.index') }}" class="text-sm font-semibold text-slate-500">{{ __('Cancel') }}</a>
             </div>
             <p id="accessory-form-error" class="text-sm text-danger-600"></p>
         </form>
 
         <div class="space-y-6">
             <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-                <h3 class="text-sm font-semibold text-slate-900 dark:text-white">Accessory Image</h3>
-                <p class="mt-1 text-xs text-slate-500">Upload a photo to show in the app.</p>
+                <h3 class="text-sm font-semibold text-slate-900 dark:text-white">{{ __('Accessory Image') }}</h3>
+                <p class="mt-1 text-xs text-slate-500">{{ __('Upload a photo to show in the app.') }}</p>
                 <div id="accessory-image-preview" class="mt-4 flex h-40 items-center justify-center rounded-xl border border-dashed border-slate-300 bg-slate-50 text-xs text-slate-500 dark:border-slate-700 dark:bg-slate-900/60">
                     <div class="text-center">
-                        <p class="font-semibold">No image uploaded</p>
-                        <p>PNG, JPG up to 5MB</p>
+                        <p class="font-semibold">{{ __('No image uploaded') }}</p>
+                        <p>{{ __('PNG, JPG up to 5MB') }}</p>
                     </div>
                 </div>
                 <input type="file" name="image" form="accessory-edit-form" accept="image/*" class="mt-4 w-full text-sm text-slate-500" />
             </div>
 
             <div class="rounded-2xl border border-danger-100 bg-danger-50 p-5 text-xs text-danger-700 dark:border-danger-500/30 dark:bg-danger-500/10 dark:text-danger-100">
-                <p class="font-semibold">Delete accessory</p>
-                <p class="mt-2">Deleting will remove the item from the catalog and mobile app.</p>
+                <p class="font-semibold">{{ __('Delete accessory') }}</p>
+                <p class="mt-2">{{ __('Deleting will remove the item from the catalog and mobile app.') }}</p>
             </div>
         </div>
     </div>
@@ -205,17 +205,17 @@
                 if (file) {
                     document.getElementById('accessory-form-error').textContent = '';
                 }
-                if (window.adminValidateFileSize && file && !window.adminValidateFileSize(file, 'Image')) {
+                if (window.adminValidateFileSize && file && !window.adminValidateFileSize(file, '{{ __('Image') }}')) {
                     event.stopImmediatePropagation();
                     event.preventDefault();
                     event.target.value = '';
-                    document.getElementById('accessory-form-error').textContent = 'Image must be 5MB or smaller.';
+                    document.getElementById('accessory-form-error').textContent = '{{ __('Image must be 5MB or smaller.') }}';
                     return;
                 }
                 if (file) {
                     var reader = new FileReader();
                     reader.onload = function (e) {
-                        document.getElementById('accessory-image-preview').innerHTML = '<img src="' + e.target.result + '" alt="Preview" class="h-32 w-32 rounded-xl object-cover" />';
+                        document.getElementById('accessory-image-preview').innerHTML = '<img src="' + e.target.result + '" alt="{{ __('Preview') }}" class="h-32 w-32 rounded-xl object-cover" />';
                     };
                     reader.readAsDataURL(file);
                 }
@@ -242,7 +242,7 @@
                 document.getElementById('tag').value = data.data.tag || '';
                 document.getElementById('description').value = data.data.description || '';
                 if (data.data.image) {
-                    document.getElementById('accessory-image-preview').innerHTML = '<img src="' + data.data.image + '" alt="' + (data.data.name || 'Accessory image') + '" class="h-32 w-32 rounded-xl object-cover" />';
+                    document.getElementById('accessory-image-preview').innerHTML = '<img src="' + data.data.image + '" alt="' + (data.data.name || '{{ __('Accessory image') }}') + '" class="h-32 w-32 rounded-xl object-cover" />';
                 }
             }
 
@@ -270,30 +270,30 @@
                     if (window.adminSwalStore) {
                         window.adminSwalStore({
                             icon: 'success',
-                            title: 'Accessory updated',
-                            text: 'Accessory updated successfully.',
+                            title: '{{ __('Accessory updated') }}',
+                            text: '{{ __('Accessory updated successfully.') }}',
                             confirmButtonColor: '#2563eb',
                         });
                     } else if (window.adminToastStore) {
-                        window.adminToastStore({ type: 'success', message: 'Accessory updated successfully.' });
+                        window.adminToastStore({ type: 'success', message: '{{ __('Accessory updated successfully.') }}' });
                     }
                     window.location.href = '/admin/accessories';
                     return;
                 }
 
                 var errorData = await response.json();
-                document.getElementById('accessory-form-error').textContent = errorData.message || 'Unable to update accessory.';
+                document.getElementById('accessory-form-error').textContent = errorData.message || '{{ __('Unable to update accessory.') }}';
                 if (window.adminSwalError) {
-                    window.adminSwalError('Update failed', errorData.message || 'Unable to update accessory.');
+                    window.adminSwalError('{{ __('Update failed') }}', errorData.message || '{{ __('Unable to update accessory.') }}');
                 } else if (window.adminToast) {
-                    window.adminToast(errorData.message || 'Unable to update accessory.', { type: 'error' });
+                    window.adminToast(errorData.message || '{{ __('Unable to update accessory.') }}', { type: 'error' });
                 }
             } catch (error) {
-                document.getElementById('accessory-form-error').textContent = 'Unable to update accessory.';
+                document.getElementById('accessory-form-error').textContent = '{{ __('Unable to update accessory.') }}';
                 if (window.adminSwalError) {
-                    window.adminSwalError('Update failed', 'Unable to update accessory.');
+                    window.adminSwalError('{{ __('Update failed') }}', '{{ __('Unable to update accessory.') }}');
                 } else if (window.adminToast) {
-                    window.adminToast('Unable to update accessory.', { type: 'error' });
+                    window.adminToast('{{ __('Unable to update accessory.') }}', { type: 'error' });
                 }
             }
         });

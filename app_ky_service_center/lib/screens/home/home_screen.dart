@@ -87,7 +87,7 @@ class _HomeScreenState extends State<HomeScreen> {
     _loadBanners();
     setState(() {
       _categoriesFuture = _loadCategoriesSafe(forceRefresh: true);
-      _productsFuture = _loadProductsSafe();
+      _productsFuture = _loadProductsSafe(forceRefresh: true);
       _profileFuture = ApiService.getUserProfile();
     });
     await Future.wait([_categoriesFuture, _productsFuture]);
@@ -108,9 +108,9 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  Future<List<Product>> _loadProductsSafe() async {
+  Future<List<Product>> _loadProductsSafe({bool forceRefresh = false}) async {
     try {
-      return await ApiService.fetchProducts();
+      return await ApiService.fetchProducts(forceRefresh: forceRefresh);
     } catch (error) {
       debugPrint('[HomeScreen] products load failed: $error');
       rethrow;
@@ -270,6 +270,7 @@ class _HomeScreenState extends State<HomeScreen> {
         child: SafeArea(
           child: RefreshIndicator(
             color: homePrimary,
+            backgroundColor: homeSurface(context),
             onRefresh: _refresh,
             child: ListView(
               physics: const BouncingScrollPhysics(

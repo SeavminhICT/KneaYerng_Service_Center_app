@@ -9,7 +9,7 @@
     $unpaidOrders= (int)   ($metrics['unpaid_orders']        ?? 0);
     $failedOrders= (int)   ($metrics['failed_orders']        ?? 0);
     $paidRate    = $totalOrders > 0 ? round(($paidOrders / $totalOrders) * 100, 1) : 0;
-    $reportType  = 'Sales Report';
+    $reportType  = __('Sales Report');
     $rangeLabel  = $rangeLabel ?? '';
 @endphp
 @extends('admin.reports.pdf._layout')
@@ -17,23 +17,23 @@
 @section('body')
 
     {{-- ── KPI Row ── --}}
-    <div class="section-title">Key Metrics</div>
+    <div class="section-title">{{ __('Key Metrics') }}</div>
     <table class="kpi-table">
         <tr>
             <td class="kpi-cell">
-                <div class="kpi-label">Total Revenue</div>
+                <div class="kpi-label">{{ __('Total Revenue') }}</div>
                 <div class="kpi-value kpi-green">${{ number_format($totalSales, 2) }}</div>
             </td>
             <td class="kpi-cell">
-                <div class="kpi-label">Total Orders</div>
+                <div class="kpi-label">{{ __('Total Orders') }}</div>
                 <div class="kpi-value kpi-accent">{{ number_format($totalOrders) }}</div>
             </td>
             <td class="kpi-cell">
-                <div class="kpi-label">Avg Order Value</div>
+                <div class="kpi-label">{{ __('Avg Order Value') }}</div>
                 <div class="kpi-value">${{ number_format($avgOrder, 2) }}</div>
             </td>
             <td class="kpi-cell">
-                <div class="kpi-label">Payment Rate</div>
+                <div class="kpi-label">{{ __('Payment Rate') }}</div>
                 <div class="kpi-value {{ $paidRate >= 70 ? 'kpi-green' : ($paidRate >= 40 ? 'kpi-amber' : 'kpi-red') }}">{{ $paidRate }}%</div>
             </td>
         </tr>
@@ -44,35 +44,35 @@
         <tr>
             {{-- Payment breakdown --}}
             <td>
-                <div class="section-title">Payment Breakdown</div>
+                <div class="section-title">{{ __('Payment Breakdown') }}</div>
                 <table class="data-table">
                     <thead>
                         <tr>
-                            <th>Status</th>
-                            <th class="text-right">Orders</th>
-                            <th class="text-right">Share</th>
+                            <th>{{ __('Status') }}</th>
+                            <th class="text-right">{{ __('Orders') }}</th>
+                            <th class="text-right">{{ __('Share') }}</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr>
-                            <td><span class="badge badge-green">Paid</span></td>
+                            <td><span class="badge badge-green">{{ __('Paid') }}</span></td>
                             <td class="text-right font-bold">{{ $paidOrders }}</td>
                             <td class="text-right text-green">{{ $totalOrders > 0 ? round($paidOrders/$totalOrders*100,1) : 0 }}%</td>
                         </tr>
                         <tr>
-                            <td><span class="badge badge-amber">Unpaid</span></td>
+                            <td><span class="badge badge-amber">{{ __('Unpaid') }}</span></td>
                             <td class="text-right font-bold">{{ $unpaidOrders }}</td>
                             <td class="text-right text-amber">{{ $totalOrders > 0 ? round($unpaidOrders/$totalOrders*100,1) : 0 }}%</td>
                         </tr>
                         <tr>
-                            <td><span class="badge badge-red">Failed</span></td>
+                            <td><span class="badge badge-red">{{ __('Failed') }}</span></td>
                             <td class="text-right font-bold">{{ $failedOrders }}</td>
                             <td class="text-right text-red">{{ $totalOrders > 0 ? round($failedOrders/$totalOrders*100,1) : 0 }}%</td>
                         </tr>
                     </tbody>
                     <tfoot>
                         <tr>
-                            <td>Total</td>
+                            <td>{{ __('Total') }}</td>
                             <td class="text-right">{{ $totalOrders }}</td>
                             <td class="text-right">100%</td>
                         </tr>
@@ -82,14 +82,14 @@
 
             {{-- Daily summary (top 10 days) --}}
             <td>
-                <div class="section-title">Top Revenue Days</div>
+                <div class="section-title">{{ __('Top Revenue Days') }}</div>
                 @php $topDays = collect($daily)->sortByDesc('total')->take(8)->values(); @endphp
                 <table class="data-table">
                     <thead>
                         <tr>
-                            <th>Date</th>
-                            <th class="text-right">Orders</th>
-                            <th class="text-right">Revenue</th>
+                            <th>{{ __('Date') }}</th>
+                            <th class="text-right">{{ __('Orders') }}</th>
+                            <th class="text-right">{{ __('Revenue') }}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -100,7 +100,7 @@
                                 <td class="text-right text-green">${{ number_format($day['total'], 2) }}</td>
                             </tr>
                         @empty
-                            <tr><td colspan="3" style="text-align:center;color:#94a3b8;padding:12px">No data</td></tr>
+                            <tr><td colspan="3" style="text-align:center;color:#94a3b8;padding:12px">{{ __('No data') }}</td></tr>
                         @endforelse
                     </tbody>
                 </table>
@@ -109,16 +109,16 @@
     </table>
 
     {{-- ── Top Products ── --}}
-    <div class="section-title">Top Products by Revenue</div>
+    <div class="section-title">{{ __('Top Products by Revenue') }}</div>
     <table class="data-table">
         <thead>
             <tr>
                 <th style="width:30px">#</th>
-                <th>Product Name</th>
-                <th>Type</th>
-                <th class="text-right">Qty Sold</th>
-                <th class="text-right">Revenue</th>
-                <th class="text-right">Revenue Share</th>
+                <th>{{ __('Product Name') }}</th>
+                <th>{{ __('Type') }}</th>
+                <th class="text-right">{{ __('Qty Sold') }}</th>
+                <th class="text-right">{{ __('Revenue') }}</th>
+                <th class="text-right">{{ __('Revenue Share') }}</th>
             </tr>
         </thead>
         <tbody>
@@ -133,13 +133,13 @@
                     <td class="text-right text-muted">{{ $share }}%</td>
                 </tr>
             @empty
-                <tr><td colspan="6" style="text-align:center;color:#94a3b8;padding:14px">No sales data for this period.</td></tr>
+                <tr><td colspan="6" style="text-align:center;color:#94a3b8;padding:14px">{{ __('No sales data for this period.') }}</td></tr>
             @endforelse
         </tbody>
         @if (count($topItems))
         <tfoot>
             <tr>
-                <td colspan="3">Total (shown)</td>
+                <td colspan="3">{{ __('Total (shown)') }}</td>
                 <td class="text-right">{{ number_format(collect($topItems)->sum('quantity')) }}</td>
                 <td class="text-right">${{ number_format(collect($topItems)->sum('sales'), 2) }}</td>
                 <td></td>
@@ -150,14 +150,14 @@
 
     {{-- ── Daily breakdown (all days) ── --}}
     @if (count($daily))
-    <div class="section-title" style="margin-top:4px">Daily Breakdown</div>
+    <div class="section-title" style="margin-top:4px">{{ __('Daily Breakdown') }}</div>
     <table class="data-table">
         <thead>
             <tr>
-                <th>Date</th>
-                <th>Day</th>
-                <th class="text-right">Orders</th>
-                <th class="text-right">Revenue</th>
+                <th>{{ __('Date') }}</th>
+                <th>{{ __('Day') }}</th>
+                <th class="text-right">{{ __('Orders') }}</th>
+                <th class="text-right">{{ __('Revenue') }}</th>
             </tr>
         </thead>
         <tbody>
@@ -172,7 +172,7 @@
         </tbody>
         <tfoot>
             <tr>
-                <td colspan="2">Total</td>
+                <td colspan="2">{{ __('Total') }}</td>
                 <td class="text-right">{{ number_format(collect($daily)->sum('count')) }}</td>
                 <td class="text-right">${{ number_format(collect($daily)->sum('total'), 2) }}</td>
             </tr>

@@ -51,7 +51,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   void initState() {
     super.initState();
-    _profileFuture = ApiService.getUserProfile();
+    _profileFuture = ApiService.refreshUserProfile();
   }
 
   @override
@@ -566,7 +566,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _refreshProfile() async {
     setState(() {
-      _profileFuture = ApiService.getUserProfile();
+      _profileFuture = ApiService.refreshUserProfile();
     });
     await _profileFuture;
   }

@@ -20,6 +20,8 @@ class DatabaseSeeder extends Seeder
     {
         // User::factory(10)->create();
 
+        $this->call(RolePermissionSeeder::class);
+
         User::updateOrCreate(
             ['email' => 'admin168@gmail.com'],
             [

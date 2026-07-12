@@ -73,6 +73,10 @@ class AppLocalizations {
   String get newPassword         => _t('New Password',             'ពាក្យសម្ងាត់ថ្មី');
   String get verifyOtp           => _t('Verify',                   'ផ្ទៀងផ្ទាត់');
   String get registrationSuccess => _t('Registration Successful',  'ការចុះឈ្មោះបានជោគជ័យ');
+  String get registrationSuccessMessage => _t(
+    'Your account is verified. Start exploring services and managing your bookings.',
+    'គណនីរបស់អ្នកត្រូវបានផ្ទៀងផ្ទាត់រួចរាល់។ អ្នកអាចចាប់ផ្តើមប្រើសេវាកម្ម និងគ្រប់គ្រងការកក់បានឥឡូវនេះ។',
+  );
 
   // ── Home ──────────────────────────────────────────────────────────────────
   String get searchProducts   => _t('Search products...',        'ស្វែងរកផលិតផល...');

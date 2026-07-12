@@ -1,16 +1,16 @@
 @extends('layouts.admin')
 
-@section('title', 'Notifications')
-@section('page-title', 'Notifications')
+@section('title', __('Notifications'))
+@section('page-title', __('Notifications'))
 
 @section('content')
     <section class="space-y-6">
         <div class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
             <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                 <div>
-                    <span class="inline-flex rounded-full bg-primary-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.22em] text-primary-700 dark:bg-primary-500/10 dark:text-primary-100">Push Center</span>
-                    <h1 class="mt-3 text-2xl font-semibold text-slate-900 dark:text-white">Send Notifications With Delivery Context</h1>
-                    <p class="mt-2 max-w-3xl text-sm text-slate-500">Design and preview the notification payload, choose the audience, and follow the full system flow from admin action to mobile deep linking.</p>
+                    <span class="inline-flex rounded-full bg-primary-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.22em] text-primary-700 dark:bg-primary-500/10 dark:text-primary-100">{{ __('Push Center') }}</span>
+                    <h1 class="mt-3 text-2xl font-semibold text-slate-900 dark:text-white">{{ __('Send Notifications With Delivery Context') }}</h1>
+                    <p class="mt-2 max-w-3xl text-sm text-slate-500">{{ __('Design and preview the notification payload, choose the audience, and follow the full system flow from admin action to mobile deep linking.') }}</p>
                 </div>
                 
             </div>
@@ -21,78 +21,80 @@
                 <div class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
                     <div class="flex items-center justify-between gap-4">
                         <div>
-                            <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Compose Notification</h2>
-                            <p class="mt-1 text-sm text-slate-500">Create a reusable payload for announcements, alerts, documents, and order updates.</p>
+                            <h2 class="text-lg font-semibold text-slate-900 dark:text-white">{{ __('Compose Notification') }}</h2>
+                            <p class="mt-1 text-sm text-slate-500">{{ __('Create a reusable payload for announcements, alerts, documents, and order updates.') }}</p>
                         </div>
-                        <span class="rounded-full bg-primary-50 px-3 py-1 text-xs font-semibold text-primary-700 dark:bg-primary-500/10 dark:text-primary-100">Draft mode</span>
+                        <span class="rounded-full bg-primary-50 px-3 py-1 text-xs font-semibold text-primary-700 dark:bg-primary-500/10 dark:text-primary-100">{{ __('Draft mode') }}</span>
                     </div>
 
                     <form id="notification-form" class="mt-6 space-y-5" data-send-url="{{ route('admin.notifications.store', [], false) }}">
                         <div class="grid gap-5 md:grid-cols-2">
                             <div>
-                                <label for="notification-title" class="text-sm font-semibold text-slate-700 dark:text-slate-200">Title</label>
-                                <input id="notification-title" name="title" type="text" placeholder="Enter notification title" class="mt-2 h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-700 placeholder:text-slate-400 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100" />
+                                <label for="notification-title" class="text-sm font-semibold text-slate-700 dark:text-slate-200">{{ __('Title') }}</label>
+                                <input id="notification-title" name="title" type="text" placeholder="{{ __('Enter notification title') }}" class="mt-2 h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-700 placeholder:text-slate-400 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100" />
                             </div>
                             <div>
-                                <label for="notification-type" class="text-sm font-semibold text-slate-700 dark:text-slate-200">Notification Type</label>
+                                <label for="notification-type" class="text-sm font-semibold text-slate-700 dark:text-slate-200">{{ __('Notification Type') }}</label>
                                 <select id="notification-type" name="type" class="mt-2 h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-700 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100">
-                                    <option value="Announcement">Announcement</option>
-                                    <option value="Alert">Alert</option>
-                                    <option value="Document">Document</option>
-                                    <option value="Order">Order</option>
+                                    <option value="Announcement">{{ __('Announcement') }}</option>
+                                    <option value="Alert">{{ __('Alert') }}</option>
+                                    <option value="Document">{{ __('Document') }}</option>
+                                    <option value="Order">{{ __('Order') }}</option>
                                 </select>
                             </div>
                         </div>
 
                         <div>
-                            <label for="notification-message" class="text-sm font-semibold text-slate-700 dark:text-slate-200">Message</label>
-                            <textarea id="notification-message" name="message" rows="5" placeholder="Write the message users should see on the device and inside the app." class="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 placeholder:text-slate-400 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"></textarea>
+                            <label for="notification-message" class="text-sm font-semibold text-slate-700 dark:text-slate-200">{{ __('Message') }}</label>
+                            <textarea id="notification-message" name="message" rows="5" placeholder="{{ __('Write the message users should see on the device and inside the app.') }}" class="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 placeholder:text-slate-400 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"></textarea>
                         </div>
 
                         <div class="grid gap-5 md:grid-cols-2">
                             <div>
-                                <label class="text-sm font-semibold text-slate-700 dark:text-slate-200">Target Users</label>
+                                <label class="text-sm font-semibold text-slate-700 dark:text-slate-200">{{ __('Target Users') }}</label>
                                 <div class="mt-2 grid gap-3 sm:grid-cols-2">
                                     <label class="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200">
                                         <input type="radio" name="target_mode" value="all" checked class="h-4 w-4 border-slate-300 text-primary-600 focus:ring-primary-500" />
-                                        All Users
+                                        {{ __('All Users') }}
                                     </label>
                                     <label class="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200">
                                         <input type="radio" name="target_mode" value="specific" class="h-4 w-4 border-slate-300 text-primary-600 focus:ring-primary-500" />
-                                        Specific User
+                                        {{ __('Specific User') }}
                                     </label>
                                 </div>
                             </div>
                             <div id="specific-user-panel" class="hidden">
-                                <label for="target-user-id" class="text-sm font-semibold text-slate-700 dark:text-slate-200">Choose User</label>
+                                <label for="target-user-id" class="text-sm font-semibold text-slate-700 dark:text-slate-200">{{ __('Choose User') }}</label>
                                 <select id="target-user-id" name="target_user_id" class="mt-2 h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-700 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100" disabled>
-                                    <option value="">Select a user</option>
+                                    <option value="">{{ __('Select a user') }}</option>
                                     @foreach ($users as $user)
                                         <option value="{{ $user->id }}">
-                                            {{ trim(($user->name ?: 'User').' - '.($user->email ?: $user->phone ?: 'No contact')) }}
+                                            {{ trim(($user->name ?: __('User')).' - '.($user->email ?: $user->phone ?: __('No contact'))) }}
                                         </option>
                                     @endforeach
                                 </select>
-                                <p class="mt-2 text-xs text-slate-500">Only users who already opened the mobile app and registered a device token can receive push delivery.</p>
+                                <p class="mt-2 text-xs text-slate-500">{{ __('Only users who already opened the mobile app and registered a device token can receive push delivery.') }}</p>
                             </div>
                         </div>
 
                         <div class="grid gap-5 md:grid-cols-2">
                             <div>
-                                <label for="notification-image" class="text-sm font-semibold text-slate-700 dark:text-slate-200">Upload Image</label>
+                                <label for="notification-image" class="text-sm font-semibold text-slate-700 dark:text-slate-200">{{ __('Upload Image') }}</label>
                                 <input id="notification-image" name="image" type="file" accept="image/*" class="mt-2 block w-full rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-3 text-sm text-slate-500 file:mr-4 file:rounded-xl file:border-0 file:bg-primary-50 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-primary-700 hover:file:bg-primary-100 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-400 dark:file:bg-primary-500/10 dark:file:text-primary-100" />
                             </div>
                             <div>
-                                <label for="notification-link" class="text-sm font-semibold text-slate-700 dark:text-slate-200">Deep Link</label>
+                                <label for="notification-link" class="text-sm font-semibold text-slate-700 dark:text-slate-200">{{ __('Deep Link') }}</label>
                                 <input id="notification-link" name="deep_link" type="text" placeholder="/document/6 or https://..." class="mt-2 h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-700 placeholder:text-slate-400 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100" />
                             </div>
                         </div>
 
                         <div class="flex flex-wrap gap-3 pt-2">
-                            <button id="send-notification" type="submit" class="inline-flex items-center justify-center rounded-2xl bg-[#4A88F7] px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-primary-500/20 transition hover:bg-[#3977E6]">Send Notification</button>
-                            <button id="save-draft" type="button" class="inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200">Save Draft</button>
+                            @if (auth()->user()?->hasPermission('create_notification'))
+                            <button id="send-notification" type="submit" class="inline-flex items-center justify-center rounded-2xl bg-[#4A88F7] px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-primary-500/20 transition hover:bg-[#3977E6]">{{ __('Send Notification') }}</button>
+                            @endif
+                            <button id="save-draft" type="button" class="inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200">{{ __('Save Draft') }}</button>
                         </div>
-                        <p class="text-xs text-slate-500">Dashboard send flow: save notification in backend, send through Firebase, then the phone receives it if that user has a valid mobile token.</p>
+                        <p class="text-xs text-slate-500">{{ __('Dashboard send flow: save notification in backend, send through Firebase, then the phone receives it if that user has a valid mobile token.') }}</p>
                     </form>
                 </div>
 
@@ -101,8 +103,8 @@
 
             <div class="space-y-6">
                 <div class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-                    <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Push Preview</h2>
-                    <p class="mt-1 text-sm text-slate-500">Live preview of the content users will see on mobile.</p>
+                    <h2 class="text-lg font-semibold text-slate-900 dark:text-white">{{ __('Push Preview') }}</h2>
+                    <p class="mt-1 text-sm text-slate-500">{{ __('Live preview of the content users will see on mobile.') }}</p>
                     <div class="mt-5 rounded-[28px] border border-slate-200 bg-slate-950 p-4 text-white shadow-inner dark:border-slate-800">
                         <div class="rounded-[24px] bg-white/10 p-4 backdrop-blur">
                             <div class="flex items-start gap-3">
@@ -112,12 +114,12 @@
                                     </svg>
                                 </div>
                                 <div class="min-w-0 flex-1">
-                                    <p id="preview-type" class="text-xs font-semibold uppercase tracking-[0.24em] text-white/60">Announcement</p>
-                                    <p id="preview-title" class="mt-2 text-base font-semibold">Title preview will appear here</p>
-                                    <p id="preview-message" class="mt-2 text-sm leading-6 text-white/80">Message preview will update as you type into the form on the left.</p>
+                                    <p id="preview-type" class="text-xs font-semibold uppercase tracking-[0.24em] text-white/60">{{ __('Announcement') }}</p>
+                                    <p id="preview-title" class="mt-2 text-base font-semibold">{{ __('Title preview will appear here') }}</p>
+                                    <p id="preview-message" class="mt-2 text-sm leading-6 text-white/80">{{ __('Message preview will update as you type into the form on the left.') }}</p>
                                     <div class="mt-4 flex items-center justify-between text-xs text-white/55">
-                                        <span>2 min ago</span>
-                                        <span id="preview-link">No deep link</span>
+                                        <span>{{ __('2 min ago') }}</span>
+                                        <span id="preview-link">{{ __('No deep link') }}</span>
                                     </div>
                                 </div>
                             </div>

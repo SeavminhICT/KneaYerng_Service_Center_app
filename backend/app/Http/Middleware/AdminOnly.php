@@ -21,7 +21,7 @@ class AdminOnly
             return $this->unauthenticated($request);
         }
 
-        if (! $user->isAdmin()) {
+        if (! $user->canAccessAdminPanel()) {
             return $this->forbidden($request);
         }
 

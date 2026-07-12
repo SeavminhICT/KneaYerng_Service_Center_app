@@ -1,7 +1,7 @@
 @extends('layouts.admin')
 
-@section('title', 'Tracking Order')
-@section('page-title', 'Tracking Order')
+@section('title', __('Tracking Order'))
+@section('page-title', __('Tracking Order'))
 
 @section('content')
 <div class="space-y-6">
@@ -9,23 +9,23 @@
     {{-- Header & Stats --}}
     <div class="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-5">
         <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-            <p class="text-xs font-semibold uppercase tracking-widest text-slate-400">Total Delivery</p>
+            <p class="text-xs font-semibold uppercase tracking-widest text-slate-400">{{ __('Total Delivery') }}</p>
             <p id="stat-total" class="mt-2 text-2xl font-bold text-slate-900 dark:text-white">--</p>
         </div>
         <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-            <p class="text-xs font-semibold uppercase tracking-widest text-slate-400">Pending</p>
+            <p class="text-xs font-semibold uppercase tracking-widest text-slate-400">{{ __('Pending') }}</p>
             <p id="stat-pending" class="mt-2 text-2xl font-bold text-warning-600 dark:text-warning-400">--</p>
         </div>
         <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-            <p class="text-xs font-semibold uppercase tracking-widest text-slate-400">On the Way</p>
+            <p class="text-xs font-semibold uppercase tracking-widest text-slate-400">{{ __('On the Way') }}</p>
             <p id="stat-out" class="mt-2 text-2xl font-bold text-primary-600 dark:text-primary-400">--</p>
         </div>
         <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-            <p class="text-xs font-semibold uppercase tracking-widest text-slate-400">Complete</p>
+            <p class="text-xs font-semibold uppercase tracking-widest text-slate-400">{{ __('Complete') }}</p>
             <p id="stat-delivered" class="mt-2 text-2xl font-bold text-success-600 dark:text-success-400">--</p>
         </div>
         <div class="col-span-2 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900 md:col-span-1">
-            <p class="text-xs font-semibold uppercase tracking-widest text-slate-400">Cancelled</p>
+            <p class="text-xs font-semibold uppercase tracking-widest text-slate-400">{{ __('Cancelled') }}</p>
             <p id="stat-cancelled" class="mt-2 text-2xl font-bold text-danger-600 dark:text-danger-400">--</p>
         </div>
     </div>
@@ -34,24 +34,24 @@
     <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
         <div class="flex flex-wrap items-center gap-3">
             <select id="track-status-filter" class="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-600 focus:border-primary-500 focus:ring-primary-500 sm:w-[13.5rem] dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300">
-                <option value="">All Workflow Stages</option>
-                <option value="pending_approval">Pending</option>
-                <option value="approved">Approved</option>
-                <option value="in_progress">Processing</option>
-                <option value="on_the_way">On the Way</option>
-                <option value="completed">Complete</option>
-                <option value="cancelled">Cancelled</option>
-                <option value="rejected">Rejected</option>
+                <option value="">{{ __('All Workflow Stages') }}</option>
+                <option value="pending_approval">{{ __('Pending') }}</option>
+                <option value="approved">{{ __('Approved') }}</option>
+                <option value="in_progress">{{ __('Processing') }}</option>
+                <option value="on_the_way">{{ __('On the Way') }}</option>
+                <option value="completed">{{ __('Complete') }}</option>
+                <option value="cancelled">{{ __('Cancelled') }}</option>
+                <option value="rejected">{{ __('Rejected') }}</option>
             </select>
             <input id="track-from-date" type="date" class="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-600 focus:border-primary-500 focus:ring-primary-500 sm:w-36 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300" />
             <input id="track-to-date" type="date" class="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-600 focus:border-primary-500 focus:ring-primary-500 sm:w-36 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300" />
             <div class="relative w-full sm:flex-1">
-                <input id="track-search" type="text" placeholder="Search order, customer…" class="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 pr-9 text-sm text-slate-700 placeholder:text-slate-400 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200" />
+                <input id="track-search" type="text" placeholder="{{ __('Search order, customer…') }}" class="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 pr-9 text-sm text-slate-700 placeholder:text-slate-400 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200" />
                 <svg class="absolute right-3 top-3 h-4 w-4 text-slate-400" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35m1.6-5.15a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
             </div>
             <button id="track-refresh" class="inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-600 shadow-sm hover:border-primary-300 hover:text-primary-600 sm:w-auto dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
                 <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h5M20 20v-5h-5M4.05 9A9 9 0 0119.95 15M19.95 15A9 9 0 014.05 9"/></svg>
-                Refresh
+                {{ __('Refresh') }}
             </button>
         </div>
     </div>
@@ -65,10 +65,10 @@
 
     {{-- Pagination --}}
     <div class="flex items-center justify-between text-xs text-slate-500">
-        <p id="track-pagination-info">Loading…</p>
+        <p id="track-pagination-info">{{ __('Loading…') }}</p>
         <div class="flex gap-2">
-            <button id="track-prev" class="rounded-lg border border-slate-200 px-3 py-1 text-slate-600 disabled:opacity-40 dark:border-slate-800 dark:text-slate-300">Previous</button>
-            <button id="track-next" class="rounded-lg border border-slate-200 bg-slate-100 px-3 py-1 text-slate-900 disabled:opacity-40 dark:border-slate-800 dark:bg-slate-900">Next</button>
+            <button id="track-prev" class="rounded-lg border border-slate-200 px-3 py-1 text-slate-600 disabled:opacity-40 dark:border-slate-800 dark:text-slate-300">{{ __('Previous') }}</button>
+            <button id="track-next" class="rounded-lg border border-slate-200 bg-slate-100 px-3 py-1 text-slate-900 disabled:opacity-40 dark:border-slate-800 dark:bg-slate-900">{{ __('Next') }}</button>
         </div>
     </div>
 </div>
@@ -77,7 +77,7 @@
 <div id="track-drawer" class="fixed inset-y-0 right-0 z-50 hidden w-full max-w-lg flex-col border-l border-slate-200 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-900">
     <div class="flex items-center justify-between border-b border-slate-200 px-6 py-4 dark:border-slate-800">
         <div>
-            <p id="drawer-order-number" class="text-xs uppercase tracking-widest text-slate-400">Order</p>
+            <p id="drawer-order-number" class="text-xs uppercase tracking-widest text-slate-400">{{ __('Order') }}</p>
             <h3 id="drawer-customer" class="text-lg font-semibold text-slate-900 dark:text-white">--</h3>
         </div>
         <div class="flex items-center gap-3">
@@ -91,37 +91,37 @@
 
         {{-- Workflow progress --}}
         <div>
-            <p class="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-3">Delivery Workflow</p>
+            <p class="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-3">{{ __('Delivery Workflow') }}</p>
             <div id="drawer-workflow-steps" class="relative pl-6 space-y-3 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200 dark:before:bg-slate-700"></div>
         </div>
 
         {{-- Order info --}}
         <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/40 space-y-2 text-sm text-slate-600 dark:text-slate-300">
-            <p class="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-2">Order Info</p>
-            <div class="flex justify-between"><span>Placed At</span><span id="drawer-placed" class="font-semibold text-slate-900 dark:text-white">--</span></div>
-            <div class="flex justify-between"><span>Total</span><span id="drawer-total" class="font-semibold text-slate-900 dark:text-white">--</span></div>
-            <div class="flex justify-between"><span>Payment</span><span id="drawer-payment" class="font-semibold text-slate-900 dark:text-white">--</span></div>
-            <div class="flex justify-between"><span>Assigned Staff</span><span id="drawer-staff" class="font-semibold text-slate-900 dark:text-white">--</span></div>
+            <p class="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-2">{{ __('Order Info') }}</p>
+            <div class="flex justify-between"><span>{{ __('Placed At') }}</span><span id="drawer-placed" class="font-semibold text-slate-900 dark:text-white">--</span></div>
+            <div class="flex justify-between"><span>{{ __('Total') }}</span><span id="drawer-total" class="font-semibold text-slate-900 dark:text-white">--</span></div>
+            <div class="flex justify-between"><span>{{ __('Payment') }}</span><span id="drawer-payment" class="font-semibold text-slate-900 dark:text-white">--</span></div>
+            <div class="flex justify-between"><span>{{ __('Assigned Staff') }}</span><span id="drawer-staff" class="font-semibold text-slate-900 dark:text-white">--</span></div>
         </div>
 
         {{-- Delivery info --}}
         <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/40 space-y-2 text-sm text-slate-600 dark:text-slate-300">
-            <p class="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-2">Delivery Info</p>
-            <div class="flex justify-between gap-3"><span class="shrink-0">Address</span><span id="drawer-address" class="text-right font-semibold text-slate-900 dark:text-white">--</span></div>
-            <div class="flex justify-between"><span>Phone</span><span id="drawer-phone" class="font-semibold text-slate-900 dark:text-white">--</span></div>
-            <div class="flex justify-between gap-3"><span class="shrink-0">Note</span><span id="drawer-note" class="text-right font-semibold text-slate-900 dark:text-white">--</span></div>
+            <p class="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-2">{{ __('Delivery Info') }}</p>
+            <div class="flex justify-between gap-3"><span class="shrink-0">{{ __('Address') }}</span><span id="drawer-address" class="text-right font-semibold text-slate-900 dark:text-white">--</span></div>
+            <div class="flex justify-between"><span>{{ __('Phone') }}</span><span id="drawer-phone" class="font-semibold text-slate-900 dark:text-white">--</span></div>
+            <div class="flex justify-between gap-3"><span class="shrink-0">{{ __('Note') }}</span><span id="drawer-note" class="text-right font-semibold text-slate-900 dark:text-white">--</span></div>
         </div>
 
         {{-- Items --}}
         <div>
-            <p class="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-3">Items</p>
+            <p class="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-3">{{ __('Items') }}</p>
             <div class="overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800">
                 <table class="w-full text-left text-sm">
                     <thead class="bg-slate-50 text-xs uppercase tracking-widest text-slate-400 dark:bg-slate-950/40">
                         <tr>
-                            <th class="px-4 py-2">Item</th>
-                            <th class="px-4 py-2">Qty</th>
-                            <th class="px-4 py-2 text-right">Total</th>
+                            <th class="px-4 py-2">{{ __('Item') }}</th>
+                            <th class="px-4 py-2">{{ __('Qty') }}</th>
+                            <th class="px-4 py-2 text-right">{{ __('Total') }}</th>
                         </tr>
                     </thead>
                     <tbody id="drawer-items" class="divide-y divide-slate-200 text-slate-600 dark:divide-slate-800 dark:text-slate-300"></tbody>
@@ -130,19 +130,21 @@
         </div>
 
         {{-- Status update --}}
+        @if (auth()->user()?->hasPermission('update_tracking_order'))
         <div class="rounded-2xl border border-primary-200 bg-primary-50 p-4 dark:border-primary-500/20 dark:bg-primary-500/5">
-            <p class="text-xs font-semibold uppercase tracking-widest text-primary-600 dark:text-primary-300 mb-3">Update Status</p>
+            <p class="text-xs font-semibold uppercase tracking-widest text-primary-600 dark:text-primary-300 mb-3">{{ __('Update Status') }}</p>
             <div class="flex gap-2">
                 <select id="drawer-status-select" class="h-10 flex-1 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700 shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"></select>
-                <button id="drawer-status-save" class="inline-flex h-10 items-center rounded-xl bg-primary-600 px-4 text-xs font-semibold text-white shadow-sm hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-50">Save</button>
+                <button id="drawer-status-save" class="inline-flex h-10 items-center rounded-xl bg-primary-600 px-4 text-xs font-semibold text-white shadow-sm hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-50">{{ __('Save') }}</button>
             </div>
-            <textarea id="drawer-status-note-input" rows="2" placeholder="Optional note…" class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"></textarea>
+            <textarea id="drawer-status-note-input" rows="2" placeholder="{{ __('Optional note…') }}" class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"></textarea>
             <p id="drawer-status-msg" class="mt-2 text-xs text-slate-500"></p>
         </div>
+        @endif
 
         {{-- Full detail link --}}
         <div class="text-center">
-            <a id="drawer-full-link" href="#" class="text-sm font-semibold text-primary-600 hover:underline dark:text-primary-400">View Full Order Details →</a>
+            <a id="drawer-full-link" href="#" class="text-sm font-semibold text-primary-600 hover:underline dark:text-primary-400">{{ __('View Full Order Details →') }}</a>
         </div>
     </div>
 </div>
@@ -190,20 +192,20 @@ document.addEventListener('DOMContentLoaded', function () {
     var drawerFullLink   = document.getElementById('drawer-full-link');
 
     var WORKFLOW_STEPS = [
-        { value: 'pending_approval', label: 'Pending' },
-        { value: 'approved',         label: 'Approved' },
-        { value: 'in_progress',      label: 'Processing' },
-        { value: 'on_the_way',       label: 'On the Way' },
-        { value: 'completed',        label: 'Complete' }
+        { value: 'pending_approval', label: '{{ __('Pending') }}' },
+        { value: 'approved',         label: '{{ __('Approved') }}' },
+        { value: 'in_progress',      label: '{{ __('Processing') }}' },
+        { value: 'on_the_way',       label: '{{ __('On the Way') }}' },
+        { value: 'completed',        label: '{{ __('Complete') }}' }
     ];
 
     function statusLabel(s) {
         var map = {
-            pending_approval: 'Pending', approved: 'Approved', assigned: 'Processing',
-            in_progress: 'Processing', on_the_way: 'On the Way', arrived: 'On the Way',
-            out_for_delivery: 'On the Way', delivered: 'Complete', completed: 'Complete',
-            cancelled: 'Cancelled', rejected: 'Rejected', created: 'Pending', pending: 'Pending',
-            pending_confirmation: 'Pending', processing: 'Processing', ready: 'Processing'
+            pending_approval: '{{ __('Pending') }}', approved: '{{ __('Approved') }}', assigned: '{{ __('Processing') }}',
+            in_progress: '{{ __('Processing') }}', on_the_way: '{{ __('On the Way') }}', arrived: '{{ __('On the Way') }}',
+            out_for_delivery: '{{ __('On the Way') }}', delivered: '{{ __('Complete') }}', completed: '{{ __('Complete') }}',
+            cancelled: '{{ __('Cancelled') }}', rejected: '{{ __('Rejected') }}', created: '{{ __('Pending') }}', pending: '{{ __('Pending') }}',
+            pending_confirmation: '{{ __('Pending') }}', processing: '{{ __('Processing') }}', ready: '{{ __('Processing') }}'
         };
         return map[s] || (s || '--').replace(/_/g, ' ').replace(/\b\w/g, function(c){return c.toUpperCase();});
     }
@@ -257,16 +259,16 @@ document.addEventListener('DOMContentLoaded', function () {
             var q = buildQuery();
             q.set('page', currentPage);
             var res = await window.adminApi.request('/api/orders?' + q.toString());
-            if (!res.ok) { list.innerHTML = '<p class="py-10 text-center text-sm text-slate-500">Unable to load orders.</p>'; return; }
+            if (!res.ok) { list.innerHTML = '<p class="py-10 text-center text-sm text-slate-500">{{ __('Unable to load orders.') }}</p>'; return; }
             var data = await res.json();
             var orders = data.data || [];
             renderList(orders);
             var total = data.meta && data.meta.total != null ? data.meta.total : orders.length;
-            paginInfo.textContent = 'Showing ' + orders.length + ' of ' + total + ' delivery orders';
+            paginInfo.textContent = '{{ __('Showing') }} ' + orders.length + ' {{ __('of') }} ' + total + ' {{ __('delivery orders') }}';
             prevBtn.disabled = currentPage <= 1 || !data.links || !data.links.prev;
             nextBtn.disabled = !data.links || !data.links.next;
         } catch (e) {
-            list.innerHTML = '<p class="py-10 text-center text-sm text-slate-500">Error loading orders.</p>';
+            list.innerHTML = '<p class="py-10 text-center text-sm text-slate-500">{{ __('Error loading orders.') }}</p>';
             console.error(e);
         } finally {
             isLoadingOrders = false;
@@ -291,7 +293,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function renderList(orders) {
         if (!orders.length) {
-            list.innerHTML = '<div class="rounded-2xl border border-dashed border-slate-300 dark:border-slate-700 py-16 text-center"><p class="text-sm text-slate-400">No delivery orders found.</p></div>';
+            list.innerHTML = '<div class="rounded-2xl border border-dashed border-slate-300 dark:border-slate-700 py-16 text-center"><p class="text-sm text-slate-400">{{ __('No delivery orders found.') }}</p></div>';
             return;
         }
         list.innerHTML = orders.map(function(o) {
@@ -306,14 +308,14 @@ document.addEventListener('DOMContentLoaded', function () {
                 '        <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M12 2a10 10 0 100 20A10 10 0 0012 2z"/></svg>',
                 '      </div>',
                 '      <div>',
-                '        <p class="text-sm font-semibold text-slate-900 dark:text-white">' + (o.order_number || 'Order #' + o.id) + '</p>',
+                '        <p class="text-sm font-semibold text-slate-900 dark:text-white">' + (o.order_number || '{{ __('Order') }} #' + o.id) + '</p>',
                 '        <p class="text-xs text-slate-500">' + (o.customer_name || '--') + ' &bull; ' + date + '</p>',
                 '      </div>',
                 '    </div>',
                 '    <div class="flex items-center gap-3">',
                 '      <span class="rounded-full px-3 py-1 text-xs font-semibold ' + badgeCls + '">' + statusLabel(s) + '</span>',
                 '      <span class="text-sm font-semibold text-slate-900 dark:text-white">' + currency.format(o.total_amount || 0) + '</span>',
-                '      <button data-order-id="' + o.id + '" class="track-detail-btn inline-flex h-9 items-center rounded-xl bg-primary-600 px-4 text-xs font-semibold text-white hover:bg-primary-700">Detail</button>',
+                '      <button data-order-id="' + o.id + '" class="track-detail-btn inline-flex h-9 items-center rounded-xl bg-primary-600 px-4 text-xs font-semibold text-white hover:bg-primary-700">{{ __('Detail') }}</button>',
                 '    </div>',
                 '  </div>',
                 '  <div class="border-t border-slate-100 dark:border-slate-800 px-5 py-3">',
@@ -362,13 +364,13 @@ document.addEventListener('DOMContentLoaded', function () {
         drawerStatusNote.value = '';
         drawer.classList.add('open');
         backdrop.classList.remove('hidden');
-        document.getElementById('drawer-workflow-steps').innerHTML = '<p class="text-xs text-slate-400">Loading…</p>';
+        document.getElementById('drawer-workflow-steps').innerHTML = '<p class="text-xs text-slate-400">{{ __('Loading…') }}</p>';
         document.getElementById('drawer-items').innerHTML = '';
 
         try {
             await window.adminApi.ensureCsrfCookie();
             var res = await window.adminApi.request('/api/orders/' + orderId);
-            if (!res.ok) { document.getElementById('drawer-workflow-steps').innerHTML = '<p class="text-xs text-slate-400">Unable to load order.</p>'; return; }
+            if (!res.ok) { document.getElementById('drawer-workflow-steps').innerHTML = '<p class="text-xs text-slate-400">{{ __('Unable to load order.') }}</p>'; return; }
             var data = await res.json();
             renderDrawer(data.data);
         } catch (e) { console.error(e); }
@@ -378,12 +380,12 @@ document.addEventListener('DOMContentLoaded', function () {
         currentDrawerStatus = normalizeWorkflowStatus(order.status);
         drawerFullLink.href = '/admin/orders/' + order.id;
 
-        document.getElementById('drawer-order-number').textContent = order.order_number || 'Order';
+        document.getElementById('drawer-order-number').textContent = order.order_number || '{{ __('Order') }}';
         document.getElementById('drawer-customer').textContent = order.customer_name || '--';
         document.getElementById('drawer-placed').textContent = order.placed_at ? new Date(order.placed_at).toLocaleString() : '--';
         document.getElementById('drawer-total').textContent = currency.format(order.total_amount || 0);
         document.getElementById('drawer-payment').textContent = order.payment_status || '--';
-        document.getElementById('drawer-staff').textContent = order.assigned_staff_name || 'Not assigned';
+        document.getElementById('drawer-staff').textContent = order.assigned_staff_name || '{{ __('Not assigned') }}';
         document.getElementById('drawer-address').textContent = order.delivery_address || '--';
         document.getElementById('drawer-phone').textContent = order.delivery_phone || '--';
         document.getElementById('drawer-note').textContent = order.delivery_note || '--';
@@ -408,7 +410,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 '<div>' +
                 '<p class="step-label text-sm">' + step.label + '</p>' +
                 (timeStr ? '<p class="text-xs text-slate-400 dark:text-slate-500">' + timeStr + '</p>' : '') +
-                (entry && entry.changed_by_name ? '<p class="text-xs text-slate-500">by ' + entry.changed_by_name + (entry.note ? ' — ' + entry.note : '') + '</p>' : '') +
+                (entry && entry.changed_by_name ? '<p class="text-xs text-slate-500">{{ __('by') }} ' + entry.changed_by_name + (entry.note ? ' — ' + entry.note : '') + '</p>' : '') +
                 '</div></div>';
         }).join('');
 
@@ -422,34 +424,36 @@ document.addEventListener('DOMContentLoaded', function () {
             ? items.map(function(item) {
                 return '<tr class="text-sm"><td class="px-4 py-2">' + (item.product_name || '--') + '</td><td class="px-4 py-2">' + (item.quantity || 1) + '</td><td class="px-4 py-2 text-right font-semibold">' + currency.format((item.price || 0) * (item.quantity || 1)) + '</td></tr>';
             }).join('')
-            : '<tr><td class="px-4 py-6 text-center text-sm text-slate-400" colspan="3">No items.</td></tr>';
+            : '<tr><td class="px-4 py-6 text-center text-sm text-slate-400" colspan="3">{{ __('No items.') }}</td></tr>';
 
         // Status update dropdown
         var statusOptions = [
-            { value: 'pending_approval', label: 'Pending' },
-            { value: 'approved',         label: 'Approved' },
-            { value: 'in_progress',      label: 'Processing' },
-            { value: 'on_the_way',       label: 'On the Way' },
-            { value: 'completed',        label: 'Complete' },
-            { value: 'cancelled',        label: 'Cancelled' }
+            { value: 'pending_approval', label: '{{ __('Pending') }}' },
+            { value: 'approved',         label: '{{ __('Approved') }}' },
+            { value: 'in_progress',      label: '{{ __('Processing') }}' },
+            { value: 'on_the_way',       label: '{{ __('On the Way') }}' },
+            { value: 'completed',        label: '{{ __('Complete') }}' },
+            { value: 'cancelled',        label: '{{ __('Cancelled') }}' }
         ];
-        drawerStatusSel.innerHTML = statusOptions.map(function(opt) {
-            return '<option value="' + opt.value + '"' + (opt.value === currentDrawerStatus ? ' selected' : '') + '>' + opt.label + '</option>';
-        }).join('');
-        drawerStatusSave.disabled = true;
+        if (drawerStatusSel) {
+            drawerStatusSel.innerHTML = statusOptions.map(function(opt) {
+                return '<option value="' + opt.value + '"' + (opt.value === currentDrawerStatus ? ' selected' : '') + '>' + opt.label + '</option>';
+            }).join('');
+        }
+        if (drawerStatusSave) drawerStatusSave.disabled = true;
     }
 
-    drawerStatusSel.addEventListener('change', function() {
+    if (drawerStatusSel) drawerStatusSel.addEventListener('change', function() {
         drawerStatusSave.disabled = drawerStatusSel.value === currentDrawerStatus;
-        drawerStatusMsg.textContent = drawerStatusSel.value !== currentDrawerStatus ? 'Unsaved changes' : '';
+        drawerStatusMsg.textContent = drawerStatusSel.value !== currentDrawerStatus ? '{{ __('Unsaved changes') }}' : '';
     });
 
-    drawerStatusSave.addEventListener('click', async function() {
+    if (drawerStatusSave) drawerStatusSave.addEventListener('click', async function() {
         var newStatus = drawerStatusSel.value;
         if (!currentDrawerOrderId || newStatus === currentDrawerStatus) return;
         try {
             drawerStatusSave.disabled = true;
-            drawerStatusMsg.textContent = 'Saving…';
+            drawerStatusMsg.textContent = '{{ __('Saving…') }}';
             await window.adminApi.ensureCsrfCookie();
             var res = await window.adminApi.request('/api/admin/orders/' + currentDrawerOrderId + '/tracking-status', {
                 method: 'POST',
@@ -457,11 +461,11 @@ document.addEventListener('DOMContentLoaded', function () {
                 body: JSON.stringify({ status: newStatus, note: drawerStatusNote.value || null, override: true })
             });
             var payload = await res.json();
-            if (!res.ok) { drawerStatusMsg.textContent = (payload && payload.message) ? payload.message : 'Save failed.'; drawerStatusSave.disabled = false; return; }
-            drawerStatusMsg.textContent = 'Status updated!';
+            if (!res.ok) { drawerStatusMsg.textContent = (payload && payload.message) ? payload.message : '{{ __('Save failed.') }}'; drawerStatusSave.disabled = false; return; }
+            drawerStatusMsg.textContent = '{{ __('Status updated!') }}';
             await openDrawer(currentDrawerOrderId);
             loadOrders();
-        } catch(e) { drawerStatusMsg.textContent = 'Save failed.'; drawerStatusSave.disabled = false; console.error(e); }
+        } catch(e) { drawerStatusMsg.textContent = '{{ __('Save failed.') }}'; drawerStatusSave.disabled = false; console.error(e); }
     });
 
     function closeDrawer() {

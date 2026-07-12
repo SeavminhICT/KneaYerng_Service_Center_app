@@ -17,12 +17,14 @@ class OtpScreen extends StatefulWidget {
     this.type = 'phone',
     this.purpose = 'signup',
     this.autoRequest = false,
+    this.initialResendInSec,
   });
 
   final String destination;
   final String type;
   final String purpose;
   final bool autoRequest;
+  final int? initialResendInSec;
 
   @override
   State<OtpScreen> createState() => _OtpScreenState();
@@ -30,11 +32,13 @@ class OtpScreen extends StatefulWidget {
 
 class _OtpScreenState extends State<OtpScreen> {
   static const int _otpLength = 6;
-  static const Color _brandBlue = Color(0xFF5A67F8);
-  static const Color _brandBlueDark = Color(0xFF4C5EF1);
+  static const Color _brandBlue = Color(0xFF5865F2);
+  static const Color _brandBlueDark = Color(0xFF4654E9);
+  static const Color _background = Color(0xFFF1F7FE);
   static const Color _surface = Colors.white;
-  static const Color _textPrimary = Color(0xFF1B1738);
-  static const Color _hint = Color(0xFFD8D6D8);
+  static const Color _textPrimary = Color(0xFF171A38);
+  static const Color _textSecondary = Color(0xFF626A7D);
+  static const Color _hint = Color(0xFFD4D8E2);
   static const Color _error = Color(0xFFEF4444);
 
   final List<TextEditingController> _controllers = List.generate(
@@ -61,8 +65,7 @@ class _OtpScreenState extends State<OtpScreen> {
         _requestOtp();
       });
     } else {
-      // Start a 2-minute countdown automatically on entry
-      _startResendCountdown(120);
+      _startResendCountdown(widget.initialResendInSec ?? 120);
     }
   }
 
@@ -103,10 +106,12 @@ class _OtpScreenState extends State<OtpScreen> {
       context,
     ).showSnackBar(SnackBar(content: Text(result.message)));
 
-    if (result.resendInSec != null && result.resendInSec! > 0) {
-      _startResendCountdown(result.resendInSec!);
-    } else {
-      _startResendCountdown(120);
+    if (result.ok) {
+      _startResendCountdown(
+        result.resendInSec != null && result.resendInSec! > 0
+            ? result.resendInSec!
+            : 120,
+      );
     }
   }
 
@@ -255,118 +260,158 @@ class _OtpScreenState extends State<OtpScreen> {
     final l = AppLocalizations.of(context);
     final mediaQuery = MediaQuery.of(context);
     final bottomInset = mediaQuery.viewInsets.bottom;
-    final viewportHeight =
-        mediaQuery.size.height - mediaQuery.padding.vertical - bottomInset - 36;
     final masked = _maskDestination(widget.destination, widget.type);
 
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      backgroundColor: _background,
       resizeToAvoidBottomInset: true,
       body: GestureDetector(
         onTap: () => FocusScope.of(context).unfocus(),
         child: Stack(
           children: [
-            Positioned.fill(
-              child: DecoratedBox(
-                decoration: BoxDecoration(color: Theme.of(context).scaffoldBackgroundColor),
-              ),
-            ),
             Positioned(
-              top: -80,
-              right: -30,
+              top: -90,
+              right: -85,
               child: IgnorePointer(
-                child: _buildGlow(
-                  size: 230,
-                  colors: const [
-                    Color(0x16FFD9CF),
-                    Color(0x0CFFFFFF),
-                    Colors.transparent,
-                  ],
+                child: Container(
+                  width: 270,
+                  height: 270,
+                  decoration: const BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: RadialGradient(
+                      colors: [Color(0x55FFFFFF), Color(0x00FFFFFF)],
+                    ),
+                  ),
                 ),
               ),
             ),
             Positioned(
-              left: -70,
-              bottom: 20,
+              left: -100,
+              bottom: -110,
               child: IgnorePointer(
-                child: _buildGlow(
-                  size: 260,
-                  colors: const [
-                    Color(0x185A67F8),
-                    Color(0x0CF3F6FF),
-                    Colors.transparent,
-                  ],
+                child: Container(
+                  width: 310,
+                  height: 310,
+                  decoration: const BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: RadialGradient(
+                      colors: [Color(0x245865F2), Color(0x005865F2)],
+                    ),
+                  ),
                 ),
               ),
             ),
             SafeArea(
               child: LayoutBuilder(
                 builder: (context, constraints) {
-                  final isCompact = constraints.maxHeight < 760;
-
+                  final isCompact = constraints.maxHeight < 700;
                   final isKeyboardOpen = bottomInset > 0;
                   return SingleChildScrollView(
-                    physics: isKeyboardOpen
-                        ? const ClampingScrollPhysics()
-                        : const NeverScrollableScrollPhysics(),
+                    physics: const ClampingScrollPhysics(),
                     keyboardDismissBehavior:
                         ScrollViewKeyboardDismissBehavior.onDrag,
-                    padding: EdgeInsets.fromLTRB(20, 16, 20, bottomInset + 20),
+                    padding: EdgeInsets.fromLTRB(
+                      24,
+                      isCompact ? 8 : 16,
+                      24,
+                      bottomInset + 24,
+                    ),
                     child: ConstrainedBox(
                       constraints: BoxConstraints(
-                        minHeight: viewportHeight.clamp(0.0, double.infinity),
+                        minHeight:
+                            (constraints.maxHeight -
+                                    bottomInset -
+                                    (isCompact ? 32 : 48))
+                                .clamp(0.0, double.infinity),
                       ),
                       child: Align(
                         alignment: Alignment.topCenter,
                         child: ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 400),
+                          constraints: const BoxConstraints(maxWidth: 460),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
                               _buildBackButton(),
-                              SizedBox(height: isCompact ? 12 : 20),
+                              SizedBox(height: isCompact ? 10 : 24),
                               Align(
                                 alignment: Alignment.centerLeft,
                                 child: Container(
-                                  width: 56,
-                                  height: 56,
+                                  width: 58,
+                                  height: 58,
                                   decoration: BoxDecoration(
-                                    color: _brandBlue.withAlpha(20),
-                                    borderRadius: BorderRadius.circular(16),
+                                    gradient: const LinearGradient(
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                      colors: [
+                                        Color(0xFFE8EDFF),
+                                        Color(0xFFDCE5FF),
+                                      ],
+                                    ),
+                                    borderRadius: BorderRadius.circular(18),
+                                    border: Border.all(
+                                      color: Colors.white,
+                                      width: 1.2,
+                                    ),
+                                    boxShadow: const [
+                                      BoxShadow(
+                                        color: Color(0x105865F2),
+                                        blurRadius: 18,
+                                        offset: Offset(0, 8),
+                                      ),
+                                    ],
                                   ),
                                   child: const Icon(
                                     HugeIcons.strokeRoundedSecurityCheck,
-                                    size: 28,
+                                    size: 30,
                                     color: _brandBlue,
                                   ),
                                 ),
                               ),
-                              SizedBox(height: isCompact ? 16 : 24),
+                              SizedBox(height: isCompact ? 18 : 28),
                               Text(
                                 l.otpVerification,
-                                style: const TextStyle(
-                                  fontSize: 32,
-                                  fontWeight: FontWeight.w700,
-                                  color: _textPrimary,
-                                  letterSpacing: -0.8,
-                                ),
+                                style: Theme.of(context).textTheme.headlineLarge
+                                    ?.copyWith(
+                                      fontSize: 36,
+                                      fontWeight: FontWeight.w700,
+                                      color: _textPrimary,
+                                      letterSpacing: -1.1,
+                                      height: 1.1,
+                                    ),
                               ),
-                              const SizedBox(height: 14),
-                              Text(
-                                'We\'ve sent you the verification\ncode on $masked',
-                                style: const TextStyle(
-                                  color: _textPrimary,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w500,
-                                  height: 1.5,
+                              const SizedBox(height: 18),
+                              Text.rich(
+                                TextSpan(
+                                  children: [
+                                    const TextSpan(
+                                      text:
+                                          'We sent a 6-digit verification code to\n',
+                                    ),
+                                    TextSpan(
+                                      text: masked,
+                                      style: const TextStyle(
+                                        color: _textPrimary,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ],
                                 ),
+                                style: Theme.of(context).textTheme.bodyLarge
+                                    ?.copyWith(
+                                      color: _textSecondary,
+                                      fontSize: 17,
+                                      fontWeight: FontWeight.w500,
+                                      height: 1.5,
+                                    ),
                               ),
-                              SizedBox(height: isCompact ? 30 : 40),
+                              SizedBox(height: isCompact ? 28 : 44),
                               _buildOtpFields(),
-                              SizedBox(height: isCompact ? 34 : 44),
+                              SizedBox(height: isCompact ? 28 : 42),
                               _buildContinueButton(l),
-                              const SizedBox(height: 28),
+                              const SizedBox(height: 26),
                               _buildResendSection(l),
+                              if (!isKeyboardOpen)
+                                SizedBox(height: isCompact ? 8 : 28),
                             ],
                           ),
                         ),
@@ -382,29 +427,23 @@ class _OtpScreenState extends State<OtpScreen> {
     );
   }
 
-  Widget _buildGlow({required double size, required List<Color> colors}) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        gradient: RadialGradient(radius: 0.72, colors: colors),
-      ),
-    );
-  }
-
   Widget _buildBackButton() {
     return Align(
       alignment: Alignment.centerLeft,
-      child: IconButton(
-        onPressed: () => Navigator.maybePop(context),
-        padding: EdgeInsets.zero,
-        alignment: Alignment.centerLeft,
-        constraints: const BoxConstraints.tightFor(width: 44, height: 44),
-        splashRadius: 22,
-        icon: const Icon(
-          HugeIcons.strokeRoundedArrowLeft01,
-          color: _textPrimary,
-          size: 34,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => Navigator.maybePop(context),
+          borderRadius: BorderRadius.circular(14),
+          child: const SizedBox(
+            width: 46,
+            height: 46,
+            child: Icon(
+              HugeIcons.strokeRoundedArrowLeft01,
+              color: _textPrimary,
+              size: 31,
+            ),
+          ),
         ),
       ),
     );
@@ -413,10 +452,10 @@ class _OtpScreenState extends State<OtpScreen> {
   Widget _buildOtpFields() {
     return LayoutBuilder(
       builder: (context, constraints) {
-        const spacing = 10.0;
-        final boxWidth = ((constraints.maxWidth - (spacing * (_otpLength - 1))) /
-                _otpLength)
-            .clamp(40.0, 56.0);
+        const spacing = 9.0;
+        final boxWidth =
+            ((constraints.maxWidth - (spacing * (_otpLength - 1))) / _otpLength)
+                .clamp(30.0, 61.0);
 
         return Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -426,12 +465,27 @@ class _OtpScreenState extends State<OtpScreen> {
             final borderColor = _hasError
                 ? _error
                 : (isFocused
-                    ? _brandBlue
-                    : (hasValue ? _brandBlue : const Color(0xFF5D6CFF)));
+                      ? _brandBlue
+                      : (hasValue
+                            ? const Color(0xFF7A84F8)
+                            : const Color(0xFF9AA4EF)));
 
-            return SizedBox(
+            return AnimatedContainer(
+              duration: const Duration(milliseconds: 160),
               width: boxWidth,
-              height: 72,
+              height: 74,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: isFocused
+                    ? const [
+                        BoxShadow(
+                          color: Color(0x205865F2),
+                          blurRadius: 14,
+                          offset: Offset(0, 7),
+                        ),
+                      ]
+                    : const [],
+              ),
               child: TextField(
                 controller: _controllers[index],
                 focusNode: _focusNodes[index],
@@ -442,18 +496,19 @@ class _OtpScreenState extends State<OtpScreen> {
                     : TextInputAction.next,
                 inputFormatters: [
                   FilteringTextInputFormatter.digitsOnly,
+                  LengthLimitingTextInputFormatter(_otpLength),
                 ],
-                maxLength: 1,
+                maxLength: _otpLength,
                 textAlign: TextAlign.center,
                 cursorColor: _brandBlue,
                 style: TextStyle(
                   color: _hasError ? _error : _textPrimary,
-                  fontSize: 28,
+                  fontSize: 27,
                   fontWeight: FontWeight.w700,
                 ),
                 decoration: InputDecoration(
                   counterText: '',
-                  hintText: '-',
+                  hintText: '–',
                   hintStyle: const TextStyle(
                     color: _hint,
                     fontSize: 28,
@@ -461,20 +516,33 @@ class _OtpScreenState extends State<OtpScreen> {
                   ),
                   filled: true,
                   fillColor: _surface,
-                  contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                  contentPadding: const EdgeInsets.symmetric(vertical: 15),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(20),
-                    borderSide: BorderSide(color: borderColor, width: 1.5),
+                    borderSide: BorderSide(color: borderColor, width: 1.45),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(20),
                     borderSide: BorderSide(
                       color: _hasError ? _error : _brandBlue,
-                      width: 1.7,
+                      width: 1.8,
                     ),
+                  ),
+                  errorBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(20),
+                    borderSide: const BorderSide(color: _error, width: 1.6),
+                  ),
+                  focusedErrorBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(20),
+                    borderSide: const BorderSide(color: _error, width: 1.8),
                   ),
                 ),
                 onChanged: (value) => _handleOtpChange(index, value),
+                onSubmitted: (_) {
+                  if (index == _otpLength - 1) {
+                    _verifyOtp();
+                  }
+                },
               ),
             );
           }),
@@ -485,7 +553,7 @@ class _OtpScreenState extends State<OtpScreen> {
 
   Widget _buildContinueButton(AppLocalizations l) {
     return SizedBox(
-      height: 64,
+      height: 62,
       child: DecoratedBox(
         decoration: BoxDecoration(
           gradient: const LinearGradient(
@@ -493,11 +561,11 @@ class _OtpScreenState extends State<OtpScreen> {
             end: Alignment.bottomRight,
             colors: [_brandBlue, _brandBlueDark],
           ),
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: BorderRadius.circular(22),
           boxShadow: const [
             BoxShadow(
-              color: Color(0x285A67F8),
-              blurRadius: 22,
+              color: Color(0x385865F2),
+              blurRadius: 24,
               offset: Offset(0, 12),
             ),
           ],
@@ -513,7 +581,7 @@ class _OtpScreenState extends State<OtpScreen> {
             surfaceTintColor: Colors.transparent,
             padding: const EdgeInsets.symmetric(horizontal: 16),
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(24),
+              borderRadius: BorderRadius.circular(22),
             ),
           ),
           child: AnimatedSwitcher(
@@ -537,20 +605,20 @@ class _OtpScreenState extends State<OtpScreen> {
                           l.continueText.toUpperCase(),
                           style: const TextStyle(
                             color: Colors.white,
-                            fontSize: 17,
+                            fontSize: 16,
                             fontWeight: FontWeight.w700,
-                            letterSpacing: 0.7,
+                            letterSpacing: 0.9,
                           ),
                         ),
                       ),
                       Align(
                         alignment: Alignment.centerRight,
                         child: Container(
-                          width: 38,
-                          height: 38,
+                          width: 40,
+                          height: 40,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            color: Colors.black.withAlpha(22),
+                            color: Colors.white.withAlpha(22),
                           ),
                           child: const Icon(
                             HugeIcons.strokeRoundedArrowRight01,
@@ -569,14 +637,11 @@ class _OtpScreenState extends State<OtpScreen> {
 
   Widget _buildResendSection(AppLocalizations l) {
     if (_isResending) {
-      return Center(
-        child: Text(
-          'Sending...',
-          style: const TextStyle(
-            color: _textPrimary,
-            fontSize: 16,
-            fontWeight: FontWeight.w500,
-          ),
+      return const Center(
+        child: SizedBox(
+          width: 22,
+          height: 22,
+          child: CircularProgressIndicator(color: _brandBlue, strokeWidth: 2.2),
         ),
       );
     }
@@ -589,7 +654,7 @@ class _OtpScreenState extends State<OtpScreen> {
             const Text(
               'Re-send code in ',
               style: TextStyle(
-                color: _textPrimary,
+                color: _textSecondary,
                 fontSize: 16,
                 fontWeight: FontWeight.w500,
               ),
@@ -617,11 +682,8 @@ class _OtpScreenState extends State<OtpScreen> {
           tapTargetSize: MaterialTapTargetSize.shrinkWrap,
         ),
         child: Text(
-          l.resend,
-          style: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-          ),
+          '${l.resend} code',
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
         ),
       ),
     );

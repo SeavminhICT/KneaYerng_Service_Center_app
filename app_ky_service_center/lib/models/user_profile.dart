@@ -33,7 +33,7 @@ class UserProfile {
     return UserProfile(
       firstName: map['first_name'],
       lastName: map['last_name'],
-      email: map['email'],
+      email: _normalizeOptionalEmail(map['email']),
       phone: map['phone'],
       birth: map['birth'],
       gender: map['gender'],
@@ -44,6 +44,14 @@ class UserProfile {
           map['is_admin']?.toString().toLowerCase() == 'true' ||
           map['role']?.toString().toLowerCase() == 'admin',
     );
+  }
+
+  static String? _normalizeOptionalEmail(dynamic value) {
+    final email = value?.toString().trim() ?? '';
+    if (email.isEmpty) return null;
+
+    final validEmail = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
+    return validEmail.hasMatch(email) ? email : null;
   }
 
   Map<String, dynamic> toMap() {

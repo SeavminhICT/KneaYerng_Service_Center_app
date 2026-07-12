@@ -54,6 +54,7 @@ class SupportChatMessage {
   bool get isCustomer => senderType == 'customer';
   bool get isSupport => senderType == 'support';
   bool get isVoice => messageType == 'voice';
+  bool get isImage => messageType == 'image';
   bool get hasText => (body ?? '').trim().isNotEmpty;
 
   factory SupportChatMessage.fromJson(Map<String, dynamic> json) {

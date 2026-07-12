@@ -7,7 +7,7 @@
     $completed     = (int) ($metrics['completed']      ?? 0);
     $inProgress    = (int) ($metrics['in_progress']    ?? 0);
     $completionRate = $total > 0 ? round($completed / $total * 100, 1) : 0;
-    $reportType    = 'Repair Requests Report';
+    $reportType    = __('Repair Requests Report');
     $rangeLabel    = $rangeLabel ?? '';
 
     $statusColors = [
@@ -20,9 +20,9 @@
         'completed'        => 'badge-green',
     ];
     $serviceLabels = [
-        'drop_off' => 'Drop-off',
-        'pickup'   => 'Pickup',
-        'on_site'  => 'On-site',
+        'drop_off' => __('Drop-off'),
+        'pickup'   => __('Pickup'),
+        'on_site'  => __('On-site'),
     ];
 @endphp
 @extends('admin.reports.pdf._layout')
@@ -30,23 +30,23 @@
 @section('body')
 
     {{-- ── KPI Row ── --}}
-    <div class="section-title">Key Metrics</div>
+    <div class="section-title">{{ __('Key Metrics') }}</div>
     <table class="kpi-table">
         <tr>
             <td class="kpi-cell">
-                <div class="kpi-label">Total Requests</div>
+                <div class="kpi-label">{{ __('Total Requests') }}</div>
                 <div class="kpi-value kpi-accent">{{ number_format($total) }}</div>
             </td>
             <td class="kpi-cell">
-                <div class="kpi-label">Completed</div>
+                <div class="kpi-label">{{ __('Completed') }}</div>
                 <div class="kpi-value kpi-green">{{ number_format($completed) }}</div>
             </td>
             <td class="kpi-cell">
-                <div class="kpi-label">In Progress</div>
+                <div class="kpi-label">{{ __('In Progress') }}</div>
                 <div class="kpi-value kpi-amber">{{ number_format($inProgress) }}</div>
             </td>
             <td class="kpi-cell">
-                <div class="kpi-label">Completion Rate</div>
+                <div class="kpi-label">{{ __('Completion Rate') }}</div>
                 <div class="kpi-value {{ $completionRate >= 70 ? 'kpi-green' : ($completionRate >= 40 ? 'kpi-amber' : 'kpi-red') }}">{{ $completionRate }}%</div>
             </td>
         </tr>
@@ -56,13 +56,13 @@
     <table class="two-col" style="margin-bottom:18px">
         <tr>
             <td>
-                <div class="section-title">Requests by Status</div>
+                <div class="section-title">{{ __('Requests by Status') }}</div>
                 <table class="data-table">
                     <thead>
                         <tr>
-                            <th>Status</th>
-                            <th class="text-right">Count</th>
-                            <th class="text-right">Share</th>
+                            <th>{{ __('Status') }}</th>
+                            <th class="text-right">{{ __('Count') }}</th>
+                            <th class="text-right">{{ __('Share') }}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -78,12 +78,12 @@
                                 <td class="text-right text-muted">{{ $share }}%</td>
                             </tr>
                         @empty
-                            <tr><td colspan="3" style="text-align:center;color:#94a3b8;padding:12px">No data</td></tr>
+                            <tr><td colspan="3" style="text-align:center;color:#94a3b8;padding:12px">{{ __('No data') }}</td></tr>
                         @endforelse
                     </tbody>
                     <tfoot>
                         <tr>
-                            <td>Total</td>
+                            <td>{{ __('Total') }}</td>
                             <td class="text-right">{{ $total }}</td>
                             <td class="text-right">100%</td>
                         </tr>
@@ -91,13 +91,13 @@
                 </table>
             </td>
             <td>
-                <div class="section-title">Requests by Service Type</div>
+                <div class="section-title">{{ __('Requests by Service Type') }}</div>
                 <table class="data-table">
                     <thead>
                         <tr>
-                            <th>Service Type</th>
-                            <th class="text-right">Count</th>
-                            <th class="text-right">Share</th>
+                            <th>{{ __('Service Type') }}</th>
+                            <th class="text-right">{{ __('Count') }}</th>
+                            <th class="text-right">{{ __('Share') }}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -112,12 +112,12 @@
                                 <td class="text-right text-muted">{{ $share }}%</td>
                             </tr>
                         @empty
-                            <tr><td colspan="3" style="text-align:center;color:#94a3b8;padding:12px">No data</td></tr>
+                            <tr><td colspan="3" style="text-align:center;color:#94a3b8;padding:12px">{{ __('No data') }}</td></tr>
                         @endforelse
                     </tbody>
                     <tfoot>
                         <tr>
-                            <td>Total</td>
+                            <td>{{ __('Total') }}</td>
                             <td class="text-right">{{ $total }}</td>
                             <td class="text-right">100%</td>
                         </tr>
@@ -128,17 +128,17 @@
     </table>
 
     {{-- ── Recent Requests ── --}}
-    <div class="section-title">Recent Repair Requests</div>
+    <div class="section-title">{{ __('Recent Repair Requests') }}</div>
     <table class="data-table">
         <thead>
             <tr>
                 <th style="width:30px">#</th>
-                <th>Customer</th>
-                <th>Device / Issue</th>
-                <th>Service</th>
-                <th>Technician</th>
-                <th class="text-center">Status</th>
-                <th class="text-right">Date</th>
+                <th>{{ __('Customer') }}</th>
+                <th>{{ __('Device / Issue') }}</th>
+                <th>{{ __('Service') }}</th>
+                <th>{{ __('Technician') }}</th>
+                <th class="text-center">{{ __('Status') }}</th>
+                <th class="text-right">{{ __('Date') }}</th>
             </tr>
         </thead>
         <tbody>
@@ -159,7 +159,7 @@
                     <td class="text-right text-muted">{{ $date }}</td>
                 </tr>
             @empty
-                <tr><td colspan="7" style="text-align:center;color:#94a3b8;padding:14px">No repair requests for this period.</td></tr>
+                <tr><td colspan="7" style="text-align:center;color:#94a3b8;padding:14px">{{ __('No repair requests for this period.') }}</td></tr>
             @endforelse
         </tbody>
     </table>

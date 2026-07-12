@@ -654,7 +654,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     if (!request.ok) return;
 
-    Navigator.push(context, _buildOtpRoute(phone, otpType));
+    Navigator.push(
+      context,
+      _buildOtpRoute(phone, otpType, initialResendInSec: request.resendInSec),
+    );
   }
 
   Future<void> _loginWithGoogle() async {
@@ -744,6 +747,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     String destination,
     String type, {
     bool autoRequest = false,
+    int? initialResendInSec,
   }) {
     return PageRouteBuilder<void>(
       transitionDuration: const Duration(milliseconds: 450),
@@ -753,6 +757,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         type: type,
         purpose: 'signup',
         autoRequest: autoRequest,
+        initialResendInSec: initialResendInSec,
       ),
       transitionsBuilder: (context, animation, secondaryAnimation, child) {
         final curved = CurvedAnimation(

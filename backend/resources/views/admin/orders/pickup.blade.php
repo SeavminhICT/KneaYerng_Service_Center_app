@@ -1,73 +1,73 @@
 @extends('layouts.admin')
 
-@section('title', 'Checking Pick Up')
-@section('page-title', 'Checking Pick Up')
+@section('title', __('Checking Pick Up'))
+@section('page-title', __('Checking Pick Up'))
 
 @section('content')
     <div class="space-y-6">
         <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
             <div class="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                    <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Pickup Order Verification</h2>
-                    <p class="text-sm text-slate-500">Scan or enter the pickup ticket QR to verify orders.</p>
+                    <h2 class="text-lg font-semibold text-slate-900 dark:text-white">{{ __('Pickup Order Verification') }}</h2>
+                    <p class="text-sm text-slate-500">{{ __('Scan or enter the pickup ticket QR to verify orders.') }}</p>
                 </div>
-                <span class="text-xs font-semibold uppercase tracking-widest text-slate-400">Pickup</span>
+                <span class="text-xs font-semibold uppercase tracking-widest text-slate-400">{{ __('Pickup') }}</span>
             </div>
             <div class="mt-4 grid gap-4 lg:grid-cols-2">
                 <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950/40">
-                    <label class="text-xs font-semibold uppercase tracking-widest text-slate-400">Scan QR token</label>
+                    <label class="text-xs font-semibold uppercase tracking-widest text-slate-400">{{ __('Scan QR token') }}</label>
                     <div class="mt-2 flex flex-wrap items-center gap-3">
-                        <input id="pickup-qr-input" type="text" placeholder="Paste or scan QR token" class="h-10 flex-1 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700 placeholder:text-slate-400 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200" />
-                        <button id="pickup-qr-verify" class="inline-flex h-10 items-center rounded-xl bg-primary-600 px-4 text-xs font-semibold text-white shadow-sm hover:bg-primary-700">Verify</button>
-                        <button id="pickup-qr-camera" class="inline-flex h-10 items-center rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-600 shadow-sm hover:border-primary-200 hover:text-primary-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300">Open Camera</button>
-                        <button id="pickup-qr-photo" class="inline-flex h-10 items-center rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-600 shadow-sm hover:border-primary-200 hover:text-primary-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300">Use Photo</button>
+                        <input id="pickup-qr-input" type="text" placeholder="{{ __('Paste or scan QR token') }}" class="h-10 flex-1 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700 placeholder:text-slate-400 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200" />
+                        <button id="pickup-qr-verify" class="inline-flex h-10 items-center rounded-xl bg-primary-600 px-4 text-xs font-semibold text-white shadow-sm hover:bg-primary-700">{{ __('Verify') }}</button>
+                        <button id="pickup-qr-camera" class="inline-flex h-10 items-center rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-600 shadow-sm hover:border-primary-200 hover:text-primary-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300">{{ __('Open Camera') }}</button>
+                        <button id="pickup-qr-photo" class="inline-flex h-10 items-center rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-600 shadow-sm hover:border-primary-200 hover:text-primary-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300">{{ __('Use Photo') }}</button>
                         <input id="pickup-qr-file" type="file" accept="image/*" capture="environment" class="hidden" />
                     </div>
                     <div id="pickup-qr-camera-wrap" class="mt-3 hidden rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900">
                         <div class="mb-3 flex flex-wrap items-center gap-3">
-                            <label class="text-xs font-semibold uppercase tracking-widest text-slate-400">Camera</label>
+                            <label class="text-xs font-semibold uppercase tracking-widest text-slate-400">{{ __('Camera') }}</label>
                             <select id="pickup-qr-camera-select" class="h-9 flex-1 rounded-xl border border-slate-200 bg-white px-3 text-xs text-slate-700 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200">
-                                <option value="">Select camera</option>
+                                <option value="">{{ __('Select camera') }}</option>
                             </select>
-                            <button id="pickup-qr-camera-refresh" class="inline-flex h-9 items-center rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-600 shadow-sm hover:border-primary-200 hover:text-primary-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300">Refresh</button>
+                            <button id="pickup-qr-camera-refresh" class="inline-flex h-9 items-center rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-600 shadow-sm hover:border-primary-200 hover:text-primary-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300">{{ __('Refresh') }}</button>
                             <div id="pickup-qr-camera-single" class="hidden text-xs font-semibold text-slate-700 dark:text-slate-200"></div>
                         </div>
                         <div id="pickup-qr-reader" class="mx-auto max-w-xs"></div>
-                        <p class="mt-2 text-xs text-slate-500">Allow camera access to scan the ticket QR. If live camera does not open on phone, use Use Photo or open the page with HTTPS.</p>
+                        <p class="mt-2 text-xs text-slate-500">{{ __('Allow camera access to scan the ticket QR. If live camera does not open on phone, use Use Photo or open the page with HTTPS.') }}</p>
                     </div>
-                    <p id="pickup-qr-status" class="mt-2 text-xs text-slate-500">Waiting for scan.</p>
+                    <p id="pickup-qr-status" class="mt-2 text-xs text-slate-500">{{ __('Waiting for scan.') }}</p>
                 </div>
                 <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950/40">
-                    <label class="text-xs font-semibold uppercase tracking-widest text-slate-400">Manual Order Search</label>
+                    <label class="text-xs font-semibold uppercase tracking-widest text-slate-400">{{ __('Manual Order Search') }}</label>
                     <div class="mt-2 flex flex-wrap items-center gap-3">
-                        <input id="pickup-order-search-input" type="text" placeholder="Order ID or Order Number" class="h-10 flex-1 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700 placeholder:text-slate-400 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200" />
-                        <button id="pickup-order-search" class="inline-flex h-10 items-center rounded-xl border border-slate-200 bg-white px-4 text-xs font-semibold text-slate-600 shadow-sm hover:border-primary-200 hover:text-primary-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300">Search</button>
+                        <input id="pickup-order-search-input" type="text" placeholder="{{ __('Order ID or Order Number') }}" class="h-10 flex-1 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700 placeholder:text-slate-400 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200" />
+                        <button id="pickup-order-search" class="inline-flex h-10 items-center rounded-xl border border-slate-200 bg-white px-4 text-xs font-semibold text-slate-600 shadow-sm hover:border-primary-200 hover:text-primary-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300">{{ __('Search') }}</button>
                     </div>
-                    <p class="mt-2 text-xs text-slate-500">Use this to review ticket status before verifying.</p>
+                    <p class="mt-2 text-xs text-slate-500">{{ __('Use this to review ticket status before verifying.') }}</p>
                 </div>
                 <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950/40">
-                    <label class="text-xs font-semibold uppercase tracking-widest text-slate-400">Verify by Ticket ID</label>
+                    <label class="text-xs font-semibold uppercase tracking-widest text-slate-400">{{ __('Verify by Ticket ID') }}</label>
                     <div class="mt-2 flex flex-wrap items-center gap-3">
-                        <input id="pickup-ticket-id-input" type="text" placeholder="Ticket ID (e.g., TCK-KYAPP00...)" class="h-10 flex-1 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700 placeholder:text-slate-400 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200" />
-                        <button id="pickup-ticket-id-verify" class="inline-flex h-10 items-center rounded-xl bg-primary-600 px-4 text-xs font-semibold text-white shadow-sm hover:bg-primary-700">Verify Ticket</button>
+                        <input id="pickup-ticket-id-input" type="text" placeholder="{{ __('Ticket ID (e.g., TCK-KYAPP00...)') }}" class="h-10 flex-1 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700 placeholder:text-slate-400 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200" />
+                        <button id="pickup-ticket-id-verify" class="inline-flex h-10 items-center rounded-xl bg-primary-600 px-4 text-xs font-semibold text-white shadow-sm hover:bg-primary-700">{{ __('Verify Ticket') }}</button>
                     </div>
-                    <p class="mt-2 text-xs text-slate-500">Enter ticket ID to verify without scanning QR.</p>
+                    <p class="mt-2 text-xs text-slate-500">{{ __('Enter ticket ID to verify without scanning QR.') }}</p>
                 </div>
             </div>
             <div class="mt-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/60">
                 <div class="flex flex-wrap items-center justify-between gap-2">
                     <div>
-                        <p class="text-xs uppercase tracking-widest text-slate-400">Verification Result</p>
-                        <p id="pickup-order-title" class="mt-1 text-sm font-semibold text-slate-900 dark:text-white">No order selected.</p>
+                        <p class="text-xs uppercase tracking-widest text-slate-400">{{ __('Verification Result') }}</p>
+                        <p id="pickup-order-title" class="mt-1 text-sm font-semibold text-slate-900 dark:text-white">{{ __('No order selected.') }}</p>
                     </div>
                     <span id="pickup-ticket-status" class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-200">--</span>
                 </div>
                 <div class="mt-3 grid gap-2 text-sm text-slate-600 dark:text-slate-300 sm:grid-cols-2">
-                    <div>Customer: <span id="pickup-order-customer" class="font-semibold text-slate-900 dark:text-white">--</span></div>
-                    <div>Payment: <span id="pickup-order-payment" class="font-semibold text-slate-900 dark:text-white">--</span></div>
-                    <div>Status: <span id="pickup-order-status" class="font-semibold text-slate-900 dark:text-white">--</span></div>
-                    <div>Verified At: <span id="pickup-order-verified" class="font-semibold text-slate-900 dark:text-white">--</span></div>
-                    <div>Verified By: <span id="pickup-order-verified-by" class="font-semibold text-slate-900 dark:text-white">--</span></div>
+                    <div>{{ __('Customer') }}: <span id="pickup-order-customer" class="font-semibold text-slate-900 dark:text-white">--</span></div>
+                    <div>{{ __('Payment') }}: <span id="pickup-order-payment" class="font-semibold text-slate-900 dark:text-white">--</span></div>
+                    <div>{{ __('Status') }}: <span id="pickup-order-status" class="font-semibold text-slate-900 dark:text-white">--</span></div>
+                    <div>{{ __('Verified At') }}: <span id="pickup-order-verified" class="font-semibold text-slate-900 dark:text-white">--</span></div>
+                    <div>{{ __('Verified By') }}: <span id="pickup-order-verified-by" class="font-semibold text-slate-900 dark:text-white">--</span></div>
                 </div>
             </div>
         </div>
@@ -122,7 +122,7 @@
 
             function openPickupQrPhotoInput() {
                 if (!pickupQrFileInput) {
-                    pickupQrStatus.textContent = 'Photo scanner not available.';
+                    pickupQrStatus.textContent = '{{ __('Photo scanner not available.') }}';
                     return;
                 }
 
@@ -152,7 +152,7 @@
 
             function renderPickupOrder(order, note) {
                 if (!order) {
-                    pickupOrderTitle.textContent = note || 'No order selected.';
+                    pickupOrderTitle.textContent = note || '{{ __('No order selected.') }}';
                     pickupOrderCustomer.textContent = '--';
                     pickupOrderPayment.textContent = '--';
                     pickupOrderStatus.textContent = '--';
@@ -166,15 +166,15 @@
                 pickupOrderCustomer.textContent = order.customer_name || '--';
                 pickupOrderPayment.textContent = order.payment_status || '--';
                 pickupOrderStatus.textContent = order.status || '--';
-                pickupOrderVerified.textContent = order.pickup_verified_at ? new Date(order.pickup_verified_at).toLocaleString() : 'Not verified';
+                pickupOrderVerified.textContent = order.pickup_verified_at ? new Date(order.pickup_verified_at).toLocaleString() : '{{ __('Not verified') }}';
                 pickupOrderVerifiedBy.textContent = order.pickup_verified_by_name || '--';
                 setPickupStatusBadge(normalizeTicketStatus(order));
             }
 
             async function verifyPickupToken() {
                 var token = pickupQrInput.value.trim();
-                if (!token) { pickupQrStatus.textContent = 'Please scan or paste a QR token.'; return; }
-                pickupQrStatus.textContent = 'Verifying ticket...';
+                if (!token) { pickupQrStatus.textContent = '{{ __('Please scan or paste a QR token.') }}'; return; }
+                pickupQrStatus.textContent = '{{ __('Verifying ticket...') }}';
                 pickupQrVerify.disabled = true;
                 try {
                     await window.adminApi.ensureCsrfCookie();
@@ -185,16 +185,16 @@
                     });
                     var payload = await response.json();
                     if (!response.ok) {
-                        pickupQrStatus.textContent = payload && payload.message ? payload.message : 'Invalid ticket.';
+                        pickupQrStatus.textContent = payload && payload.message ? payload.message : '{{ __('Invalid ticket.') }}';
                         renderPickupOrder(null, pickupQrStatus.textContent);
                         return;
                     }
                     var order = payload.data || payload;
-                    pickupQrStatus.textContent = 'Ticket verified and marked completed.';
+                    pickupQrStatus.textContent = '{{ __('Ticket verified and marked completed.') }}';
                     renderPickupOrder(order);
                     playPickupSuccessSound();
                 } catch (error) {
-                    pickupQrStatus.textContent = 'Verification failed.';
+                    pickupQrStatus.textContent = '{{ __('Verification failed.') }}';
                     renderPickupOrder(null, pickupQrStatus.textContent);
                     console.error(error);
                 } finally {
@@ -215,8 +215,8 @@
 
             async function verifyPickupTicketId() {
                 var ticketId = pickupTicketIdInput.value.trim();
-                if (!ticketId) { pickupQrStatus.textContent = 'Please enter a ticket ID.'; return; }
-                pickupQrStatus.textContent = 'Verifying ticket...';
+                if (!ticketId) { pickupQrStatus.textContent = '{{ __('Please enter a ticket ID.') }}'; return; }
+                pickupQrStatus.textContent = '{{ __('Verifying ticket...') }}';
                 pickupTicketIdVerify.disabled = true;
                 try {
                     await window.adminApi.ensureCsrfCookie();
@@ -227,16 +227,16 @@
                     });
                     var payload = await response.json();
                     if (!response.ok) {
-                        pickupQrStatus.textContent = payload && payload.message ? payload.message : 'Invalid ticket.';
+                        pickupQrStatus.textContent = payload && payload.message ? payload.message : '{{ __('Invalid ticket.') }}';
                         renderPickupOrder(null, pickupQrStatus.textContent);
                         return;
                     }
                     var order = payload.data || payload;
-                    pickupQrStatus.textContent = 'Ticket verified and marked completed.';
+                    pickupQrStatus.textContent = '{{ __('Ticket verified and marked completed.') }}';
                     renderPickupOrder(order);
                     playPickupSuccessSound();
                 } catch (error) {
-                    pickupQrStatus.textContent = 'Verification failed.';
+                    pickupQrStatus.textContent = '{{ __('Verification failed.') }}';
                     renderPickupOrder(null, pickupQrStatus.textContent);
                     console.error(error);
                 } finally {
@@ -257,9 +257,9 @@
 
             async function startPickupQrCamera() {
                 if (!pickupQrReader) { return; }
-                if (!window.Html5Qrcode) { pickupQrStatus.textContent = 'QR scanner library not available.'; return; }
+                if (!window.Html5Qrcode) { pickupQrStatus.textContent = '{{ __('QR scanner library not available.') }}'; return; }
                 if (!canUseLiveCamera()) {
-                    pickupQrStatus.textContent = 'Live camera needs HTTPS or localhost on mobile. Opening photo capture instead.';
+                    pickupQrStatus.textContent = '{{ __('Live camera needs HTTPS or localhost on mobile. Opening photo capture instead.') }}';
                     openPickupQrPhotoInput();
                     return;
                 }
@@ -268,9 +268,9 @@
                     var cameras = await Html5Qrcode.getCameras();
                     pickupQrCameras = cameras || [];
                     renderCameraOptions();
-                    pickupQrStatus.textContent = 'Camera ready. Scan the QR code.';
+                    pickupQrStatus.textContent = '{{ __('Camera ready. Scan the QR code.') }}';
                     pickupQrCameraWrap.classList.remove('hidden');
-                    pickupQrCameraButton.textContent = 'Stop Camera';
+                    pickupQrCameraButton.textContent = '{{ __('Stop Camera') }}';
                     pickupQrActive = true;
 
                     var cameraId = getSelectedCameraId();
@@ -284,7 +284,7 @@
                             { fps: 10, qrbox: 280 },
                             function (decodedText) {
                                 pickupQrInput.value = decodedText;
-                                pickupQrStatus.textContent = 'QR scanned. Verifying...';
+                                pickupQrStatus.textContent = '{{ __('QR scanned. Verifying...') }}';
                                 stopPickupQrCamera();
                                 verifyPickupToken();
                             }
@@ -296,7 +296,7 @@
                                 { fps: 10, qrbox: 280 },
                                 function (decodedText) {
                                     pickupQrInput.value = decodedText;
-                                    pickupQrStatus.textContent = 'QR scanned. Verifying...';
+                                    pickupQrStatus.textContent = '{{ __('QR scanned. Verifying...') }}';
                                     stopPickupQrCamera();
                                     verifyPickupToken();
                                 }
@@ -306,7 +306,7 @@
                         }
                     }
                 } catch (error) {
-                    pickupQrStatus.textContent = 'Unable to access live camera. Use Photo instead.';
+                    pickupQrStatus.textContent = '{{ __('Unable to access live camera. Use Photo instead.') }}';
                     console.error(error);
                 }
             }
@@ -316,7 +316,7 @@
                     return;
                 }
                 if (!window.Html5Qrcode) {
-                    pickupQrStatus.textContent = 'QR scanner library not available.';
+                    pickupQrStatus.textContent = '{{ __('QR scanner library not available.') }}';
                     return;
                 }
 
@@ -327,14 +327,14 @@
 
                     pickupQrScanner = pickupQrScanner || new Html5Qrcode('pickup-qr-reader');
                     pickupQrCameraWrap.classList.remove('hidden');
-                    pickupQrStatus.textContent = 'Reading QR from photo...';
+                    pickupQrStatus.textContent = '{{ __('Reading QR from photo...') }}';
 
                     var decodedText = await pickupQrScanner.scanFile(file, true);
                     pickupQrInput.value = decodedText;
-                    pickupQrStatus.textContent = 'QR scanned from photo. Verifying...';
+                    pickupQrStatus.textContent = '{{ __('QR scanned from photo. Verifying...') }}';
                     verifyPickupToken();
                 } catch (error) {
-                    pickupQrStatus.textContent = 'Unable to read QR from photo.';
+                    pickupQrStatus.textContent = '{{ __('Unable to read QR from photo.') }}';
                     console.error(error);
                 } finally {
                     if (pickupQrFileInput) {
@@ -360,11 +360,11 @@
             function renderCameraOptions() {
                 if (!pickupQrCameraSelect) { return; }
                 var current = pickupQrCameraSelect.value;
-                pickupQrCameraSelect.innerHTML = '<option value="">Select camera</option>';
+                pickupQrCameraSelect.innerHTML = '<option value="">{{ __('Select camera') }}</option>';
                 pickupQrCameras.forEach(function (camera) {
                     var option = document.createElement('option');
                     option.value = camera.id;
-                    option.textContent = camera.label || ('Camera ' + camera.id);
+                    option.textContent = camera.label || ('{{ __('Camera') }} ' + camera.id);
                     pickupQrCameraSelect.appendChild(option);
                 });
                 if (pickupQrCameras.length <= 1) {
@@ -372,7 +372,7 @@
                     pickupQrCameraRefresh.classList.add('hidden');
                     if (pickupQrCameraSingle) {
                         pickupQrCameraSingle.classList.remove('hidden');
-                        pickupQrCameraSingle.textContent = pickupQrCameras.length ? (pickupQrCameras[0].label || 'Camera ready') : 'No camera found';
+                        pickupQrCameraSingle.textContent = pickupQrCameras.length ? (pickupQrCameras[0].label || '{{ __('Camera ready') }}') : '{{ __('No camera found') }}';
                     }
                 } else {
                     pickupQrCameraSelect.classList.remove('hidden');
@@ -392,18 +392,18 @@
             function stopPickupQrCamera() {
                 if (!pickupQrScanner) {
                     pickupQrCameraWrap.classList.add('hidden');
-                    pickupQrCameraButton.textContent = 'Open Camera';
+                    pickupQrCameraButton.textContent = '{{ __('Open Camera') }}';
                     pickupQrActive = false;
                     return Promise.resolve();
                 }
                 return pickupQrScanner.stop().then(function () {
                     pickupQrScanner.clear();
                     pickupQrCameraWrap.classList.add('hidden');
-                    pickupQrCameraButton.textContent = 'Open Camera';
+                    pickupQrCameraButton.textContent = '{{ __('Open Camera') }}';
                     pickupQrActive = false;
                 }).catch(function (error) {
                     pickupQrCameraWrap.classList.add('hidden');
-                    pickupQrCameraButton.textContent = 'Open Camera';
+                    pickupQrCameraButton.textContent = '{{ __('Open Camera') }}';
                     pickupQrActive = false;
                     console.error(error);
                 });
@@ -411,7 +411,7 @@
 
             async function searchPickupOrder() {
                 var value = pickupOrderSearchInput.value.trim();
-                if (!value) { renderPickupOrder(null, 'Enter an order id or number to search.'); return; }
+                if (!value) { renderPickupOrder(null, '{{ __('Enter an order id or number to search.') }}'); return; }
                 try {
                     await window.adminApi.ensureCsrfCookie();
                     var response;
@@ -420,7 +420,7 @@
                     } else {
                         response = await window.adminApi.request('/api/orders?q=' + encodeURIComponent(value));
                     }
-                    if (!response.ok) { renderPickupOrder(null, 'Order not found.'); return; }
+                    if (!response.ok) { renderPickupOrder(null, '{{ __('Order not found.') }}'); return; }
                     var payload = await response.json();
                     var order = payload.data || payload;
                     if (Array.isArray(order)) {
@@ -428,10 +428,10 @@
                     } else if (payload.data && Array.isArray(payload.data)) {
                         order = payload.data.length ? payload.data[0] : null;
                     }
-                    if (!order) { renderPickupOrder(null, 'Order not found.'); return; }
+                    if (!order) { renderPickupOrder(null, '{{ __('Order not found.') }}'); return; }
                     renderPickupOrder(order);
                 } catch (error) {
-                    renderPickupOrder(null, 'Unable to fetch order.');
+                    renderPickupOrder(null, '{{ __('Unable to fetch order.') }}');
                     console.error(error);
                 }
             }
@@ -461,13 +461,13 @@
             }
             if (pickupQrCameraRefresh) {
                 pickupQrCameraRefresh.addEventListener('click', async function () {
-                    if (!window.Html5Qrcode) { pickupQrStatus.textContent = 'QR scanner library not available.'; return; }
+                    if (!window.Html5Qrcode) { pickupQrStatus.textContent = '{{ __('QR scanner library not available.') }}'; return; }
                     try {
                         pickupQrCameras = await Html5Qrcode.getCameras();
                         renderCameraOptions();
-                        pickupQrStatus.textContent = pickupQrCameras.length ? 'Camera list updated.' : 'No camera found.';
+                        pickupQrStatus.textContent = pickupQrCameras.length ? '{{ __('Camera list updated.') }}' : '{{ __('No camera found.') }}';
                     } catch (error) {
-                        pickupQrStatus.textContent = 'Unable to load cameras.';
+                        pickupQrStatus.textContent = '{{ __('Unable to load cameras.') }}';
                         console.error(error);
                     }
                 });

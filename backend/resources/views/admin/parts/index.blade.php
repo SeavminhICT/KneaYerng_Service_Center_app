@@ -10,9 +10,11 @@
                 <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Parts Inventory</h2>
                 <p class="text-sm text-slate-500">Track repair parts stock and cost.</p>
             </div>
+            @if (auth()->user()?->hasPermission('create_parts_inventory'))
             <div class="flex items-center gap-3">
                 <a href="{{ route('admin.parts.create') }}" class="inline-flex h-10 items-center rounded-xl bg-primary-600 px-4 text-sm font-semibold text-white shadow-sm">Add Part</a>
             </div>
+            @endif
         </div>
 
         <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
@@ -135,8 +137,8 @@
                             <td class="px-4 py-3">${tagBadge(item.tag)}</td>
                             <td class="px-4 py-3 text-right">
                                 <button data-id="${item.id}" class="text-xs font-semibold text-slate-500 js-view-part">View</button>
-                                <a href="/admin/parts/${item.id}/edit" class="ml-3 text-xs font-semibold text-primary-600">Edit</a>
-                                <button data-id="${item.id}" class="ml-3 text-xs font-semibold text-danger-600 js-delete-part">Delete</button>
+                                ${window.adminCan('update_parts_inventory') ? `<a href="/admin/parts/${item.id}/edit" class="ml-3 text-xs font-semibold text-primary-600">Edit</a>` : ''}
+                                ${window.adminCan('delete_parts_inventory') ? `<button data-id="${item.id}" class="ml-3 text-xs font-semibold text-danger-600 js-delete-part">Delete</button>` : ''}
                             </td>
                         </tr>
                     `;

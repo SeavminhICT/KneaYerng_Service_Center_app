@@ -1,8 +1,14 @@
 import 'dart:async';
+import 'dart:io';
 
+import 'package:audioplayers/audioplayers.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:record/record.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 
 import '../../l10n/app_localizations.dart';
@@ -47,13 +53,21 @@ class SupportChatScreen extends StatefulWidget {
 class _SupportChatScreenState extends State<SupportChatScreen> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+  final ImagePicker _imagePicker = ImagePicker();
+  final AudioRecorder _audioRecorder = AudioRecorder();
+  final AudioPlayer _audioPlayer = AudioPlayer();
 
   SupportConversation? _conversation;
   Timer? _pollingTimer;
+  Timer? _recordTimer;
   bool _isLoading = true;
   bool _isRefreshing = false;
   bool _isSending = false;
   bool _isGuest = false;
+  bool _isUploadingMedia = false;
+  bool _isRecording = false;
+  int _recordSeconds = 0;
+  int? _playingMessageId;
   String? _errorMessage;
 
   @override
@@ -64,13 +78,19 @@ class _SupportChatScreenState extends State<SupportChatScreen> {
       const Duration(seconds: 5),
       (_) => _loadConversation(silent: true),
     );
+    _audioPlayer.onPlayerComplete.listen((_) {
+      if (mounted) setState(() => _playingMessageId = null);
+    });
   }
 
   @override
   void dispose() {
     _pollingTimer?.cancel();
+    _recordTimer?.cancel();
     _messageController.dispose();
     _scrollController.dispose();
+    _audioRecorder.dispose();
+    _audioPlayer.dispose();
     super.dispose();
   }
 
@@ -145,6 +165,159 @@ class _SupportChatScreenState extends State<SupportChatScreen> {
       if (mounted) {
         setState(() => _isSending = false);
       }
+    }
+  }
+
+  void _showError(Object error) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(error.toString().replaceFirst('Exception: ', ''))),
+    );
+  }
+
+  Future<void> _pickImage() async {
+    final conversation = _conversation;
+    if (conversation == null || _isUploadingMedia || _isSending) return;
+
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      builder: (sheetContext) => SafeArea(
+        child: Wrap(
+          children: [
+            ListTile(
+              leading: const Icon(HugeIcons.strokeRoundedCamera01),
+              title: const Text('Take a photo'),
+              onTap: () => Navigator.pop(sheetContext, ImageSource.camera),
+            ),
+            ListTile(
+              leading: const Icon(HugeIcons.strokeRoundedImage02),
+              title: const Text('Choose from gallery'),
+              onTap: () => Navigator.pop(sheetContext, ImageSource.gallery),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (source == null) return;
+
+    final picked = await _imagePicker.pickImage(
+      source: source,
+      maxWidth: 1600,
+      imageQuality: 80,
+    );
+    if (picked == null) return;
+
+    setState(() => _isUploadingMedia = true);
+    try {
+      final mediaUrl = await ApiService.uploadSupportMedia(
+        filePath: picked.path,
+        type: 'image',
+      );
+      await ApiService.sendSupportMessage(
+        conversationId: conversation.id,
+        messageType: 'image',
+        mediaUrl: mediaUrl,
+      );
+      await _loadConversation(silent: true);
+    } catch (error) {
+      _showError(error);
+    } finally {
+      if (mounted) setState(() => _isUploadingMedia = false);
+    }
+  }
+
+  Future<void> _startRecording() async {
+    if (_isRecording || _isSending || _isUploadingMedia) return;
+
+    final hasPermission = await _audioRecorder.hasPermission();
+    if (!hasPermission) {
+      _showError(Exception('Microphone permission is required to record voice messages.'));
+      return;
+    }
+
+    final dir = await getTemporaryDirectory();
+    final path =
+        '${dir.path}/support_voice_${DateTime.now().millisecondsSinceEpoch}.m4a';
+
+    await _audioRecorder.start(
+      const RecordConfig(encoder: AudioEncoder.aacLc),
+      path: path,
+    );
+
+    setState(() {
+      _isRecording = true;
+      _recordSeconds = 0;
+    });
+
+    _recordTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) setState(() => _recordSeconds += 1);
+    });
+  }
+
+  Future<void> _stopRecording({required bool send}) async {
+    if (!_isRecording) return;
+
+    _recordTimer?.cancel();
+    final path = await _audioRecorder.stop();
+    final durationSec = _recordSeconds;
+    setState(() {
+      _isRecording = false;
+      _recordSeconds = 0;
+    });
+
+    if (!send || path == null) {
+      if (path != null) {
+        final file = File(path);
+        if (await file.exists()) await file.delete();
+      }
+      return;
+    }
+
+    if (durationSec < 1) {
+      _showError(Exception('Recording was too short.'));
+      return;
+    }
+
+    final conversation = _conversation;
+    if (conversation == null) return;
+
+    setState(() => _isUploadingMedia = true);
+    try {
+      final mediaUrl = await ApiService.uploadSupportMedia(
+        filePath: path,
+        type: 'voice',
+      );
+      await ApiService.sendSupportMessage(
+        conversationId: conversation.id,
+        messageType: 'voice',
+        mediaUrl: mediaUrl,
+        mediaDurationSec: durationSec,
+      );
+      await _loadConversation(silent: true);
+    } catch (error) {
+      _showError(error);
+    } finally {
+      if (mounted) setState(() => _isUploadingMedia = false);
+    }
+  }
+
+  Future<void> _toggleVoicePlayback(SupportChatMessage message) async {
+    final mediaUrl = ApiService.normalizeMediaUrl(message.mediaUrl);
+    if (mediaUrl == null) return;
+
+    if (_playingMessageId == message.id) {
+      await _audioPlayer.stop();
+      setState(() => _playingMessageId = null);
+      return;
+    }
+
+    await _audioPlayer.stop();
+    setState(() => _playingMessageId = message.id);
+    try {
+      await _audioPlayer.play(UrlSource(mediaUrl));
+    } catch (error) {
+      if (mounted) setState(() => _playingMessageId = null);
+      _showError(error);
     }
   }
 
@@ -249,7 +422,11 @@ class _SupportChatScreenState extends State<SupportChatScreen> {
                                 const <SupportChatMessage>[];
                             final message =
                                 messages[messages.length - 1 - index];
-                            return _MessageBubble(message: message);
+                            return _MessageBubble(
+                              message: message,
+                              isPlaying: _playingMessageId == message.id,
+                              onPlayVoice: () => _toggleVoicePlayback(message),
+                            );
                           },
                         ),
                       ),
@@ -257,7 +434,14 @@ class _SupportChatScreenState extends State<SupportChatScreen> {
               _Composer(
                 controller: _messageController,
                 isSending: _isSending,
+                isUploading: _isUploadingMedia,
+                isRecording: _isRecording,
+                recordSeconds: _recordSeconds,
                 onSend: _sendMessage,
+                onPickImage: _pickImage,
+                onStartRecording: _startRecording,
+                onStopRecording: () => _stopRecording(send: true),
+                onCancelRecording: () => _stopRecording(send: false),
               ),
             ],
           ),
@@ -354,9 +538,15 @@ class _SupportHeader extends StatelessWidget {
 }
 
 class _MessageBubble extends StatelessWidget {
-  const _MessageBubble({required this.message});
+  const _MessageBubble({
+    required this.message,
+    this.isPlaying = false,
+    this.onPlayVoice,
+  });
 
   final SupportChatMessage message;
+  final bool isPlaying;
+  final VoidCallback? onPlayVoice;
 
   @override
   Widget build(BuildContext context) {
@@ -371,6 +561,61 @@ class _MessageBubble extends StatelessWidget {
         ? ''
         : DateFormat('hh:mm a').format(message.createdAt!.toLocal());
 
+    Widget content;
+    EdgeInsets padding = const EdgeInsets.symmetric(
+      horizontal: 14,
+      vertical: 12,
+    );
+
+    if (message.isImage) {
+      padding = const EdgeInsets.all(4);
+      final imageUrl = ApiService.normalizeMediaUrl(message.mediaUrl);
+      content = ClipRRect(
+        borderRadius: BorderRadius.circular(14),
+        child: GestureDetector(
+          onTap: imageUrl == null
+              ? null
+              : () => _openImagePreview(context, imageUrl),
+          child: imageUrl == null
+              ? const SizedBox(
+                  height: 160,
+                  width: 200,
+                  child: Center(child: Icon(Icons.broken_image_outlined)),
+                )
+              : CachedNetworkImage(
+                  imageUrl: imageUrl,
+                  width: 200,
+                  height: 200,
+                  fit: BoxFit.cover,
+                  placeholder: (_, __) => const SizedBox(
+                    height: 200,
+                    width: 200,
+                    child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                  ),
+                  errorWidget: (_, __, ___) => const SizedBox(
+                    height: 160,
+                    width: 200,
+                    child: Center(child: Icon(Icons.broken_image_outlined)),
+                  ),
+                ),
+        ),
+      );
+    } else if (message.isVoice) {
+      content = _VoiceMessageTile(
+        message: message,
+        isCustomer: isCustomer,
+        isPlaying: isPlaying,
+        onTap: onPlayVoice,
+      );
+    } else {
+      content = Text(
+        message.body?.trim().isNotEmpty == true
+            ? message.body!.trim()
+            : 'Message',
+        style: TextStyle(fontSize: 14, color: textColor, height: 1.4),
+      );
+    }
+
     return Padding(
       padding: EdgeInsets.only(
         left: isCustomer ? 54 : 0,
@@ -381,7 +626,7 @@ class _MessageBubble extends StatelessWidget {
         crossAxisAlignment: align,
         children: [
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            padding: padding,
             decoration: BoxDecoration(
               color: bubbleColor,
               borderRadius: BorderRadius.circular(18),
@@ -394,18 +639,7 @@ class _MessageBubble extends StatelessWidget {
                 ),
               ],
             ),
-            child: message.isVoice
-                ? _VoiceMessageTile(message: message, isCustomer: isCustomer)
-                : Text(
-                    message.body?.trim().isNotEmpty == true
-                        ? message.body!.trim()
-                        : 'Message',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: textColor,
-                      height: 1.4,
-                    ),
-                  ),
+            child: content,
           ),
           const SizedBox(height: 4),
           Text(
@@ -416,32 +650,65 @@ class _MessageBubble extends StatelessWidget {
       ),
     );
   }
+
+  void _openImagePreview(BuildContext context, String imageUrl) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => Scaffold(
+          backgroundColor: Colors.black,
+          appBar: AppBar(backgroundColor: Colors.black, foregroundColor: Colors.white),
+          body: Center(
+            child: InteractiveViewer(
+              child: CachedNetworkImage(imageUrl: imageUrl, fit: BoxFit.contain),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _VoiceMessageTile extends StatelessWidget {
-  const _VoiceMessageTile({required this.message, required this.isCustomer});
+  const _VoiceMessageTile({
+    required this.message,
+    required this.isCustomer,
+    this.isPlaying = false,
+    this.onTap,
+  });
 
   final SupportChatMessage message;
   final bool isCustomer;
+  final bool isPlaying;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final theme = _SupportTheme(context);
     final color = isCustomer ? Colors.white : theme.text;
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(HugeIcons.strokeRoundedPlayCircle, color: color, size: 22),
-        const SizedBox(width: 10),
-        Text(
-          'Voice message ${_formatDuration(message.mediaDurationSec)}',
-          style: TextStyle(
-            fontSize: 13.5,
-            fontWeight: FontWeight.w700,
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            isPlaying
+                ? HugeIcons.strokeRoundedPauseCircle
+                : HugeIcons.strokeRoundedPlayCircle,
             color: color,
+            size: 22,
           ),
-        ),
-      ],
+          const SizedBox(width: 10),
+          Text(
+            'Voice message ${_formatDuration(message.mediaDurationSec)}',
+            style: TextStyle(
+              fontSize: 13.5,
+              fontWeight: FontWeight.w700,
+              color: color,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -450,16 +717,32 @@ class _Composer extends StatelessWidget {
   const _Composer({
     required this.controller,
     required this.isSending,
+    required this.isUploading,
+    required this.isRecording,
+    required this.recordSeconds,
     required this.onSend,
+    required this.onPickImage,
+    required this.onStartRecording,
+    required this.onStopRecording,
+    required this.onCancelRecording,
   });
 
   final TextEditingController controller;
   final bool isSending;
+  final bool isUploading;
+  final bool isRecording;
+  final int recordSeconds;
   final VoidCallback onSend;
+  final VoidCallback onPickImage;
+  final VoidCallback onStartRecording;
+  final VoidCallback onStopRecording;
+  final VoidCallback onCancelRecording;
 
   @override
   Widget build(BuildContext context) {
     final theme = _SupportTheme(context);
+    final busy = isSending || isUploading;
+
     return Container(
       padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
       decoration: BoxDecoration(
@@ -468,79 +751,123 @@ class _Composer extends StatelessWidget {
       ),
       child: SafeArea(
         top: false,
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            IconButton(
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text(
-                      'Voice recording is not enabled yet in this app build.',
-                    ),
-                  ),
-                );
-              },
-              icon: Icon(HugeIcons.strokeRoundedMic01, color: theme.muted),
-              tooltip: 'Voice message',
-            ),
-            Expanded(
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Theme.of(context).scaffoldBackgroundColor,
-                  borderRadius: BorderRadius.circular(18),
-                  border: Border.all(color: theme.border),
-                ),
-                child: TextField(
-                  controller: controller,
-                  minLines: 1,
-                  maxLines: 4,
-                  textInputAction: TextInputAction.send,
-                  onSubmitted: (_) => onSend(),
-                  maxLength: 500,
-                  style: TextStyle(color: theme.text),
-                  decoration: InputDecoration(
-                    hintText: 'Type your message...',
-                    hintStyle: TextStyle(color: theme.muted),
-                    counterText: '',
-                    border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 12,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(width: 10),
-            InkWell(
-              onTap: isSending ? null : onSend,
-              borderRadius: BorderRadius.circular(20),
-              child: Container(
-                height: 48,
-                width: 48,
-                decoration: BoxDecoration(
-                  color: isSending
-                      ? theme.muted
-                      : const Color.fromARGB(255, 39, 93, 240),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: isSending
-                    ? const Padding(
-                        padding: EdgeInsets.all(12),
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2.2,
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            Colors.white,
-                          ),
-                        ),
-                      )
-                    : const Icon(HugeIcons.strokeRoundedSent, color: Colors.white),
-              ),
-            ),
-          ],
-        ),
+        child: isRecording
+            ? _buildRecordingRow(context, theme)
+            : _buildComposerRow(context, theme, busy),
       ),
+    );
+  }
+
+  Widget _buildRecordingRow(BuildContext context, _SupportTheme theme) {
+    return Row(
+      children: [
+        IconButton(
+          onPressed: onCancelRecording,
+          icon: const Icon(HugeIcons.strokeRoundedDelete02, color: Colors.red),
+          tooltip: 'Cancel recording',
+        ),
+        Expanded(
+          child: Row(
+            children: [
+              const Icon(HugeIcons.strokeRoundedMic01, color: Colors.red),
+              const SizedBox(width: 8),
+              Text(
+                'Recording  ${_formatDuration(recordSeconds)}',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: theme.text,
+                ),
+              ),
+            ],
+          ),
+        ),
+        InkWell(
+          onTap: onStopRecording,
+          borderRadius: BorderRadius.circular(20),
+          child: Container(
+            height: 48,
+            width: 48,
+            decoration: const BoxDecoration(
+              color: Color.fromARGB(255, 39, 93, 240),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(HugeIcons.strokeRoundedSent, color: Colors.white),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildComposerRow(BuildContext context, _SupportTheme theme, bool busy) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        IconButton(
+          onPressed: busy ? null : onPickImage,
+          icon: Icon(HugeIcons.strokeRoundedImage02, color: theme.muted),
+          tooltip: 'Send image',
+        ),
+        IconButton(
+          onPressed: busy ? null : onStartRecording,
+          icon: Icon(HugeIcons.strokeRoundedMic01, color: theme.muted),
+          tooltip: 'Voice message',
+        ),
+        Expanded(
+          child: Container(
+            decoration: BoxDecoration(
+              color: Theme.of(context).scaffoldBackgroundColor,
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: theme.border),
+            ),
+            child: TextField(
+              controller: controller,
+              minLines: 1,
+              maxLines: 4,
+              textInputAction: TextInputAction.send,
+              onSubmitted: (_) => onSend(),
+              maxLength: 500,
+              style: TextStyle(color: theme.text),
+              decoration: InputDecoration(
+                hintText: 'Type your message...',
+                hintStyle: TextStyle(color: theme.muted),
+                counterText: '',
+                border: InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 12,
+                ),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        InkWell(
+          onTap: busy ? null : onSend,
+          borderRadius: BorderRadius.circular(20),
+          child: Container(
+            height: 48,
+            width: 48,
+            decoration: BoxDecoration(
+              color: busy
+                  ? theme.muted
+                  : const Color.fromARGB(255, 39, 93, 240),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: busy
+                ? const Padding(
+                    padding: EdgeInsets.all(12),
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.2,
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        Colors.white,
+                      ),
+                    ),
+                  )
+                : const Icon(HugeIcons.strokeRoundedSent, color: Colors.white),
+          ),
+        ),
+      ],
     );
   }
 }

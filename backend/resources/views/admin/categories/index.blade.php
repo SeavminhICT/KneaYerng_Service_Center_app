@@ -159,12 +159,14 @@ html.dark #ecm-panel { background:#0f172a!important; border-color:#1e293b!import
             <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Category List</h2>
             <p class="text-sm text-slate-500">Organize product collections for the app catalog.</p>
         </div>
+        @if (auth()->user()?->hasPermission('create_category'))
         <div class="flex items-center gap-3">
             <a href="{{ route('admin.categories.create') }}"
                class="inline-flex h-10 items-center rounded-xl bg-primary-600 px-4 text-sm font-semibold text-white shadow-sm hover:bg-primary-700 transition-colors">
                 + Add Category
             </a>
         </div>
+        @endif
     </div>
 
     <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
@@ -674,16 +676,16 @@ document.addEventListener('DOMContentLoaded', function () {
                     <td class="px-4 py-3 text-right">
                         <div class="inline-flex items-center justify-end gap-3">
                             <button data-id="${cat.id}" class="text-xs font-semibold text-slate-500 hover:text-slate-800 transition-colors js-view-category">View</button>
-                            <button data-id="${cat.id}"
+                            ${window.adminCan('update_category') ? `<button data-id="${cat.id}"
                                     class="text-xs font-semibold text-violet-600 hover:text-violet-800 transition-colors js-edit-category
                                            inline-flex items-center gap-1">
                                 <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
                                 Edit
                             </button>
                             <button data-id="${cat.id}" data-status="${cat.status || 'inactive'}"
-                                    class="text-xs font-semibold text-slate-500 hover:text-slate-800 transition-colors js-toggle-category">${toggleLabel}</button>
-                            <button data-id="${cat.id}"
-                                    class="text-xs font-semibold text-red-500 hover:text-red-700 transition-colors js-delete-category">Delete</button>
+                                    class="text-xs font-semibold text-slate-500 hover:text-slate-800 transition-colors js-toggle-category">${toggleLabel}</button>` : ''}
+                            ${window.adminCan('delete_category') ? `<button data-id="${cat.id}"
+                                    class="text-xs font-semibold text-red-500 hover:text-red-700 transition-colors js-delete-category">Delete</button>` : ''}
                         </div>
                     </td>
                 </tr>`;

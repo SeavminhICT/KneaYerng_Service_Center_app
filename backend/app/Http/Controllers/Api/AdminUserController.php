@@ -3,18 +3,20 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Role;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 class AdminUserController extends Controller
 {
     /**
-     * Dashboard-access roles managed here. Customers (role=user) register
-     * through the app and are out of scope for this admin-only CRUD.
+     * Legacy operational roles kept for delivery/repair assignment. Web admin
+     * accounts are managed through the roles table and the user_roles pivot.
      */
-    private const DASHBOARD_ROLES = ['admin', 'manager', 'staff', 'technician'];
+    private const LEGACY_ROLES = ['staff', 'technician'];
 
     public function index(Request $request)
     {
@@ -22,7 +24,18 @@ class AdminUserController extends Controller
         $perPage = max(1, min(100, $perPage));
 
         $query = User::query()
-            ->whereIn('role', self::DASHBOARD_ROLES)
+            ->with('roles:id,name')
+            ->where(function ($builder) {
+                $builder
+                    ->whereHas('roles')
+                    ->orWhereIn('role', self::LEGACY_ROLES);
+            })
+            ->where(function ($builder) {
+                $builder->whereNull('is_admin')->orWhere('is_admin', false);
+            })
+            ->where(function ($builder) {
+                $builder->whereNull('role')->orWhere('role', '!=', 'admin');
+            })
             ->orderBy('first_name')
             ->orderBy('last_name')
             ->orderBy('id');
@@ -38,8 +51,9 @@ class AdminUserController extends Controller
             });
         }
 
-        if ($request->filled('role')) {
-            $query->where('role', $request->input('role'));
+        if ($request->filled('role_id')) {
+            $roleId = (int) $request->input('role_id');
+            $query->whereHas('roles', fn ($builder) => $builder->where('roles.id', $roleId));
         }
 
         if ($request->filled('status')) {
@@ -66,21 +80,25 @@ class AdminUserController extends Controller
             'last_name' => ['nullable', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
             'phone' => ['nullable', 'string', 'max:30'],
-            'role' => ['required', Rule::in(self::DASHBOARD_ROLES)],
-            'status' => ['nullable', Rule::in(['active', 'inactive'])],
+            'role_id' => ['required', 'integer', 'exists:roles,id'],
             'password' => ['required', 'string', 'min:8', 'max:255'],
         ]);
+
+        $role = Role::findOrFail($validated['role_id']);
 
         $user = User::create([
             'first_name' => trim($validated['first_name']),
             'last_name' => trim((string) ($validated['last_name'] ?? '')),
             'email' => strtolower(trim($validated['email'])),
             'phone' => trim((string) ($validated['phone'] ?? '')),
-            'role' => $validated['role'],
-            'status' => $validated['status'] ?? 'active',
+            'role' => $this->legacyRoleFor($role),
+            'status' => 'active',
             'password' => $validated['password'],
-            'is_admin' => $validated['role'] === 'admin',
+            'is_admin' => false,
         ]);
+
+        $user->roles()->sync([$role->id]);
+        $user->load('roles:id,name');
 
         return response()->json([
             'data' => $this->transformUser($user),
@@ -89,21 +107,23 @@ class AdminUserController extends Controller
 
     public function show(User $user)
     {
-        $this->abortIfCustomer($user);
+        $this->abortIfUnmanaged($user);
+
+        $user->load('roles:id,name');
 
         return response()->json(['data' => $this->transformUser($user)]);
     }
 
     public function update(Request $request, User $user)
     {
-        $this->abortIfCustomer($user);
+        $this->abortIfUnmanaged($user);
 
         $validated = $request->validate([
             'first_name' => ['sometimes', 'required', 'string', 'max:255'],
             'last_name' => ['nullable', 'string', 'max:255'],
             'email' => ['sometimes', 'required', 'email', 'max:255', 'unique:users,email,'.$user->id],
             'phone' => ['nullable', 'string', 'max:30'],
-            'role' => ['sometimes', 'required', Rule::in(self::DASHBOARD_ROLES)],
+            'role_id' => ['sometimes', 'required', 'integer', 'exists:roles,id'],
             'status' => ['sometimes', Rule::in(['active', 'inactive'])],
             'password' => ['nullable', 'string', 'min:8', 'max:255'],
         ]);
@@ -120,10 +140,6 @@ class AdminUserController extends Controller
         if (array_key_exists('phone', $validated)) {
             $user->phone = trim((string) $validated['phone']);
         }
-        if (array_key_exists('role', $validated)) {
-            $user->role = $validated['role'];
-            $user->is_admin = $validated['role'] === 'admin';
-        }
         if (array_key_exists('status', $validated)) {
             $user->status = $validated['status'];
         }
@@ -131,15 +147,25 @@ class AdminUserController extends Controller
             $user->password = Hash::make($validated['password']);
         }
 
+        if (array_key_exists('role_id', $validated)) {
+            $role = Role::findOrFail($validated['role_id']);
+            $user->role = $this->legacyRoleFor($role);
+            $user->is_admin = false;
+            $user->roles()->sync([$role->id]);
+        }
+
         $user->save();
+        $user->load('roles:id,name');
 
         return response()->json(['data' => $this->transformUser($user)]);
     }
 
     public function destroy(User $user)
     {
-        $this->abortIfCustomer($user);
+        $this->abortIfUnmanaged($user);
 
+        $user->roles()->detach();
+        $user->tokens()->delete();
         $user->delete();
 
         return response()->json(['message' => 'User deleted.']);
@@ -147,7 +173,7 @@ class AdminUserController extends Controller
 
     public function updateStatus(Request $request, User $user)
     {
-        $this->abortIfCustomer($user);
+        $this->abortIfUnmanaged($user);
 
         $validated = $request->validate([
             'status' => ['required', Rule::in(['active', 'inactive'])],
@@ -159,15 +185,34 @@ class AdminUserController extends Controller
         return response()->json(['data' => $this->transformUser($user)]);
     }
 
-    private function abortIfCustomer(User $user): void
+    private function abortIfUnmanaged(User $user): void
     {
-        if (! in_array($user->role, self::DASHBOARD_ROLES, true)) {
+        if ($user->is_admin || $user->role === 'admin') {
+            abort(404);
+        }
+
+        if (! $user->roles()->exists() && ! in_array($user->role, self::LEGACY_ROLES, true)) {
             abort(404);
         }
     }
 
+    /**
+     * Keep the legacy users.role column meaningful: staff/technician roles
+     * still drive delivery and repair assignment, everything else becomes a
+     * generic web admin account (never 'admin' or 'user' so these accounts
+     * gain no super admin rights and never show up as customers).
+     */
+    private function legacyRoleFor(Role $role): string
+    {
+        $name = Str::snake(strtolower(trim($role->name)));
+
+        return in_array($name, self::LEGACY_ROLES, true) ? $name : 'webadmin';
+    }
+
     private function transformUser(User $user): array
     {
+        $role = $user->roles->first();
+
         return [
             'id' => $user->id,
             'name' => $user->name,
@@ -176,6 +221,8 @@ class AdminUserController extends Controller
             'email' => $user->email,
             'phone' => $user->phone,
             'role' => $user->role,
+            'role_id' => $role?->id,
+            'role_name' => $role?->name ?? ucfirst((string) $user->role),
             'status' => $user->status ?? 'active',
             'created_at' => $user->created_at?->toISOString(),
         ];

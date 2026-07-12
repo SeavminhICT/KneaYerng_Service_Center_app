@@ -11,7 +11,7 @@ class RoleController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Role::query()->withCount('users')->orderBy('name');
+        $query = Role::query()->withCount(['users', 'permissions'])->orderBy('name');
 
         if ($request->filled('q')) {
             $search = trim((string) $request->input('q'));
@@ -97,6 +97,7 @@ class RoleController extends Controller
             'name' => $role->name,
             'description' => $role->description,
             'users_count' => $role->users_count ?? null,
+            'permissions_count' => $role->permissions_count ?? null,
             'created_at' => $role->created_at?->toISOString(),
         ];
     }

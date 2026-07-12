@@ -130,6 +130,7 @@
         </div>
 
         {{-- Status update --}}
+        @if (auth()->user()?->hasPermission('update_tracking_order'))
         <div class="rounded-2xl border border-primary-200 bg-primary-50 p-4 dark:border-primary-500/20 dark:bg-primary-500/5">
             <p class="text-xs font-semibold uppercase tracking-widest text-primary-600 dark:text-primary-300 mb-3">{{ __('Update Status') }}</p>
             <div class="flex gap-2">
@@ -139,6 +140,7 @@
             <textarea id="drawer-status-note-input" rows="2" placeholder="{{ __('Optional note…') }}" class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"></textarea>
             <p id="drawer-status-msg" class="mt-2 text-xs text-slate-500"></p>
         </div>
+        @endif
 
         {{-- Full detail link --}}
         <div class="text-center">
@@ -433,18 +435,20 @@ document.addEventListener('DOMContentLoaded', function () {
             { value: 'completed',        label: '{{ __('Complete') }}' },
             { value: 'cancelled',        label: '{{ __('Cancelled') }}' }
         ];
-        drawerStatusSel.innerHTML = statusOptions.map(function(opt) {
-            return '<option value="' + opt.value + '"' + (opt.value === currentDrawerStatus ? ' selected' : '') + '>' + opt.label + '</option>';
-        }).join('');
-        drawerStatusSave.disabled = true;
+        if (drawerStatusSel) {
+            drawerStatusSel.innerHTML = statusOptions.map(function(opt) {
+                return '<option value="' + opt.value + '"' + (opt.value === currentDrawerStatus ? ' selected' : '') + '>' + opt.label + '</option>';
+            }).join('');
+        }
+        if (drawerStatusSave) drawerStatusSave.disabled = true;
     }
 
-    drawerStatusSel.addEventListener('change', function() {
+    if (drawerStatusSel) drawerStatusSel.addEventListener('change', function() {
         drawerStatusSave.disabled = drawerStatusSel.value === currentDrawerStatus;
         drawerStatusMsg.textContent = drawerStatusSel.value !== currentDrawerStatus ? '{{ __('Unsaved changes') }}' : '';
     });
 
-    drawerStatusSave.addEventListener('click', async function() {
+    if (drawerStatusSave) drawerStatusSave.addEventListener('click', async function() {
         var newStatus = drawerStatusSel.value;
         if (!currentDrawerOrderId || newStatus === currentDrawerStatus) return;
         try {

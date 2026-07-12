@@ -10,9 +10,11 @@
                 <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Voucher List</h2>
                 <p class="text-sm text-slate-500">Create and manage discount vouchers for the store.</p>
             </div>
+            @if (auth()->user()?->hasPermission('create_voucher'))
             <div class="flex items-center gap-3">
                 <a href="{{ route('admin.vouchers.create') }}" class="inline-flex h-10 items-center rounded-xl bg-primary-600 px-4 text-sm font-semibold text-white shadow-sm">Add Voucher</a>
             </div>
+            @endif
         </div>
 
         <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
@@ -142,6 +144,14 @@
 
                 rows.innerHTML = list.map(function (voucher) {
                     var statusLabel = voucher.is_active ? 'active' : 'inactive';
+                    var actionButtons = '<button data-id="' + voucher.id + '" class="text-xs font-semibold text-slate-500 js-view-voucher">View</button>';
+                    if (window.adminCan('update_voucher')) {
+                        actionButtons += '<a href="/admin/vouchers/' + voucher.id + '/edit" class="text-xs font-semibold text-primary-600">Edit</a>';
+                        actionButtons += '<button data-id="' + voucher.id + '" data-active="' + (voucher.is_active ? '1' : '0') + '" class="text-xs font-semibold text-slate-500 js-toggle-voucher">' + (voucher.is_active ? 'Deactivate' : 'Activate') + '</button>';
+                    }
+                    if (window.adminCan('delete_voucher')) {
+                        actionButtons += '<button data-id="' + voucher.id + '" class="text-xs font-semibold text-danger-600 js-delete-voucher">Delete</button>';
+                    }
                     return `
                         <tr>
                             <td class="px-4 py-3"><input type="checkbox" class="rounded border-slate-300 text-primary-600 focus:ring-primary-500" /></td>
@@ -157,12 +167,7 @@
                             <td class="px-4 py-3">${formatUsage(voucher)}</td>
                             <td class="px-4 py-3">${statusBadge(statusLabel)}</td>
                             <td class="px-4 py-3 text-right">
-                                <div class="inline-flex items-center justify-end gap-3">
-                                    <button data-id="${voucher.id}" class="text-xs font-semibold text-slate-500 js-view-voucher">View</button>
-                                    <a href="/admin/vouchers/${voucher.id}/edit" class="text-xs font-semibold text-primary-600">Edit</a>
-                                    <button data-id="${voucher.id}" data-active="${voucher.is_active ? '1' : '0'}" class="text-xs font-semibold text-slate-500 js-toggle-voucher">${voucher.is_active ? 'Deactivate' : 'Activate'}</button>
-                                    <button data-id="${voucher.id}" class="text-xs font-semibold text-danger-600 js-delete-voucher">Delete</button>
-                                </div>
+                                <div class="inline-flex items-center justify-end gap-3">${actionButtons}</div>
                             </td>
                         </tr>
                     `;

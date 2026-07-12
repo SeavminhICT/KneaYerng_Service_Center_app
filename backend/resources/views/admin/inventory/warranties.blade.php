@@ -165,7 +165,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         rowsEl.innerHTML = list.map(function (w) {
-            var canVoid = w.status === 'active';
+            var canVoid = w.status === 'active' && window.adminCan('update_warranty_tracking');
             var orderLink = w.order_id
                 ? '<a href="/admin/orders/' + w.order_id + '" class="text-xs font-mono text-primary-600 hover:underline dark:text-primary-400">' + (w.order_number || '#' + w.order_id) + '</a>'
                 : '—';

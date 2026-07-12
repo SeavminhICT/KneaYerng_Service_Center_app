@@ -56,6 +56,7 @@
                         <span>{{ __('Assigned Staff') }}</span>
                         <span class="font-semibold text-slate-900 dark:text-white" id="assigned-staff-name">--</span>
                     </div>
+                    @if (auth()->user()?->hasPermission('update_tracking_order'))
                     <div class="mt-4">
                         <label class="block text-xs font-semibold uppercase tracking-widest text-slate-400">{{ __('Admin actions') }}</label>
                         <div class="mt-2 flex flex-wrap items-center gap-3">
@@ -87,6 +88,7 @@
                         </label>
                         <p id="order-status-note" class="mt-2 text-xs text-slate-500"></p>
                     </div>
+                    @endif
                 </div>
             </div>
 
@@ -125,6 +127,7 @@
                     <div class="mt-3">
                         <span class="rounded-full bg-success-50 px-2 py-1 text-xs font-semibold text-success-700 dark:bg-success-500/10 dark:text-success-100" id="order-payment">--</span>
                     </div>
+                    @if (auth()->user()?->hasPermission('update_order'))
                     <div class="mt-4">
                         <label class="block text-xs font-semibold uppercase tracking-widest text-slate-400">{{ __('Manage payment status') }}</label>
                         <div class="mt-2 flex flex-wrap items-center gap-3">
@@ -138,6 +141,7 @@
                         </div>
                         <p id="payment-status-note" class="mt-2 text-xs text-slate-500"></p>
                     </div>
+                    @endif
                 </div>
             </div>
         </div>
@@ -363,6 +367,9 @@
                     options = getOrderStatusOptions(orderType);
                 }
 
+                if (!orderStatusSelect) {
+                    return;
+                }
                 orderStatusSelect.innerHTML = options.map(function (option) {
                     return '<option value="' + option.value + '">' + option.label + '</option>';
                 }).join('');
@@ -381,6 +388,9 @@
             }
 
             function renderStaffOptions(selectedId) {
+                if (!assignedStaffSelect) {
+                    return;
+                }
                 assignedStaffSelect.innerHTML = '<option value="">{{ __('Select staff') }}</option>' + staffOptions.map(function (staff) {
                     var selected = Number(selectedId) === Number(staff.id) ? ' selected' : '';
                     return '<option value="' + staff.id + '"' + selected + '>' + staff.name + ' (' + (staff.role || 'staff') + ')</option>';
@@ -443,17 +453,17 @@
                 renderOrderStatusOptions(order);
                 renderStaffOptions(order.assigned_staff_id);
                 renderTrackingHistory(order);
-                paymentStatusSelect.value = currentPaymentStatus;
-                paymentStatusSave.disabled = true;
-                paymentStatusNote.textContent = '';
-                assignedStaffNote.textContent = '';
+                if (paymentStatusSelect) paymentStatusSelect.value = currentPaymentStatus;
+                if (paymentStatusSave) paymentStatusSave.disabled = true;
+                if (paymentStatusNote) paymentStatusNote.textContent = '';
+                if (assignedStaffNote) assignedStaffNote.textContent = '';
 
                 var isDelivery = (order.order_type || '').toLowerCase() === 'delivery';
                 var canApprove = isDelivery && currentOrderStatus === 'pending_approval';
                 var canReject = isDelivery && ['pending_approval', 'approved'].indexOf(currentOrderStatus) !== -1;
-                orderApprove.disabled = !canApprove;
-                orderReject.disabled = !canReject;
-                orderActionNote.placeholder = currentOrderStatus === 'pending_approval'
+                if (orderApprove) orderApprove.disabled = !canApprove;
+                if (orderReject) orderReject.disabled = !canReject;
+                if (orderActionNote) orderActionNote.placeholder = currentOrderStatus === 'pending_approval'
                     ? '{{ __('Reason or admin note') }}'
                     : '{{ __('Optional admin note') }}';
 
@@ -535,19 +545,19 @@
                 }, AUTO_REFRESH_MS);
             }
 
-            paymentStatusSelect.addEventListener('change', function (event) {
+            if (paymentStatusSelect) paymentStatusSelect.addEventListener('change', function (event) {
                 var newStatus = event.target.value;
                 paymentStatusSave.disabled = newStatus === currentPaymentStatus;
                 paymentStatusNote.textContent = newStatus === currentPaymentStatus ? '' : '{{ __('Unsaved changes') }}';
             });
 
-            orderStatusSelect.addEventListener('change', function (event) {
+            if (orderStatusSelect) orderStatusSelect.addEventListener('change', function (event) {
                 var newStatus = event.target.value;
                 orderStatusSave.disabled = newStatus === currentOrderStatus;
                 orderStatusNote.textContent = newStatus === currentOrderStatus ? '' : '{{ __('Unsaved changes') }}';
             });
 
-            paymentStatusSave.addEventListener('click', async function () {
+            if (paymentStatusSave) paymentStatusSave.addEventListener('click', async function () {
                 var newStatus = paymentStatusSelect.value;
                 var previousStatus = currentPaymentStatus;
                 if (newStatus === previousStatus) {
@@ -584,7 +594,7 @@
                 }
             });
 
-            orderStatusSave.addEventListener('click', async function () {
+            if (orderStatusSave) orderStatusSave.addEventListener('click', async function () {
                 var newStatus = orderStatusSelect.value;
                 var previousStatus = currentOrderStatus;
                 if (newStatus === previousStatus) {
@@ -626,7 +636,7 @@
                 }
             });
 
-            assignedStaffSave.addEventListener('click', async function () {
+            if (assignedStaffSave) assignedStaffSave.addEventListener('click', async function () {
                 var staffId = assignedStaffSelect.value;
                 if (!staffId) {
                     assignedStaffNote.textContent = '{{ __('Select a staff member first.') }}';
@@ -665,7 +675,7 @@
                 }
             });
 
-            orderApprove.addEventListener('click', async function () {
+            if (orderApprove) orderApprove.addEventListener('click', async function () {
                 isMutating = true;
                 try {
                     orderApprove.disabled = true;
@@ -690,7 +700,7 @@
                 }
             });
 
-            orderReject.addEventListener('click', async function () {
+            if (orderReject) orderReject.addEventListener('click', async function () {
                 if (!orderActionNote.value.trim()) {
                     orderStatusNote.textContent = '{{ __('Add a reason before rejecting.') }}';
                     return;

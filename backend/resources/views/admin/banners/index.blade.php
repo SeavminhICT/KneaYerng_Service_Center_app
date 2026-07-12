@@ -12,6 +12,7 @@
             </div>
         </div>
 
+        @if (auth()->user()?->hasPermission('create_banner'))
         <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
             <form id="banner-form" class="grid gap-3 md:grid-cols-2">
                 <label class="flex h-12 w-full max-w-md cursor-pointer items-center justify-between rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-300">
@@ -34,6 +35,7 @@
                 </div>
             </div>
         </div>
+        @endif
 
         <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
             <div class="flex items-center justify-between">
@@ -148,7 +150,7 @@
                                 </div>
                                 <div class="mt-3 flex items-center justify-between text-xs text-slate-500">
                                     <span>{{ __('ID:') }} ${banner.id}</span>
-                                    <button data-banner-delete="${banner.id}" class="text-xs font-semibold text-danger-600">{{ __('Delete') }}</button>
+                                    ${window.adminCan('delete_banner') ? `<button data-banner-delete="${banner.id}" class="text-xs font-semibold text-danger-600">{{ __('Delete') }}</button>` : ''}
                                 </div>
                                 <div class="mt-2 space-y-1">
                                     ${banner.badge_label ? `<p class="text-[11px] font-semibold uppercase tracking-wide text-primary-600">${banner.badge_label}</p>` : ''}
@@ -170,7 +172,7 @@
                 }
             }
 
-            form.addEventListener('submit', async function (event) {
+            if (form) form.addEventListener('submit', async function (event) {
                 event.preventDefault();
                 if (!fileInput.files.length) {
                     formMessage.textContent = '{{ __('Please choose an image file.') }}';
@@ -233,7 +235,7 @@
                 loadBanners();
             });
 
-            fileInput.addEventListener('change', function () {
+            if (fileInput) fileInput.addEventListener('change', function () {
                 var file = fileInput.files[0];
                 if (window.adminValidateFileSize && file && !window.adminValidateFileSize(file, '{{ __('Banner image') }}')) {
                     fileInput.value = '';

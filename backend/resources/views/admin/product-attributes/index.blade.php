@@ -12,7 +12,8 @@
             </div>
         </div>
 
-        <div class="grid gap-6 lg:grid-cols-[1.2fr_2fr]">
+        <div class="grid gap-6 {{ auth()->user()?->hasPermission('create_product_master') ? 'lg:grid-cols-[1.2fr_2fr]' : '' }}">
+            @if (auth()->user()?->hasPermission('create_product_master'))
             <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
                 <h3 class="text-sm font-semibold text-slate-900 dark:text-white">{{ __('Add Option') }}</h3>
                 <p class="mt-1 text-xs text-slate-500">{{ __('Create new values that appear in product create/edit.') }}</p>
@@ -40,6 +41,7 @@
                     <p id="master-form-error" class="text-xs text-danger-600"></p>
                 </form>
             </div>
+            @endif
 
             <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
                 <div class="flex flex-wrap items-center justify-between gap-3">
@@ -175,8 +177,8 @@
                             <td class="px-4 py-3">${valueText}</td>
                             <td class="px-4 py-3">${typeText}</td>
                             <td class="px-4 py-3 text-right">
-                                <button type="button" data-action="edit" class="rounded-lg border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200">Edit</button>
-                                <button type="button" data-action="delete" class="ml-2 rounded-lg border border-rose-200 px-3 py-1 text-xs font-semibold text-rose-600 hover:bg-rose-50 dark:border-rose-400/40 dark:text-rose-300">Delete</button>
+                                ${window.adminCan('update_product_master') ? `<button type="button" data-action="edit" class="rounded-lg border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200">Edit</button>` : ''}
+                                ${window.adminCan('delete_product_master') ? `<button type="button" data-action="delete" class="ml-2 rounded-lg border border-rose-200 px-3 py-1 text-xs font-semibold text-rose-600 hover:bg-rose-50 dark:border-rose-400/40 dark:text-rose-300">Delete</button>` : ''}
                             </td>
                         </tr>
                     `;
@@ -318,7 +320,8 @@
             filterSelect.addEventListener('change', loadOptions);
             searchInput.addEventListener('input', loadOptions);
 
-            document.getElementById('master-create-form').addEventListener('submit', async function (event) {
+            var masterCreateForm = document.getElementById('master-create-form');
+            if (masterCreateForm) masterCreateForm.addEventListener('submit', async function (event) {
                 event.preventDefault();
                 document.getElementById('master-form-error').textContent = '';
                 document.getElementById('master-value-error').textContent = '';

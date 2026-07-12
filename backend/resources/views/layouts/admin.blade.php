@@ -72,6 +72,26 @@
 
         <script>
             (function () {
+                @php($authUser = auth()->user())
+                var isSuperAdmin = {{ $authUser && $authUser->isAdmin() ? 'true' : 'false' }};
+                var permissions = @json($authUser && ! $authUser->isAdmin() ? $authUser->permissionNames() : []);
+
+                window.adminCan = function (name) {
+                    return isSuperAdmin || permissions.indexOf(name) !== -1;
+                };
+                window.adminCanAny = function () {
+                    if (isSuperAdmin) {
+                        return true;
+                    }
+                    return Array.prototype.slice.call(arguments).some(function (name) {
+                        return permissions.indexOf(name) !== -1;
+                    });
+                };
+            })();
+        </script>
+
+        <script>
+            (function () {
                 var container = document.getElementById('admin-toast-container');
                 if (!container) {
                     return;

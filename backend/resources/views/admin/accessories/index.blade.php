@@ -10,9 +10,11 @@
                 <h2 class="text-lg font-semibold text-slate-900 dark:text-white">{{ __('Accessories & Repair Parts') }}</h2>
                 <p class="text-sm text-slate-500">{{ __('Manage accessories and repair parts for iPhone and Samsung.') }}</p>
             </div>
+            @if (auth()->user()?->hasPermission('create_accessory'))
             <div class="flex items-center gap-3">
                 <a href="{{ route('admin.accessories.create') }}" class="inline-flex h-10 items-center rounded-xl bg-primary-600 px-4 text-sm font-semibold text-white shadow-sm">{{ __('Add Accessory') }}</a>
             </div>
+            @endif
         </div>
 
         <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
@@ -123,8 +125,8 @@
                             <td class="px-4 py-3">${warrantyBadge(item.warranty)}</td>
                             <td class="px-4 py-3 text-right">
                                 <button data-id="${item.id}" class="text-xs font-semibold text-slate-500 js-view-accessory">{{ __('View') }}</button>
-                                <a href="/admin/accessories/${item.id}/edit" class="ml-3 text-xs font-semibold text-primary-600">{{ __('Edit') }}</a>
-                                <button data-id="${item.id}" class="ml-3 text-xs font-semibold text-danger-600 js-delete-accessory">{{ __('Delete') }}</button>
+                                ${window.adminCan('update_accessory') ? `<a href="/admin/accessories/${item.id}/edit" class="ml-3 text-xs font-semibold text-primary-600">{{ __('Edit') }}</a>` : ''}
+                                ${window.adminCan('delete_accessory') ? `<button data-id="${item.id}" class="ml-3 text-xs font-semibold text-danger-600 js-delete-accessory">{{ __('Delete') }}</button>` : ''}
                             </td>
                         </tr>
                     `;

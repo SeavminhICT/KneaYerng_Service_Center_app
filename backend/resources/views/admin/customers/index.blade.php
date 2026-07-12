@@ -103,6 +103,7 @@
                                             {{ __('View') }}
                                         </a>
                                         {{-- Delete --}}
+                                        @if (auth()->user()?->hasPermission('delete_customer'))
                                         <form method="POST"
                                               action="{{ route('admin.customers.destroy', $customer->id) }}"
                                               class="delete-customer-form">
@@ -118,6 +119,7 @@
                                                 {{ __('Delete') }}
                                             </button>
                                         </form>
+                                        @endif
                                     </div>
                                 </td>
                             </tr>

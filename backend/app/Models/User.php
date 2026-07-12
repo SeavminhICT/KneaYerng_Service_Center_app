@@ -98,7 +98,15 @@ class User extends Authenticatable
 
                 // External URL (e.g. Google profile picture) — return as-is
                 if (str_starts_with($value, 'http://') || str_starts_with($value, 'https://')) {
-                    return $value;
+                    $parsedPath = parse_url($value, PHP_URL_PATH);
+                    if (! is_string($parsedPath) ||
+                        (! str_contains($parsedPath, '/api/media/') &&
+                         ! str_contains($parsedPath, '/storage/') &&
+                         ! str_contains($parsedPath, '/public/storage/'))) {
+                        return $value;
+                    }
+
+                    $value = $parsedPath;
                 }
 
                 // Strip any known storage prefix so we always get the bare key
@@ -107,9 +115,24 @@ class User extends Authenticatable
                     $path = substr($path, strlen('public/storage/'));
                 } elseif (str_starts_with($path, 'storage/')) {
                     $path = substr($path, strlen('storage/'));
+                } elseif (str_starts_with($path, 'api/media/')) {
+                    $path = substr($path, strlen('api/media/'));
                 }
 
-                return rtrim(config('app.url'), '/') . '/api/media/' . $path;
+                $baseUrl = '';
+                if (app()->bound('request')) {
+                    try {
+                        $baseUrl = request()->getSchemeAndHttpHost();
+                    } catch (\Throwable) {
+                        $baseUrl = '';
+                    }
+                }
+
+                if ($baseUrl === '') {
+                    $baseUrl = (string) config('app.url', '');
+                }
+
+                return rtrim($baseUrl, '/') . '/api/media/' . $path;
             }
         );
     }
@@ -178,14 +201,52 @@ class User extends Authenticatable
         return $this->roles()->where('name', $roleName)->exists();
     }
 
+    /**
+     * Cached list of permission names granted through the user's roles.
+     *
+     * @var list<string>|null
+     */
+    protected ?array $cachedPermissionNames = null;
+
+    /**
+     * @return list<string>
+     */
+    public function permissionNames(): array
+    {
+        if ($this->cachedPermissionNames === null) {
+            $this->cachedPermissionNames = Permission::query()
+                ->whereHas('roles.users', fn ($query) => $query->where('users.id', $this->id))
+                ->pluck('name')
+                ->all();
+        }
+
+        return $this->cachedPermissionNames;
+    }
+
     public function hasPermission(string $permissionName): bool
     {
         if ($this->isAdmin()) {
             return true;
         }
 
-        return $this->roles()
-            ->whereHas('permissions', fn ($query) => $query->where('name', $permissionName))
-            ->exists();
+        return in_array($permissionName, $this->permissionNames(), true);
+    }
+
+    public function hasAnyPermission(string ...$permissionNames): bool
+    {
+        if ($this->isAdmin()) {
+            return true;
+        }
+
+        return array_intersect($permissionNames, $this->permissionNames()) !== [];
+    }
+
+    /**
+     * Web admin panel access: super admins always, otherwise any user that
+     * has been assigned a role from User Management.
+     */
+    public function canAccessAdminPanel(): bool
+    {
+        return $this->isAdmin() || $this->roles()->exists();
     }
 }

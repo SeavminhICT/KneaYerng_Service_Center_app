@@ -89,7 +89,9 @@
                         </div>
 
                         <div class="flex flex-wrap gap-3 pt-2">
+                            @if (auth()->user()?->hasPermission('create_notification'))
                             <button id="send-notification" type="submit" class="inline-flex items-center justify-center rounded-2xl bg-[#4A88F7] px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-primary-500/20 transition hover:bg-[#3977E6]">{{ __('Send Notification') }}</button>
+                            @endif
                             <button id="save-draft" type="button" class="inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200">{{ __('Save Draft') }}</button>
                         </div>
                         <p class="text-xs text-slate-500">{{ __('Dashboard send flow: save notification in backend, send through Firebase, then the phone receives it if that user has a valid mobile token.') }}</p>

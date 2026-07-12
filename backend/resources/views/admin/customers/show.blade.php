@@ -22,6 +22,7 @@
                 {{ __('Back to Customers') }}
             </a>
 
+            @if (auth()->user()?->hasPermission('delete_customer'))
             <form method="POST"
                   action="{{ route('admin.customers.destroy', $customer->id) }}"
                   onsubmit="return confirm('{{ __('Delete customer') }} &quot;{{ addslashes($customer->name ?: __('Unnamed')) }}&quot;?\n{{ __('This action cannot be undone.') }}')">
@@ -35,6 +36,7 @@
                     {{ __('Delete Customer') }}
                 </button>
             </form>
+            @endif
         </div>
 
         {{-- ── Profile card ─────────────────────────────────────────────── --}}

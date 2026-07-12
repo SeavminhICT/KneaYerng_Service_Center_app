@@ -33,6 +33,7 @@
                 <p id="permission-list-status" class="mt-4 text-xs text-slate-500"></p>
             </div>
 
+            @if (auth()->user()?->hasAnyPermission('create_permission', 'update_permission'))
             <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
                 <h3 id="permission-form-title" class="text-sm font-semibold text-slate-900 dark:text-white">{{ __('Create Permission') }}</h3>
                 <form id="permission-form" class="mt-4 space-y-3 text-sm text-slate-600 dark:text-slate-300">
@@ -52,6 +53,7 @@
                     <p id="permission-form-status" class="text-xs text-slate-500"></p>
                 </form>
             </div>
+            @endif
         </div>
     </div>
 
@@ -87,6 +89,9 @@
             };
 
             function resetForm() {
+                if (!form) {
+                    return;
+                }
                 idField.value = '';
                 nameField.value = '';
                 descriptionField.value = '';
@@ -118,8 +123,8 @@
                                 <td class="px-4 py-3 font-semibold text-slate-900 dark:text-white">${permission.name}</td>
                                 <td class="px-4 py-3">${permission.description || '--'}</td>
                                 <td class="px-4 py-3 text-right">
-                                    <button data-edit-id="${permission.id}" data-edit-name="${permission.name}" data-edit-description="${permission.description || ''}" class="permission-edit-btn text-primary-600 hover:underline">{{ __('Edit') }}</button>
-                                    <button data-delete-id="${permission.id}" class="permission-delete-btn ml-3 text-red-600 hover:underline">{{ __('Delete') }}</button>
+                                    ${window.adminCan('update_permission') ? `<button data-edit-id="${permission.id}" data-edit-name="${permission.name}" data-edit-description="${permission.description || ''}" class="permission-edit-btn text-primary-600 hover:underline">{{ __('Edit') }}</button>` : ''}
+                                    ${window.adminCan('delete_permission') ? `<button data-delete-id="${permission.id}" class="permission-delete-btn ml-3 text-red-600 hover:underline">{{ __('Delete') }}</button>` : ''}
                                 </td>
                             </tr>
                         `;
@@ -165,9 +170,9 @@
                 debounceTimer = setTimeout(loadPermissions, 250);
             });
 
-            cancelButton.addEventListener('click', resetForm);
+            if (cancelButton) cancelButton.addEventListener('click', resetForm);
 
-            form.addEventListener('submit', async function (event) {
+            if (form) form.addEventListener('submit', async function (event) {
                 event.preventDefault();
                 try {
                     submitButton.disabled = true;

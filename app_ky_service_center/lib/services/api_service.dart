@@ -229,10 +229,10 @@ class ApiService {
   static const int _maxBaseUrlHistoryEntries = 8;
   static const String _loopbackApi = 'http://127.0.0.1:8000/api';
   static const String _androidEmulatorApi = 'http://10.0.2.2:8000/api';
-  // ⚡ DEV: Hardcoded to the active ngrok tunnel — works on any device/network.
-  // Set to empty string to re-enable LAN auto-detection.
-  static const String _ngrokDevUrl =
-      'https://unkempt-flashcard-wieldable.ngrok-free.dev/api';
+  // Hosted backend used by default. Set to empty string to re-enable LAN
+  // auto-detection for local development.
+  static const String _defaultServerUrl =
+      'https://kneayerng.militarygeographytrainingcenter.training/';
   static String? _runtimeBaseUrl;
   static String? _autoDetectedBaseUrl;
   static String? _resolvedBaseUrl;
@@ -240,22 +240,24 @@ class ApiService {
   static Future<void> initialize() async {
     final prefs = await SharedPreferences.getInstance();
 
-    // ⚡ DEV SHORTCUT: If a hardcoded ngrok URL is set, use it immediately
-    // and skip the slow LAN-scanning auto-detection. Remove or blank out
-    // _ngrokDevUrl to re-enable auto-detection.
-    if (_ngrokDevUrl.isNotEmpty) {
-      _resolvedBaseUrl = _normalizeBaseUrl(_ngrokDevUrl);
-      _runtimeBaseUrl = _resolvedBaseUrl;
-      await _rememberBaseUrlInHistory(_resolvedBaseUrl!, prefs: prefs);
-      debugPrint('[ApiService] DEV: Using ngrok URL → $_resolvedBaseUrl');
-      return;
-    }
-
     final stored = prefs.getString(_baseUrlPreferenceKey);
     if (stored == null || stored.trim().isEmpty) {
       _runtimeBaseUrl = null;
     } else {
       _runtimeBaseUrl = _normalizeBaseUrl(stored);
+    }
+
+    final configuredBaseUrl = _firstConfiguredBaseUrl([
+      _baseUrlOverride,
+      _runtimeBaseUrl,
+      _hostedBaseUrlOverride,
+      _defaultServerUrl,
+    ]);
+    if (configuredBaseUrl != null) {
+      _resolvedBaseUrl = configuredBaseUrl;
+      await _rememberBaseUrlInHistory(_resolvedBaseUrl!, prefs: prefs);
+      debugPrint('[ApiService] Using server URL -> $_resolvedBaseUrl');
+      return;
     }
 
     final history = _readBaseUrlHistoryFromPrefs(prefs);
@@ -281,6 +283,14 @@ class ApiService {
 
     if (_baseUrlOverride.isNotEmpty) {
       return _normalizeBaseUrl(_baseUrlOverride);
+    }
+
+    final configuredBaseUrl = _firstConfiguredBaseUrl([
+      _hostedBaseUrlOverride,
+      _defaultServerUrl,
+    ]);
+    if (configuredBaseUrl != null) {
+      return configuredBaseUrl;
     }
 
     if (_autoDetectedBaseUrl != null && _autoDetectedBaseUrl!.isNotEmpty) {
@@ -351,9 +361,33 @@ class ApiService {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_baseUrlPreferenceKey);
     _runtimeBaseUrl = null;
+    final configuredBaseUrl = _firstConfiguredBaseUrl([
+      _baseUrlOverride,
+      _hostedBaseUrlOverride,
+      _defaultServerUrl,
+    ]);
+    if (configuredBaseUrl != null) {
+      _resolvedBaseUrl = configuredBaseUrl;
+      await _rememberBaseUrlInHistory(_resolvedBaseUrl!, prefs: prefs);
+      return;
+    }
+
     final history = _readBaseUrlHistoryFromPrefs(prefs);
     _autoDetectedBaseUrl = await _resolveAutoDetectedBaseUrl(history: history);
     _resolvedBaseUrl = _autoDetectedBaseUrl;
+  }
+
+  static String? _firstConfiguredBaseUrl(Iterable<String?> rawValues) {
+    for (final raw in rawValues) {
+      if (raw == null || raw.trim().isEmpty) {
+        continue;
+      }
+      final normalized = _normalizeBaseUrl(raw);
+      if (normalized.isNotEmpty) {
+        return normalized;
+      }
+    }
+    return null;
   }
 
   static Future<String?> testBaseUrl(String raw) async {
@@ -1225,9 +1259,9 @@ class ApiService {
       addCandidate(raw);
     }
 
-    // ⚡ DEV: Try ngrok tunnel first (works from any real device)
-    if (_ngrokDevUrl.isNotEmpty) {
-      addCandidate(_ngrokDevUrl);
+    // Try hosted/default server first when auto-detection is enabled.
+    if (_defaultServerUrl.isNotEmpty) {
+      addCandidate(_defaultServerUrl);
     }
 
     if (defaultTargetPlatform != TargetPlatform.android &&
@@ -1907,8 +1941,8 @@ class ApiService {
             'conversation_id': conversationId,
             'message_type': messageType,
             'body': body.trim(),
-            if (mediaUrl != null) 'media_url': mediaUrl,
-            if (mediaDurationSec != null) 'media_duration_sec': mediaDurationSec,
+            'media_url': ?mediaUrl,
+            'media_duration_sec': ?mediaDurationSec,
           }),
         )
         .timeout(const Duration(seconds: 18));

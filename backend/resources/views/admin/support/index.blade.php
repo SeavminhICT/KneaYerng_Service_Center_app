@@ -72,6 +72,7 @@
                         </div>
                     </div>
                     <div class="flex items-center gap-2">
+                        @if (auth()->user()?->hasPermission('update_support_inbox'))
                         <select id="chat-status-select" class="h-9 rounded-lg border border-slate-200 bg-white px-3 text-xs font-bold text-slate-700 shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200">
                             <option value="new">New Inquiry</option>
                             <option value="open">Open</option>
@@ -80,6 +81,7 @@
                             <option value="resolved">Resolved</option>
                             <option value="closed">Closed</option>
                         </select>
+                        @endif
                         <button id="close-chat-btn" class="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
                             <svg class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -94,6 +96,7 @@
                 </div>
 
                 <!-- Fixed Message Input Area at Bottom -->
+                @if (auth()->user()?->hasAnyPermission('create_support_inbox', 'update_support_inbox'))
                 <div class="border-t border-slate-100 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
                     <input type="file" id="image-input" accept="image/*" class="hidden" />
                     <form id="reply-form" class="flex items-end gap-3">
@@ -125,6 +128,7 @@
                         </button>
                     </form>
                 </div>
+                @endif
             </div>
         </div>
     </div>
@@ -547,7 +551,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     document.getElementById('current-customer-name').textContent = conv.customer?.name || 'Unknown';
                     document.getElementById('current-conversation-subject').textContent = conv.subject || 'Support Request';
                     document.getElementById('current-customer-avatar').textContent = (conv.customer?.name || '??').split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
-                    statusSelect.value = conv.status;
+                    if (statusSelect) statusSelect.value = conv.status;
                 }
                 
                 const oldScrollHeight = messagesContainer.scrollHeight;
@@ -673,12 +677,12 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    imageBtn.addEventListener('click', () => {
+    if (imageBtn) imageBtn.addEventListener('click', () => {
         if (!activeConversationId) return;
         imageInput.click();
     });
 
-    imageInput.addEventListener('change', async () => {
+    if (imageInput) imageInput.addEventListener('change', async () => {
         const file = imageInput.files && imageInput.files[0];
         imageInput.value = '';
         if (!file || !activeConversationId) return;
@@ -788,7 +792,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    micBtn.addEventListener('click', () => {
+    if (micBtn) micBtn.addEventListener('click', () => {
         if (!activeConversationId) return;
         if (mediaRecorder) {
             stopRecording(true);
@@ -797,11 +801,11 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    cancelRecordingBtn.addEventListener('click', () => {
+    if (cancelRecordingBtn) cancelRecordingBtn.addEventListener('click', () => {
         stopRecording(false);
     });
 
-    replyForm.addEventListener('submit', async function(e) {
+    if (replyForm) replyForm.addEventListener('submit', async function(e) {
         e.preventDefault();
         const body = messageInput.value.trim();
         if (!body || !activeConversationId) return;
@@ -830,7 +834,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    statusSelect.addEventListener('change', async function() {
+    if (statusSelect) statusSelect.addEventListener('change', async function() {
         if (!activeConversationId) return;
         try {
             await window.adminApi.request(`/api/admin/support/conversations/${activeConversationId}/status`, {
@@ -918,7 +922,7 @@ document.addEventListener('DOMContentLoaded', function() {
     fetchConversations();
     listPollInterval = setInterval(fetchConversations, 5000);
 
-    messageInput.addEventListener('input', function() {
+    if (messageInput) messageInput.addEventListener('input', function() {
         this.style.height = 'auto';
         this.style.height = Math.min(this.scrollHeight, 128) + 'px';
     });

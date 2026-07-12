@@ -4,6 +4,7 @@
 @section('page-title', __('Dashboard'))
 
 @section('content')
+    @if (auth()->user()?->hasPermission('view_dashboard'))
     <section class="space-y-6">
         <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                 <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
@@ -337,4 +338,12 @@
             }
         });
     </script>
+    @else
+    <section class="space-y-6">
+        <div class="rounded-2xl border border-slate-200 bg-white p-10 text-center shadow-sm dark:border-slate-800 dark:bg-slate-900">
+            <p class="text-lg font-semibold text-slate-900 dark:text-white">{{ __('Welcome') }}, {{ auth()->user()?->name }}</p>
+            <p class="mt-2 text-sm text-slate-500">{{ __('Use the menu on the left to open the pages you have access to.') }}</p>
+        </div>
+    </section>
+    @endif
 @endsection

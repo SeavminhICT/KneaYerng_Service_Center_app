@@ -11,7 +11,9 @@
                 <p class="text-sm text-slate-500">{{ __('Manage inventory and availability for the mobile app.') }}</p>
             </div>
             <div class="flex items-center gap-3">
+                @if (auth()->user()?->hasPermission('create_product'))
                 <a href="{{ route('admin.products.create') }}" class="inline-flex h-10 items-center rounded-xl bg-primary-600 px-4 text-sm font-semibold text-white shadow-sm">{{ __('Add Product') }}</a>
+                @endif
             </div>
         </div>
 
@@ -175,9 +177,9 @@
                             <td class="px-4 py-3">${statusBadge(product.status)}</td>
                             <td class="px-4 py-3 text-right">
                                 <button data-id="${product.id}" class="text-xs font-semibold text-slate-500 js-view-product">View</button>
-                                <a href="/admin/products/${product.id}/edit" class="ml-3 text-xs font-semibold text-primary-600">Edit</a>
-                                <button data-id="${product.id}" class="ml-3 text-xs font-semibold text-slate-500 js-toggle-status">Toggle</button>
-                                <button data-id="${product.id}" class="ml-3 text-xs font-semibold text-danger-600 js-delete-product">Delete</button>
+                                ${window.adminCan('update_product') ? `<a href="/admin/products/${product.id}/edit" class="ml-3 text-xs font-semibold text-primary-600">Edit</a>
+                                <button data-id="${product.id}" class="ml-3 text-xs font-semibold text-slate-500 js-toggle-status">Toggle</button>` : ''}
+                                ${window.adminCan('delete_product') ? `<button data-id="${product.id}" class="ml-3 text-xs font-semibold text-danger-600 js-delete-product">Delete</button>` : ''}
                             </td>
                         </tr>
                     `;

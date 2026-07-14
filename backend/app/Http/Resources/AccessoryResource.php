@@ -28,6 +28,10 @@ class AccessoryResource extends JsonResource
             'description' => $this->description,
             'warranty' => $this->warranty,
             'image' => $this->formatMediaUrl($this->image, $baseUrl),
+            'added_by' => $this->whenLoaded('addedBy', fn () => $this->addedBy ? [
+                'id' => $this->addedBy->id,
+                'name' => $this->addedBy->name,
+            ] : null),
             'created_at' => $this->created_at?->toISOString(),
             'updated_at' => $this->updated_at?->toISOString(),
         ];

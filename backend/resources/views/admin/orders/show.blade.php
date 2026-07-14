@@ -56,6 +56,10 @@
                         <span>{{ __('Assigned Staff') }}</span>
                         <span class="font-semibold text-slate-900 dark:text-white" id="assigned-staff-name">--</span>
                     </div>
+                    <div class="flex items-center justify-between">
+                        <span>{{ __('Added By') }}</span>
+                        <span class="font-semibold text-slate-900 dark:text-white" id="order-added-by-name">--</span>
+                    </div>
                     @if (auth()->user()?->hasPermission('update_tracking_order'))
                     <div class="mt-4">
                         <label class="block text-xs font-semibold uppercase tracking-widest text-slate-400">{{ __('Admin actions') }}</label>
@@ -166,6 +170,7 @@
             var orderReject = document.getElementById('order-reject');
             var orderActionNote = document.getElementById('order-action-note');
             var assignedStaffName = document.getElementById('assigned-staff-name');
+            var orderAddedByName = document.getElementById('order-added-by-name');
             var assignedStaffSelect = document.getElementById('assigned-staff-select');
             var assignedStaffSave = document.getElementById('assigned-staff-save');
             var assignedStaffNote = document.getElementById('assigned-staff-note');
@@ -445,6 +450,7 @@
                 document.getElementById('order-type').textContent = order.order_type ? order.order_type.toUpperCase() : '--';
                 document.getElementById('order-status-current').textContent = formatStatusLabel(currentOrderStatus);
                 assignedStaffName.textContent = order.assigned_staff_name || '--';
+                orderAddedByName.textContent = order.added_by_name || '--';
                 document.getElementById('delivery-address').textContent = order.delivery_address || (order.order_type === 'pickup' ? '{{ __('Pickup order') }}' : '--');
                 document.getElementById('delivery-phone').textContent = order.delivery_phone || '--';
                 document.getElementById('delivery-note').textContent = order.delivery_note || '--';

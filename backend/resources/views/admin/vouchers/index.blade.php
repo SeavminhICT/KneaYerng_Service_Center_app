@@ -47,6 +47,7 @@
                             <th class="px-4 py-3">Validity</th>
                             <th class="px-4 py-3">Usage</th>
                             <th class="px-4 py-3">Status</th>
+                            <th class="px-4 py-3">Added By</th>
                             <th class="px-4 py-3 text-right">Action</th>
                         </tr>
                     </thead>
@@ -136,7 +137,7 @@
                 await window.adminApi.ensureCsrfCookie();
                 var response = await window.adminApi.request('/api/vouchers?q=' + encodeURIComponent(currentQuery) + '&page=' + currentPage);
                 if (!response.ok) {
-                    rows.innerHTML = '<tr><td class="px-4 py-6 text-center text-sm text-slate-500" colspan="8">Unable to load vouchers.</td></tr>';
+                    rows.innerHTML = '<tr><td class="px-4 py-6 text-center text-sm text-slate-500" colspan="9">Unable to load vouchers.</td></tr>';
                     return;
                 }
                 var data = await response.json();
@@ -166,12 +167,13 @@
                             <td class="px-4 py-3">${formatValidity(voucher)}</td>
                             <td class="px-4 py-3">${formatUsage(voucher)}</td>
                             <td class="px-4 py-3">${statusBadge(statusLabel)}</td>
+                            <td class="px-4 py-3">${voucher.added_by?.name ?? '--'}</td>
                             <td class="px-4 py-3 text-right">
                                 <div class="inline-flex items-center justify-end gap-3">${actionButtons}</div>
                             </td>
                         </tr>
                     `;
-                }).join('') || '<tr><td class="px-4 py-6 text-center text-sm text-slate-500" colspan="8">No vouchers found.</td></tr>';
+                }).join('') || '<tr><td class="px-4 py-6 text-center text-sm text-slate-500" colspan="9">No vouchers found.</td></tr>';
 
                 info.textContent = 'Showing ' + list.length + ' of ' + (data.meta?.total ?? list.length) + ' vouchers';
                 prevButton.disabled = !data.links?.prev;

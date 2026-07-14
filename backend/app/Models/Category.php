@@ -11,6 +11,7 @@ class Category extends Model
     use HasFactory;
 
     protected $fillable = [
+        'added_by',
         'name',
         'slug',
         'image',
@@ -21,5 +22,10 @@ class Category extends Model
     public function products()
     {
         return $this->hasMany(Product::class);
+    }
+
+    public function addedBy()
+    {
+        return $this->belongsTo(User::class, 'added_by');
     }
 }

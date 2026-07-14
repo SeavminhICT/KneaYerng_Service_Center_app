@@ -37,7 +37,7 @@ class OrderController extends Controller
     {
         $query = Order::query();
         $this->applyOrderFilters($request, $query);
-        $query->with(['assignedStaff']);
+        $query->with(['assignedStaff', 'addedBy']);
         $query->orderByDesc('placed_at')->orderByDesc('id');
 
         $perPage = (int) $request->input('per_page', 10);
@@ -389,6 +389,7 @@ class OrderController extends Controller
         try {
             $order = DB::transaction(function () use (
                 $validated,
+                $actor,
                 $resolvedUserId,
                 $orderNumber,
                 $orderType,
@@ -409,6 +410,7 @@ class OrderController extends Controller
                 $items
             ) {
                 $order = Order::create([
+                    'added_by' => $actor?->id,
                     'order_number' => $orderNumber,
                     'user_id' => $resolvedUserId,
                     'assigned_staff_id' => $validated['assigned_staff_id'] ?? null,
@@ -511,6 +513,7 @@ class OrderController extends Controller
                 'items',
                 'payments',
                 'assignedStaff',
+                'addedBy',
                 'approver',
                 'rejector',
                 'canceller',
@@ -565,6 +568,7 @@ class OrderController extends Controller
             'items',
             'payments',
             'assignedStaff',
+            'addedBy',
             'approver',
             'rejector',
             'canceller',

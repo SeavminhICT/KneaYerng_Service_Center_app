@@ -11,6 +11,7 @@ class Order extends Model
     use HasFactory;
 
     protected $fillable = [
+        'added_by',
         'order_number',
         'user_id',
         'assigned_staff_id',
@@ -97,6 +98,11 @@ class Order extends Model
     public function assignedStaff()
     {
         return $this->belongsTo(User::class, 'assigned_staff_id');
+    }
+
+    public function addedBy()
+    {
+        return $this->belongsTo(User::class, 'added_by');
     }
 
     public function approver()

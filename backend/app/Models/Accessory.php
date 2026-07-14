@@ -34,6 +34,7 @@ class Accessory extends Model
     ];
 
     protected $fillable = [
+        'added_by',
         'brand',
         'name',
         'price',
@@ -51,4 +52,8 @@ class Accessory extends Model
         'stock' => 'integer',
     ];
 
+    public function addedBy()
+    {
+        return $this->belongsTo(User::class, 'added_by');
+    }
 }

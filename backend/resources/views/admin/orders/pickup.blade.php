@@ -68,6 +68,7 @@
                     <div>{{ __('Status') }}: <span id="pickup-order-status" class="font-semibold text-slate-900 dark:text-white">--</span></div>
                     <div>{{ __('Verified At') }}: <span id="pickup-order-verified" class="font-semibold text-slate-900 dark:text-white">--</span></div>
                     <div>{{ __('Verified By') }}: <span id="pickup-order-verified-by" class="font-semibold text-slate-900 dark:text-white">--</span></div>
+                    <div>{{ __('Added By') }}: <span id="pickup-order-added-by" class="font-semibold text-slate-900 dark:text-white">--</span></div>
                 </div>
             </div>
         </div>
@@ -98,6 +99,7 @@
             var pickupOrderStatus = document.getElementById('pickup-order-status');
             var pickupOrderVerified = document.getElementById('pickup-order-verified');
             var pickupOrderVerifiedBy = document.getElementById('pickup-order-verified-by');
+            var pickupOrderAddedBy = document.getElementById('pickup-order-added-by');
             var pickupQrScanner = null;
             var pickupQrActive = false;
             var pickupQrCameras = [];
@@ -158,6 +160,7 @@
                     pickupOrderStatus.textContent = '--';
                     pickupOrderVerified.textContent = '--';
                     pickupOrderVerifiedBy.textContent = '--';
+                    pickupOrderAddedBy.textContent = '--';
                     setPickupStatusBadge('--');
                     return;
                 }
@@ -168,6 +171,7 @@
                 pickupOrderStatus.textContent = order.status || '--';
                 pickupOrderVerified.textContent = order.pickup_verified_at ? new Date(order.pickup_verified_at).toLocaleString() : '{{ __('Not verified') }}';
                 pickupOrderVerifiedBy.textContent = order.pickup_verified_by_name || '--';
+                pickupOrderAddedBy.textContent = order.added_by_name || '--';
                 setPickupStatusBadge(normalizeTicketStatus(order));
             }
 

@@ -20,7 +20,7 @@ class ProductController extends Controller
 {
     public function index(Request $request)
     {
-        $relations = ['category'];
+        $relations = ['category', 'addedBy'];
         if ($this->variantsEnabled()) {
             $relations['variants'] = fn ($builder) => $builder->orderBy('sort_order')->orderBy('id');
         }
@@ -101,6 +101,9 @@ class ProductController extends Controller
             }
             $validated['image_gallery'] = $galleryPaths;
         }
+
+        $actor = $request->user() ?? $request->user('sanctum');
+        $validated['added_by'] = $actor?->id;
 
         $product = Product::create($validated);
         $this->syncVariants(
@@ -446,7 +449,7 @@ class ProductController extends Controller
 
     private function loadProductRelations(Product $product): Product
     {
-        $relations = ['category'];
+        $relations = ['category', 'addedBy'];
         if ($this->variantsEnabled()) {
             $relations['variants'] = fn ($builder) => $builder->orderBy('sort_order')->orderBy('id');
         }

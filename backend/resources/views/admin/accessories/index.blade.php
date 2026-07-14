@@ -47,6 +47,7 @@
                             <th class="px-4 py-3">{{ __('Discount') }}</th>
                             <th class="px-4 py-3">{{ __('Final Price') }}</th>
                             <th class="px-4 py-3">{{ __('Warranty') }}</th>
+                            <th class="px-4 py-3">{{ __('Added By') }}</th>
                             <th class="px-4 py-3 text-right">{{ __('Action') }}</th>
                         </tr>
                     </thead>
@@ -98,7 +99,7 @@
                 await window.adminApi.ensureCsrfCookie();
                 var response = await window.adminApi.request('/api/accessories?q=' + encodeURIComponent(currentQuery) + '&page=' + currentPage);
                 if (!response.ok) {
-                    rows.innerHTML = '<tr><td class="px-4 py-6 text-center text-sm text-slate-500" colspan="10">{{ __('Unable to load accessories.') }}</td></tr>';
+                    rows.innerHTML = '<tr><td class="px-4 py-6 text-center text-sm text-slate-500" colspan="11">{{ __('Unable to load accessories.') }}</td></tr>';
                     return;
                 }
                 var data = await response.json();
@@ -123,6 +124,7 @@
                             <td class="px-4 py-3">${formatCurrency(item.discount)}</td>
                             <td class="px-4 py-3">${formatCurrency(item.final_price)}</td>
                             <td class="px-4 py-3">${warrantyBadge(item.warranty)}</td>
+                            <td class="px-4 py-3">${item.added_by?.name ?? '--'}</td>
                             <td class="px-4 py-3 text-right">
                                 <button data-id="${item.id}" class="text-xs font-semibold text-slate-500 js-view-accessory">{{ __('View') }}</button>
                                 ${window.adminCan('update_accessory') ? `<a href="/admin/accessories/${item.id}/edit" class="ml-3 text-xs font-semibold text-primary-600">{{ __('Edit') }}</a>` : ''}
@@ -130,7 +132,7 @@
                             </td>
                         </tr>
                     `;
-                }).join('') || '<tr><td class="px-4 py-6 text-center text-sm text-slate-500" colspan="10">{{ __('No accessories found.') }}</td></tr>';
+                }).join('') || '<tr><td class="px-4 py-6 text-center text-sm text-slate-500" colspan="11">{{ __('No accessories found.') }}</td></tr>';
 
                 info.textContent = '{{ __('Showing') }} ' + list.length + ' {{ __('of') }} ' + (data.meta?.total ?? list.length) + ' {{ __('accessories') }}';
                 prevButton.disabled = !data.links?.prev;

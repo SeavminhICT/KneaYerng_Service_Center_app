@@ -213,6 +213,7 @@ html.dark #ecm-panel { background:#0f172a!important; border-color:#1e293b!import
                             </button>
                         </th>
                         <th class="px-4 py-3">Status</th>
+                        <th class="px-4 py-3">Added By</th>
                         <th class="px-4 py-3 text-right">Action</th>
                     </tr>
                 </thead>
@@ -650,7 +651,7 @@ document.addEventListener('DOMContentLoaded', function () {
             '/api/categories?q=' + encodeURIComponent(currentQuery) + '&page=' + currentPage
         );
         if (!res.ok) {
-            rows.innerHTML = '<tr><td class="px-4 py-6 text-center text-sm text-slate-500" colspan="7">Unable to load categories.</td></tr>';
+            rows.innerHTML = '<tr><td class="px-4 py-6 text-center text-sm text-slate-500" colspan="8">Unable to load categories.</td></tr>';
             return;
         }
         var data = await res.json();
@@ -673,6 +674,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     <td class="px-4 py-3 text-slate-500 text-xs font-mono">${cat.slug}</td>
                     <td class="px-4 py-3">${cat.products_count ?? 0}</td>
                     <td class="px-4 py-3">${statusBadge(cat.status || 'inactive')}</td>
+                    <td class="px-4 py-3">${cat.added_by?.name ?? '--'}</td>
                     <td class="px-4 py-3 text-right">
                         <div class="inline-flex items-center justify-end gap-3">
                             <button data-id="${cat.id}" class="text-xs font-semibold text-slate-500 hover:text-slate-800 transition-colors js-view-category">View</button>
@@ -689,7 +691,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         </div>
                     </td>
                 </tr>`;
-        }).join('') || '<tr><td class="px-4 py-6 text-center text-sm text-slate-500" colspan="7">No categories found.</td></tr>';
+        }).join('') || '<tr><td class="px-4 py-6 text-center text-sm text-slate-500" colspan="8">No categories found.</td></tr>';
 
         info.textContent    = 'Showing ' + list.length + ' of ' + (data.meta?.total ?? list.length) + ' categories';
         prevButton.disabled = !data.links?.prev;

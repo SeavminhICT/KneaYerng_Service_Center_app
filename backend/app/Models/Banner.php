@@ -11,10 +11,16 @@ class Banner extends Model
     use HasFactory;
 
     protected $fillable = [
+        'added_by',
         'image',
         'badge_label',
         'title',
         'subtitle',
         'cta_label',
     ];
+
+    public function addedBy()
+    {
+        return $this->belongsTo(User::class, 'added_by');
+    }
 }

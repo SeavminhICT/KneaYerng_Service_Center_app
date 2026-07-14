@@ -13,7 +13,7 @@ class VoucherController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Voucher::query()->withCount('redemptions')->orderByDesc('id');
+        $query = Voucher::query()->withCount('redemptions')->with('addedBy')->orderByDesc('id');
 
         if ($request->filled('q')) {
             $q = $request->string('q');
@@ -41,8 +41,10 @@ class VoucherController extends Controller
     public function store(StoreVoucherRequest $request)
     {
         $validated = $request->validated();
+        $actor = $request->user() ?? $request->user('sanctum');
 
         $voucher = Voucher::create([
+            'added_by' => $actor?->id,
             'code' => $validated['code'],
             'name' => $validated['name'] ?? null,
             'discount_type' => $validated['discount_type'],
@@ -57,12 +59,12 @@ class VoucherController extends Controller
             'description' => $validated['description'] ?? null,
         ]);
 
-        return new VoucherResource($voucher->loadCount('redemptions'));
+        return new VoucherResource($voucher->loadCount('redemptions')->load('addedBy'));
     }
 
     public function show(Voucher $voucher)
     {
-        return new VoucherResource($voucher->loadCount('redemptions'));
+        return new VoucherResource($voucher->loadCount('redemptions')->load('addedBy'));
     }
 
     public function update(UpdateVoucherRequest $request, Voucher $voucher)
@@ -77,7 +79,7 @@ class VoucherController extends Controller
 
         $voucher->save();
 
-        return new VoucherResource($voucher->loadCount('redemptions'));
+        return new VoucherResource($voucher->loadCount('redemptions')->load('addedBy'));
     }
 
     public function destroy(Voucher $voucher)

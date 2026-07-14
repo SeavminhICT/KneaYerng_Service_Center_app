@@ -24,6 +24,10 @@ class VoucherResource extends JsonResource
             'is_stackable' => (bool) $this->is_stackable,
             'description' => $this->description,
             'redemptions_count' => $this->when(isset($this->redemptions_count), $this->redemptions_count),
+            'added_by' => $this->whenLoaded('addedBy', fn () => $this->addedBy ? [
+                'id' => $this->addedBy->id,
+                'name' => $this->addedBy->name,
+            ] : null),
             'created_at' => $this->created_at?->toISOString(),
             'updated_at' => $this->updated_at?->toISOString(),
         ];

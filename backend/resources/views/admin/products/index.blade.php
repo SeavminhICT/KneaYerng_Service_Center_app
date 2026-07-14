@@ -61,6 +61,7 @@
                                 </button>
                             </th>
                             <th class="px-4 py-3">{{ __('Discount') }}</th>
+                            <th class="px-4 py-3">{{ __('Added By') }}</th>
                             <th class="px-4 py-3">{{ __('Variants') }}</th>
                             <th class="px-4 py-3">
                                 <button class="inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-widest text-slate-400">
@@ -145,7 +146,7 @@
                 await window.adminApi.ensureCsrfCookie();
                 var response = await window.adminApi.request('/api/products?q=' + encodeURIComponent(currentQuery) + '&page=' + currentPage);
                 if (!response.ok) {
-                    rows.innerHTML = '<tr><td class="px-4 py-6 text-center text-sm text-slate-500" colspan="11">Unable to load products.</td></tr>';
+                    rows.innerHTML = '<tr><td class="px-4 py-6 text-center text-sm text-slate-500" colspan="12">Unable to load products.</td></tr>';
                     return;
                 }
                 var data = await response.json();
@@ -172,6 +173,7 @@
                             <td class="px-4 py-3">${warrantyBadge(product.warranty)}</td>
                             <td class="px-4 py-3">${formatCurrency(product.price)}</td>
                             <td class="px-4 py-3">${formatCurrency(product.discount)}</td>
+                            <td class="px-4 py-3">${product.added_by?.name ?? '--'}</td>
                             <td class="px-4 py-3">${(product.variants || []).length}</td>
                             <td class="px-4 py-3">${product.stock}</td>
                             <td class="px-4 py-3">${statusBadge(product.status)}</td>
@@ -183,7 +185,7 @@
                             </td>
                         </tr>
                     `;
-                }).join('') || '<tr><td class="px-4 py-6 text-center text-sm text-slate-500" colspan="11">No products found.</td></tr>';
+                }).join('') || '<tr><td class="px-4 py-6 text-center text-sm text-slate-500" colspan="12">No products found.</td></tr>';
 
                 info.textContent = 'Showing ' + list.length + ' of ' + (data.meta?.total ?? list.length) + ' products';
                 prevButton.disabled = !data.links?.prev;
@@ -279,6 +281,10 @@
                                 <div class="flex items-center justify-between gap-4">
                                     <span class="font-semibold text-slate-500">Variant Count</span>
                                     <span class="text-slate-900">${variants.length}</span>
+                                </div>
+                                <div class="flex items-center justify-between gap-4">
+                                    <span class="font-semibold text-slate-500">Added By</span>
+                                    <span class="text-slate-900">${product.added_by?.name ?? '--'}</span>
                                 </div>
                             </div>
                             <div class="mt-4 rounded-2xl border border-slate-200 bg-white p-3">

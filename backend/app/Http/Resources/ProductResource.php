@@ -75,6 +75,10 @@ class ProductResource extends JsonResource
                 'id' => $this->category?->id,
                 'name' => $this->category?->name,
             ]),
+            'added_by' => $this->whenLoaded('addedBy', fn () => $this->addedBy ? [
+                'id' => $this->addedBy->id,
+                'name' => $this->addedBy->name,
+            ] : null),
             'created_at' => $this->created_at?->toISOString(),
         ];
     }

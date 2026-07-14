@@ -57,6 +57,8 @@ class OrderResource extends JsonResource
             'customer_name' => $this->customer_name,
             'customer_email' => $this->customer_email,
             'order_type' => $this->order_type,
+            'added_by' => $this->added_by,
+            'added_by_name' => $this->addedBy?->name,
             'assigned_staff_id' => $this->assigned_staff_id,
             'assigned_staff_name' => $this->assignedStaff?->name,
             'payment_method' => $this->payment_method,

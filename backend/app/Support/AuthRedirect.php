@@ -8,7 +8,7 @@ class AuthRedirect
 {
     public static function destination(?User $user): string
     {
-        if ($user && $user->isAdmin()) {
+        if ($user && $user->canAccessAdminPanel()) {
             return route('admin.dashboard');
         }
 

@@ -15,7 +15,7 @@ class CategoryController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Category::query()->withCount('products')->orderBy('sort_order')->orderBy('id');
+        $query = Category::query()->withCount('products')->with('addedBy')->orderBy('sort_order')->orderBy('id');
 
         if ($request->filled('q')) {
             $q = $request->string('q');
@@ -50,7 +50,10 @@ class CategoryController extends Controller
 
         $slug = $validated['slug'] ?? $this->generateUniqueSlug($validated['name']);
 
+        $actor = $request->user() ?? $request->user('sanctum');
+
         $category = Category::create([
+            'added_by' => $actor?->id,
             'name' => $validated['name'],
             'slug' => $slug,
             'image' => $imagePath,
@@ -58,12 +61,12 @@ class CategoryController extends Controller
             'status' => $validated['status'] ?? 'active',
         ]);
 
-        return new CategoryResource($category->loadCount('products'));
+        return new CategoryResource($category->loadCount('products')->load('addedBy'));
     }
 
     public function show(Category $category)
     {
-        return new CategoryResource($category->loadCount('products'));
+        return new CategoryResource($category->loadCount('products')->load('addedBy'));
     }
 
     public function update(UpdateCategoryRequest $request, Category $category)
@@ -106,7 +109,7 @@ class CategoryController extends Controller
 
         $category->save();
 
-        return new CategoryResource($category->loadCount('products'));
+        return new CategoryResource($category->loadCount('products')->load('addedBy'));
     }
 
     public function destroy(Category $category)

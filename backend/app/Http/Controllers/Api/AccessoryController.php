@@ -16,7 +16,7 @@ class AccessoryController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Accessory::query()->orderByDesc('id');
+        $query = Accessory::query()->with('addedBy')->orderByDesc('id');
 
         if ($request->filled('q')) {
             $query->where('name', 'like', '%'.$request->string('q').'%');
@@ -70,15 +70,18 @@ class AccessoryController extends Controller
             }
         }
 
+        $actor = $request->user() ?? $request->user('sanctum');
+        $validated['added_by'] = $actor?->id;
+
         $accessory = Accessory::create($validated);
         $this->ensurePartFromAccessory($accessory);
 
-        return new AccessoryResource($accessory);
+        return new AccessoryResource($accessory->load('addedBy'));
     }
 
     public function show(Accessory $accessory)
     {
-        return new AccessoryResource($accessory);
+        return new AccessoryResource($accessory->load('addedBy'));
     }
 
     public function update(UpdateAccessoryRequest $request, Accessory $accessory)
@@ -103,7 +106,7 @@ class AccessoryController extends Controller
 
         $accessory->update($validated);
 
-        return new AccessoryResource($accessory);
+        return new AccessoryResource($accessory->load('addedBy'));
     }
 
     public function destroy(Accessory $accessory)

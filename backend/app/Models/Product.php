@@ -28,6 +28,7 @@ class Product extends Model
     ];
 
     protected $fillable = [
+        'added_by',
         'name',
         'description',
         'sku',
@@ -69,6 +70,11 @@ class Product extends Model
     public function category()
     {
         return $this->belongsTo(Category::class);
+    }
+
+    public function addedBy()
+    {
+        return $this->belongsTo(User::class, 'added_by');
     }
 
     public function variants()

@@ -175,6 +175,7 @@
                             </th>
                             <th class="px-4 py-3">{{ __('Payment') }}</th>
                             <th class="px-4 py-3">{{ __('Status') }}</th>
+                            <th class="px-4 py-3">{{ __('Added By') }}</th>
                             <th class="px-4 py-3 text-right">{{ __('Action') }}</th>
                         </tr>
                     </thead>
@@ -652,7 +653,7 @@
 
                 var response = await window.adminApi.request('/api/orders?' + query.toString());
                 if (!response.ok) {
-                    rows.innerHTML = '<tr><td class="px-4 py-6 text-center text-sm text-slate-500" colspan="7">Unable to load orders.</td></tr>';
+                    rows.innerHTML = '<tr><td class="px-4 py-6 text-center text-sm text-slate-500" colspan="8">Unable to load orders.</td></tr>';
                     return;
                 }
                 var data = await response.json();
@@ -667,10 +668,11 @@
                             <td class="px-4 py-3">${currencyFormatter.format(order.total_amount || 0)}</td>
                             <td class="px-4 py-3">${order.payment_status}</td>
                             <td class="px-4 py-3">${formatStatusLabel(order.status)}</td>
+                            <td class="px-4 py-3">${order.added_by_name ?? '--'}</td>
                             <td class="px-4 py-3 text-right"><a href="/admin/orders/${order.id}" class="text-xs font-semibold text-primary-600">Details</a></td>
                         </tr>
                     `;
-                }).join('') || '<tr><td class="px-4 py-6 text-center text-sm text-slate-500" colspan="7">No orders found.</td></tr>';
+                }).join('') || '<tr><td class="px-4 py-6 text-center text-sm text-slate-500" colspan="8">No orders found.</td></tr>';
 
                 info.textContent = 'Showing ' + list.length + ' of ' + (data.meta?.total ?? list.length) + ' orders';
                 prevButton.disabled = !data.links?.prev;

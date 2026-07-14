@@ -149,7 +149,7 @@
                                     ${imageUrl ? `<img src="${imageUrl}" alt="Banner ${banner.id}" class="h-full w-full object-cover" />` : ''}
                                 </div>
                                 <div class="mt-3 flex items-center justify-between text-xs text-slate-500">
-                                    <span>{{ __('ID:') }} ${banner.id}</span>
+                                    <span>{{ __('ID:') }} ${banner.id} &middot; {{ __('Added By:') }} ${banner.added_by?.name ?? '--'}</span>
                                     ${window.adminCan('delete_banner') ? `<button data-banner-delete="${banner.id}" class="text-xs font-semibold text-danger-600">{{ __('Delete') }}</button>` : ''}
                                 </div>
                                 <div class="mt-2 space-y-1">

@@ -11,6 +11,7 @@ class Voucher extends Model
     use HasFactory;
 
     protected $fillable = [
+        'added_by',
         'code',
         'name',
         'discount_type',
@@ -37,6 +38,11 @@ class Voucher extends Model
     public function redemptions()
     {
         return $this->hasMany(VoucherRedemption::class);
+    }
+
+    public function addedBy()
+    {
+        return $this->belongsTo(User::class, 'added_by');
     }
 
     public function setCodeAttribute($value): void

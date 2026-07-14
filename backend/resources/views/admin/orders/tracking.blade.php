@@ -309,7 +309,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 '      </div>',
                 '      <div>',
                 '        <p class="text-sm font-semibold text-slate-900 dark:text-white">' + (o.order_number || '{{ __('Order') }} #' + o.id) + '</p>',
-                '        <p class="text-xs text-slate-500">' + (o.customer_name || '--') + ' &bull; ' + date + '</p>',
+                '        <p class="text-xs text-slate-500">' + (o.customer_name || '--') + ' &bull; ' + date + ' &bull; {{ __('Added By:') }} ' + (o.added_by_name || '--') + '</p>',
                 '      </div>',
                 '    </div>',
                 '    <div class="flex items-center gap-3">',

@@ -23,6 +23,7 @@ class BannerController extends Controller
     public function index()
     {
         $banners = Banner::query()
+            ->with('addedBy')
             ->orderByDesc('id')
             ->paginate(12);
 
@@ -47,7 +48,10 @@ class BannerController extends Controller
             return response()->json(['message' => 'Image upload failed: '.$e->getMessage()], 500);
         }
 
+        $actor = $request->user() ?? $request->user('sanctum');
+
         $banner = Banner::create([
+            'added_by' => $actor?->id,
             'image' => 'storage/'.$storedPath,
             'badge_label' => $request->string('badge_label')->trim()->toString() ?: null,
             'title' => $request->string('title')->trim()->toString() ?: null,
@@ -55,12 +59,12 @@ class BannerController extends Controller
             'cta_label' => $request->string('cta_label')->trim()->toString() ?: null,
         ]);
 
-        return new BannerResource($banner);
+        return new BannerResource($banner->load('addedBy'));
     }
 
     public function show(Banner $banner)
     {
-        return new BannerResource($banner);
+        return new BannerResource($banner->load('addedBy'));
     }
 
     public function update(Request $request, Banner $banner)
@@ -95,7 +99,7 @@ class BannerController extends Controller
         $banner->cta_label = $request->string('cta_label')->trim()->toString() ?: null;
         $banner->save();
 
-        return new BannerResource($banner);
+        return new BannerResource($banner->load('addedBy'));
     }
 
     public function destroy(Banner $banner)

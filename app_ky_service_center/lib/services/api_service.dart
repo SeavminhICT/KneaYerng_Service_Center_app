@@ -232,7 +232,7 @@ class ApiService {
   // Hosted backend used by default. Set to empty string to re-enable LAN
   // auto-detection for local development.
   static const String _defaultServerUrl =
-      'https://kneayerng.seavminh.com/';
+      'https://kneayerng.seavminh.com/api';
   static String? _runtimeBaseUrl;
   static String? _autoDetectedBaseUrl;
   static String? _resolvedBaseUrl;

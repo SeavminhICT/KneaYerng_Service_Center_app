@@ -11,8 +11,11 @@ class MobileDeviceToken extends Model
 
     protected $fillable = [
         'user_id',
+        'guest_device_id',
         'token',
         'platform',
+        'device_name',
+        'app_version',
         'last_used_at',
     ];
 

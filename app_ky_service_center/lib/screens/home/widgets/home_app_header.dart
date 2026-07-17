@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:hugeicons/hugeicons.dart';
 
 import '../../../l10n/app_localizations.dart';
+import '../../../services/app_notification_service.dart';
 import '../../../services/cart_service.dart';
 import '../../../theme/app_fonts.dart';
 import 'home_colors.dart';
@@ -73,10 +74,13 @@ class HomeAppHeader extends StatelessWidget {
             ],
           ),
         ),
-        HomeIconCircleButton(
-          icon: HugeIcons.strokeRoundedNotification01,
-          onTap: onNotificationTap,
-          badgeCount: 1,
+        ValueListenableBuilder<int>(
+          valueListenable: AppNotificationService.instance.unreadCount,
+          builder: (context, count, _) => HomeIconCircleButton(
+            icon: HugeIcons.strokeRoundedNotification01,
+            onTap: onNotificationTap,
+            badgeCount: count,
+          ),
         ),
         const SizedBox(width: 6),
         HomeCartIconButton(onTap: onCartTap),

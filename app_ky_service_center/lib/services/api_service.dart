@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math';
 import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart'
     show
@@ -2030,6 +2031,7 @@ class ApiService {
     int? categoryId,
     String? categoryName,
     String? status,
+    String? tag,
     int perPage = 20,
     String? queryText,
     bool forceRefresh = false,
@@ -2037,6 +2039,9 @@ class ApiService {
     final query = <String, String>{};
     if (status != null && status.isNotEmpty) {
       query['status'] = status;
+    }
+    if (tag != null && tag.isNotEmpty) {
+      query['tag'] = tag;
     }
     if (queryText != null && queryText.trim().isNotEmpty) {
       query['q'] = queryText.trim();
@@ -2052,7 +2057,7 @@ class ApiService {
     ).replace(queryParameters: query.isEmpty ? null : query);
 
     final cacheKey =
-        'cached_products_${categoryId ?? 0}_${categoryName ?? ''}_${status ?? ''}_${perPage}_${queryText ?? ''}';
+        'cached_products_${categoryId ?? 0}_${categoryName ?? ''}_${status ?? ''}_${tag ?? ''}_${perPage}_${queryText ?? ''}';
 
     try {
       final body = await _fetchWithCache(
@@ -3080,24 +3085,51 @@ class ApiService {
     return null;
   }
 
+  /// Stable anonymous device identifier so guests (no account) can register
+  /// FCM tokens and keep a server-side notification inbox.
+  static const String _guestDeviceIdKey = 'guest_device_id_v1';
+
+  static Future<String> getOrCreateGuestDeviceId() async {
+    final prefs = await SharedPreferences.getInstance();
+    final existing = prefs.getString(_guestDeviceIdKey);
+    if (existing != null && existing.isNotEmpty) {
+      return existing;
+    }
+
+    final random = Random.secure();
+    final bytes = List<int>.generate(20, (_) => random.nextInt(256));
+    final id = bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
+    await prefs.setString(_guestDeviceIdKey, id);
+    return id;
+  }
+
   static Future<List<OrderTrackingNotificationItem>>
   fetchOrderTrackingNotifications() async {
     final token = await getToken();
-    if (token == null || token.isEmpty) {
-      return [];
-    }
 
     http.Response res;
     try {
-      res = await http
-          .get(
-            Uri.parse('$baseUrl/order-notifications'),
-            headers: {
-              'Accept': 'application/json',
-              'Authorization': 'Bearer $token',
-            },
-          )
-          .timeout(const Duration(seconds: 18));
+      if (token == null || token.isEmpty) {
+        final guestDeviceId = await getOrCreateGuestDeviceId();
+        res = await http
+            .get(
+              Uri.parse('$baseUrl/guest/notifications').replace(
+                queryParameters: {'guest_device_id': guestDeviceId},
+              ),
+              headers: const {'Accept': 'application/json'},
+            )
+            .timeout(const Duration(seconds: 18));
+      } else {
+        res = await http
+            .get(
+              Uri.parse('$baseUrl/order-notifications'),
+              headers: {
+                'Accept': 'application/json',
+                'Authorization': 'Bearer $token',
+              },
+            )
+            .timeout(const Duration(seconds: 18));
+      }
     } catch (_) {
       return [];
     }
@@ -3127,11 +3159,23 @@ class ApiService {
     int notificationId,
   ) async {
     final token = await getToken();
-    if (token == null || token.isEmpty) {
-      return;
-    }
 
     try {
+      if (token == null || token.isEmpty) {
+        final guestDeviceId = await getOrCreateGuestDeviceId();
+        await http
+            .post(
+              Uri.parse('$baseUrl/guest/notifications/$notificationId/read'),
+              headers: const {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+              },
+              body: jsonEncode({'guest_device_id': guestDeviceId}),
+            )
+            .timeout(const Duration(seconds: 12));
+        return;
+      }
+
       await http
           .post(
             Uri.parse('$baseUrl/order-notifications/$notificationId/read'),
@@ -3347,23 +3391,31 @@ class ApiService {
     required String token,
     required String platform,
   }) async {
-    final authToken = await getToken();
-    if (authToken == null || authToken.isEmpty || token.trim().isEmpty) {
+    if (token.trim().isEmpty) {
       return false;
     }
+
+    final authToken = await getToken();
+    final guestDeviceId = await getOrCreateGuestDeviceId();
+    final isGuest = authToken == null || authToken.isEmpty;
 
     try {
       final response = await http
           .post(
-            Uri.parse('$baseUrl/mobile-devices/token'),
+            Uri.parse(
+              isGuest
+                  ? '$baseUrl/mobile-devices/token/guest'
+                  : '$baseUrl/mobile-devices/token',
+            ),
             headers: {
               'Accept': 'application/json',
               'Content-Type': 'application/json',
-              'Authorization': 'Bearer $authToken',
+              if (!isGuest) 'Authorization': 'Bearer $authToken',
             },
             body: jsonEncode({
               'token': token.trim(),
               'platform': platform.trim(),
+              'guest_device_id': guestDeviceId,
             }),
           )
           .timeout(const Duration(seconds: 12));
@@ -3375,23 +3427,42 @@ class ApiService {
   }
 
   static Future<bool> unregisterMobileDeviceToken(String token) async {
-    final authToken = await getToken();
-    if (authToken == null || authToken.isEmpty || token.trim().isEmpty) {
+    if (token.trim().isEmpty) {
       return false;
     }
 
+    final authToken = await getToken();
+
     try {
-      final response = await http
-          .post(
-            Uri.parse('$baseUrl/mobile-devices/token/remove'),
-            headers: {
-              'Accept': 'application/json',
-              'Content-Type': 'application/json',
-              'Authorization': 'Bearer $authToken',
-            },
-            body: jsonEncode({'token': token.trim()}),
-          )
-          .timeout(const Duration(seconds: 12));
+      http.Response response;
+      if (authToken == null || authToken.isEmpty) {
+        final guestDeviceId = await getOrCreateGuestDeviceId();
+        response = await http
+            .post(
+              Uri.parse('$baseUrl/mobile-devices/token/guest/remove'),
+              headers: const {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+              },
+              body: jsonEncode({
+                'token': token.trim(),
+                'guest_device_id': guestDeviceId,
+              }),
+            )
+            .timeout(const Duration(seconds: 12));
+      } else {
+        response = await http
+            .post(
+              Uri.parse('$baseUrl/mobile-devices/token/remove'),
+              headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer $authToken',
+              },
+              body: jsonEncode({'token': token.trim()}),
+            )
+            .timeout(const Duration(seconds: 12));
+      }
       return response.statusCode >= 200 && response.statusCode < 300;
     } catch (error) {
       debugPrint('Unregister mobile device token failed: $error');

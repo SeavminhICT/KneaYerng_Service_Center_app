@@ -56,6 +56,19 @@ class AppNotificationService {
   static final AppNotificationService instance = AppNotificationService._();
 
   final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
+  /// Live unread-notification count shown as the in-app bell badge.
+  /// Updated by FCM pushes, the stored-notification poll, and the
+  /// notification center when items are read or deleted.
+  final ValueNotifier<int> unreadCount = ValueNotifier<int>(0);
+
+  void reportUnreadCount(int count) {
+    final normalized = count < 0 ? 0 : count;
+    if (unreadCount.value != normalized) {
+      unreadCount.value = normalized;
+    }
+  }
+
   FirebaseMessaging get _messaging => FirebaseMessaging.instance;
   final FlutterLocalNotificationsPlugin _localNotifications =
       FlutterLocalNotificationsPlugin();
@@ -214,8 +227,9 @@ class AppNotificationService {
 
   Future<bool> syncTokenWithBackend({bool force = false}) async {
     if (!_isSupportedMobilePlatform || Firebase.apps.isEmpty) return false;
+    // A missing auth token is fine: the device is registered as a guest
+    // (anonymous) device so broadcasts still reach it.
     final authToken = (await ApiService.getToken())?.trim();
-    if (authToken == null || authToken.isEmpty) return false;
 
     final token = await _messaging.getToken();
     final normalizedToken = token?.trim();
@@ -284,6 +298,7 @@ class AppNotificationService {
 
     final notification = message.notification;
     final badgeCount = _tryParseInt(message.data['badge']) ?? 1;
+    reportUnreadCount(badgeCount);
     final notificationId = _tryParseInt(message.data['notification_id']);
     if (notificationId != null) {
       _rememberStoredNotificationId(notificationId);
@@ -460,6 +475,9 @@ class AppNotificationService {
       }
 
       final notifications = await ApiService.fetchOrderTrackingNotifications();
+      reportUnreadCount(
+        notifications.where((item) => item.isUnread).length,
+      );
       if (notifications.isEmpty) {
         return;
       }

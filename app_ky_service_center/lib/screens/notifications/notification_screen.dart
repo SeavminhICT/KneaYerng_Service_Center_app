@@ -5,6 +5,7 @@ import 'package:skeletonizer/skeletonizer.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/order_tracking_notification.dart';
 import '../../services/api_service.dart';
+import '../../services/app_notification_service.dart';
 import '../orders/delivery_tracking_screen.dart';
 import 'widgets/notification_card.dart';
 import 'widgets/notification_detail_screen.dart';
@@ -81,12 +82,14 @@ class _NotificationScreenState extends State<NotificationScreen> {
           .map((item) => item.id == id ? item.copyWith(isUnread: false) : item)
           .toList();
     });
+    AppNotificationService.instance.reportUnreadCount(_unreadCount);
   }
 
   void _deleteNotification(String id) {
     setState(() {
       _items = _items.where((item) => item.id != id).toList();
     });
+    AppNotificationService.instance.reportUnreadCount(_unreadCount);
   }
 
   Future<void> _openFilterSheet() async {
@@ -183,6 +186,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
       _isLoading = false;
       _isRefreshing = false;
     });
+    AppNotificationService.instance.reportUnreadCount(_unreadCount);
   }
 
   NotificationItem _mapOrderNotification(OrderTrackingNotificationItem item) {

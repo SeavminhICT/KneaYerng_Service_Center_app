@@ -41,6 +41,10 @@ class ProductController extends Controller
             $query->where('status', $request->string('status'));
         }
 
+        if ($request->filled('tag')) {
+            $query->where('tag', strtoupper(str_replace([' ', '-'], '_', trim((string) $request->string('tag')))));
+        }
+
         if ($request->filled('category_id')) {
             $query->where('category_id', $request->integer('category_id'));
         }

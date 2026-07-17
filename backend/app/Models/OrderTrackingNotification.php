@@ -11,6 +11,8 @@ class OrderTrackingNotification extends Model
 
     protected $fillable = [
         'user_id',
+        'guest_device_id',
+        'campaign_id',
         'order_id',
         'type',
         'title',

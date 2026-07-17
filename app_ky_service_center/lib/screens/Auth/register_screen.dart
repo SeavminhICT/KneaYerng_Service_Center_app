@@ -6,8 +6,11 @@ import 'package:hugeicons/hugeicons.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../services/api_service.dart';
+import '../../services/app_notification_service.dart';
+import '../../services/cart_service.dart';
 import '../../theme/app_palette.dart';
 import '../../widgets/circle_back_button.dart';
+import '../main_navigation_screen.dart';
 import 'otp_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -703,29 +706,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
       setState(() => _loading = false);
 
       if (error == null) {
-        final otpResult = await ApiService.requestOtp(
-          destination: email,
-          type: 'email',
-          purpose: 'login',
-        );
+        // Google accounts are already verified by the backend; no OTP needed.
+        await AppNotificationService.instance.syncTokenWithBackend(force: true);
+        unawaited(CartService.instance.loadFromApi());
         if (!mounted) return;
-        setState(() => _loading = false);
-
-        if (otpResult.ok) {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => OtpScreen(
-                destination: email,
-                type: 'email',
-                purpose: 'login',
-              ),
-            ),
-          );
-        } else {
-          ScaffoldMessenger.of(context)
-              .showSnackBar(SnackBar(content: Text(otpResult.message)));
-        }
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const MainNavigationScreen()),
+        );
         return;
       }
 

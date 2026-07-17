@@ -18,6 +18,7 @@ use App\Http\Controllers\Api\OtpController;
 use App\Http\Controllers\Api\ProductWarrantyController;
 use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\KhqrPaymentController;
+use App\Http\Controllers\Api\GuestNotificationController;
 use App\Http\Controllers\Api\MediaController;
 use App\Http\Controllers\Api\MobileDeviceController;
 use App\Http\Controllers\Api\ProductController;
@@ -95,6 +96,15 @@ Route::get('products/{product}', [ProductController::class, 'show']);
 Route::get('accessories', [AccessoryController::class, 'index']);
 Route::get('accessories/{accessory}', [AccessoryController::class, 'show']);
 Route::get('checkout/options', CheckoutOptionsController::class);
+
+// Guest (anonymous) devices: register FCM tokens and read stored notifications
+// without an account, keyed by an app-generated guest device id.
+Route::middleware('throttle:60,1')->group(function () {
+    Route::post('mobile-devices/token/guest', [MobileDeviceController::class, 'storeGuest']);
+    Route::post('mobile-devices/token/guest/remove', [MobileDeviceController::class, 'destroyGuest']);
+    Route::get('guest/notifications', [GuestNotificationController::class, 'index']);
+    Route::post('guest/notifications/{notification}/read', [GuestNotificationController::class, 'markRead']);
+});
 
 Route::middleware('auth:sanctum')->group(function () {
     // ── Product Warranties (customer) ─────────────────────────────────────

@@ -74,7 +74,15 @@
                                 <div class="mt-2 grid gap-3 sm:grid-cols-2">
                                     <label class="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200">
                                         <input type="radio" name="target_mode" value="all" checked class="h-4 w-4 border-slate-300 text-primary-600 focus:ring-primary-500" />
-                                        {{ __('All Users') }}
+                                        {{ __('Everyone (incl. guests)') }}
+                                    </label>
+                                    <label class="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200">
+                                        <input type="radio" name="target_mode" value="registered" class="h-4 w-4 border-slate-300 text-primary-600 focus:ring-primary-500" />
+                                        {{ __('Registered Users') }}
+                                    </label>
+                                    <label class="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200">
+                                        <input type="radio" name="target_mode" value="guests" class="h-4 w-4 border-slate-300 text-primary-600 focus:ring-primary-500" />
+                                        {{ __('Guest Devices') }}
                                     </label>
                                     <label class="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200">
                                         <input type="radio" name="target_mode" value="specific" class="h-4 w-4 border-slate-300 text-primary-600 focus:ring-primary-500" />
@@ -340,7 +348,9 @@
                     return count === 1 ? '1 specific user' : count + ' specific users';
                 }
                 var labels = {
-                    all: 'All users',
+                    all: 'Everyone (incl. guests)',
+                    registered: 'Registered users',
+                    guests: 'Guest devices',
                     active: 'Active users',
                     new: 'New users',
                     inactive: 'Inactive users',
@@ -355,6 +365,9 @@
                     sent: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300',
                     scheduled: 'bg-sky-50 text-sky-700 dark:bg-sky-500/10 dark:text-sky-300',
                     draft: 'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300',
+                    queued: 'bg-indigo-50 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300',
+                    sending: 'bg-indigo-50 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300',
+                    failed: 'bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-300',
                 };
                 span.className = 'inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide ' + (classes[status] || 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300');
                 span.textContent = status || 'unknown';
@@ -501,8 +514,11 @@
                 messageInput.value = item.message || '';
                 typeInput.value = item.type || 'Announcement';
                 deepLinkInput.value = item.deep_link || '';
-                var isCustom = (item.audience || 'all') === 'custom';
-                var wanted = isCustom ? 'specific' : 'all';
+                var audience = (item.audience || 'all').toLowerCase();
+                var isCustom = audience === 'custom';
+                var wanted = isCustom
+                    ? 'specific'
+                    : (audience === 'guests' || audience === 'registered' ? audience : 'all');
                 var radio = document.querySelector('input[name="target_mode"][value="' + wanted + '"]');
                 if (radio) {
                     radio.checked = true;

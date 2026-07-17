@@ -145,32 +145,19 @@
                         <div>
                             <label class="text-xs font-semibold text-slate-600 dark:text-slate-300" for="variant-storage">{{ __('Storage') }} *</label>
                             <select id="variant-storage" class="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200">
-                                <option value="">{{ __('Select') }}</option>
-                                <option value="128GB">128GB</option>
-                                <option value="256GB">256GB</option>
-                                <option value="512GB">512GB</option>
-                                <option value="1TB">1TB</option>
+                                <option value="">{{ __('Loading…') }}</option>
                             </select>
                         </div>
                         <div>
                             <label class="text-xs font-semibold text-slate-600 dark:text-slate-300" for="variant-color">{{ __('Color') }} *</label>
                             <select id="variant-color" class="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200">
-                                <option value="">{{ __('Select') }}</option>
-                                <option value="Black">{{ __('Black') }}</option>
-                                <option value="White">{{ __('White') }}</option>
-                                <option value="Blue">{{ __('Blue') }}</option>
-                                <option value="Gold">{{ __('Gold') }}</option>
-                                <option value="Natural Titanium">{{ __('Natural Titanium') }}</option>
+                                <option value="">{{ __('Loading…') }}</option>
                             </select>
                         </div>
                         <div>
                             <label class="text-xs font-semibold text-slate-600 dark:text-slate-300" for="variant-condition">{{ __('Condition') }} *</label>
                             <select id="variant-condition" class="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200">
-                                <option value="">{{ __('Select') }}</option>
-                                <option value="New">{{ __('New') }}</option>
-                                <option value="Used">{{ __('Used') }}</option>
-                                <option value="Like New">{{ __('Like New') }}</option>
-                                <option value="Refurbished">{{ __('Refurbished') }}</option>
+                                <option value="">{{ __('Loading…') }}</option>
                             </select>
                         </div>
                         <div>
@@ -187,11 +174,15 @@
                         </div>
                         <div>
                             <label class="text-xs font-semibold text-slate-600 dark:text-slate-300" for="variant-ram">{{ __('RAM') }}</label>
-                            <input id="variant-ram" type="text" placeholder="8GB" class="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200" />
+                            <select id="variant-ram" class="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200">
+                                <option value="">{{ __('Loading…') }}</option>
+                            </select>
                         </div>
                         <div>
                             <label class="text-xs font-semibold text-slate-600 dark:text-slate-300" for="variant-ssd">{{ __('SSD') }}</label>
-                            <input id="variant-ssd" type="text" placeholder="NVMe" class="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200" />
+                            <select id="variant-ssd" class="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200">
+                                <option value="">{{ __('Loading…') }}</option>
+                            </select>
                         </div>
                         <div>
                             <label class="text-xs font-semibold text-slate-600 dark:text-slate-300" for="variant-image">{{ __('Variant Image') }}</label>
@@ -627,7 +618,70 @@
                 }
             });
 
-            loadCategories();
+            function escapeAttrOption(value) {
+                return String(value || '')
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;');
+            }
+
+            async function loadAttributeOptions() {
+                var selectMap = {
+                    storage_capacity: { id: 'variant-storage',   placeholder: 'Select storage' },
+                    color:            { id: 'variant-color',     placeholder: 'Select color' },
+                    condition:        { id: 'variant-condition', placeholder: 'Select condition' },
+                    ram:              { id: 'variant-ram',       placeholder: 'None' },
+                    ssd:              { id: 'variant-ssd',       placeholder: 'None' },
+                };
+
+                // Set placeholders immediately — selects never stay on "Loading…"
+                Object.keys(selectMap).forEach(function (type) {
+                    var sel = document.getElementById(selectMap[type].id);
+                    if (sel) sel.innerHTML = '<option value="">' + selectMap[type].placeholder + '</option>';
+                });
+
+                try {
+                    await window.adminApi.ensureCsrfCookie();
+                    var response = await window.adminApi.request('/api/product-attributes');
+                    if (!response.ok) return;
+                    var payload = await response.json();
+                    var list = Array.isArray(payload.data) ? payload.data : [];
+
+                    // Group values by type
+                    var grouped = {};
+                    list.forEach(function (item) {
+                        if (!grouped[item.type]) grouped[item.type] = [];
+                        grouped[item.type].push(item.value);
+                    });
+
+                    // Populate each select, restoring current value if already set
+                    Object.keys(selectMap).forEach(function (type) {
+                        var cfg = selectMap[type];
+                        var sel = document.getElementById(cfg.id);
+                        if (!sel) return;
+                        var current = sel.value;
+                        var values = grouped[type] || [];
+                        if (values.length > 0) {
+                            sel.innerHTML = '<option value="">' + cfg.placeholder + '</option>' +
+                                values.map(function (v) {
+                                    var e = escapeAttrOption(v);
+                                    return '<option value="' + e + '">' + e + '</option>';
+                                }).join('');
+                            if (current) sel.value = current;
+                        }
+                    });
+                } catch (e) {
+                    // placeholders already set above
+                }
+            }
+
+            // window.adminApi is defined by the layout after @yield('content'),
+            // so wait for DOMContentLoaded before making API calls.
+            document.addEventListener('DOMContentLoaded', function () {
+                loadCategories();
+                loadAttributeOptions();
+            });
             renderVariantRows();
         })();
     </script>

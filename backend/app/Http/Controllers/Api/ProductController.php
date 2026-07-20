@@ -41,6 +41,14 @@ class ProductController extends Controller
             $query->where('status', $request->string('status'));
         }
 
+        if ($request->filled('brand')) {
+            $query->where('brand', $request->string('brand'));
+        }
+
+        if ($request->filled('warranty')) {
+            $query->where('warranty', $request->string('warranty'));
+        }
+
         if ($request->filled('tag')) {
             $query->where('tag', strtoupper(str_replace([' ', '-'], '_', trim((string) $request->string('tag')))));
         }
@@ -62,10 +70,59 @@ class ProductController extends Controller
             $query->where('stock', '<=', $threshold);
         }
 
-        $perPage = max(1, min((int) $request->integer('per_page', 10), 100));
+        $perPageInput = $request->input('per_page', 25);
+        if ($perPageInput === 'all' || (int) $perPageInput === -1) {
+            $perPage = 10000;
+        } else {
+            $perPage = max(1, min((int) $perPageInput, 10000));
+        }
+
         $products = $query->paginate($perPage)->withQueryString();
 
         return ProductResource::collection($products);
+    }
+
+    public function bulkAction(Request $request)
+    {
+        $validated = $request->validate([
+            'action' => ['required', 'string', 'in:activate,deactivate,archive,delete'],
+            'ids' => ['required', 'array', 'min:1'],
+            'ids.*' => ['integer'],
+        ]);
+
+        $action = $validated['action'];
+        $ids = $validated['ids'];
+
+        if ($action === 'activate') {
+            Product::whereIn('id', $ids)->update(['status' => 'active']);
+            return response()->json(['message' => count($ids) . ' product(s) activated successfully.']);
+        }
+
+        if ($action === 'deactivate') {
+            Product::whereIn('id', $ids)->update(['status' => 'draft']);
+            return response()->json(['message' => count($ids) . ' product(s) set to draft.']);
+        }
+
+        if ($action === 'archive') {
+            Product::whereIn('id', $ids)->update(['status' => 'archived']);
+            return response()->json(['message' => count($ids) . ' product(s) archived successfully.']);
+        }
+
+        if ($action === 'delete') {
+            $actor = $request->user() ?? $request->user('sanctum') ?? auth('web')->user();
+            if ($actor && ! ($actor->isAdmin() || (method_exists($actor, 'hasPermission') && $actor->hasPermission('delete_product')) || (method_exists($actor, 'hasPermissionTo') && $actor->hasPermissionTo('delete_product')))) {
+                return response()->json(['message' => 'Unauthorized to delete products.'], 403);
+            }
+
+            $products = Product::whereIn('id', $ids)->get();
+            foreach ($products as $p) {
+                $p->delete();
+            }
+
+            return response()->json(['message' => count($products) . ' product(s) deleted successfully.']);
+        }
+
+        return response()->json(['message' => 'Invalid bulk action.'], 422);
     }
 
     public function store(StoreProductRequest $request)

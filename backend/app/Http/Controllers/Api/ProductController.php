@@ -319,22 +319,34 @@ class ProductController extends Controller
             $condition = trim((string) ($rawRow['condition'] ?? ''));
             $ram = trim((string) ($rawRow['ram'] ?? ''));
             $ssd = trim((string) ($rawRow['ssd'] ?? ''));
+            $cpu = trim((string) ($rawRow['cpu'] ?? ''));
+            $display = trim((string) ($rawRow['display'] ?? ''));
+            $country = trim((string) ($rawRow['country'] ?? ''));
             $sku = trim((string) ($rawRow['sku'] ?? ''));
             $image = trim((string) ($rawRow['image'] ?? ''));
-            $price = is_numeric($rawRow['price'] ?? null) ? (float) $rawRow['price'] : 0.0;
-            $stock = is_numeric($rawRow['stock'] ?? null) ? (int) $rawRow['stock'] : 0;
+            $hasPrice = is_numeric($rawRow['price'] ?? null);
+            $hasStock = is_numeric($rawRow['stock'] ?? null);
+            $price = $hasPrice ? (float) $rawRow['price'] : 0.0;
+            $stock = $hasStock ? (int) $rawRow['stock'] : 0;
 
-            if ($storage === '' || $color === '' || $condition === '') {
+            $hasIdentity = $storage !== '' || $color !== '' || $condition !== ''
+                || $ram !== '' || $ssd !== '' || $cpu !== '' || $display !== ''
+                || $country !== '' || $sku !== '';
+
+            if (! $hasIdentity && ! $hasPrice && ! $hasStock) {
                 continue;
             }
 
             $rows[] = [
                 '__row_index' => (int) $index,
-                'storage_capacity' => $storage,
-                'color' => $color,
-                'condition' => $condition,
+                'storage_capacity' => $storage !== '' ? $storage : null,
+                'color' => $color !== '' ? $color : null,
+                'condition' => $condition !== '' ? $condition : null,
                 'ram' => $ram !== '' ? $ram : null,
                 'ssd' => $ssd !== '' ? $ssd : null,
+                'cpu' => $cpu !== '' ? $cpu : null,
+                'display' => $display !== '' ? $display : null,
+                'country' => $country !== '' ? $country : null,
                 'price' => max($price, 0),
                 'stock' => max($stock, 0),
                 'sku' => $sku !== '' ? $sku : null,
@@ -357,6 +369,9 @@ class ProductController extends Controller
             $validated['condition'] = [];
             $validated['ram'] = [];
             $validated['ssd'] = [];
+            $validated['cpu'] = [];
+            $validated['display'] = [];
+            $validated['country'] = [];
 
             return;
         }
@@ -372,6 +387,9 @@ class ProductController extends Controller
         $validated['condition'] = $this->uniqueVariantValues($variantRows, 'condition');
         $validated['ram'] = $this->uniqueVariantValues($variantRows, 'ram');
         $validated['ssd'] = $this->uniqueVariantValues($variantRows, 'ssd');
+        $validated['cpu'] = $this->uniqueVariantValues($variantRows, 'cpu');
+        $validated['display'] = $this->uniqueVariantValues($variantRows, 'display');
+        $validated['country'] = $this->uniqueVariantValues($variantRows, 'country');
     }
 
     /**

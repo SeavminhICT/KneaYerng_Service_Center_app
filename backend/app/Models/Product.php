@@ -27,12 +27,19 @@ class Product extends Model
         'PROMOTION',
     ];
 
+    public const PRODUCT_TYPES = [
+        'mobile',
+        'mac',
+        'accessory',
+    ];
+
     protected $fillable = [
         'added_by',
         'name',
         'description',
         'sku',
         'category_id',
+        'product_type',
         'price',
         'discount',
         'stock',

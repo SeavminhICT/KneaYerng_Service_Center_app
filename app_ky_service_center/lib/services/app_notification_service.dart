@@ -104,25 +104,34 @@ class AppNotificationService {
     await _initializeLocalNotifications();
 
     if (hasFirebase) {
-      FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
-      await _messaging.setForegroundNotificationPresentationOptions(
-        alert: false,
-        badge: false,
-        sound: false,
-      );
+      try {
+        FirebaseMessaging.onBackgroundMessage(
+          firebaseMessagingBackgroundHandler,
+        );
+        await _messaging.setForegroundNotificationPresentationOptions(
+          alert: false,
+          badge: false,
+          sound: false,
+        );
 
-      FirebaseMessaging.onMessage.listen(_handleForegroundMessage);
-      FirebaseMessaging.onMessageOpenedApp.listen(_handleRemoteMessageTap);
-      _messaging.onTokenRefresh.listen((token) {
-        syncTokenWithBackend(force: true);
-      });
+        FirebaseMessaging.onMessage.listen(_handleForegroundMessage);
+        FirebaseMessaging.onMessageOpenedApp.listen(_handleRemoteMessageTap);
+        _messaging.onTokenRefresh.listen((token) {
+          syncTokenWithBackend(force: true);
+        });
 
-      final initialMessage = await _messaging.getInitialMessage();
-      if (initialMessage != null) {
-        _queueLaunchTarget(_launchTargetFromRemoteMessage(initialMessage));
+        final initialMessage = await _messaging.getInitialMessage();
+        if (initialMessage != null) {
+          _queueLaunchTarget(_launchTargetFromRemoteMessage(initialMessage));
+        }
+
+        await syncTokenWithBackend(force: true);
+      } catch (e) {
+        // FCM setup is best-effort: emulators/devices without working Google
+        // Play services throw here (e.g. "FCM Registration failed!"). Local
+        // notifications and stored-notification polling must still work.
+        debugPrint('FCM push setup failed, continuing without it: $e');
       }
-
-      await syncTokenWithBackend(force: true);
     } else {
       debugPrint(
         'Skipping FCM push setup: Firebase is not configured for this build.',
@@ -231,7 +240,13 @@ class AppNotificationService {
     // (anonymous) device so broadcasts still reach it.
     final authToken = (await ApiService.getToken())?.trim();
 
-    final token = await _messaging.getToken();
+    String? token;
+    try {
+      token = await _messaging.getToken();
+    } catch (e) {
+      debugPrint('Failed to obtain FCM token: $e');
+      return false;
+    }
     final normalizedToken = token?.trim();
     if (normalizedToken == null || normalizedToken.isEmpty) return false;
 
@@ -267,7 +282,13 @@ class AppNotificationService {
 
   Future<void> unregisterDeviceToken() async {
     if (!_isSupportedMobilePlatform || Firebase.apps.isEmpty) return;
-    final token = await _messaging.getToken();
+    String? token;
+    try {
+      token = await _messaging.getToken();
+    } catch (e) {
+      debugPrint('Failed to obtain FCM token: $e');
+      return;
+    }
     final normalized = token?.trim();
     if (normalized == null || normalized.isEmpty) return;
 

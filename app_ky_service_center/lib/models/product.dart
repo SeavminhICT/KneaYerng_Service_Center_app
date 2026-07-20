@@ -11,6 +11,9 @@ class ProductVariant {
     required this.stock,
     this.ram,
     this.ssd,
+    this.cpu,
+    this.display,
+    this.country,
     this.sku,
     this.imageUrl,
     this.isActive = true,
@@ -24,6 +27,9 @@ class ProductVariant {
   final int stock;
   final String? ram;
   final String? ssd;
+  final String? cpu;
+  final String? display;
+  final String? country;
   final String? sku;
   final String? imageUrl;
   final bool isActive;
@@ -40,6 +46,9 @@ class ProductVariant {
       stock: Product._toIntOrNull(json['stock']) ?? 0,
       ram: Product._toTextValue(json['ram']),
       ssd: Product._toTextValue(json['ssd']),
+      cpu: Product._toTextValue(json['cpu']),
+      display: Product._toTextValue(json['display']),
+      country: Product._toTextValue(json['country']),
       sku: Product._toTextValue(json['sku']),
       imageUrl: ApiService.normalizeMediaUrl(
         Product._pickImageValue(json, const [
@@ -67,6 +76,7 @@ class Product {
     this.categoryName,
     this.categoryId,
     this.brand,
+    this.productType,
     this.description,
     this.sku,
     this.discount,
@@ -98,6 +108,7 @@ class Product {
   final String? categoryName;
   final int? categoryId;
   final String? brand;
+  final String? productType;
   final String? description;
   final String? sku;
   final double? discount;
@@ -129,6 +140,7 @@ class Product {
         'category_name': categoryName,
         'category_id': categoryId,
         'brand': brand,
+        'product_type': productType,
         'description': description,
         'sku': sku,
         'discount': discount,
@@ -223,6 +235,7 @@ class Product {
       categoryName: resolvedCategoryName,
       categoryId: resolvedCategoryId,
       brand: json['brand']?.toString(),
+      productType: json['product_type']?.toString(),
       description: _toTextValue(json['description']),
       sku: json['sku']?.toString(),
       discount: _toDoubleOrNull(
@@ -452,12 +465,6 @@ class Product {
     return value
         .whereType<Map>()
         .map((item) => ProductVariant.fromJson(Map<String, dynamic>.from(item)))
-        .where(
-          (variant) =>
-              variant.storageCapacity.trim().isNotEmpty &&
-              variant.color.trim().isNotEmpty &&
-              variant.condition.trim().isNotEmpty,
-        )
         .toList();
   }
 }

@@ -217,17 +217,18 @@ String? _discountLabel(Product product) {
   return '$percent% OFF';
 }
 
-/// Badge text shown on a product card: a discount percentage if present,
-/// otherwise the product tag, a "New" badge for recently created
+/// Badge text shown on a product card: the admin-set tag if present
+/// (Hot Sale, Top Seller, Promotion — same as the admin panel),
+/// otherwise a discount percentage, a "New" badge for recently created
 /// products, or a generic "Featured" fallback.
 String? homeProductBadgeText(Product product) {
-  final discount = _discountLabel(product);
-  if (discount != null) return discount;
-
   final tag = product.tag?.trim();
   if (tag != null && tag.isNotEmpty) {
     return _formatTagLabel(tag);
   }
+
+  final discount = _discountLabel(product);
+  if (discount != null) return discount;
 
   if (product.createdAt != null &&
       DateTime.now().difference(product.createdAt!).inDays <= 30) {
@@ -249,6 +250,10 @@ class _DiscountBadge extends StatelessWidget {
         ? const Color(0xFFFF7A1A)
         : lower.contains('hot')
         ? const Color(0xFFEF4444)
+        : lower.contains('top')
+        ? const Color(0xFFF59E0B)
+        : lower.contains('promo')
+        ? const Color(0xFF8B5CF6)
         : lower.contains('new')
         ? const Color(0xFF22A06B)
         : homePrimary;

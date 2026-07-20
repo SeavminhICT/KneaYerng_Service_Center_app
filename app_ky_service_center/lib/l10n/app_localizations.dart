@@ -82,6 +82,8 @@ class AppLocalizations {
   String get searchProducts   => _t('Search products...',        'ស្វែងរកផលិតផល...');
   String get categories       => _t('Categories',               'ប្រភេទ');
   String get hotSale          => _t('Hot Sale',                 'ពិសេសប្រចាំថ្ងៃ');
+  String get topSeller        => _t('Top Seller',               'លក់ដាច់បំផុត');
+  String get promotion        => _t('Promotion',                'ប្រូម៉ូសិន');
   String get featuredProducts => _t('Featured Products',        'ផលិតផលពិសេស');
   String get popularProducts  => _t('Popular Products',         'ផលិតផលពេញនិយម');
   String get newArrivals      => _t('New Arrivals',             'ទំនិញថ្មី');

@@ -18,12 +18,27 @@
 
             <div class="grid gap-4 sm:grid-cols-2">
                 <div>
+                    <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="product-type">Product Type</label>
+                    @php
+                        $currentProductType = old('product_type', $product->product_type ?? 'mobile');
+                    @endphp
+                    <select id="product-type" name="product_type" class="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200">
+                        <option value="mobile" {{ $currentProductType === 'mobile' ? 'selected' : '' }}>Mobile</option>
+                        <option value="mac" {{ $currentProductType === 'mac' ? 'selected' : '' }}>Mac</option>
+                        <option value="accessory" {{ $currentProductType === 'accessory' ? 'selected' : '' }}>Accessory</option>
+                    </select>
+                </div>
+                <div>
                     <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="name">Product Name</label>
                     <input id="name" name="name" type="text" value="{{ old('name', $product->name ?? '') }}" class="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200" />
                 </div>
                 <div>
                     <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="brand">Brand</label>
-                    <input id="brand" name="brand" type="text" value="{{ old('brand', $product->brand ?? '') }}" class="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200" />
+                    <input id="brand" name="brand" type="text" value="{{ old('brand', $product->brand ?? '') }}" list="brand-presets" class="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200" />
+                    <datalist id="brand-presets">
+                        <option value="Apple"></option>
+                        <option value="Samsung"></option>
+                    </datalist>
                 </div>
                 <div>
                     <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="sku">SKU</label>
@@ -49,18 +64,6 @@
                 <div>
                     <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="discount">Discount</label>
                     <input id="discount" name="discount" type="number" step="0.01" min="0" value="{{ old('discount', $product->discount ?? 0) }}" class="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200" />
-                </div>
-                <div>
-                    <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="cpu">CPU</label>
-                    <input id="cpu" name="cpu" type="text" value="{{ old('cpu', is_array($product->cpu ?? null) ? implode(', ', $product->cpu) : ($product->cpu ?? '')) }}" class="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200" />
-                </div>
-                <div>
-                    <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="display">Display</label>
-                    <input id="display" name="display" type="text" value="{{ old('display', is_array($product->display ?? null) ? implode(', ', $product->display) : ($product->display ?? '')) }}" class="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200" />
-                </div>
-                <div>
-                    <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="country">Country / Region</label>
-                    <input id="country" name="country" type="text" value="{{ old('country', is_array($product->country ?? null) ? implode(', ', $product->country) : ($product->country ?? '')) }}" class="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200" />
                 </div>
                 <div>
                     <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="warranty">
@@ -127,41 +130,43 @@
                 <div class="flex items-center justify-between gap-3">
                     <div>
                         <h3 class="text-sm font-semibold text-slate-900 dark:text-white">Variant Builder</h3>
-                        <p class="text-xs text-slate-500">Add, edit, or delete product variants.</p>
+                        <p id="variant-section-hint" class="text-xs text-slate-500">Add, edit, or delete product variants.</p>
                     </div>
                     <button id="variant-clear-btn" type="button" class="rounded-lg border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600 dark:border-slate-700 dark:text-slate-300">Clear</button>
                 </div>
 
                 <div class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                    <div>
-                        <label class="text-xs font-semibold text-slate-600 dark:text-slate-300" for="variant-storage">Storage</label>
-                        <select id="variant-storage" class="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200">
-                            <option value="">Loading…</option>
-                        </select>
+                    <div data-variant-field="display">
+                        <label class="text-xs font-semibold text-slate-600 dark:text-slate-300" for="variant-display" id="variant-label-display">Display</label>
+                        <select id="variant-display" class="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200"></select>
                     </div>
-                    <div>
-                        <label class="text-xs font-semibold text-slate-600 dark:text-slate-300" for="variant-color">Color</label>
-                        <select id="variant-color" class="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200">
-                            <option value="">Loading…</option>
-                        </select>
+                    <div data-variant-field="cpu">
+                        <label class="text-xs font-semibold text-slate-600 dark:text-slate-300" for="variant-cpu" id="variant-label-cpu">CPU</label>
+                        <select id="variant-cpu" class="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200"></select>
                     </div>
-                    <div>
-                        <label class="text-xs font-semibold text-slate-600 dark:text-slate-300" for="variant-condition">Condition</label>
-                        <select id="variant-condition" class="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200">
-                            <option value="">Loading…</option>
-                        </select>
+                    <div data-variant-field="storage">
+                        <label class="text-xs font-semibold text-slate-600 dark:text-slate-300" for="variant-storage" id="variant-label-storage">Storage</label>
+                        <select id="variant-storage" class="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200"></select>
                     </div>
-                    <div>
-                        <label class="text-xs font-semibold text-slate-600 dark:text-slate-300" for="variant-ram">RAM</label>
-                        <select id="variant-ram" class="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200">
-                            <option value="">Loading…</option>
-                        </select>
+                    <div data-variant-field="ram">
+                        <label class="text-xs font-semibold text-slate-600 dark:text-slate-300" for="variant-ram" id="variant-label-ram">RAM</label>
+                        <select id="variant-ram" class="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200"></select>
                     </div>
-                    <div>
-                        <label class="text-xs font-semibold text-slate-600 dark:text-slate-300" for="variant-ssd">SSD</label>
-                        <select id="variant-ssd" class="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200">
-                            <option value="">Loading…</option>
-                        </select>
+                    <div data-variant-field="ssd">
+                        <label class="text-xs font-semibold text-slate-600 dark:text-slate-300" for="variant-ssd" id="variant-label-ssd">SSD</label>
+                        <select id="variant-ssd" class="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200"></select>
+                    </div>
+                    <div data-variant-field="color">
+                        <label class="text-xs font-semibold text-slate-600 dark:text-slate-300" for="variant-color" id="variant-label-color">Color</label>
+                        <select id="variant-color" class="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200"></select>
+                    </div>
+                    <div data-variant-field="condition">
+                        <label class="text-xs font-semibold text-slate-600 dark:text-slate-300" for="variant-condition" id="variant-label-condition">Condition</label>
+                        <select id="variant-condition" class="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200"></select>
+                    </div>
+                    <div data-variant-field="country">
+                        <label class="text-xs font-semibold text-slate-600 dark:text-slate-300" for="variant-country" id="variant-label-country">Country</label>
+                        <select id="variant-country" class="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200"></select>
                     </div>
                     <div>
                         <label class="text-xs font-semibold text-slate-600 dark:text-slate-300" for="variant-sku">SKU</label>
@@ -189,18 +194,7 @@
                 <div class="mt-4 overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800">
                     <table class="w-full text-left text-sm">
                         <thead class="bg-slate-50 text-xs uppercase tracking-wider text-slate-500 dark:bg-slate-950 dark:text-slate-400">
-                            <tr>
-                                <th class="px-3 py-2">Storage</th>
-                                <th class="px-3 py-2">Color</th>
-                                <th class="px-3 py-2">Condition</th>
-                                <th class="px-3 py-2">Price</th>
-                                <th class="px-3 py-2">Stock</th>
-                                <th class="px-3 py-2">RAM</th>
-                                <th class="px-3 py-2">SSD</th>
-                                <th class="px-3 py-2">SKU</th>
-                                <th class="px-3 py-2">Image</th>
-                                <th class="px-3 py-2 text-right">Action</th>
-                            </tr>
+                            <tr id="variant-table-head"></tr>
                         </thead>
                         <tbody id="variant-table-body" class="divide-y divide-slate-200 dark:divide-slate-800"></tbody>
                     </table>
@@ -279,33 +273,66 @@
             const productId = form.dataset.productId;
             const variants = [];
             let editIndex = null;
+            let masterOptions = {};
 
-            const variantStorage = document.getElementById('variant-storage');
-            const variantColor = document.getElementById('variant-color');
-            const variantCondition = document.getElementById('variant-condition');
-            const variantRam = document.getElementById('variant-ram');
-            const variantSsd = document.getElementById('variant-ssd');
+            // Variant attribute fields shown per product type (same config as the create page).
+            const VARIANT_FIELDS = {
+                display: { payloadKey: 'display',          masterType: 'display',          label: 'Display',   placeholder: 'Select display' },
+                cpu:     { payloadKey: 'cpu',              masterType: 'cpu',              label: 'CPU',       placeholder: 'Select CPU' },
+                storage: { payloadKey: 'storage_capacity', masterType: 'storage_capacity', label: 'Storage',   placeholder: 'Select storage' },
+                ram:     { payloadKey: 'ram',              masterType: 'ram',              label: 'RAM',       placeholder: 'Select RAM' },
+                ssd:     { payloadKey: 'ssd',              masterType: 'ssd',              label: 'SSD',       placeholder: 'Select SSD' },
+                color:   { payloadKey: 'color',            masterType: 'color',            label: 'Color',     placeholder: 'Select color' },
+                condition: { payloadKey: 'condition',      masterType: 'condition',        label: 'Condition', placeholder: 'Select condition' },
+                country: { payloadKey: 'country',          masterType: 'country',          label: 'Country',   placeholder: 'Select country' },
+            };
+
+            const TYPE_CONFIG = {
+                mobile: {
+                    fields: ['storage', 'color', 'condition', 'country'],
+                    required: ['storage', 'color', 'condition'],
+                    labels: {},
+                    hint: 'Mobile variants: storage, color, condition, country, price, SKU and stock.',
+                },
+                mac: {
+                    fields: ['display', 'cpu', 'storage', 'ram', 'ssd', 'color', 'condition', 'country'],
+                    required: ['storage', 'color', 'condition'],
+                    labels: { storage: 'Capacity', ssd: 'Storage (SSD)' },
+                    hint: 'Mac variants: display, CPU, capacity, RAM, storage, color, condition and country — options come from Product Master.',
+                },
+                accessory: {
+                    fields: ['color'],
+                    required: [],
+                    labels: {},
+                    hint: 'Accessory variants: color (optional), price, SKU and stock.',
+                },
+            };
+
+            const productTypeSelect = document.getElementById('product-type');
             const variantSku = document.getElementById('variant-sku');
             const variantPrice = document.getElementById('variant-price');
             const variantStock = document.getElementById('variant-stock');
             const variantImage = document.getElementById('variant-image');
             const variantAddBtn = document.getElementById('variant-add-btn');
             const variantClearBtn = document.getElementById('variant-clear-btn');
+            const variantHead = document.getElementById('variant-table-head');
             const variantRows = document.getElementById('variant-table-body');
             const variantFormError = document.getElementById('variant-form-error');
             const variantCountBadge = document.getElementById('variant-count-badge');
+            const variantSectionHint = document.getElementById('variant-section-hint');
             const productPriceInput = document.getElementById('price');
             const productStockInput = document.getElementById('stock');
 
-            function cleanText(value) {
-                return String(value || '').trim();
+            function currentConfig() {
+                return TYPE_CONFIG[productTypeSelect.value] || TYPE_CONFIG.mobile;
             }
 
-            function toArrayText(value) {
-                if (Array.isArray(value)) {
-                    return value.map((item) => cleanText(item)).filter(Boolean).join(', ');
-                }
-                return cleanText(value);
+            function fieldSelect(key) {
+                return document.getElementById('variant-' + key);
+            }
+
+            function cleanText(value) {
+                return String(value || '').trim();
             }
 
             function toNumber(value, fallback) {
@@ -317,19 +344,59 @@
                 return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value || 0);
             }
 
+            function escapeHtml(value) {
+                return String(value || '')
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;');
+            }
+
             function variantKey(item) {
-                return [item.storage_capacity, item.color, item.condition]
-                    .map((value) => cleanText(value).toLowerCase())
+                return currentConfig().fields
+                    .map((key) => cleanText(item[VARIANT_FIELDS[key].payloadKey]).toLowerCase())
                     .join('|');
+            }
+
+            function applyVariantFields() {
+                const config = currentConfig();
+
+                document.querySelectorAll('[data-variant-field]').forEach(function (wrapper) {
+                    const key = wrapper.getAttribute('data-variant-field');
+                    wrapper.classList.toggle('hidden', config.fields.indexOf(key) === -1);
+                });
+
+                config.fields.forEach(function (key) {
+                    const label = document.getElementById('variant-label-' + key);
+                    if (label) {
+                        const text = config.labels[key] || VARIANT_FIELDS[key].label;
+                        label.textContent = text + (config.required.indexOf(key) !== -1 ? ' *' : '');
+                    }
+                });
+
+                variantSectionHint.textContent = config.hint;
+                renderVariantHead();
+            }
+
+            function renderVariantHead() {
+                const config = currentConfig();
+                const cells = config.fields.map(function (key) {
+                    return '<th class="px-3 py-2">' + escapeHtml(config.labels[key] || VARIANT_FIELDS[key].label) + '</th>';
+                });
+                cells.push('<th class="px-3 py-2">Price</th>');
+                cells.push('<th class="px-3 py-2">Stock</th>');
+                cells.push('<th class="px-3 py-2">SKU</th>');
+                cells.push('<th class="px-3 py-2">Image</th>');
+                cells.push('<th class="px-3 py-2 text-right">Action</th>');
+                variantHead.innerHTML = cells.join('');
             }
 
             function resetVariantForm() {
                 editIndex = null;
-                variantStorage.value = '';
-                variantColor.value = '';
-                variantCondition.value = '';
-                variantRam.value = '';
-                variantSsd.value = '';
+                Object.keys(VARIANT_FIELDS).forEach(function (key) {
+                    const select = fieldSelect(key);
+                    if (select) select.value = '';
+                });
                 variantSku.value = '';
                 variantPrice.value = '';
                 variantStock.value = '';
@@ -352,44 +419,48 @@
             }
 
             function renderVariantRows() {
+                const config = currentConfig();
+                const columnCount = config.fields.length + 5;
+
                 if (!variants.length) {
-                    variantRows.innerHTML = '<tr><td colspan="10" class="px-3 py-4 text-center text-xs text-slate-500">No variants configured.</td></tr>';
+                    variantRows.innerHTML = '<tr><td colspan="' + columnCount + '" class="px-3 py-4 text-center text-xs text-slate-500">No variants configured.</td></tr>';
                     updateVariantSummary();
                     return;
                 }
 
-                variantRows.innerHTML = variants.map((item, index) => {
+                variantRows.innerHTML = variants.map(function (item, index) {
                     const hasNewFile = item.file instanceof File;
                     const imageText = hasNewFile ? item.file.name : (cleanText(item.image) ? 'Existing image' : 'None');
-                    return `
-                        <tr>
-                            <td class="px-3 py-2">${item.storage_capacity}</td>
-                            <td class="px-3 py-2">${item.color}</td>
-                            <td class="px-3 py-2">${item.condition}</td>
-                            <td class="px-3 py-2">${formatMoney(toNumber(item.price, 0))}</td>
-                            <td class="px-3 py-2">${toNumber(item.stock, 0)}</td>
-                            <td class="px-3 py-2">${cleanText(item.ram) || '--'}</td>
-                            <td class="px-3 py-2">${cleanText(item.ssd) || '--'}</td>
-                            <td class="px-3 py-2">${cleanText(item.sku) || '--'}</td>
-                            <td class="px-3 py-2 text-xs text-slate-500">${imageText}</td>
-                            <td class="px-3 py-2 text-right">
-                                <button type="button" data-action="edit" data-index="${index}" class="text-xs font-semibold text-primary-600">Edit</button>
-                                <button type="button" data-action="delete" data-index="${index}" class="ml-3 text-xs font-semibold text-danger-600">Delete</button>
-                            </td>
-                        </tr>
-                    `;
+                    const cells = config.fields.map(function (key) {
+                        return '<td class="px-3 py-2">' + (escapeHtml(cleanText(item[VARIANT_FIELDS[key].payloadKey])) || '--') + '</td>';
+                    });
+                    cells.push('<td class="px-3 py-2">' + formatMoney(toNumber(item.price, 0)) + '</td>');
+                    cells.push('<td class="px-3 py-2">' + toNumber(item.stock, 0) + '</td>');
+                    cells.push('<td class="px-3 py-2">' + (escapeHtml(cleanText(item.sku)) || '--') + '</td>');
+                    cells.push('<td class="px-3 py-2 text-xs text-slate-500">' + escapeHtml(imageText) + '</td>');
+                    cells.push(
+                        '<td class="px-3 py-2 text-right">'
+                        + '<button type="button" data-action="edit" data-index="' + index + '" class="text-xs font-semibold text-primary-600">Edit</button>'
+                        + '<button type="button" data-action="delete" data-index="' + index + '" class="ml-3 text-xs font-semibold text-danger-600">Delete</button>'
+                        + '</td>'
+                    );
+                    return '<tr>' + cells.join('') + '</tr>';
                 }).join('');
 
                 updateVariantSummary();
             }
 
             function readVariantInput() {
+                const config = currentConfig();
                 const payload = {
-                    storage_capacity: cleanText(variantStorage.value),
-                    color: cleanText(variantColor.value),
-                    condition: cleanText(variantCondition.value),
-                    ram: cleanText(variantRam.value),
-                    ssd: cleanText(variantSsd.value),
+                    storage_capacity: '',
+                    color: '',
+                    condition: '',
+                    ram: '',
+                    ssd: '',
+                    cpu: '',
+                    display: '',
+                    country: '',
                     price: toNumber(variantPrice.value, NaN),
                     stock: toNumber(variantStock.value, NaN),
                     sku: cleanText(variantSku.value),
@@ -397,9 +468,20 @@
                     file: null,
                 };
 
-                if (!payload.storage_capacity || !payload.color || !payload.condition) {
-                    return { error: 'Storage, color, and condition are required.' };
+                config.fields.forEach(function (key) {
+                    payload[VARIANT_FIELDS[key].payloadKey] = cleanText(fieldSelect(key).value);
+                });
+
+                const missing = config.required.filter(function (key) {
+                    return !payload[VARIANT_FIELDS[key].payloadKey];
+                });
+                if (missing.length) {
+                    const names = missing.map(function (key) {
+                        return config.labels[key] || VARIANT_FIELDS[key].label;
+                    });
+                    return { error: names.join(', ') + (missing.length === 1 ? ' is required.' : ' are required.') };
                 }
+
                 if (!Number.isFinite(payload.price) || payload.price < 0) {
                     return { error: 'Price must be 0 or higher.' };
                 }
@@ -420,11 +502,10 @@
                     return;
                 }
                 editIndex = index;
-                variantStorage.value = cleanText(item.storage_capacity);
-                variantColor.value = cleanText(item.color);
-                variantCondition.value = cleanText(item.condition);
-                variantRam.value = cleanText(item.ram);
-                variantSsd.value = cleanText(item.ssd);
+                Object.keys(VARIANT_FIELDS).forEach(function (key) {
+                    const select = fieldSelect(key);
+                    if (select) select.value = cleanText(item[VARIANT_FIELDS[key].payloadKey]);
+                });
                 variantSku.value = cleanText(item.sku);
                 variantPrice.value = String(item.price ?? '');
                 variantStock.value = String(item.stock ?? '');
@@ -448,7 +529,7 @@
                     return variantKey(item) === variantKey(payload);
                 });
                 if (duplicate) {
-                    variantFormError.textContent = 'This storage/color/condition combination already exists.';
+                    variantFormError.textContent = 'This variant combination already exists.';
                     return;
                 }
 
@@ -482,6 +563,12 @@
 
             variantAddBtn.addEventListener('click', addOrUpdateVariant);
             variantClearBtn.addEventListener('click', resetVariantForm);
+
+            productTypeSelect.addEventListener('change', function () {
+                resetVariantForm();
+                applyVariantFields();
+                renderVariantRows();
+            });
 
             variantRows.addEventListener('click', function (event) {
                 const button = event.target.closest('button[data-action]');
@@ -547,6 +634,9 @@
                         condition: cleanText(item.condition),
                         ram: cleanText(item.ram),
                         ssd: cleanText(item.ssd),
+                        cpu: cleanText(item.cpu),
+                        display: cleanText(item.display),
+                        country: cleanText(item.country),
                         price: toNumber(item.price, 0),
                         stock: toNumber(item.stock, 0),
                         sku: cleanText(item.sku),
@@ -589,11 +679,14 @@
                 const formData = new FormData(form);
                 formData.append('_method', 'PUT');
                 formData.set('variants', JSON.stringify(variants.map((item) => ({
-                    storage_capacity: item.storage_capacity,
-                    color: item.color,
-                    condition: item.condition,
+                    storage_capacity: cleanText(item.storage_capacity) || null,
+                    color: cleanText(item.color) || null,
+                    condition: cleanText(item.condition) || null,
                     ram: cleanText(item.ram) || null,
                     ssd: cleanText(item.ssd) || null,
+                    cpu: cleanText(item.cpu) || null,
+                    display: cleanText(item.display) || null,
+                    country: cleanText(item.country) || null,
                     price: toNumber(item.price, 0),
                     stock: toNumber(item.stock, 0),
                     sku: cleanText(item.sku) || null,
@@ -639,59 +732,44 @@
                 }
             });
 
-            function escapeAttrOption(value) {
-                return String(value || '')
-                    .replace(/&/g, '&amp;')
-                    .replace(/</g, '&lt;')
-                    .replace(/>/g, '&gt;')
-                    .replace(/"/g, '&quot;');
+            function populateAttributeSelects() {
+                Object.keys(VARIANT_FIELDS).forEach(function (key) {
+                    const cfg = VARIANT_FIELDS[key];
+                    const select = fieldSelect(key);
+                    if (!select) {
+                        return;
+                    }
+                    const current = select.value;
+                    const values = masterOptions[cfg.masterType] || [];
+                    select.innerHTML = '<option value="">' + escapeHtml(cfg.placeholder) + '</option>'
+                        + values.map(function (value) {
+                            const escaped = escapeHtml(value);
+                            return '<option value="' + escaped + '">' + escaped + '</option>';
+                        }).join('');
+                    if (current) {
+                        select.value = current;
+                    }
+                });
             }
 
+            // Options come from the Product Master (product attribute options).
             async function loadAttributeOptions() {
-                var selectMap = {
-                    storage_capacity: { id: 'variant-storage',   placeholder: 'Select storage' },
-                    color:            { id: 'variant-color',     placeholder: 'Select color' },
-                    condition:        { id: 'variant-condition', placeholder: 'Select condition' },
-                    ram:              { id: 'variant-ram',       placeholder: 'None' },
-                    ssd:              { id: 'variant-ssd',       placeholder: 'None' },
-                };
-
-                // Set placeholders immediately — selects never stay on "Loading…"
-                Object.keys(selectMap).forEach(function (type) {
-                    var sel = document.getElementById(selectMap[type].id);
-                    if (sel) sel.innerHTML = '<option value="">' + selectMap[type].placeholder + '</option>';
-                });
+                populateAttributeSelects();
 
                 try {
                     await window.adminApi.ensureCsrfCookie();
-                    var response = await window.adminApi.request('/api/product-attributes');
+                    const response = await window.adminApi.request('/api/product-attributes');
                     if (!response.ok) return;
-                    var payload = await response.json();
-                    var list = Array.isArray(payload.data) ? payload.data : [];
+                    const payload = await response.json();
+                    const list = Array.isArray(payload.data) ? payload.data : [];
 
-                    // Group values by type
-                    var grouped = {};
+                    masterOptions = {};
                     list.forEach(function (item) {
-                        if (!grouped[item.type]) grouped[item.type] = [];
-                        grouped[item.type].push(item.value);
+                        if (!masterOptions[item.type]) masterOptions[item.type] = [];
+                        masterOptions[item.type].push(item.value);
                     });
 
-                    // Populate each select, restoring current value if already set
-                    Object.keys(selectMap).forEach(function (type) {
-                        var cfg = selectMap[type];
-                        var sel = document.getElementById(cfg.id);
-                        if (!sel) return;
-                        var current = sel.value;
-                        var values = grouped[type] || [];
-                        if (values.length > 0) {
-                            sel.innerHTML = '<option value="">' + cfg.placeholder + '</option>' +
-                                values.map(function (v) {
-                                    var e = escapeAttrOption(v);
-                                    return '<option value="' + e + '">' + e + '</option>';
-                                }).join('');
-                            if (current) sel.value = current;
-                        }
-                    });
+                    populateAttributeSelects();
                 } catch (e) {
                     // placeholders already set above
                 }
@@ -705,6 +783,7 @@
                     loadVariants();
                 }
             });
+            applyVariantFields();
             renderVariantRows(); // Shows empty-state immediately while variants load
         })();
     </script>

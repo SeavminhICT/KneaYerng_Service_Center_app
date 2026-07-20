@@ -12,7 +12,6 @@ import '../../theme/app_palette.dart';
 import '../main_navigation_screen.dart';
 import 'register_screen.dart';
 import 'forgot_password_screen.dart';
-import 'otp_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -122,29 +121,14 @@ class _LoginScreenState extends State<LoginScreen> {
       setState(() => _loading = false);
 
       if (error == null) {
-        final otpResult = await ApiService.requestOtp(
-          destination: email,
-          type: 'email',
-          purpose: 'login',
-        );
+        // Google accounts are already verified by the backend; no OTP needed.
+        await AppNotificationService.instance.syncTokenWithBackend(force: true);
+        unawaited(CartService.instance.loadFromApi());
         if (!mounted) return;
-        setState(() => _loading = false);
-
-        if (otpResult.ok) {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => OtpScreen(
-                destination: email,
-                type: 'email',
-                purpose: 'login',
-              ),
-            ),
-          );
-        } else {
-          ScaffoldMessenger.of(context)
-              .showSnackBar(SnackBar(content: Text(otpResult.message)));
-        }
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const MainNavigationScreen()),
+        );
         return;
       }
 

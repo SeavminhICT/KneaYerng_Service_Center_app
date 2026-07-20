@@ -46,6 +46,9 @@ class _HomeScreenState extends State<HomeScreen> {
   List<BannerItem> _banners = [];
   late Future<List<Category>> _categoriesFuture;
   late Future<List<Product>> _productsFuture;
+  late Future<List<Product>> _hotSaleFuture;
+  late Future<List<Product>> _topSellerFuture;
+  late Future<List<Product>> _promotionFuture;
   Future<UserProfile?> _profileFuture = ApiService.getUserProfile();
 
   @override
@@ -53,6 +56,9 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
     _categoriesFuture = _loadCategoriesSafe();
     _productsFuture = _loadProductsSafe();
+    _hotSaleFuture = _loadTaggedProductsSafe('HOT_SALE');
+    _topSellerFuture = _loadTaggedProductsSafe('TOP_SELLER');
+    _promotionFuture = _loadTaggedProductsSafe('PROMOTION');
     _loadBanners();
     ApiService.profileVersionListenable.addListener(_handleProfileUpdated);
   }
@@ -88,9 +94,20 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() {
       _categoriesFuture = _loadCategoriesSafe(forceRefresh: true);
       _productsFuture = _loadProductsSafe(forceRefresh: true);
+      _hotSaleFuture = _loadTaggedProductsSafe('HOT_SALE', forceRefresh: true);
+      _topSellerFuture =
+          _loadTaggedProductsSafe('TOP_SELLER', forceRefresh: true);
+      _promotionFuture =
+          _loadTaggedProductsSafe('PROMOTION', forceRefresh: true);
       _profileFuture = ApiService.getUserProfile();
     });
-    await Future.wait([_categoriesFuture, _productsFuture]);
+    await Future.wait([
+      _categoriesFuture,
+      _productsFuture,
+      _hotSaleFuture,
+      _topSellerFuture,
+      _promotionFuture,
+    ]);
   }
 
   Future<void> _clearImageCache() async {
@@ -115,6 +132,103 @@ class _HomeScreenState extends State<HomeScreen> {
       debugPrint('[HomeScreen] products load failed: $error');
       rethrow;
     }
+  }
+
+  /// Loads products carrying an admin-set tag (HOT_SALE, TOP_SELLER,
+  /// PROMOTION) via the server-side tag filter, so tagged products show
+  /// even when they are not among the newest items. Falls back to
+  /// filtering the general product list if the tag request fails.
+  Future<List<Product>> _loadTaggedProductsSafe(
+    String tag, {
+    bool forceRefresh = false,
+  }) async {
+    try {
+      final products = await ApiService.fetchProducts(
+        tag: tag,
+        forceRefresh: forceRefresh,
+      );
+      // Older backends ignore the tag parameter and return every product,
+      // so re-filter locally in all cases.
+      final matched = products
+          .where((product) => (product.tag ?? '').toUpperCase() == tag)
+          .toList();
+      if (matched.isNotEmpty) return matched;
+    } catch (error) {
+      debugPrint('[HomeScreen] $tag products load failed: $error');
+    }
+
+    try {
+      final all = await _productsFuture;
+      return all
+          .where((product) => (product.tag ?? '').toUpperCase() == tag)
+          .toList();
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  /// Horizontal carousel for one admin tag (Hot Sale, Top Seller,
+  /// Promotion). Hidden entirely when no product carries the tag.
+  Widget _buildTagSection({
+    required String title,
+    required Future<List<Product>> future,
+    bool showSkeleton = true,
+  }) {
+    return FutureBuilder<List<Product>>(
+      future: future,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          if (!showSkeleton) return const SizedBox.shrink();
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              HomeSectionHeader(title: title),
+              const SizedBox(height: 14),
+              const HomeProductsSkeleton(),
+              const SizedBox(height: 22),
+            ],
+          );
+        }
+        final products = snapshot.data ?? const <Product>[];
+        if (products.isEmpty) {
+          return const SizedBox.shrink();
+        }
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            HomeSectionHeader(title: title),
+            const SizedBox(height: 14),
+            SizedBox(
+              height: 258,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: products.length,
+                separatorBuilder: (_, _) => const SizedBox(width: 14),
+                itemBuilder: (context, index) {
+                  final product = products[index];
+                  return SizedBox(
+                    width: 165,
+                    child: HomeFlashProductCard(
+                      product: product,
+                      onOpen: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) =>
+                                ProductDetailScreen(product: product),
+                          ),
+                        );
+                      },
+                      onAdd: () => _handleAddToCart(product),
+                    ),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 22),
+          ],
+        );
+      },
+    );
   }
 
   void _openSearch() {
@@ -382,66 +496,17 @@ class _HomeScreenState extends State<HomeScreen> {
                   },
                 ),
                 const SizedBox(height: 22),
-                FutureBuilder<List<Product>>(
-                  future: _productsFuture,
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          HomeSectionHeader(title: l.hotSale),
-                          const SizedBox(height: 14),
-                          const HomeProductsSkeleton(),
-                        ],
-                      );
-                    }
-                    final hotSaleProducts = (snapshot.data ?? const [])
-                        .where(
-                          (product) =>
-                              (product.tag ?? '').toUpperCase() == 'HOT_SALE',
-                        )
-                        .toList();
-                    if (hotSaleProducts.isEmpty) {
-                      return const SizedBox.shrink();
-                    }
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        HomeSectionHeader(title: l.hotSale),
-                        const SizedBox(height: 14),
-                        SizedBox(
-                          height: 258,
-                          child: ListView.separated(
-                            scrollDirection: Axis.horizontal,
-                            itemCount: hotSaleProducts.length,
-                            separatorBuilder: (_, _) =>
-                                const SizedBox(width: 14),
-                            itemBuilder: (context, index) {
-                              final product = hotSaleProducts[index];
-                              return SizedBox(
-                                width: 165,
-                                child: HomeFlashProductCard(
-                                  product: product,
-                                  onOpen: () {
-                                    Navigator.of(context).push(
-                                      MaterialPageRoute(
-                                        builder: (_) => ProductDetailScreen(
-                                          product: product,
-                                        ),
-                                      ),
-                                    );
-                                  },
-                                  onAdd: () => _handleAddToCart(product),
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                      ],
-                    );
-                  },
+                _buildTagSection(title: l.hotSale, future: _hotSaleFuture),
+                _buildTagSection(
+                  title: l.topSeller,
+                  future: _topSellerFuture,
+                  showSkeleton: false,
                 ),
-                const SizedBox(height: 22),
+                _buildTagSection(
+                  title: l.promotion,
+                  future: _promotionFuture,
+                  showSkeleton: false,
+                ),
                 const HomeValueHighlights(),
                 const SizedBox(height: 24),
                 FutureBuilder<List<Category>>(

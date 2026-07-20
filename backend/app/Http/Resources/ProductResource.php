@@ -20,10 +20,19 @@ class ProductResource extends JsonResource
             function () use ($baseUrl) {
                 return $this->variants
                     ->map(function ($variant) use ($baseUrl) {
-                        $storage = trim((string) ($variant->storage_capacity ?? ''));
-                        $color = trim((string) ($variant->color ?? ''));
-                        $condition = trim((string) ($variant->condition ?? ''));
-                        $label = implode(' / ', array_values(array_filter([$storage, $color, $condition])));
+                        $labelParts = array_map(
+                            fn ($value) => trim((string) ($value ?? '')),
+                            [
+                                $variant->display,
+                                $variant->cpu,
+                                $variant->storage_capacity,
+                                $variant->ram,
+                                $variant->ssd,
+                                $variant->color,
+                                $variant->condition,
+                            ]
+                        );
+                        $label = implode(' / ', array_values(array_filter($labelParts)));
 
                         return [
                             'id' => $variant->id,
@@ -32,6 +41,9 @@ class ProductResource extends JsonResource
                             'condition' => $variant->condition,
                             'ram' => $variant->ram,
                             'ssd' => $variant->ssd,
+                            'cpu' => $variant->cpu,
+                            'display' => $variant->display,
+                            'country' => $variant->country,
                             'price' => (float) $variant->price,
                             'stock' => (int) $variant->stock,
                             'sku' => $variant->sku,
@@ -52,6 +64,7 @@ class ProductResource extends JsonResource
             'name' => $this->name,
             'description' => $this->description,
             'sku' => $this->sku,
+            'product_type' => $this->product_type,
             'price' => $this->price,
             'discount' => $this->discount,
             'stock' => $this->stock,

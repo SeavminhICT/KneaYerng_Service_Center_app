@@ -30,6 +30,21 @@ import 'widgets/product_review_entry.dart';
 import 'widgets/product_trust_strip.dart';
 import 'widgets/product_variant_selectors.dart';
 
+/// One selectable/displayable variant attribute (storage, color, RAM, ...).
+class _VariantFieldSpec {
+  const _VariantFieldSpec(
+    this.key,
+    this.label,
+    this.selector, {
+    this.isColor = false,
+  });
+
+  final String key;
+  final String label;
+  final String Function(ProductVariant) selector;
+  final bool isColor;
+}
+
 class ProductDetailScreen extends StatefulWidget {
   const ProductDetailScreen({
     super.key,
@@ -53,9 +68,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
 
   int _galleryIndex = 0;
   int _quantity     = 1;
-  int _storageIndex = 0;
-  int _colorIndex   = 0;
-  int _conditionIndex = 0;
+  final Map<String, int> _variantIndex = {};
   bool _descriptionExpanded = false;
   bool _isReviewSheetOpen   = false;
   final List<ProductReviewEntry> _reviews = [];
@@ -196,40 +209,151 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
     return values;
   }
 
+  /// Every variant attribute the app can display/select, ordered by how
+  /// they're grouped in the admin product form (spec-y fields first, then
+  /// physical attributes). Matching for [_resolveSelectedVariant] uses the
+  /// same order, most-defining first, so a Mac's storage/RAM/SSD win over
+  /// its color/condition/country when narrowing down an exact variant.
+  List<_VariantFieldSpec> _variantFieldSpecs(Product product) => [
+        _VariantFieldSpec('display', 'Display', (v) => v.display ?? ''),
+        _VariantFieldSpec('cpu', 'CPU', (v) => v.cpu ?? ''),
+        _VariantFieldSpec(
+          'storage',
+          product.productType == 'mac' ? 'Capacity' : 'Size / Model',
+          (v) => v.storageCapacity,
+        ),
+        _VariantFieldSpec('ram', 'RAM', (v) => v.ram ?? ''),
+        _VariantFieldSpec('ssd', 'SSD', (v) => v.ssd ?? ''),
+        _VariantFieldSpec('color', 'Color', (v) => v.color, isColor: true),
+        _VariantFieldSpec('condition', 'Condition', (v) => v.condition),
+        _VariantFieldSpec('country', 'Country', (v) => v.country ?? ''),
+      ];
+
+  /// Options for each field: from live variant rows when present, otherwise
+  /// falling back to the legacy product-level (non-variant) attribute lists.
+  List<String> _optionsForField(
+    Product product,
+    List<ProductVariant> variantRows,
+    _VariantFieldSpec spec,
+  ) {
+    if (variantRows.isNotEmpty) {
+      return _variantValues(variantRows, spec.selector);
+    }
+    switch (spec.key) {
+      case 'storage':
+        return _splitOptions(product.storageCapacity);
+      case 'color':
+        return _splitOptions(product.color);
+      case 'condition':
+        return _splitOptions(product.condition);
+      case 'ram':
+        return product.ramOptions;
+      case 'ssd':
+        return _splitOptions(product.ssd);
+      case 'cpu':
+        return _splitOptions(product.cpu);
+      case 'display':
+        return _splitOptions(product.display);
+      case 'country':
+        return _splitOptions(product.country);
+    }
+    return const [];
+  }
+
   ProductVariant? _resolveSelectedVariant(
     List<ProductVariant> variants,
-    String? storage,
-    String? color,
-    String? condition,
+    List<_VariantFieldSpec> specs,
+    Map<String, String?> selected,
   ) {
     if (variants.isEmpty) return null;
 
-    bool matches(ProductVariant v,
-        {bool s = true, bool c = true, bool cond = true}) {
-      if (s && storage != null && v.storageCapacity != storage) return false;
-      if (c && color   != null && v.color            != color)   return false;
-      if (cond && condition != null && v.condition   != condition) return false;
+    bool matches(ProductVariant v, int considerCount) {
+      for (var i = 0; i < considerCount; i++) {
+        final spec = specs[i];
+        final want = selected[spec.key];
+        if (want == null || want.isEmpty) continue;
+        if (spec.selector(v).trim() != want) return false;
+      }
       return true;
     }
 
-    for (final v in variants) { if (matches(v)) return v; }
-    for (final v in variants) { if (matches(v, cond: false)) return v; }
-    for (final v in variants) { if (matches(v, c: false, cond: false)) return v; }
-    for (final v in variants) { if (matches(v, s: false, cond: false)) return v; }
+    for (var considerCount = specs.length; considerCount >= 0; considerCount--) {
+      for (final v in variants) {
+        if (matches(v, considerCount)) return v;
+      }
+    }
     return variants.first;
   }
 
-  String _selectedVariantLabel({
-    String? storage,
-    String? color,
-    String? condition,
-  }) {
+  String _selectedVariantLabel(
+    List<_VariantFieldSpec> specs,
+    Map<String, String?> selected,
+  ) {
     final parts = [
-      if (storage   != null && storage.isNotEmpty)   storage,
-      if (color     != null && color.isNotEmpty)     color,
-      if (condition != null && condition.isNotEmpty) condition,
+      for (final spec in specs)
+        if ((selected[spec.key] ?? '').isNotEmpty) selected[spec.key]!,
     ];
     return parts.join(' / ');
+  }
+
+  /// Renders a "Label · Selected" row + a chip Wrap for every variant field
+  /// that has options, separated by dividers — one block per field so Mac
+  /// products can show Display/CPU/Storage/RAM/SSD/Color/Condition/Country
+  /// side by side with mobile's simpler Storage/Color/Condition set.
+  List<Widget> _buildVariantSectionWidgets(
+    ProductDetailTone tone,
+    List<_VariantFieldSpec> specs,
+    Map<String, List<String>> options,
+    Map<String, String?> selected,
+  ) {
+    final visible = specs
+        .where((spec) => (options[spec.key] ?? const []).isNotEmpty)
+        .toList();
+    final widgets = <Widget>[];
+
+    for (var i = 0; i < visible.length; i++) {
+      final spec = visible[i];
+      final values = options[spec.key]!;
+      final selectedValue = selected[spec.key] ?? values.first;
+      final selectedIndex = values.indexOf(selectedValue);
+
+      widgets.add(ProductVariantRow(
+        tone: tone,
+        label: spec.label,
+        selected: selectedValue,
+      ));
+      widgets.add(const SizedBox(height: 10));
+      widgets.add(Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: List.generate(values.length, (j) {
+          final isSelected = j == selectedIndex;
+          if (spec.isColor) {
+            return ProductColorChip(
+              tone: tone,
+              label: values[j],
+              color: _colorFromName(values[j]),
+              selected: isSelected,
+              onTap: () => setState(() => _variantIndex[spec.key] = j),
+            );
+          }
+          return ProductVariantChipButton(
+            tone: tone,
+            label: values[j],
+            selected: isSelected,
+            onTap: () => setState(() => _variantIndex[spec.key] = j),
+          );
+        }),
+      ));
+
+      if (i != visible.length - 1) {
+        widgets.add(const SizedBox(height: 16));
+        widgets.add(Divider(color: tone.divider, height: 1));
+        widgets.add(const SizedBox(height: 16));
+      }
+    }
+
+    return widgets;
   }
 
   double _discountPercent(Product p) {
@@ -368,36 +492,36 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
     final l                = AppLocalizations.of(context);
     final product          = widget.product;
     final variantRows      = _activeVariants(product);
-    final storageOptions   = variantRows.isNotEmpty
-        ? _variantValues(variantRows, (v) => v.storageCapacity)
-        : _splitOptions(product.storageCapacity);
-    final colorOptions     = variantRows.isNotEmpty
-        ? _variantValues(variantRows, (v) => v.color)
-        : _splitOptions(product.color);
-    final conditionOptions = variantRows.isNotEmpty
-        ? _variantValues(variantRows, (v) => v.condition)
-        : _splitOptions(product.condition);
+    final variantSpecs     = _variantFieldSpecs(product);
 
-    if (_storageIndex   >= storageOptions.length)   _storageIndex   = 0;
-    if (_colorIndex     >= colorOptions.length)     _colorIndex     = 0;
-    if (_conditionIndex >= conditionOptions.length) _conditionIndex = 0;
-
-    final selectedStorage   = storageOptions.isNotEmpty
-        ? storageOptions[_storageIndex]   : null;
-    final selectedColor     = colorOptions.isNotEmpty
-        ? colorOptions[_colorIndex]       : null;
-    final selectedCondition = conditionOptions.isNotEmpty
-        ? conditionOptions[_conditionIndex] : null;
+    // Options + the currently-selected value for every variant attribute
+    // that has at least one option for this product (storage/color/condition
+    // for mobile, all eight for Mac, color only for accessories, etc).
+    final variantOptions = <String, List<String>>{};
+    final selectedByField = <String, String?>{};
+    for (final spec in variantSpecs) {
+      final options = _optionsForField(product, variantRows, spec);
+      variantOptions[spec.key] = options;
+      var index = _variantIndex[spec.key] ?? 0;
+      if (index >= options.length) {
+        index = 0;
+        _variantIndex[spec.key] = 0;
+      }
+      selectedByField[spec.key] = options.isNotEmpty ? options[index] : null;
+    }
 
     final selectedVariantEntity = variantRows.isNotEmpty
-        ? _resolveSelectedVariant(
-            variantRows, selectedStorage, selectedColor, selectedCondition)
+        ? _resolveSelectedVariant(variantRows, variantSpecs, selectedByField)
         : null;
-    final selectedVariant = _selectedVariantLabel(
-      storage:   selectedVariantEntity?.storageCapacity ?? selectedStorage,
-      color:     selectedVariantEntity?.color           ?? selectedColor,
-      condition: selectedVariantEntity?.condition       ?? selectedCondition,
-    );
+    if (selectedVariantEntity != null) {
+      for (final spec in variantSpecs) {
+        final fromVariant = spec.selector(selectedVariantEntity).trim();
+        if (fromVariant.isNotEmpty) {
+          selectedByField[spec.key] = fromVariant;
+        }
+      }
+    }
+    final selectedVariant = _selectedVariantLabel(variantSpecs, selectedByField);
 
     final gallery   = _buildGallery(product,
         preferredImage: selectedVariantEntity?.imageUrl);
@@ -428,6 +552,12 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
       builder: (context, _) {
         final isFavorite = FavoriteService.instance.contains(product);
         final tone = ProductDetailTone.of(context);
+        final variantSectionWidgets = _buildVariantSectionWidgets(
+          tone,
+          variantSpecs,
+          variantOptions,
+          selectedByField,
+        );
 
         return Theme(
           data: Theme.of(context).copyWith(
@@ -542,9 +672,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
                                   const SizedBox(height: 16),
 
                                   // ── Variants section ──────────────────
-                                  if (storageOptions.isNotEmpty ||
-                                      colorOptions.isNotEmpty ||
-                                      conditionOptions.isNotEmpty) ...[
+                                  if (variantSectionWidgets.isNotEmpty) ...[
                                     ProductDetailSectionTitle(title: l.filter, tone: tone),
                                     const SizedBox(height: 12),
                                     ProductDetailCard(
@@ -553,90 +681,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
                                         crossAxisAlignment:
                                             CrossAxisAlignment.start,
                                         children: [
-                                          if (storageOptions.isNotEmpty) ...[
-                                            ProductVariantRow(
-                                              tone: tone,
-                                              label: 'Size / Model',
-                                              selected: storageOptions[
-                                                  _storageIndex],
-                                            ),
-                                            const SizedBox(height: 10),
-                                            Wrap(
-                                              spacing:    8,
-                                              runSpacing: 8,
-                                              children: List.generate(
-                                                storageOptions.length,
-                                                (i) => ProductVariantChipButton(
-                                                  tone:     tone,
-                                                  label:    storageOptions[i],
-                                                  selected: _storageIndex == i,
-                                                  onTap: () => setState(
-                                                      () => _storageIndex = i),
-                                                ),
-                                              ),
-                                            ),
-                                            if (colorOptions.isNotEmpty ||
-                                                conditionOptions.isNotEmpty) ...[
-                                              const SizedBox(height: 16),
-                                              Divider(
-                                                  color: tone.divider, height: 1),
-                                              const SizedBox(height: 16),
-                                            ],
-                                          ],
-                                          if (colorOptions.isNotEmpty) ...[
-                                            ProductVariantRow(
-                                              tone:     tone,
-                                              label:    'Color',
-                                              selected: colorOptions[_colorIndex],
-                                            ),
-                                            const SizedBox(height: 10),
-                                            Wrap(
-                                              spacing:    8,
-                                              runSpacing: 8,
-                                              children: List.generate(
-                                                colorOptions.length,
-                                                (i) => ProductColorChip(
-                                                  tone:     tone,
-                                                  label:    colorOptions[i],
-                                                  color: _colorFromName(
-                                                      colorOptions[i]),
-                                                  selected: _colorIndex == i,
-                                                  onTap: () => setState(
-                                                      () => _colorIndex = i),
-                                                ),
-                                              ),
-                                            ),
-                                            if (conditionOptions.isNotEmpty) ...[
-                                              const SizedBox(height: 16),
-                                              Divider(
-                                                  color: tone.divider, height: 1),
-                                              const SizedBox(height: 16),
-                                            ],
-                                          ],
-                                          if (conditionOptions.isNotEmpty) ...[
-                                            ProductVariantRow(
-                                              tone: tone,
-                                              label: 'Condition',
-                                              selected: conditionOptions[
-                                                  _conditionIndex],
-                                            ),
-                                            const SizedBox(height: 10),
-                                            Wrap(
-                                              spacing:    8,
-                                              runSpacing: 8,
-                                              children: List.generate(
-                                                conditionOptions.length,
-                                                (i) => ProductVariantChipButton(
-                                                  tone:  tone,
-                                                  label: conditionOptions[i],
-                                                  selected:
-                                                      _conditionIndex == i,
-                                                  onTap: () => setState(
-                                                      () => _conditionIndex = i),
-                                                ),
-                                              ),
-                                            ),
-                                          ],
+                                          ...variantSectionWidgets,
                                           if (selectedVariant.isNotEmpty) ...[
                                             const SizedBox(height: 16),
                                             Divider(

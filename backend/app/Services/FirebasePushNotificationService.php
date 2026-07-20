@@ -56,22 +56,29 @@ class FirebasePushNotificationService
 
     public function sendStoredNotification(User $user, OrderTrackingNotification $notification): array
     {
-        if (! $this->messaging) {
-            return [
-                'device_tokens' => 0,
-                'delivered' => 0,
-                'failed' => 0,
-                'removed_invalid_tokens' => 0,
-            ];
-        }
-
         $tokens = $user->mobileDeviceTokens()
             ->pluck('token')
             ->filter()
             ->unique()
             ->values();
 
-        if ($tokens->isEmpty()) {
+        $badgeCount = max(1, OrderTrackingNotification::query()
+            ->where('user_id', $user->id)
+            ->whereNull('read_at')
+            ->count());
+
+        return $this->sendNotificationToTokens($tokens, $notification, $badgeCount);
+    }
+
+    /**
+     * Push a stored notification to an explicit set of FCM tokens (used for
+     * guest devices that have no associated user account).
+     */
+    public function sendNotificationToTokens(iterable $tokens, OrderTrackingNotification $notification, int $badgeCount = 1): array
+    {
+        $tokens = collect($tokens)->filter()->unique()->values();
+
+        if (! $this->messaging || $tokens->isEmpty()) {
             return [
                 'device_tokens' => 0,
                 'delivered' => 0,
@@ -81,10 +88,7 @@ class FirebasePushNotificationService
         }
 
         $payload = is_array($notification->payload) ? $notification->payload : [];
-        $badgeCount = max(1, OrderTrackingNotification::query()
-            ->where('user_id', $user->id)
-            ->whereNull('read_at')
-            ->count());
+        $badgeCount = max(1, $badgeCount);
         $data = $this->normalizeData([
             'title' => $notification->title,
             'body' => $notification->body ?? 'Your order tracking status was updated.',
@@ -157,7 +161,8 @@ class FirebasePushNotificationService
             } catch (Throwable $exception) {
                 $summary['failed']++;
                 Log::warning('Firebase push delivery failed.', [
-                    'user_id' => $user->id,
+                    'user_id' => $notification->user_id,
+                    'guest_device_id' => $notification->guest_device_id,
                     'notification_id' => $notification->id,
                     'token_suffix' => substr($token, -12),
                     'error' => $exception->getMessage(),

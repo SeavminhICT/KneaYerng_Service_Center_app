@@ -2,13 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Jobs\SendAdminNotificationCampaign;
 use App\Models\AdminNotificationCampaign;
-use App\Models\OrderTrackingNotification;
 use App\Models\User;
-use App\Services\FirebasePushNotificationService;
+use App\Services\AdminNotificationCampaignSender;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -28,6 +27,8 @@ class AdminNotificationController extends Controller
 
     private const AUDIENCE_OPTIONS = [
         'all',
+        'registered',
+        'guests',
         'active',
         'new',
         'inactive',
@@ -36,7 +37,7 @@ class AdminNotificationController extends Controller
     ];
 
     public function __construct(
-        private readonly FirebasePushNotificationService $pushNotificationService
+        private readonly AdminNotificationCampaignSender $campaignSender
     ) {
     }
 
@@ -47,7 +48,7 @@ class AdminNotificationController extends Controller
             'message' => ['nullable', 'string', 'max:4000'],
             'type' => ['required', 'string', Rule::in(self::TYPE_OPTIONS)],
             'audience' => ['nullable', 'string', Rule::in(self::AUDIENCE_OPTIONS)],
-            'target_mode' => ['nullable', 'string', Rule::in(['all', 'specific'])],
+            'target_mode' => ['nullable', 'string', Rule::in(['all', 'specific', 'registered', 'guests'])],
             'target_user_id' => ['nullable', 'integer', 'exists:users,id'],
             'custom_user_ids' => ['nullable', 'array'],
             'custom_user_ids.*' => ['integer', 'exists:users,id'],
@@ -115,12 +116,12 @@ class AdminNotificationController extends Controller
             }
         }
 
-        $users = $this->resolveRecipients($audience, $customUserIds);
-        if (in_array($action, ['send_now', 'schedule'], true) && $users->isEmpty()) {
+        $recipientCount = $this->campaignSender->countRecipients($audience, $customUserIds);
+        if (in_array($action, ['send_now', 'schedule'], true) && $recipientCount === 0) {
             return response()->json([
-                'message' => 'No users found for this audience.',
+                'message' => 'No recipients found for this audience.',
                 'errors' => [
-                    'audience' => ['No users found for this audience.'],
+                    'audience' => ['No recipients found for this audience.'],
                 ],
             ], 422);
         }
@@ -132,23 +133,13 @@ class AdminNotificationController extends Controller
         }
 
         $actor = $request->user() ?? $request->user('sanctum');
-        $normalizedType = strtolower(trim((string) $validated['type']));
         $deepLink = trim((string) ($validated['deep_link'] ?? ''));
         $message = trim((string) ($validated['message'] ?? ''));
-
-        $summary = [
-            'targeted_users' => $users->count(),
-            'saved_notifications' => 0,
-            'device_tokens' => 0,
-            'delivered' => 0,
-            'failed' => 0,
-            'removed_invalid_tokens' => 0,
-        ];
 
         $status = match ($action) {
             'save_draft' => 'draft',
             'schedule' => 'scheduled',
-            default => 'sent',
+            default => 'queued',
         };
 
         $campaign = AdminNotificationCampaign::create([
@@ -162,66 +153,34 @@ class AdminNotificationController extends Controller
             'action' => $action,
             'status' => $status,
             'scheduled_for' => $scheduledFor,
-            'summary' => $summary,
+            'summary' => [
+                'targeted_recipients' => $recipientCount,
+                'saved_notifications' => 0,
+                'device_tokens' => 0,
+                'delivered' => 0,
+                'failed' => 0,
+                'removed_invalid_tokens' => 0,
+            ],
             'meta' => [
                 'image_url' => $imageUrl,
             ],
         ]);
 
         if ($action === 'send_now') {
-            foreach ($users as $user) {
-                $notification = OrderTrackingNotification::create([
-                    'user_id' => $user->id,
-                    'order_id' => $this->extractOrderId($deepLink),
-                    'type' => 'admin_'.str_replace(' ', '_', $normalizedType),
-                    'title' => trim((string) $validated['title']),
-                    'body' => $message,
-                    'payload' => [
-                        'source' => 'admin_dashboard',
-                        'deep_link' => $deepLink !== '' ? $deepLink : null,
-                        'image_url' => $imageUrl,
-                        'display_type' => (string) $validated['type'],
-                        'campaign_id' => $campaign->id,
-                        'audience' => $audience,
-                    ],
-                ]);
-                $summary['saved_notifications']++;
-
-                $dispatch = $this->pushNotificationService->sendStoredNotification(
-                    $user,
-                    $notification,
-                );
-
-                $summary['device_tokens'] += $dispatch['device_tokens'];
-                $summary['delivered'] += $dispatch['delivered'];
-                $summary['failed'] += $dispatch['failed'];
-                $summary['removed_invalid_tokens'] += $dispatch['removed_invalid_tokens'];
-            }
-
-            $campaign->summary = $summary;
-            $campaign->save();
-
-            $messageText = $summary['device_tokens'] > 0
-                ? 'Notification sent to '.$summary['delivered'].' device(s).'
-                : 'Notification saved, but no registered mobile devices were found for the selected user(s).';
-
-            return response()->json([
-                'message' => $messageText,
-                'summary' => $summary,
-                'history_item' => $this->transformCampaign($campaign->fresh()),
-            ]);
-        }
-
-        if ($action === 'schedule') {
+            SendAdminNotificationCampaign::dispatch($campaign->id);
+            $messageText = 'Notification queued for delivery to '.$recipientCount.' recipient(s). Delivery stats will appear in Sent History.';
+        } elseif ($action === 'schedule') {
             $messageText = 'Notification scheduled for '.$scheduledFor?->toDayDateTimeString().'.';
         } else {
             $messageText = 'Notification draft saved.';
         }
 
+        $campaign = $campaign->fresh();
+
         return response()->json([
             'message' => $messageText,
-            'summary' => $summary,
-            'history_item' => $this->transformCampaign($campaign->fresh()),
+            'summary' => $campaign->summary ?? [],
+            'history_item' => $this->transformCampaign($campaign),
         ]);
     }
 
@@ -236,8 +195,12 @@ class AdminNotificationController extends Controller
             ->limit($limit)
             ->get();
 
+        $receipts = $this->campaignSender->receiptCounts($items->pluck('id'));
+
         return response()->json([
-            'data' => $items->map(fn (AdminNotificationCampaign $campaign) => $this->transformCampaign($campaign))->values(),
+            'data' => $items
+                ->map(fn (AdminNotificationCampaign $campaign) => $this->transformCampaign($campaign, $receipts->get($campaign->id)))
+                ->values(),
         ]);
     }
 
@@ -247,7 +210,7 @@ class AdminNotificationController extends Controller
         $limit = max(5, min(100, $limit));
         $search = trim((string) $request->input('q', ''));
 
-        $query = $this->buildBaseRecipientQuery()
+        $query = $this->campaignSender->buildBaseRecipientQuery()
             ->withCount('orders')
             ->withSum('orders', 'total_amount')
             ->with(['mobileDeviceTokens' => function ($builder) {
@@ -300,76 +263,6 @@ class AdminNotificationController extends Controller
         ]);
     }
 
-    private function resolveRecipients(string $audience, array $customUserIds): Collection
-    {
-        $query = $this->buildBaseRecipientQuery();
-        $this->applyAudienceFilter($query, $audience, $customUserIds);
-
-        return $query
-            ->orderBy('first_name')
-            ->orderBy('last_name')
-            ->get();
-    }
-
-    private function buildBaseRecipientQuery(): Builder
-    {
-        return User::query()
-            ->where(function (Builder $builder) {
-                $builder
-                    ->whereNull('is_admin')
-                    ->orWhere('is_admin', false);
-            })
-            ->where(function (Builder $builder) {
-                $builder
-                    ->whereNull('role')
-                    ->orWhere('role', '!=', 'admin');
-            });
-    }
-
-    private function applyAudienceFilter(Builder $query, string $audience, array $customUserIds): void
-    {
-        switch ($audience) {
-            case 'active':
-                $query->whereHas('mobileDeviceTokens', function (Builder $builder) {
-                    $builder->where('last_used_at', '>=', now()->subDays(30));
-                });
-                break;
-
-            case 'new':
-                $query->where('created_at', '>=', now()->subDays(14));
-                break;
-
-            case 'inactive':
-                $query->whereDoesntHave('mobileDeviceTokens', function (Builder $builder) {
-                    $builder->where('last_used_at', '>=', now()->subDays(30));
-                });
-                break;
-
-            case 'premium':
-                $query->where(function (Builder $builder) {
-                    $builder
-                        ->whereHas('orders', function (Builder $orderQuery) {
-                            $orderQuery->where('total_amount', '>=', 300);
-                        })
-                        ->orWhereHas('orders', function (Builder $orderQuery) {
-                            $orderQuery
-                                ->selectRaw('user_id')
-                                ->groupBy('user_id')
-                                ->havingRaw('COUNT(*) >= 3');
-                        });
-                });
-                break;
-
-            case 'custom':
-                $query->whereKey($customUserIds === [] ? [0] : $customUserIds);
-                break;
-
-            case 'all':
-            default:
-                break;
-        }
-    }
-
     private function normalizeAction(?string $raw): string
     {
         $value = strtolower(trim((string) $raw));
@@ -390,7 +283,12 @@ class AdminNotificationController extends Controller
 
         $legacy = strtolower(trim((string) $targetMode));
 
-        return $legacy === 'specific' ? 'custom' : 'all';
+        return match ($legacy) {
+            'specific' => 'custom',
+            'guests' => 'guests',
+            'registered' => 'registered',
+            default => 'all',
+        };
     }
 
     /**
@@ -419,8 +317,14 @@ class AdminNotificationController extends Controller
         return array_values(array_unique($ids));
     }
 
-    private function transformCampaign(AdminNotificationCampaign $campaign): array
+    private function transformCampaign(AdminNotificationCampaign $campaign, ?object $receipts = null): array
     {
+        $summary = $campaign->summary ?? [];
+        if ($receipts !== null) {
+            $summary['stored_notifications'] = (int) $receipts->stored;
+            $summary['read'] = (int) $receipts->read;
+        }
+
         return [
             'id' => $campaign->id,
             'type' => $campaign->type,
@@ -432,7 +336,7 @@ class AdminNotificationController extends Controller
             'action' => $campaign->action,
             'status' => $campaign->status,
             'scheduled_for' => $campaign->scheduled_for?->toISOString(),
-            'summary' => $campaign->summary ?? [],
+            'summary' => $summary,
             'created_at' => $campaign->created_at?->toISOString(),
             'created_by' => [
                 'id' => $campaign->adminUser?->id,
@@ -440,14 +344,5 @@ class AdminNotificationController extends Controller
                 'email' => $campaign->adminUser?->email,
             ],
         ];
-    }
-
-    private function extractOrderId(string $deepLink): ?int
-    {
-        if (! str_starts_with($deepLink, '/orders/')) {
-            return null;
-        }
-
-        return filter_var(substr($deepLink, strlen('/orders/')), FILTER_VALIDATE_INT) ?: null;
     }
 }

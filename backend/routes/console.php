@@ -1,5 +1,7 @@
 <?php
 
+use App\Jobs\SendAdminNotificationCampaign;
+use App\Models\AdminNotificationCampaign;
 use App\Models\KhqrTransaction;
 use App\Models\Order;
 use App\Models\Payment;
@@ -56,5 +58,30 @@ Artisan::command('khqr:expire', function () {
     $this->comment("Expired {$expiredCount} KHQR transaction(s).");
 })->purpose('Expire stale KHQR transactions');
 
+Artisan::command('notifications:send-due', function () {
+    $due = AdminNotificationCampaign::query()
+        ->where('status', 'scheduled')
+        ->whereNotNull('scheduled_for')
+        ->where('scheduled_for', '<=', now())
+        ->orderBy('scheduled_for')
+        ->limit(50)
+        ->get();
+
+    foreach ($due as $campaign) {
+        $campaign->status = 'queued';
+        $campaign->save();
+        SendAdminNotificationCampaign::dispatch($campaign->id);
+    }
+
+    if ($due->isNotEmpty()) {
+        Log::info('Queued scheduled notification campaigns.', [
+            'campaign_ids' => $due->pluck('id')->all(),
+        ]);
+    }
+
+    $this->comment('Queued '.$due->count().' scheduled campaign(s).');
+})->purpose('Queue admin notification campaigns whose schedule time has arrived');
+
 Schedule::command('khqr:expire')->everyMinute();
+Schedule::command('notifications:send-due')->everyMinute();
 Schedule::command('backup:run')->daily();

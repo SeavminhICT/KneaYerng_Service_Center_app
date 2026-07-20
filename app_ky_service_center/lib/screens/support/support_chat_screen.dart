@@ -587,12 +587,12 @@ class _MessageBubble extends StatelessWidget {
                   width: 200,
                   height: 200,
                   fit: BoxFit.cover,
-                  placeholder: (_, __) => const SizedBox(
+                  placeholder: (_, _) => const SizedBox(
                     height: 200,
                     width: 200,
                     child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
                   ),
-                  errorWidget: (_, __, ___) => const SizedBox(
+                  errorWidget: (_, _, _) => const SizedBox(
                     height: 160,
                     width: 200,
                     child: Center(child: Icon(Icons.broken_image_outlined)),

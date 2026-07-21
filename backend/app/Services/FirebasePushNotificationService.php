@@ -221,8 +221,8 @@ class FirebasePushNotificationService
             return $trimmed;
         }
 
-        $isAbsoluteUnix = str_starts_with($trimmed, DIRECTORY_SEPARATOR);
-        $isAbsoluteWindows = (bool) preg_match('/^[A-Za-z]:\\\\/', $trimmed);
+        $isAbsoluteUnix = str_starts_with($trimmed, '/');
+        $isAbsoluteWindows = (bool) preg_match('#^[A-Za-z]:[\\\\/]#', $trimmed);
 
         if ($isAbsoluteUnix || $isAbsoluteWindows) {
             return $trimmed;

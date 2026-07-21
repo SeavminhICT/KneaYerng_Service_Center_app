@@ -88,32 +88,58 @@ class _HomeScreenState extends State<HomeScreen> {
     await showCartAddedBottomBar(context);
   }
 
+  // Fetches everything before setState so FutureBuilders never flash back to
+  // their loading skeletons — pull-to-refresh fires easily from a fast
+  // scroll-to-top and must stay visually quiet.
   Future<void> _refresh() async {
-    await _clearImageCache();
     _loadBanners();
-    setState(() {
-      _categoriesFuture = _loadCategoriesSafe(forceRefresh: true);
-      _productsFuture = _loadProductsSafe(forceRefresh: true);
-      _hotSaleFuture = _loadTaggedProductsSafe('HOT_SALE', forceRefresh: true);
-      _topSellerFuture =
-          _loadTaggedProductsSafe('TOP_SELLER', forceRefresh: true);
-      _promotionFuture =
-          _loadTaggedProductsSafe('PROMOTION', forceRefresh: true);
-      _profileFuture = ApiService.getUserProfile();
-    });
-    await Future.wait([
-      _categoriesFuture,
-      _productsFuture,
-      _hotSaleFuture,
-      _topSellerFuture,
-      _promotionFuture,
-    ]);
-  }
 
-  Future<void> _clearImageCache() async {
-    final cache = PaintingBinding.instance.imageCache;
-    cache.clear();
-    cache.clearLiveImages();
+    final categoriesFuture = _loadCategoriesSafe(forceRefresh: true);
+    final productsFuture = _loadProductsSafe(forceRefresh: true);
+    final hotSaleFuture = _loadTaggedProductsSafe(
+      'HOT_SALE',
+      forceRefresh: true,
+    );
+    final topSellerFuture = _loadTaggedProductsSafe(
+      'TOP_SELLER',
+      forceRefresh: true,
+    );
+    final promotionFuture = _loadTaggedProductsSafe(
+      'PROMOTION',
+      forceRefresh: true,
+    );
+    final profileFuture = ApiService.getUserProfile();
+
+    final categories = await categoriesFuture;
+    List<Product>? products;
+    try {
+      products = await productsFuture;
+    } catch (_) {
+      products = null;
+    }
+    final hotSale = await hotSaleFuture;
+    final topSeller = await topSellerFuture;
+    final promotion = await promotionFuture;
+    UserProfile? profile;
+    try {
+      profile = await profileFuture;
+    } catch (_) {
+      profile = null;
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _categoriesFuture = Future.value(categories);
+      if (products != null) {
+        _productsFuture = Future.value(products);
+      }
+      _hotSaleFuture = Future.value(hotSale);
+      _topSellerFuture = Future.value(topSeller);
+      _promotionFuture = Future.value(promotion);
+      if (profile != null) {
+        _profileFuture = Future.value(profile);
+      }
+    });
   }
 
   Future<List<Category>> _loadCategoriesSafe({bool forceRefresh = false}) async {
@@ -387,7 +413,7 @@ class _HomeScreenState extends State<HomeScreen> {
             backgroundColor: homeSurface(context),
             onRefresh: _refresh,
             child: ListView(
-              physics: const BouncingScrollPhysics(
+              physics: const ClampingScrollPhysics(
                 parent: AlwaysScrollableScrollPhysics(),
               ),
               padding: const EdgeInsets.fromLTRB(16, 14, 16, 34),

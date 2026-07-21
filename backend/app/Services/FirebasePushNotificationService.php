@@ -105,7 +105,7 @@ class FirebasePushNotificationService
         $androidConfig = AndroidConfig::fromArray([
             'priority' => 'high',
             'notification' => [
-                'channel_id' => 'order_tracking_updates',
+                'channel_id' => 'order_tracking_updates_v2',
                 'sound' => 'default',
                 'default_sound' => true,
                 'default_vibrate_timings' => true,

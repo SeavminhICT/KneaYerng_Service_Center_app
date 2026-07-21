@@ -75,7 +75,7 @@ Route::prefix('public')->group(function () {
     Route::get('categories', [CategoryController::class, 'index']);
     Route::get('categories/{category}', [CategoryController::class, 'show']);
     Route::get('products', [ProductController::class, 'index']);
-    Route::get('products/{product}', [ProductController::class, 'show']);
+    Route::get('products/{product}', [ProductController::class, 'show'])->whereNumber('product');
 });
 
 Route::get('updates', [UpdatesController::class, 'check']);
@@ -92,7 +92,7 @@ Route::post('vouchers/validate', VoucherValidationController::class);
 Route::get('categories', [CategoryController::class, 'index']);
 Route::get('categories/{category}', [CategoryController::class, 'show']);
 Route::get('products', [ProductController::class, 'index']);
-Route::get('products/{product}', [ProductController::class, 'show']);
+Route::get('products/{product}', [ProductController::class, 'show'])->whereNumber('product');
 Route::get('accessories', [AccessoryController::class, 'index']);
 Route::get('accessories/{accessory}', [AccessoryController::class, 'show']);
 Route::get('checkout/options', CheckoutOptionsController::class);
@@ -224,10 +224,11 @@ Route::middleware('admin')->group(function () {
     Route::post('categories', [CategoryController::class, 'store'])->middleware('permission:create_category');
     Route::match(['put', 'patch'], 'categories/{category}', [CategoryController::class, 'update'])->middleware('permission:update_category');
     Route::delete('categories/{category}', [CategoryController::class, 'destroy'])->middleware('permission:delete_category');
+    Route::post('products/bulk-action', [ProductController::class, 'bulkAction'])->middleware('permission:update_product,delete_product,view_product');
     Route::post('products', [ProductController::class, 'store'])->middleware('permission:create_product');
-    Route::match(['put', 'patch'], 'products/{product}', [ProductController::class, 'update'])->middleware('permission:update_product');
-    Route::delete('products/{product}', [ProductController::class, 'destroy'])->middleware('permission:delete_product');
-    Route::patch('products/{product}/status', [ProductController::class, 'toggleStatus'])->middleware('permission:update_product');
+    Route::match(['put', 'patch'], 'products/{product}', [ProductController::class, 'update'])->whereNumber('product')->middleware('permission:update_product');
+    Route::delete('products/{product}', [ProductController::class, 'destroy'])->whereNumber('product')->middleware('permission:delete_product');
+    Route::patch('products/{product}/status', [ProductController::class, 'toggleStatus'])->whereNumber('product')->middleware('permission:update_product');
     Route::post('accessories', [AccessoryController::class, 'store'])->middleware('permission:create_accessory');
     Route::match(['put', 'patch'], 'accessories/{accessory}', [AccessoryController::class, 'update'])->middleware('permission:update_accessory');
     Route::delete('accessories/{accessory}', [AccessoryController::class, 'destroy'])->middleware('permission:delete_accessory');

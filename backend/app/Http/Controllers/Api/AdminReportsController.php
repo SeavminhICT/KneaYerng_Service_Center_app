@@ -21,9 +21,18 @@ use Illuminate\Support\Str;
 
 class AdminReportsController extends Controller
 {
+    private function authorizeAccess(): void
+    {
+        $user = auth()->user();
+        if ($user && ($user->isAdmin() || $user->isStaff() || (method_exists($user, 'hasPermissionTo') && $user->hasPermissionTo('view_sales_report')))) {
+            return;
+        }
+        Gate::authorize('admin-access');
+    }
+
     public function sales(Request $request)
     {
-        Gate::authorize('admin-access');
+        $this->authorizeAccess();
 
         [$start, $end, $label, $preset] = $this->resolveRange($request);
         $report = $this->buildSalesReport($start, $end);
@@ -38,7 +47,7 @@ class AdminReportsController extends Controller
 
     public function inventory(Request $request)
     {
-        Gate::authorize('admin-access');
+        $this->authorizeAccess();
 
         [$start, $end, $label, $preset] = $this->resolveRange($request);
         $threshold = $this->resolveThreshold($request);
@@ -55,7 +64,7 @@ class AdminReportsController extends Controller
 
     public function customers(Request $request)
     {
-        Gate::authorize('admin-access');
+        $this->authorizeAccess();
 
         [$start, $end, $label, $preset] = $this->resolveRange($request);
         $report = $this->buildCustomerReport($start, $end);
@@ -69,7 +78,7 @@ class AdminReportsController extends Controller
 
     public function repairs(Request $request)
     {
-        Gate::authorize('admin-access');
+        $this->authorizeAccess();
 
         [$start, $end, $label, $preset] = $this->resolveRange($request);
         $report = $this->buildRepairsReport($start, $end);
@@ -85,11 +94,11 @@ class AdminReportsController extends Controller
 
     public function export(Request $request)
     {
-        Gate::authorize('admin-access');
+        $this->authorizeAccess();
 
         $validated = $request->validate([
             'type' => ['required', 'string', 'in:sales,inventory,customers,repairs'],
-            'format' => ['required', 'string', 'in:csv,pdf'],
+            'format' => ['required', 'string', 'in:excel,csv,pdf'],
             'preset' => ['nullable', 'string'],
             'start' => ['nullable', 'date_format:Y-m-d'],
             'end' => ['nullable', 'date_format:Y-m-d'],
@@ -103,9 +112,10 @@ class AdminReportsController extends Controller
 
         $content = '';
         $rowCount = 0;
+        $fileExt = ($format === 'pdf') ? 'pdf' : (($format === 'excel') ? 'xlsx' : 'csv');
         $fileBase = "{$type}-report-{$start->format('Ymd')}-{$end->format('Ymd')}";
 
-        if ($format === 'csv') {
+        if ($format === 'csv' || $format === 'excel') {
             if ($type === 'sales') {
                 [$content, $rowCount] = $this->buildSalesCsv($start, $end);
             } elseif ($type === 'inventory') {
@@ -124,8 +134,8 @@ class AdminReportsController extends Controller
         $disk->makeDirectory('reports');
 
         $id = (string) Str::uuid();
-        $path = "reports/{$id}.{$format}";
-        $fileName = "{$fileBase}.{$format}";
+        $path = "reports/{$id}.{$fileExt}";
+        $fileName = "{$fileBase}.{$fileExt}";
         $disk->put($path, $content);
 
         $export = [
@@ -150,7 +160,7 @@ class AdminReportsController extends Controller
 
     public function exports()
     {
-        Gate::authorize('admin-access');
+        $this->authorizeAccess();
 
         $disk = Storage::disk('local');
         $exports = [];
@@ -178,7 +188,7 @@ class AdminReportsController extends Controller
 
     public function download(string $exportId)
     {
-        Gate::authorize('admin-access');
+        $this->authorizeAccess();
 
         $export = $this->findExport($exportId);
         if (! $export) {
@@ -190,8 +200,15 @@ class AdminReportsController extends Controller
             return response()->json(['message' => 'Export file missing.'], 404);
         }
 
+        $contentType = 'text/csv; charset=UTF-8';
+        if (($export['format'] ?? '') === 'pdf') {
+            $contentType = 'application/pdf';
+        } elseif (($export['format'] ?? '') === 'excel') {
+            $contentType = 'application/vnd.ms-excel; charset=UTF-8';
+        }
+
         $headers = [
-            'Content-Type' => $export['format'] === 'pdf' ? 'application/pdf' : 'text/csv',
+            'Content-Type' => $contentType,
         ];
 
         return $disk->download($export['path'], $export['filename'] ?? basename($export['path']), $headers);
@@ -354,16 +371,21 @@ class AdminReportsController extends Controller
     private function buildSalesCsv(Carbon $start, Carbon $end): array
     {
         $handle = fopen('php://temp', 'w+');
+        fputs($handle, "\xEF\xBB\xBF");
+        fputcsv($handle, ['KneaYerng Service Center - Sales Analytics Report']);
+        fputcsv($handle, ['Period:', $start->format('d M Y') . ' to ' . $end->format('d M Y')]);
+        fputcsv($handle, ['Generated:', now()->format('Y-m-d H:i:s T')]);
+        fputcsv($handle, []);
         fputcsv($handle, [
             'Order Number',
             'Customer Name',
             'Customer Email',
             'Order Type',
             'Payment Method',
-            'Subtotal',
-            'Delivery Fee',
-            'Discount Amount',
-            'Total Amount',
+            'Subtotal ($)',
+            'Delivery Fee ($)',
+            'Discount Amount ($)',
+            'Total Amount ($)',
             'Payment Status',
             'Status',
             'Placed At',
@@ -419,13 +441,18 @@ class AdminReportsController extends Controller
     private function buildInventoryCsv(int $threshold): array
     {
         $handle = fopen('php://temp', 'w+');
+        fputs($handle, "\xEF\xBB\xBF");
+        fputcsv($handle, ['KneaYerng Service Center - Inventory & Stock Report']);
+        fputcsv($handle, ['Low Stock Threshold:', $threshold]);
+        fputcsv($handle, ['Generated:', now()->format('Y-m-d H:i:s T')]);
+        fputcsv($handle, []);
         fputcsv($handle, [
             'Item Type',
             'Name',
             'SKU',
-            'Stock',
+            'Stock Quantity',
             'Status',
-            'Unit Price',
+            'Unit Price ($)',
         ]);
 
         $rowCount = 0;
@@ -436,7 +463,7 @@ class AdminReportsController extends Controller
             ->chunk(500, function ($products) use ($handle, &$rowCount) {
                 foreach ($products as $product) {
                     fputcsv($handle, [
-                        'product',
+                        'Product',
                         $product->name,
                         $product->sku,
                         $product->stock,
@@ -453,7 +480,7 @@ class AdminReportsController extends Controller
             ->chunk(500, function ($accessories) use ($handle, &$rowCount) {
                 foreach ($accessories as $accessory) {
                     fputcsv($handle, [
-                        'accessory',
+                        'Accessory',
                         $accessory->name,
                         null,
                         $accessory->stock,
@@ -470,7 +497,7 @@ class AdminReportsController extends Controller
             ->chunk(500, function ($parts) use ($handle, &$rowCount) {
                 foreach ($parts as $part) {
                     fputcsv($handle, [
-                        'part',
+                        'Part',
                         $part->name,
                         $part->sku,
                         $part->stock,
@@ -491,12 +518,17 @@ class AdminReportsController extends Controller
     private function buildCustomerCsv(Carbon $start, Carbon $end): array
     {
         $handle = fopen('php://temp', 'w+');
+        fputs($handle, "\xEF\xBB\xBF");
+        fputcsv($handle, ['KneaYerng Service Center - Customer Intelligence Report']);
+        fputcsv($handle, ['Period:', $start->format('d M Y') . ' to ' . $end->format('d M Y')]);
+        fputcsv($handle, ['Generated:', now()->format('Y-m-d H:i:s T')]);
+        fputcsv($handle, []);
         fputcsv($handle, [
             'Customer Name',
             'Email',
             'Phone',
             'Orders Count',
-            'Total Spent',
+            'Total Spent ($)',
         ]);
 
         $rowCount = 0;
@@ -617,6 +649,11 @@ class AdminReportsController extends Controller
     private function buildRepairsCsv(Carbon $start, Carbon $end): array
     {
         $handle = fopen('php://temp', 'w+');
+        fputs($handle, "\xEF\xBB\xBF");
+        fputcsv($handle, ['KneaYerng Service Center - Repair Operations Report']);
+        fputcsv($handle, ['Period:', $start->format('d M Y') . ' to ' . $end->format('d M Y')]);
+        fputcsv($handle, ['Generated:', now()->format('Y-m-d H:i:s T')]);
+        fputcsv($handle, []);
         fputcsv($handle, [
             'ID',
             'Customer Name',
@@ -626,7 +663,7 @@ class AdminReportsController extends Controller
             'Service Type',
             'Status',
             'Technician',
-            'Appointment',
+            'Appointment Datetime',
             'Created At',
         ]);
 

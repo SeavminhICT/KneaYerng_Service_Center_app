@@ -39,6 +39,7 @@ const String _notificationPrimerShownKey =
 const String _notificationPermissionRequestedKey =
     'app_notification_permission_requested_v1';
 const Duration _storedNotificationPollInterval = Duration(seconds: 25);
+const Duration _freshStoredNotificationAlertWindow = Duration(minutes: 3);
 const Duration _tokenSyncThrottle = Duration(minutes: 5);
 
 @pragma('vm:entry-point')
@@ -145,7 +146,7 @@ class AppNotificationService {
     }
 
     await _loadStoredNotificationCursor();
-    await _pollStoredNotifications(showAlerts: false);
+    await _pollStoredNotifications(showAlerts: true, onlyFreshAlerts: true);
     _startStoredNotificationPolling();
   }
 
@@ -491,7 +492,10 @@ class AppNotificationService {
     );
   }
 
-  Future<void> _pollStoredNotifications({bool showAlerts = true}) async {
+  Future<void> _pollStoredNotifications({
+    bool showAlerts = true,
+    bool onlyFreshAlerts = false,
+  }) async {
     if (_isPollingStoredNotifications) return;
 
     _isPollingStoredNotifications = true;
@@ -536,9 +540,19 @@ class AppNotificationService {
           .where((item) => item.isUnread)
           .length
           .clamp(1, 999);
-      newlyCreatedItems.sort((a, b) => a.id.compareTo(b.id));
+      var itemsToAlert = newlyCreatedItems;
+      if (onlyFreshAlerts) {
+        final cutoff = DateTime.now().subtract(
+          _freshStoredNotificationAlertWindow,
+        );
+        itemsToAlert = itemsToAlert.where((item) {
+          final createdAt = item.createdAt;
+          return createdAt != null && createdAt.isAfter(cutoff);
+        }).toList();
+      }
+      itemsToAlert.sort((a, b) => a.id.compareTo(b.id));
 
-      for (final item in newlyCreatedItems) {
+      for (final item in itemsToAlert) {
         final event = _trackingEventFromStoredNotification(item);
         if (event != null) {
           _trackingEventsController.add(event);
@@ -553,7 +567,7 @@ class AppNotificationService {
             : _fallbackNotificationTitle;
         final body = item.body?.trim().isNotEmpty == true
             ? item.body!.trim()
-            : _defaultMessageForType(item.type);
+            : _defaultMessageForStoredNotification(item);
 
         await _showLocalNotification(
           notificationId: item.id,
@@ -607,7 +621,9 @@ class AppNotificationService {
     if (item.orderId == null &&
         orderNumber == null &&
         (deepLink == null || deepLink.isEmpty)) {
-      return null;
+      return _isAdminNotificationType(item.type, item.displayType)
+          ? const NotificationLaunchTarget(deepLink: '/notifications')
+          : null;
     }
 
     return NotificationLaunchTarget(
@@ -679,7 +695,9 @@ class AppNotificationService {
     if (orderId == null &&
         (orderNumber == null || orderNumber.isEmpty) &&
         (deepLink == null || deepLink.isEmpty)) {
-      return null;
+      return _isAdminNotificationType(data['type'], data['display_type'])
+          ? const NotificationLaunchTarget(deepLink: '/notifications')
+          : null;
     }
 
     return NotificationLaunchTarget(
@@ -760,6 +778,39 @@ String _defaultMessageForType(String? type) {
     return 'You have a new message from KY-Service Center.';
   }
   return _fallbackNotificationBody;
+}
+
+String _defaultMessageForStoredNotification(
+  OrderTrackingNotificationItem item,
+) {
+  final normalized = (item.displayType ?? item.type ?? '').trim().toLowerCase();
+  if (normalized.contains('alert')) {
+    return 'An important alert needs your attention.';
+  }
+  if (normalized.contains('document')) {
+    return 'A new document update is available for review.';
+  }
+  if (normalized.contains('promotion') || normalized.contains('announcement')) {
+    return 'A new announcement is available for your account.';
+  }
+  if (normalized.contains('message') || normalized.contains('admin')) {
+    return 'You have a new message from KY-Service Center.';
+  }
+  if (normalized.contains('reminder') || normalized == 'info') {
+    return 'There is a new update for your account.';
+  }
+  return _defaultMessageForType(item.type);
+}
+
+bool _isAdminNotificationType(Object? type, Object? displayType) {
+  final normalized = '${type ?? ''} ${displayType ?? ''}'.trim().toLowerCase();
+  return normalized.contains('admin') ||
+      normalized.contains('announcement') ||
+      normalized.contains('promotion') ||
+      normalized.contains('alert') ||
+      normalized.contains('document') ||
+      normalized.contains('reminder') ||
+      normalized == 'info';
 }
 
 bool _isAuthorized(AuthorizationStatus status) {

@@ -37,15 +37,7 @@ Route::prefix('admin')->name('admin.')->middleware(['admin'])->group(function ()
     Route::get('/notifications', function () {
         $adminEmails = (array) config('auth.admin_emails', []);
         $users = User::query()
-            ->select(['id', 'first_name', 'last_name', 'email', 'phone'])
-            ->where(function ($query) {
-                $query->whereNull('is_admin')
-                    ->orWhere('is_admin', false);
-            })
-            ->where(function ($query) {
-                $query->whereNull('role')
-                    ->orWhere('role', '!=', 'admin');
-            });
+            ->select(['id', 'first_name', 'last_name', 'email', 'phone']);
 
         if (! empty($adminEmails)) {
             $users->whereNotIn('email', $adminEmails);

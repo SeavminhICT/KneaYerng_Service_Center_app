@@ -46,6 +46,7 @@ class _HomeScreenState extends State<HomeScreen> {
   List<BannerItem> _banners = [];
   late Future<List<Category>> _categoriesFuture;
   late Future<List<Product>> _productsFuture;
+  late Future<Map<int, List<Product>>> _categoryProductsFuture;
   late Future<List<Product>> _hotSaleFuture;
   late Future<List<Product>> _topSellerFuture;
   late Future<List<Product>> _promotionFuture;
@@ -56,6 +57,7 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
     _categoriesFuture = _loadCategoriesSafe();
     _productsFuture = _loadProductsSafe();
+    _categoryProductsFuture = _loadCategoryProductsSafe(_categoriesFuture);
     _hotSaleFuture = _loadTaggedProductsSafe('HOT_SALE');
     _topSellerFuture = _loadTaggedProductsSafe('TOP_SELLER');
     _promotionFuture = _loadTaggedProductsSafe('PROMOTION');
@@ -96,6 +98,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
     final categoriesFuture = _loadCategoriesSafe(forceRefresh: true);
     final productsFuture = _loadProductsSafe(forceRefresh: true);
+    final categoryProductsFuture = _loadCategoryProductsSafe(
+      categoriesFuture,
+      forceRefresh: true,
+    );
     final hotSaleFuture = _loadTaggedProductsSafe(
       'HOT_SALE',
       forceRefresh: true,
@@ -117,6 +123,12 @@ class _HomeScreenState extends State<HomeScreen> {
     } catch (_) {
       products = null;
     }
+    Map<int, List<Product>>? categoryProducts;
+    try {
+      categoryProducts = await categoryProductsFuture;
+    } catch (_) {
+      categoryProducts = null;
+    }
     final hotSale = await hotSaleFuture;
     final topSeller = await topSellerFuture;
     final promotion = await promotionFuture;
@@ -132,6 +144,9 @@ class _HomeScreenState extends State<HomeScreen> {
       _categoriesFuture = Future.value(categories);
       if (products != null) {
         _productsFuture = Future.value(products);
+      }
+      if (categoryProducts != null) {
+        _categoryProductsFuture = Future.value(categoryProducts);
       }
       _hotSaleFuture = Future.value(hotSale);
       _topSellerFuture = Future.value(topSeller);
@@ -158,6 +173,35 @@ class _HomeScreenState extends State<HomeScreen> {
       debugPrint('[HomeScreen] products load failed: $error');
       rethrow;
     }
+  }
+
+  /// Fetches each category's own products via a category-scoped API call
+  /// (like CategoryProductsScreen does), rather than filtering a shared
+  /// "newest 20 site-wide" list — a category whose real products aren't
+  /// among the newest 20 overall would otherwise show empty/wrong items.
+  Future<Map<int, List<Product>>> _loadCategoryProductsSafe(
+    Future<List<Category>> categoriesFuture, {
+    bool forceRefresh = false,
+  }) async {
+    final categories = await categoriesFuture;
+    final entries = await Future.wait(
+      categories.map((category) async {
+        try {
+          final products = await ApiService.fetchProducts(
+            categoryId: category.id,
+            perPage: 4,
+            forceRefresh: forceRefresh,
+          );
+          return MapEntry(category.id, products);
+        } catch (error) {
+          debugPrint(
+            '[HomeScreen] products load failed for category ${category.id}: $error',
+          );
+          return MapEntry(category.id, const <Product>[]);
+        }
+      }),
+    );
+    return Map.fromEntries(entries);
   }
 
   /// Loads products carrying an admin-set tag (HOT_SALE, TOP_SELLER,
@@ -554,8 +598,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       return const SizedBox.shrink();
                     }
 
-                    return FutureBuilder<List<Product>>(
-                      future: _productsFuture,
+                    return FutureBuilder<Map<int, List<Product>>>(
+                      future: _categoryProductsFuture,
                       builder: (context, productSnapshot) {
                         if (productSnapshot.connectionState ==
                             ConnectionState.waiting) {
@@ -567,16 +611,14 @@ class _HomeScreenState extends State<HomeScreen> {
                             title: l.somethingWentWrong,
                           );
                         }
-                        final allProducts = productSnapshot.data ?? const [];
+                        final productsByCategory =
+                            productSnapshot.data ?? const {};
 
                         final sections = <Widget>[];
                         for (final category in categories) {
-                          final items = allProducts
-                              .where(
-                                (product) => product.categoryId == category.id,
-                              )
-                              .take(4)
-                              .toList();
+                          final items =
+                              productsByCategory[category.id] ??
+                              const <Product>[];
                           if (items.isEmpty) continue;
 
                           sections.add(

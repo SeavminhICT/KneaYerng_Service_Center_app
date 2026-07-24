@@ -237,10 +237,10 @@ class _LoginScreenState extends State<LoginScreen> {
                     children: [
                       _buildTextField(
                         controller: _emailCtrl,
-                        hint: l.email,
-                        keyboard: TextInputType.text,
+                        hint: l.phoneNumber,
+                        keyboard: TextInputType.phone,
                         prefixIcon: const Icon(
-                          HugeIcons.strokeRoundedMail01,
+                          HugeIcons.strokeRoundedSmartPhone01,
                           size: 22,
                           color: _iconMuted,
                         ),

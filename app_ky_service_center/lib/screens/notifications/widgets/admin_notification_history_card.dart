@@ -114,6 +114,19 @@ class AdminNotificationHistoryCard extends StatelessWidget {
                         ],
                       ),
                     ],
+                    if (summary.pushError != null) ...[
+                      const SizedBox(height: 6),
+                      Text(
+                        summary.pushError!,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Color(0xFFEF4444),
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -217,7 +230,7 @@ Color adminNotificationStatusColor(String status) {
 String adminNotificationAudienceLabelFromApi(String audience) {
   switch (audience.toLowerCase()) {
     case 'all':
-      return 'All users';
+      return 'Customers + guests';
     case 'active':
       return 'Active';
     case 'new':

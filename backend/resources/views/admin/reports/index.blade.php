@@ -7,23 +7,23 @@
 <div class="space-y-6" id="report-root">
 
     {{-- ── Header Banner ────────────────────────────────────────────────── --}}
-    <div class="relative overflow-hidden rounded-2xl bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 p-6 text-white shadow-xl dark:border dark:border-slate-800">
+    <div class="relative overflow-hidden rounded-2xl bg-gradient-to-r from-slate-100 via-indigo-100 to-slate-100 p-6 shadow-xl dark:border dark:border-slate-800 dark:from-slate-900 dark:via-indigo-950 dark:to-slate-900">
         <div class="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-primary-500/10 blur-3xl"></div>
         <div class="relative z-10 flex flex-col justify-between gap-4 md:flex-row md:items-center">
             <div>
-                <div class="inline-flex items-center gap-2 rounded-full bg-primary-500/20 px-3 py-1 text-xs font-semibold text-primary-300 backdrop-blur-md">
+                <div class="inline-flex items-center gap-2 rounded-full bg-primary-500/20 px-3 py-1 text-xs font-semibold text-primary-700 backdrop-blur-md dark:text-primary-300">
                     <span class="h-2 w-2 rounded-full bg-primary-400 animate-pulse"></span>
                     {{ __('BI Data Visualizations & Analytics') }}
                 </div>
-                <h1 class="mt-2 text-2xl font-extrabold tracking-tight text-white sm:text-3xl">
+                <h1 class="mt-2 text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl dark:text-white">
                     {{ __('Analytics & Executive Reports') }}
                 </h1>
-                <p class="mt-1 text-sm text-slate-300">
+                <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">
                     {{ __('Monitor revenue trends, customer growth, inventory health, and repair operations with actionable insights.') }}
                 </p>
             </div>
             <div class="flex items-center gap-3">
-                <span id="live-range-badge" class="hidden rounded-xl border border-slate-700/60 bg-slate-900/80 px-3 py-1.5 text-xs font-medium text-slate-300 backdrop-blur-md">
+                <span id="live-range-badge" class="hidden rounded-xl border border-slate-700/60 bg-slate-900/80 px-3 py-1.5 text-xs font-medium text-white backdrop-blur-md">
                     <span id="range-label-text" class="font-semibold text-white"></span>
                 </span>
             </div>

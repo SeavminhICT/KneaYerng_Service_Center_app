@@ -125,6 +125,18 @@ class ProductController extends Controller
         return response()->json(['message' => 'Invalid bulk action.'], 422);
     }
 
+    public function nextSku(Request $request)
+    {
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'brand' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        return response()->json([
+            'sku' => $this->generateSku($validated['name'], $validated['brand'] ?? null),
+        ]);
+    }
+
     public function store(StoreProductRequest $request)
     {
         $validated = $request->validated();
@@ -324,6 +336,67 @@ class ProductController extends Controller
         return $max + 1;
     }
 
+    private function generateVariantSku(Product $product, array $row, int $order, array $reservedSkus = []): string
+    {
+        $base = $this->skuSegment($product->sku, 24);
+        if ($base === '') {
+            $base = 'PR'.$product->id;
+        }
+
+        $segments = [];
+        foreach (['display', 'cpu', 'storage_capacity', 'ram', 'ssd', 'color', 'condition', 'country'] as $key) {
+            $segment = $this->skuSegment($row[$key] ?? null);
+            if ($segment !== '') {
+                $segments[] = $segment;
+            }
+        }
+
+        if (empty($segments)) {
+            $segments[] = str_pad((string) ($order + 1), 2, '0', STR_PAD_LEFT);
+        }
+
+        $candidate = substr($base.'-'.implode('-', $segments), 0, 120);
+
+        return $this->uniqueVariantSku($candidate, $reservedSkus);
+    }
+
+    private function uniqueVariantSku(string $candidate, array $reservedSkus = []): string
+    {
+        $candidate = trim($candidate, '-');
+        if ($candidate === '') {
+            $candidate = 'VARIANT';
+        }
+
+        $base = substr($candidate, 0, 120);
+        $reserved = array_flip(array_filter($reservedSkus, fn ($sku) => is_string($sku) && $sku !== ''));
+
+        if (! isset($reserved[$base]) && ! ProductVariant::query()->where('sku', $base)->exists()) {
+            return $base;
+        }
+
+        for ($sequence = 2; $sequence < 1000; $sequence++) {
+            $suffix = '-'.str_pad((string) $sequence, 3, '0', STR_PAD_LEFT);
+            $sku = substr($base, 0, 120 - strlen($suffix)).$suffix;
+
+            if (isset($reserved[$sku])) {
+                continue;
+            }
+
+            if (! ProductVariant::query()->where('sku', $sku)->exists()) {
+                return $sku;
+            }
+        }
+
+        return substr($base, 0, 111).'-'.strtoupper(substr(uniqid('', true), -8));
+    }
+
+    private function skuSegment(mixed $value, int $maxLength = 8): string
+    {
+        $segment = strtoupper(preg_replace('/[^A-Za-z0-9]/', '', (string) $value));
+
+        return substr($segment, 0, $maxLength);
+    }
+
     private function ensurePartFromProduct(Product $product): void
     {
         $sku = $product->sku;
@@ -507,6 +580,7 @@ class ProductController extends Controller
             return;
         }
 
+        $reservedSkus = [];
         foreach ($variantRows as $order => $row) {
             $rowIndex = (int) ($row['__row_index'] ?? $order);
             unset($row['__row_index']);
@@ -521,6 +595,12 @@ class ProductController extends Controller
 
             $row['sort_order'] = $order;
             $row['is_active'] = true;
+            if (empty($row['sku'])) {
+                $row['sku'] = $this->generateVariantSku($product, $row, $order, $reservedSkus);
+            } else {
+                $row['sku'] = trim((string) $row['sku']);
+            }
+            $reservedSkus[] = $row['sku'];
 
             $product->variants()->create($row);
         }

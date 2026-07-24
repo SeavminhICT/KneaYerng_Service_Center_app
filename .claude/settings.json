@@ -29,7 +29,9 @@
       "PowerShell(Get-Process \"Docker Desktop\" -ErrorAction SilentlyContinue)",
       "PowerShell(Stop-Process -Force)",
       "PowerShell(Start-Process \"C:\\\\Program Files\\\\Docker\\\\Docker\\\\Docker Desktop.exe\")",
-      "Bash(curl -s http://localhost:8080/login --max-time 10)"
+      "Bash(curl -s http://localhost:8080/login --max-time 10)",
+      "Bash(C:/Users/Asus/AppData/Local/Android/Sdk/platform-tools/adb.exe -s emulator-5554 shell input tap 639 2617)",
+      "Bash(C:/Users/Asus/AppData/Local/Android/Sdk/platform-tools/adb.exe -s emulator-5554 exec-out screencap -p)"
     ],
     "additionalDirectories": [
       "C:\\php"

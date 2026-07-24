@@ -113,6 +113,7 @@ class _SplashScreenState extends State<SplashScreen>
     final floatOffset = _float.value * 9.0;
 
     return Scaffold(
+      backgroundColor: const Color(0xFF2233EE),
       body: AnimatedBuilder(
         animation: Listenable.merge([_main, _rotate, _float, _pulse]),
         builder: (context, _) => Stack(

@@ -16,8 +16,8 @@ services:
     volumes:
       # Persistent storage (logs, uploads, framework cache)
       - app_storage:/var/www/html/storage
-      # Firebase service-account JSON (place file next to docker-compose.yml)
-      - ./firebase-credentials.json:/var/www/html/storage/app/firebase-credentials.json:ro
+      # Firebase service-account JSON (keep this file out of git)
+      - ./secrets/firebase-credentials.json:/var/www/html/storage/app/firebase-credentials.json:ro
       # PHP-FPM socket shared with Nginx
       - php_socket:/var/run
     depends_on:

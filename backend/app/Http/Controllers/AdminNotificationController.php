@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Jobs\SendAdminNotificationCampaign;
 use App\Models\AdminNotificationCampaign;
 use App\Models\User;
 use App\Services\AdminNotificationCampaignSender;
@@ -10,7 +9,9 @@ use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
+use Throwable;
 
 class AdminNotificationController extends Controller
 {
@@ -38,8 +39,7 @@ class AdminNotificationController extends Controller
 
     public function __construct(
         private readonly AdminNotificationCampaignSender $campaignSender
-    ) {
-    }
+    ) {}
 
     public function store(Request $request): JsonResponse
     {
@@ -74,6 +74,7 @@ class AdminNotificationController extends Controller
                 trim((string) ($validated['target_mode'] ?? ''))
             ) === 'specific';
             $errorKey = $legacySpecific ? 'target_user_id' : 'custom_user_ids';
+
             return response()->json([
                 'message' => 'Please choose at least one user for custom segment.',
                 'errors' => [
@@ -86,7 +87,7 @@ class AdminNotificationController extends Controller
         if (! empty($validated['scheduled_for'])) {
             try {
                 $scheduledFor = Carbon::parse((string) $validated['scheduled_for']);
-            } catch (\Throwable) {
+            } catch (Throwable) {
                 return response()->json([
                     'message' => 'Invalid schedule date/time.',
                     'errors' => [
@@ -167,8 +168,32 @@ class AdminNotificationController extends Controller
         ]);
 
         if ($action === 'send_now') {
-            SendAdminNotificationCampaign::dispatch($campaign->id);
-            $messageText = 'Notification queued for delivery to '.$recipientCount.' recipient(s). Delivery stats will appear in Sent History.';
+            $campaign->status = 'sending';
+            $campaign->save();
+
+            try {
+                $summary = $this->campaignSender->send($campaign);
+            } catch (Throwable $exception) {
+                $campaign->summary = array_merge($campaign->summary ?? [], [
+                    'error' => $exception->getMessage(),
+                ]);
+                $campaign->status = 'failed';
+                $campaign->save();
+
+                Log::error('Admin notification campaign immediate send failed.', [
+                    'campaign_id' => $campaign->id,
+                    'error' => $exception->getMessage(),
+                ]);
+
+                return response()->json([
+                    'message' => 'Notification could not be sent right now.',
+                    'summary' => $campaign->summary ?? [],
+                    'history_item' => $this->transformCampaign($campaign),
+                ], 500);
+            }
+
+            $campaign = $campaign->fresh() ?? $campaign;
+            $messageText = $this->formatImmediateSendMessage($summary, $recipientCount);
         } elseif ($action === 'schedule') {
             $messageText = 'Notification scheduled for '.$scheduledFor?->toDayDateTimeString().'.';
         } else {
@@ -344,5 +369,31 @@ class AdminNotificationController extends Controller
                 'email' => $campaign->adminUser?->email,
             ],
         ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $summary
+     */
+    private function formatImmediateSendMessage(array $summary, int $recipientCount): string
+    {
+        $deviceTokens = (int) ($summary['device_tokens'] ?? 0);
+        $delivered = (int) ($summary['delivered'] ?? 0);
+        $failed = (int) ($summary['failed'] ?? 0);
+        $saved = (int) ($summary['saved_notifications'] ?? 0);
+
+        if (! empty($summary['push_error'])) {
+            return 'Notification saved to the app inbox for '.$saved.' recipient(s), but push delivery is not configured correctly. Delivered '.$delivered.'/'.$deviceTokens.' device(s).';
+        }
+
+        if ($deviceTokens === 0) {
+            return 'Notification saved now for '.$saved.' recipient(s). No registered device tokens were available for push delivery.';
+        }
+
+        $message = 'Notification sent now to '.$recipientCount.' recipient(s). Delivered '.$delivered.'/'.$deviceTokens.' device(s).';
+        if ($failed > 0) {
+            $message .= ' Failed '.$failed.' device(s).';
+        }
+
+        return $message;
     }
 }

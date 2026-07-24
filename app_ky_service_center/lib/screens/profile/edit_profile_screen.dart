@@ -49,8 +49,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   // ── Form state ────────────────────────────────────────────────────────────
   final _formKey = GlobalKey<FormState>();
-  late TextEditingController _firstNameCtrl;
-  late TextEditingController _lastNameCtrl;
+  late TextEditingController _fullNameCtrl;
   late TextEditingController _phoneCtrl;
   late TextEditingController _birthCtrl;
   String? _gender;
@@ -64,8 +63,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   void initState() {
     super.initState();
     _profile = widget.profile;
-    _firstNameCtrl = TextEditingController(text: _profile.firstName ?? '');
-    _lastNameCtrl = TextEditingController(text: _profile.lastName ?? '');
+    _fullNameCtrl = TextEditingController(text: _profile.displayName == 'User' ? '' : _profile.displayName);
     _phoneCtrl = TextEditingController(text: _profile.phone ?? '');
     _birthCtrl = TextEditingController(text: _profile.birth ?? '');
     _gender = _profile.gender;
@@ -74,8 +72,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   @override
   void dispose() {
-    _firstNameCtrl.dispose();
-    _lastNameCtrl.dispose();
+    _fullNameCtrl.dispose();
     _phoneCtrl.dispose();
     _birthCtrl.dispose();
     super.dispose();
@@ -315,17 +312,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         child: Column(
           children: [
             _formField(
-              controller: _firstNameCtrl,
+              controller: _fullNameCtrl,
               label: l.fullName,
               icon: HugeIcons.strokeRoundedUser,
-              validator: (v) =>
-                  (v == null || v.trim().isEmpty) ? l.requiredField : null,
-            ),
-            const SizedBox(height: 14),
-            _formField(
-              controller: _lastNameCtrl,
-              label: l.fullName,
-              icon: HugeIcons.strokeRoundedIdVerified,
               validator: (v) =>
                   (v == null || v.trim().isEmpty) ? l.requiredField : null,
             ),
@@ -638,6 +627,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   bool _hasValue(String? v) => v != null && v.trim().isNotEmpty;
 
+  (String, String) _splitFullName(String fullName) {
+    final t = fullName.trim();
+    if (t.isEmpty) return ('', '');
+    final parts = t.split(RegExp(r'\s+'));
+    if (parts.length == 1) return (parts.first, '');
+    return (parts.first, parts.sublist(1).join(' '));
+  }
+
   String _initialsFrom(String name, String email) {
     final t = name.trim();
     if (t.isNotEmpty && t != 'User') {
@@ -699,9 +696,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       final rawEmail = _profile.email?.trim() ?? '';
       final isValidEmail = RegExp(r'^[\w\-\.]+@([\w\-]+\.)+[\w\-]{2,}$')
           .hasMatch(rawEmail);
+      final (firstName, lastName) = _splitFullName(_fullNameCtrl.text);
       final error = await ApiService.updateProfile(
-        firstName: _firstNameCtrl.text.trim(),
-        lastName: _lastNameCtrl.text.trim(),
+        firstName: firstName,
+        lastName: lastName,
         email: isValidEmail ? rawEmail : '',
         phone: _phoneCtrl.text.trim(),
         birth: _birthCtrl.text,
@@ -774,9 +772,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       final rawEmail2 = _profile.email?.trim() ?? '';
       final isValidEmail2 = RegExp(r'^[\w\-\.]+@([\w\-]+\.)+[\w\-]{2,}$')
           .hasMatch(rawEmail2);
+      final (firstName2, lastName2) = _splitFullName(_fullNameCtrl.text);
       final error = await ApiService.updateProfile(
-        firstName: _firstNameCtrl.text.trim(),
-        lastName: _lastNameCtrl.text.trim(),
+        firstName: firstName2,
+        lastName: lastName2,
         email: isValidEmail2 ? rawEmail2 : '',
         phone: _phoneCtrl.text.trim(),
         birth: _birthCtrl.text,

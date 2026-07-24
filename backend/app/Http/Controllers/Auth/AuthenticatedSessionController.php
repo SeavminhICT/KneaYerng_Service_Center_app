@@ -29,6 +29,10 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
+        if ($request->user()->canAccessAdminPanel()) {
+            $request->session()->flash('just_logged_in', true);
+        }
+
         return redirect()->intended(AuthRedirect::destination($request->user()));
     }
 

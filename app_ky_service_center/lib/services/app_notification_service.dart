@@ -13,6 +13,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/order_tracking_notification.dart';
 import '../screens/notifications/notification_screen.dart';
 import '../screens/orders/delivery_tracking_screen.dart';
+import '../screens/support/support_chat_screen.dart';
 import 'api_service.dart';
 
 const AndroidNotificationChannel _orderTrackingChannel =
@@ -61,12 +62,17 @@ class AppNotificationService {
   /// Updated by FCM pushes, the stored-notification poll, and the
   /// notification center when items are read or deleted.
   final ValueNotifier<int> unreadCount = ValueNotifier<int>(0);
+  final ValueNotifier<int> inboxRevision = ValueNotifier<int>(0);
 
   void reportUnreadCount(int count) {
     final normalized = count < 0 ? 0 : count;
     if (unreadCount.value != normalized) {
       unreadCount.value = normalized;
     }
+  }
+
+  void reportInboxChanged() {
+    inboxRevision.value = inboxRevision.value + 1;
   }
 
   FirebaseMessaging get _messaging => FirebaseMessaging.instance;
@@ -324,6 +330,7 @@ class AppNotificationService {
     if (notificationId != null) {
       _rememberStoredNotificationId(notificationId);
     }
+    reportInboxChanged();
 
     final title = notification?.title?.trim().isNotEmpty == true
         ? notification!.title!.trim()
@@ -496,9 +503,7 @@ class AppNotificationService {
       }
 
       final notifications = await ApiService.fetchOrderTrackingNotifications();
-      reportUnreadCount(
-        notifications.where((item) => item.isUnread).length,
-      );
+      reportUnreadCount(notifications.where((item) => item.isUnread).length);
       if (notifications.isEmpty) {
         return;
       }
@@ -521,6 +526,7 @@ class AppNotificationService {
 
       _lastSeenStoredNotificationId = newestId;
       unawaited(_saveStoredNotificationCursor());
+      reportInboxChanged();
 
       if (!showAlerts || newlyCreatedItems.isEmpty) {
         return;
@@ -720,6 +726,13 @@ class AppNotificationService {
             orderNumber: target.orderNumber,
           ),
         ),
+      );
+      return;
+    }
+
+    if (deepLink.startsWith('/support')) {
+      navigatorState.push(
+        MaterialPageRoute(builder: (_) => const SupportChatScreen()),
       );
       return;
     }

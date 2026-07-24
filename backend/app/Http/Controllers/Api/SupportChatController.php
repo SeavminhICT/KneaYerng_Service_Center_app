@@ -6,9 +6,11 @@ use App\Events\AdminSupportMessageCreated;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\SupportConversationResource;
 use App\Http\Resources\SupportMessageResource;
+use App\Models\OrderTrackingNotification;
 use App\Models\SupportConversation;
 use App\Models\SupportMessage;
 use App\Models\User;
+use App\Services\FirebasePushNotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -18,6 +20,10 @@ use Illuminate\Validation\ValidationException;
 
 class SupportChatController extends Controller
 {
+    public function __construct(
+        private readonly FirebasePushNotificationService $pushNotificationService
+    ) {}
+
     public function showOrCreateConversation(Request $request)
     {
         $user = $request->user() ?? $request->user('sanctum');
@@ -265,6 +271,8 @@ class SupportChatController extends Controller
             return $message;
         });
 
+        $this->pushSupportReplyNotification($conversation, $message);
+
         return response()->json([
             'message' => 'Reply sent.',
             'data' => [
@@ -274,6 +282,44 @@ class SupportChatController extends Controller
                 'message' => new SupportMessageResource($message->fresh()),
             ],
         ], 201);
+    }
+
+    protected function pushSupportReplyNotification(SupportConversation $conversation, SupportMessage $message): void
+    {
+        $customer = $conversation->customer ?? User::find($conversation->customer_id);
+        if (! $customer instanceof User) {
+            return;
+        }
+
+        $preview = match (true) {
+            $message->message_type === 'voice' => 'Sent you a voice message',
+            $message->message_type === 'image' => 'Sent you an image',
+            blank($message->body) => 'Sent you a message',
+            mb_strlen((string) $message->body) > 120 => mb_substr((string) $message->body, 0, 117).'...',
+            default => (string) $message->body,
+        };
+
+        try {
+            $notification = OrderTrackingNotification::create([
+                'user_id' => $customer->id,
+                'type' => 'support_reply',
+                'title' => 'New message from support',
+                'body' => $preview,
+                'payload' => [
+                    'source' => 'support_chat',
+                    'conversation_id' => $conversation->id,
+                    'deep_link' => '/support',
+                ],
+            ]);
+
+            $this->pushNotificationService->sendStoredNotification($customer, $notification);
+        } catch (\Throwable $exception) {
+            Log::warning('Failed to push support reply notification.', [
+                'conversation_id' => $conversation->id,
+                'message_id' => $message->id,
+                'error' => $exception->getMessage(),
+            ]);
+        }
     }
 
     public function adminUpdateStatus(Request $request, SupportConversation $conversation)

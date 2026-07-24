@@ -224,6 +224,7 @@ Route::middleware('admin')->group(function () {
     Route::post('categories', [CategoryController::class, 'store'])->middleware('permission:create_category');
     Route::match(['put', 'patch'], 'categories/{category}', [CategoryController::class, 'update'])->middleware('permission:update_category');
     Route::delete('categories/{category}', [CategoryController::class, 'destroy'])->middleware('permission:delete_category');
+    Route::get('products/next-sku', [ProductController::class, 'nextSku'])->middleware('permission:create_product,update_product');
     Route::post('products/bulk-action', [ProductController::class, 'bulkAction'])->middleware('permission:update_product,delete_product,view_product');
     Route::post('products', [ProductController::class, 'store'])->middleware('permission:create_product');
     Route::match(['put', 'patch'], 'products/{product}', [ProductController::class, 'update'])->whereNumber('product')->middleware('permission:update_product');

@@ -1,22 +1,22 @@
 <header class="fixed top-0 left-0 right-0 z-40 h-16 border-b border-slate-200 bg-white/90 backdrop-blur dark:border-slate-800 dark:bg-slate-950/90 lg:left-72">
     <div class="flex h-full items-center justify-between gap-3 px-6 lg:px-10">
 
-        <div class="flex items-center gap-4">
+        <div class="flex min-w-0 items-center gap-4">
             <button type="button" class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm transition-all duration-200 ease-out hover:-translate-y-0.5 hover:text-slate-900 hover:shadow-md active:translate-y-0 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/70 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 lg:hidden motion-reduce:transition-none" @click="sidebarOpen = true">
                 <span class="sr-only">{{ __('Open sidebar') }}</span>
                 <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
                 </svg>
             </button>
-            <div class="hidden sm:block">
+            <div class="hidden min-w-0 sm:block">
                 <p class="text-[10px] font-semibold uppercase tracking-widest text-slate-400">{{ __('Admin') }}</p>
-                <h1 class="text-sm font-bold text-slate-900 dark:text-white">@yield('page-title', __('Dashboard'))</h1>
+                <h1 class="truncate text-sm font-bold text-slate-900 dark:text-white">@yield('page-title', __('Dashboard'))</h1>
             </div>
         </div>
 
-        <div class="flex items-center gap-2">
+        <div class="flex shrink-0 items-center gap-2">
             {{-- Search --}}
-            <div class="hidden w-52 shrink-0 items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm text-slate-500 shadow-sm transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-md focus-within:-translate-y-0.5 focus-within:shadow-md dark:border-slate-800 dark:bg-slate-900 md:flex motion-reduce:transition-none">
+            <div class="hidden w-52 shrink-0 items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm text-slate-500 shadow-sm transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-md focus-within:-translate-y-0.5 focus-within:shadow-md dark:border-slate-800 dark:bg-slate-900 2xl:flex motion-reduce:transition-none">
                 <svg class="h-4 w-4 shrink-0" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35m1.6-5.15a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
@@ -24,7 +24,7 @@
             </div>
 
             {{-- Cambodia time --}}
-            <div class="hidden shrink-0 items-center gap-1 whitespace-nowrap rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs text-slate-500 shadow-sm dark:border-slate-800 dark:bg-slate-900 lg:flex">
+            <div class="hidden shrink-0 items-center gap-1 whitespace-nowrap rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs text-slate-500 shadow-sm dark:border-slate-800 dark:bg-slate-900 2xl:flex">
                 <svg class="h-4 w-4 shrink-0 text-slate-400" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
@@ -226,8 +226,8 @@
             {{-- Language toggle --}}
             <div class="relative shrink-0" x-data="{ langOpen: false }">
                 <button type="button" class="inline-flex h-9 items-center gap-1 rounded-xl border border-slate-200 bg-white px-2 text-sm font-medium text-slate-700 shadow-sm transition-all duration-200 ease-out hover:-translate-y-0.5 hover:text-slate-900 hover:shadow-md active:translate-y-0 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/70 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 motion-reduce:transition-none" @click="langOpen = !langOpen" @keydown.escape="langOpen = false">
-                    <span class="mr-1 text-base leading-none">{{ app()->getLocale() === 'km' ? '🇰🇭' : '🇬🇧' }}</span>
-                    <span class="text-xs font-semibold uppercase">{{ app()->getLocale() }}</span>
+                    <span class="text-base leading-none xl:mr-1">{{ app()->getLocale() === 'km' ? '🇰🇭' : '🇬🇧' }}</span>
+                    <span class="hidden text-xs font-semibold uppercase xl:inline">{{ app()->getLocale() }}</span>
                     <svg class="h-4 w-4 shrink-0 text-slate-400 transition-transform duration-200 ease-out" :class="langOpen ? 'rotate-180 text-slate-500' : ''" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M6 9l6 6 6-6" />
                     </svg>
@@ -243,7 +243,7 @@
             </div>
 
             {{-- Theme toggle --}}
-            <button type="button" class="inline-flex h-9 shrink-0 w-24 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white text-sm font-medium text-slate-600 shadow-sm transition-all duration-200 ease-out hover:-translate-y-0.5 hover:text-slate-900 hover:shadow-md active:translate-y-0 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/70 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 motion-reduce:transition-none" @click="theme = theme === 'dark' ? 'light' : 'dark'; localStorage.setItem('theme', theme); document.documentElement.classList.toggle('dark', theme === 'dark')">
+            <button type="button" class="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-2 text-sm font-medium text-slate-600 shadow-sm transition-all duration-200 ease-out hover:-translate-y-0.5 hover:text-slate-900 hover:shadow-md active:translate-y-0 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/70 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 motion-reduce:transition-none xl:w-24 xl:px-3" @click="theme = theme === 'dark' ? 'light' : 'dark'; localStorage.setItem('theme', theme); document.documentElement.classList.toggle('dark', theme === 'dark')">
                 {{-- Moon icon (shown in light mode) --}}
                 <svg x-show="theme === 'light'" class="h-4 w-4 shrink-0 transition-transform duration-200 ease-out" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" x-cloak>
                     <path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
@@ -252,7 +252,7 @@
                 <svg x-show="theme === 'dark'" class="h-4 w-4 shrink-0 transition-transform duration-200 ease-out" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" x-cloak>
                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2m0 14v2m9-9h-2M5 12H3m15.364 6.364l-1.414-1.414M7.05 7.05L5.636 5.636m12.728 0l-1.414 1.414M7.05 16.95l-1.414 1.414" />
                 </svg>
-                <span x-text="theme === 'dark' ? '{{ __('Dark') }}' : '{{ __('Light') }}'">{{ __('Theme') }}</span>
+                <span class="hidden xl:inline" x-text="theme === 'dark' ? '{{ __('Dark') }}' : '{{ __('Light') }}'">{{ __('Theme') }}</span>
             </button>
 
             {{-- User dropdown --}}
@@ -261,8 +261,8 @@
                     <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary-600 text-xs font-bold text-white">
                         {{ strtoupper(substr(auth()->user()?->name ?? 'A', 0, 1)) }}
                     </span>
-                    <span class="hidden text-left sm:block">
-                        <span class="block text-xs font-semibold">{{ auth()->user()?->name ?? __('Admin') }}</span>
+                    <span class="hidden max-w-[10rem] truncate text-left xl:block">
+                        <span class="block truncate text-xs font-semibold">{{ auth()->user()?->name ?? __('Admin') }}</span>
                     </span>
                     <svg class="h-4 w-4 shrink-0 text-slate-400 transition-transform duration-200 ease-out" :class="open ? 'rotate-180 text-slate-500' : ''" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M6 9l6 6 6-6" />

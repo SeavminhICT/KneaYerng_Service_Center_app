@@ -69,6 +69,10 @@
                             <input id="brand" name="brand" type="text" value="Apple" placeholder="{{ __('Brand') }}" class="mt-2 hidden w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200" />
                         </div>
                         <div>
+                            <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="sku-preview">{{ __('SKU') }}</label>
+                            <input id="sku-preview" type="text" value="" placeholder="{{ __('Auto-generated on save') }}" readonly class="mt-2 w-full rounded-xl border border-slate-200 bg-slate-100 px-3 py-2 font-mono text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200" />
+                        </div>
+                        <div>
                             <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="category">{{ __('Category') }}</label>
                             <select id="category" name="category_id" class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200">
                                 <option value="">{{ __('Select category') }}</option>
@@ -203,7 +207,7 @@
                         </div>
                         <div>
                             <label class="text-xs font-semibold text-slate-600 dark:text-slate-300" for="variant-sku">{{ __('SKU') }}</label>
-                            <input id="variant-sku" type="text" placeholder="IP17PM-256-BLK" class="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200" />
+                            <input id="variant-sku" type="text" placeholder="{{ __('Auto-generated') }}" class="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 font-mono text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200" />
                         </div>
                         <div>
                             <label class="text-xs font-semibold text-slate-600 dark:text-slate-300" for="variant-image">{{ __('Variant Image') }}</label>
@@ -347,6 +351,7 @@
             const nameInput = document.getElementById('name');
             const brandSelect = document.getElementById('brand-select');
             const brandInput = document.getElementById('brand');
+            const skuPreviewInput = document.getElementById('sku-preview');
             const variantSku = document.getElementById('variant-sku');
             const variantPrice = document.getElementById('variant-price');
             const variantStock = document.getElementById('variant-stock');
@@ -363,6 +368,8 @@
 
             const CUSTOM_NAME = '__custom__';
             let masterOptions = {};
+            let skuPreviewTimer = null;
+            let skuPreviewRequestId = 0;
 
             function currentType() {
                 const checked = document.querySelector('input[name="product_type"]:checked');
@@ -396,6 +403,115 @@
                     .replace(/</g, '&lt;')
                     .replace(/>/g, '&gt;')
                     .replace(/"/g, '&quot;');
+            }
+
+            function skuSegment(value, maxLength = 8) {
+                return cleanText(value).replace(/[^A-Za-z0-9]/g, '').toUpperCase().slice(0, maxLength);
+            }
+
+            function localProductSkuPreview() {
+                const cleanName = skuSegment(nameInput.value, 255);
+                if (!cleanName) {
+                    return '';
+                }
+
+                let namePart = cleanName.slice(0, 2);
+                while (namePart.length < 2) {
+                    namePart += 'X';
+                }
+
+                const brandPart = skuSegment(brandInput.value, 255) || 'NA';
+
+                return namePart + brandPart + '001';
+            }
+
+            function variantSkuPreview(item, index) {
+                const base = skuSegment(skuPreviewInput.value || localProductSkuPreview(), 24);
+                if (!base) {
+                    return '';
+                }
+
+                const segments = ['display', 'cpu', 'storage_capacity', 'ram', 'ssd', 'color', 'condition', 'country']
+                    .map((key) => skuSegment(item[key]))
+                    .filter((value) => value !== '');
+
+                if (!segments.length) {
+                    segments.push(String(index + 1).padStart(2, '0'));
+                }
+
+                return (base + '-' + segments.join('-')).slice(0, 120).replace(/-+$/, '');
+            }
+
+            function currentVariantDraft() {
+                const draft = {
+                    storage_capacity: '',
+                    color: '',
+                    condition: '',
+                    ram: '',
+                    ssd: '',
+                    cpu: '',
+                    display: '',
+                    country: '',
+                };
+
+                Object.keys(VARIANT_FIELDS).forEach(function (key) {
+                    const select = fieldSelect(key);
+                    if (select) {
+                        draft[VARIANT_FIELDS[key].payloadKey] = cleanText(select.value);
+                    }
+                });
+
+                return draft;
+            }
+
+            function updateVariantSkuPlaceholder() {
+                variantSku.placeholder = variantSkuPreview(currentVariantDraft(), editIndex ?? variants.length) || @json(__('Auto-generated'));
+            }
+
+            async function refreshSkuPreview() {
+                const name = cleanText(nameInput.value);
+                const fallback = localProductSkuPreview();
+
+                if (!name) {
+                    skuPreviewInput.value = '';
+                    updateVariantSkuPlaceholder();
+                    renderVariantRows();
+                    return;
+                }
+
+                skuPreviewInput.value = fallback;
+                updateVariantSkuPlaceholder();
+                renderVariantRows();
+
+                if (!window.adminApi) {
+                    return;
+                }
+
+                const requestId = ++skuPreviewRequestId;
+                const params = new URLSearchParams({
+                    name: name,
+                    brand: cleanText(brandInput.value),
+                });
+
+                try {
+                    await window.adminApi.ensureCsrfCookie();
+                    const response = await window.adminApi.request('/api/products/next-sku?' + params.toString());
+                    if (requestId !== skuPreviewRequestId || !response.ok) {
+                        return;
+                    }
+
+                    const payload = await response.json();
+                    skuPreviewInput.value = cleanText(payload.sku) || fallback;
+                    updateVariantSkuPlaceholder();
+                    renderVariantRows();
+                } catch (e) {
+                    skuPreviewInput.value = fallback;
+                }
+            }
+
+            function scheduleSkuPreviewRefresh() {
+                clearTimeout(skuPreviewTimer);
+                skuPreviewTimer = setTimeout(refreshSkuPreview, 250);
             }
 
             function variantKey(item) {
@@ -438,11 +554,15 @@
                     nameInput.value = '';
                     nameInput.classList.remove('hidden');
                     nameInput.focus();
+                    scheduleSkuPreviewRefresh();
                     return;
                 }
                 nameInput.value = nameSelect.value;
                 nameInput.classList.add('hidden');
+                scheduleSkuPreviewRefresh();
             });
+
+            nameInput.addEventListener('input', scheduleSkuPreviewRefresh);
 
             // ── Brand control ────────────────────────────────────────────
             function applyBrandControl() {
@@ -460,6 +580,16 @@
 
             brandSelect.addEventListener('change', function () {
                 brandInput.value = brandSelect.value;
+                scheduleSkuPreviewRefresh();
+            });
+
+            brandInput.addEventListener('input', scheduleSkuPreviewRefresh);
+
+            Object.keys(VARIANT_FIELDS).forEach(function (key) {
+                const select = fieldSelect(key);
+                if (select) {
+                    select.addEventListener('change', updateVariantSkuPlaceholder);
+                }
             });
 
             // ── Variant field visibility / labels / table ────────────────
@@ -481,6 +611,7 @@
 
                 variantSectionHint.textContent = config.hint;
                 renderVariantHead();
+                updateVariantSkuPlaceholder();
             }
 
             function renderVariantHead() {
@@ -508,6 +639,7 @@
                 variantImage.value = '';
                 variantFormError.textContent = '';
                 variantAddBtn.textContent = @json(__('Add Variant'));
+                updateVariantSkuPlaceholder();
             }
 
             function updateVariantSummary() {
@@ -536,12 +668,13 @@
                 variantRows.innerHTML = variants.map(function (item, index) {
                     const hasNewFile = item.file instanceof File;
                     const imageText = hasNewFile ? item.file.name : (cleanText(item.image) ? 'Existing image' : 'None');
+                    const shownSku = cleanText(item.sku) || variantSkuPreview(item, index);
                     const cells = config.fields.map(function (key) {
                         return '<td class="px-3 py-2">' + (escapeHtml(cleanText(item[VARIANT_FIELDS[key].payloadKey])) || '--') + '</td>';
                     });
                     cells.push('<td class="px-3 py-2">' + formatMoney(toNumber(item.price, 0)) + '</td>');
                     cells.push('<td class="px-3 py-2">' + toNumber(item.stock, 0) + '</td>');
-                    cells.push('<td class="px-3 py-2">' + (escapeHtml(cleanText(item.sku)) || '--') + '</td>');
+                    cells.push('<td class="px-3 py-2 font-mono">' + (escapeHtml(shownSku) || '--') + '</td>');
                     cells.push('<td class="px-3 py-2 text-xs text-slate-500">' + escapeHtml(imageText) + '</td>');
                     cells.push(
                         '<td class="px-3 py-2 text-right">'
@@ -702,6 +835,7 @@
                 applyBrandControl();
                 applyVariantFields();
                 renderVariantRows();
+                scheduleSkuPreviewRefresh();
             });
 
             function renderGalleryPreview(files, containerId) {
@@ -896,6 +1030,7 @@
             document.addEventListener('DOMContentLoaded', function () {
                 loadCategories();
                 loadAttributeOptions();
+                scheduleSkuPreviewRefresh();
             });
 
             applyNameControl();

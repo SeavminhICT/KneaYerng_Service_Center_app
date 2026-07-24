@@ -55,6 +55,8 @@ class AdminNotificationSummary {
     this.delivered = 0,
     this.failed = 0,
     this.removedInvalidTokens = 0,
+    this.pushDisabled = false,
+    this.pushError,
   });
 
   final int targetedUsers;
@@ -63,15 +65,28 @@ class AdminNotificationSummary {
   final int delivered;
   final int failed;
   final int removedInvalidTokens;
+  final bool pushDisabled;
+  final String? pushError;
 
   factory AdminNotificationSummary.fromJson(Map<String, dynamic> json) {
+    final pushError = json['push_error']?.toString().trim();
     return AdminNotificationSummary(
-      targetedUsers: _toInt(json['targeted_users']) ?? 0,
+      targetedUsers:
+          _toInt(json['targeted_users']) ??
+          _toInt(json['targeted_recipients']) ??
+          _toInt(json['saved_notifications']) ??
+          0,
       savedNotifications: _toInt(json['saved_notifications']) ?? 0,
       deviceTokens: _toInt(json['device_tokens']) ?? 0,
       delivered: _toInt(json['delivered']) ?? 0,
       failed: _toInt(json['failed']) ?? 0,
       removedInvalidTokens: _toInt(json['removed_invalid_tokens']) ?? 0,
+      pushDisabled:
+          json['push_disabled'] == true ||
+          json['push_disabled'] == 'true' ||
+          json['push_disabled'] == 1 ||
+          json['push_disabled'] == '1',
+      pushError: pushError == null || pushError.isEmpty ? null : pushError,
     );
   }
 }

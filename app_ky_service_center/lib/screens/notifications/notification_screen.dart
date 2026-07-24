@@ -35,11 +35,24 @@ class _NotificationScreenState extends State<NotificationScreen> {
   NotificationFilter _activeFilter = NotificationFilter.all;
   bool _isRefreshing = false;
   bool _isLoading = true;
+  late final VoidCallback _inboxRevisionListener;
 
   @override
   void initState() {
     super.initState();
+    _inboxRevisionListener = _handleInboxRevisionChanged;
+    AppNotificationService.instance.inboxRevision.addListener(
+      _inboxRevisionListener,
+    );
     _loadNotifications();
+  }
+
+  @override
+  void dispose() {
+    AppNotificationService.instance.inboxRevision.removeListener(
+      _inboxRevisionListener,
+    );
+    super.dispose();
   }
 
   List<NotificationItem> get _visibleItems {
@@ -66,6 +79,11 @@ class _NotificationScreenState extends State<NotificationScreen> {
   }
 
   int get _unreadCount => _items.where((item) => item.isUnread).length;
+
+  void _handleInboxRevisionChanged() {
+    if (!mounted || _isLoading || _isRefreshing) return;
+    _loadNotifications(showLoader: false);
+  }
 
   Future<void> _refresh() async {
     if (_isRefreshing) return;

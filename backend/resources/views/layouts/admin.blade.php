@@ -321,6 +321,54 @@
             })();
         </script>
 
+        @if (session('just_logged_in'))
+            <script>
+                (function () {
+                    function requestNotificationPermission() {
+                        if (!('Notification' in window) || Notification.permission !== 'default') {
+                            return;
+                        }
+
+                        Notification.requestPermission().then(function (permission) {
+                            if (permission === 'granted' && typeof window.adminToast === 'function') {
+                                window.adminToast('{{ __('Browser notifications enabled.') }}', { type: 'success' });
+                            } else if (permission === 'denied' && typeof window.adminToast === 'function') {
+                                window.adminToast('{{ __('Notifications blocked. You can enable them later from your browser settings.') }}', { type: 'error' });
+                            }
+                        });
+                    }
+
+                    function promptNotificationPermission() {
+                        if (!('Notification' in window) || Notification.permission !== 'default') {
+                            return;
+                        }
+
+                        if (!window.Swal) {
+                            requestNotificationPermission();
+                            return;
+                        }
+
+                        window.Swal.fire({
+                            icon: 'info',
+                            title: '{{ __('Enable Notifications') }}',
+                            text: '{{ __('Allow browser notifications to stay updated on new orders, support messages, and alerts.') }}',
+                            showCancelButton: true,
+                            confirmButtonText: '{{ __('Allow') }}',
+                            cancelButtonText: '{{ __('Not Now') }}',
+                            confirmButtonColor: '#2563eb',
+                            cancelButtonColor: '#64748b',
+                        }).then(function (result) {
+                            if (result.isConfirmed) {
+                                requestNotificationPermission();
+                            }
+                        });
+                    }
+
+                    setTimeout(promptNotificationPermission, 600);
+                })();
+            </script>
+        @endif
+
         @stack('scripts')
     </body>
 </html>

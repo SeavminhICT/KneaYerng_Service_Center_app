@@ -46,6 +46,7 @@ class _HomeScreenState extends State<HomeScreen> {
   List<BannerItem> _banners = [];
   late Future<List<Category>> _categoriesFuture;
   late Future<List<Product>> _productsFuture;
+  late Future<Map<int, List<Product>>> _categoryProductsFuture;
   late Future<List<Product>> _hotSaleFuture;
   late Future<List<Product>> _topSellerFuture;
   late Future<List<Product>> _promotionFuture;
@@ -56,6 +57,7 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
     _categoriesFuture = _loadCategoriesSafe();
     _productsFuture = _loadProductsSafe();
+    _categoryProductsFuture = _loadCategoryProductsSafe(_categoriesFuture);
     _hotSaleFuture = _loadTaggedProductsSafe('HOT_SALE');
     _topSellerFuture = _loadTaggedProductsSafe('TOP_SELLER');
     _promotionFuture = _loadTaggedProductsSafe('PROMOTION');
@@ -88,32 +90,71 @@ class _HomeScreenState extends State<HomeScreen> {
     await showCartAddedBottomBar(context);
   }
 
+  // Fetches everything before setState so FutureBuilders never flash back to
+  // their loading skeletons — pull-to-refresh fires easily from a fast
+  // scroll-to-top and must stay visually quiet.
   Future<void> _refresh() async {
-    await _clearImageCache();
     _loadBanners();
-    setState(() {
-      _categoriesFuture = _loadCategoriesSafe(forceRefresh: true);
-      _productsFuture = _loadProductsSafe(forceRefresh: true);
-      _hotSaleFuture = _loadTaggedProductsSafe('HOT_SALE', forceRefresh: true);
-      _topSellerFuture =
-          _loadTaggedProductsSafe('TOP_SELLER', forceRefresh: true);
-      _promotionFuture =
-          _loadTaggedProductsSafe('PROMOTION', forceRefresh: true);
-      _profileFuture = ApiService.getUserProfile();
-    });
-    await Future.wait([
-      _categoriesFuture,
-      _productsFuture,
-      _hotSaleFuture,
-      _topSellerFuture,
-      _promotionFuture,
-    ]);
-  }
 
-  Future<void> _clearImageCache() async {
-    final cache = PaintingBinding.instance.imageCache;
-    cache.clear();
-    cache.clearLiveImages();
+    final categoriesFuture = _loadCategoriesSafe(forceRefresh: true);
+    final productsFuture = _loadProductsSafe(forceRefresh: true);
+    final categoryProductsFuture = _loadCategoryProductsSafe(
+      categoriesFuture,
+      forceRefresh: true,
+    );
+    final hotSaleFuture = _loadTaggedProductsSafe(
+      'HOT_SALE',
+      forceRefresh: true,
+    );
+    final topSellerFuture = _loadTaggedProductsSafe(
+      'TOP_SELLER',
+      forceRefresh: true,
+    );
+    final promotionFuture = _loadTaggedProductsSafe(
+      'PROMOTION',
+      forceRefresh: true,
+    );
+    final profileFuture = ApiService.getUserProfile();
+
+    final categories = await categoriesFuture;
+    List<Product>? products;
+    try {
+      products = await productsFuture;
+    } catch (_) {
+      products = null;
+    }
+    Map<int, List<Product>>? categoryProducts;
+    try {
+      categoryProducts = await categoryProductsFuture;
+    } catch (_) {
+      categoryProducts = null;
+    }
+    final hotSale = await hotSaleFuture;
+    final topSeller = await topSellerFuture;
+    final promotion = await promotionFuture;
+    UserProfile? profile;
+    try {
+      profile = await profileFuture;
+    } catch (_) {
+      profile = null;
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _categoriesFuture = Future.value(categories);
+      if (products != null) {
+        _productsFuture = Future.value(products);
+      }
+      if (categoryProducts != null) {
+        _categoryProductsFuture = Future.value(categoryProducts);
+      }
+      _hotSaleFuture = Future.value(hotSale);
+      _topSellerFuture = Future.value(topSeller);
+      _promotionFuture = Future.value(promotion);
+      if (profile != null) {
+        _profileFuture = Future.value(profile);
+      }
+    });
   }
 
   Future<List<Category>> _loadCategoriesSafe({bool forceRefresh = false}) async {
@@ -132,6 +173,35 @@ class _HomeScreenState extends State<HomeScreen> {
       debugPrint('[HomeScreen] products load failed: $error');
       rethrow;
     }
+  }
+
+  /// Fetches each category's own products via a category-scoped API call
+  /// (like CategoryProductsScreen does), rather than filtering a shared
+  /// "newest 20 site-wide" list — a category whose real products aren't
+  /// among the newest 20 overall would otherwise show empty/wrong items.
+  Future<Map<int, List<Product>>> _loadCategoryProductsSafe(
+    Future<List<Category>> categoriesFuture, {
+    bool forceRefresh = false,
+  }) async {
+    final categories = await categoriesFuture;
+    final entries = await Future.wait(
+      categories.map((category) async {
+        try {
+          final products = await ApiService.fetchProducts(
+            categoryId: category.id,
+            perPage: 4,
+            forceRefresh: forceRefresh,
+          );
+          return MapEntry(category.id, products);
+        } catch (error) {
+          debugPrint(
+            '[HomeScreen] products load failed for category ${category.id}: $error',
+          );
+          return MapEntry(category.id, const <Product>[]);
+        }
+      }),
+    );
+    return Map.fromEntries(entries);
   }
 
   /// Loads products carrying an admin-set tag (HOT_SALE, TOP_SELLER,
@@ -387,7 +457,7 @@ class _HomeScreenState extends State<HomeScreen> {
             backgroundColor: homeSurface(context),
             onRefresh: _refresh,
             child: ListView(
-              physics: const BouncingScrollPhysics(
+              physics: const ClampingScrollPhysics(
                 parent: AlwaysScrollableScrollPhysics(),
               ),
               padding: const EdgeInsets.fromLTRB(16, 14, 16, 34),
@@ -528,8 +598,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       return const SizedBox.shrink();
                     }
 
-                    return FutureBuilder<List<Product>>(
-                      future: _productsFuture,
+                    return FutureBuilder<Map<int, List<Product>>>(
+                      future: _categoryProductsFuture,
                       builder: (context, productSnapshot) {
                         if (productSnapshot.connectionState ==
                             ConnectionState.waiting) {
@@ -541,16 +611,14 @@ class _HomeScreenState extends State<HomeScreen> {
                             title: l.somethingWentWrong,
                           );
                         }
-                        final allProducts = productSnapshot.data ?? const [];
+                        final productsByCategory =
+                            productSnapshot.data ?? const {};
 
                         final sections = <Widget>[];
                         for (final category in categories) {
-                          final items = allProducts
-                              .where(
-                                (product) => product.categoryId == category.id,
-                              )
-                              .take(4)
-                              .toList();
+                          final items =
+                              productsByCategory[category.id] ??
+                              const <Product>[];
                           if (items.isEmpty) continue;
 
                           sections.add(

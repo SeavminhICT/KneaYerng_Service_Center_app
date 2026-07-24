@@ -230,8 +230,8 @@ class ApiService {
   static const int _maxBaseUrlHistoryEntries = 8;
   static const String _loopbackApi = 'http://127.0.0.1:8000/api';
   static const String _androidEmulatorApi = 'http://10.0.2.2:8000/api';
-  // Hosted backend used by default. Set to empty string to re-enable LAN
-  // auto-detection for local development.
+  // Hosted backend used by default. A runtime override can still switch the
+  // app to a LAN/dev server when needed.
   static const String _defaultServerUrl =
       'https://kneayerng.seavminh.com/api';
   static String? _runtimeBaseUrl;
@@ -3330,7 +3330,7 @@ class ApiService {
             },
             body: jsonEncode(body),
           )
-          .timeout(const Duration(seconds: 20));
+          .timeout(const Duration(seconds: 60));
     } catch (_) {
       return const AdminNotificationSendResult(
         success: false,

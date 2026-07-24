@@ -421,15 +421,18 @@ class _AccessoryCard extends StatelessWidget {
     final isDark = _isDark(context);
     final inStock = item.stock > 0;
     final hasDiscount = item.hasDiscount;
+    final discountPercent = hasDiscount
+        ? (((item.basePrice - item.finalPrice) / item.basePrice) * 100).round()
+        : null;
     final warranty = (item.warranty ?? '').trim();
     final hasWarranty =
         warranty.isNotEmpty && warranty.toLowerCase() != 'no warranty';
 
     return Material(
-      color: _surface(context),
-      borderRadius: BorderRadius.circular(18),
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(20),
       child: InkWell(
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(20),
         onTap: () {
           Navigator.of(context).push(
             MaterialPageRoute(
@@ -442,13 +445,14 @@ class _AccessoryCard extends StatelessWidget {
         },
         child: Container(
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(18),
+            color: _surface(context),
+            borderRadius: BorderRadius.circular(20),
             border: Border.all(color: _border(context)),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.06),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
+                color: Colors.black.withValues(alpha: isDark ? 0.22 : 0.05),
+                blurRadius: 16,
+                offset: const Offset(0, 6),
               ),
             ],
           ),
@@ -458,35 +462,49 @@ class _AccessoryCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // ── Image ──────────────────────────────────────────────────
-                _ItemImage(imageUrl: item.imageUrl),
+                _ItemImage(
+                  imageUrl: item.imageUrl,
+                  discountPercent: discountPercent,
+                  inStock: inStock,
+                ),
                 const SizedBox(width: 14),
                 // ── Content ────────────────────────────────────────────────
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Brand pill
-                      if (item.brandLabel != 'Unknown')
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 3,
+                      // Brand pill + tap affordance
+                      Row(
+                        children: [
+                          if (item.brandLabel != 'Unknown')
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 3,
+                              ),
+                              decoration: BoxDecoration(
+                                color: _primarySoft,
+                                borderRadius: BorderRadius.circular(999),
+                              ),
+                              child: Text(
+                                item.brandLabel.toUpperCase(),
+                                style: kmFont(context, GoogleFonts.manrope(
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.w800,
+                                  color: _primary,
+                                  letterSpacing: 0.5,
+                                )),
+                              ),
+                            ),
+                          const Spacer(),
+                          Icon(
+                            HugeIcons.strokeRoundedArrowRight01,
+                            size: 15,
+                            color: _muted(context).withValues(alpha: 0.6),
                           ),
-                          decoration: BoxDecoration(
-                            color: _primarySoft,
-                            borderRadius: BorderRadius.circular(999),
-                          ),
-                          child: Text(
-                            item.brandLabel.toUpperCase(),
-                            style: kmFont(context, GoogleFonts.manrope(
-                              fontSize: 9,
-                              fontWeight: FontWeight.w800,
-                              color: _primary,
-                              letterSpacing: 0.5,
-                            )),
-                          ),
-                        ),
-                      const SizedBox(height: 5),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
                       // Name
                       Text(
                         item.name,
@@ -507,9 +525,9 @@ class _AccessoryCard extends StatelessWidget {
                           Text(
                             '\$${item.finalPrice.toStringAsFixed(2)}',
                             style: kmFont(context, GoogleFonts.manrope(
-                              fontSize: 20,
+                              fontSize: 19,
                               fontWeight: FontWeight.w800,
-                              color: hasDiscount ? _danger : _primary,
+                              color: hasDiscount ? _danger : _ink(context),
                               height: 1,
                             )),
                           ),
@@ -525,28 +543,11 @@ class _AccessoryCard extends StatelessWidget {
                                 decorationColor: _muted(context),
                               )),
                             ),
-                            const SizedBox(width: 6),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 6,
-                                vertical: 2,
-                              ),
-                              decoration: BoxDecoration(
-                                color: _dangerSoft,
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Text(
-                                '-${(((item.basePrice - item.finalPrice) / item.basePrice) * 100).toStringAsFixed(0)}%',
-                                style: kmFont(context, GoogleFonts.manrope(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w800,
-                                  color: _danger,
-                                )),
-                              ),
-                            ),
                           ],
                         ],
                       ),
+                      const SizedBox(height: 10),
+                      Container(height: 1, color: _border(context)),
                       const SizedBox(height: 10),
                       // Bottom row: stock + warranty
                       Row(
@@ -555,9 +556,6 @@ class _AccessoryCard extends StatelessWidget {
                             label: inStock ? 'In Stock' : 'Out of Stock',
                             color: inStock ? _success : _danger,
                             bg: inStock ? _successSoft : _dangerSoft,
-                            icon: inStock
-                                ? HugeIcons.strokeRoundedCheckmarkCircle02
-                                : HugeIcons.strokeRoundedCancelCircle,
                           ),
                           if (hasWarranty) ...[
                             const SizedBox(width: 6),
@@ -589,13 +587,13 @@ class _StatusChip extends StatelessWidget {
     required this.label,
     required this.color,
     required this.bg,
-    required this.icon,
+    this.icon,
   });
 
   final String label;
   final Color color;
   final Color bg;
-  final IconData icon;
+  final IconData? icon;
 
   @override
   Widget build(BuildContext context) {
@@ -608,8 +606,17 @@ class _StatusChip extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 11, color: color),
-          const SizedBox(width: 4),
+          if (icon != null) ...[
+            Icon(icon, size: 11, color: color),
+            const SizedBox(width: 4),
+          ] else ...[
+            Container(
+              width: 6,
+              height: 6,
+              decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+            ),
+            const SizedBox(width: 5),
+          ],
           Text(
             label,
             style: kmFont(context, GoogleFonts.manrope(
@@ -627,26 +634,85 @@ class _StatusChip extends StatelessWidget {
 // ── Item Image ────────────────────────────────────────────────────────────────
 
 class _ItemImage extends StatelessWidget {
-  const _ItemImage({required this.imageUrl});
+  const _ItemImage({
+    required this.imageUrl,
+    this.discountPercent,
+    this.inStock = true,
+  });
   final String? imageUrl;
+  final int? discountPercent;
+  final bool inStock;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 82,
-      height: 82,
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        color: _imageBg(context),
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: imageUrl != null && imageUrl!.isNotEmpty
-          ? AppNetworkImage(
-              imageUrl!,
-              fit: BoxFit.cover,
-              errorWidget: (ctx, url, err) => const _ImageFallback(),
-            )
-          : const _ImageFallback(),
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Container(
+          width: 88,
+          height: 88,
+          clipBehavior: Clip.antiAlias,
+          decoration: BoxDecoration(
+            color: _imageBg(context),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: imageUrl != null && imageUrl!.isNotEmpty
+              ? AppNetworkImage(
+                  imageUrl!,
+                  fit: BoxFit.cover,
+                  errorWidget: (ctx, url, err) => const _ImageFallback(),
+                )
+              : const _ImageFallback(),
+        ),
+        if (!inStock)
+          Positioned.fill(
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.55),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              alignment: Alignment.center,
+              child: Text(
+                'OUT OF\nSTOCK',
+                textAlign: TextAlign.center,
+                style: kmFont(context, GoogleFonts.manrope(
+                  fontSize: 9,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.white,
+                  height: 1.25,
+                  letterSpacing: 0.3,
+                ), forceColor: true),
+              ),
+            ),
+          ),
+        if (inStock && discountPercent != null && discountPercent! > 0)
+          Positioned(
+            top: -6,
+            left: -6,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+              decoration: BoxDecoration(
+                color: _danger,
+                borderRadius: BorderRadius.circular(8),
+                boxShadow: [
+                  BoxShadow(
+                    color: _danger.withValues(alpha: 0.35),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Text(
+                '-$discountPercent%',
+                style: kmFont(context, GoogleFonts.manrope(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.white,
+                ), forceColor: true),
+              ),
+            ),
+          ),
+      ],
     );
   }
 }

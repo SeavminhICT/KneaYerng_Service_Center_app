@@ -3,9 +3,13 @@ import 'package:hugeicons/hugeicons.dart';
 import 'package:intl/intl.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/product.dart';
+import '../../services/cart_service.dart';
 import '../../services/favorite_service.dart';
 import '../../widgets/app_network_image.dart';
+import '../../widgets/auth_guard.dart';
+import '../../widgets/cart_added_bottom_bar.dart';
 import '../../widgets/empty_state_view.dart';
+import '../home/widgets/home_flash_product_card.dart' show homeProductBadgeText;
 import '../products/product_detail_screen.dart';
 
 const _surface = Color(0xFFFFFFFF);
@@ -14,7 +18,10 @@ const _border = Color(0xFFE2E8F0);
 const _textPrimary = Color(0xFF0F172A);
 const _textMuted = Color(0xFF64748B);
 const _brandBlue = Color(0xFF0F6BFF);
+const _brandBlueSoft = Color(0xFFE8F0FF);
 const _danger = Color(0xFFDC2626);
+const _success = Color(0xFF16A34A);
+const _amber = Color(0xFFF59E0B);
 const _shadow = Color(0x140F172A);
 
 final NumberFormat _currencyFormat = NumberFormat.currency(symbol: '\$');
@@ -39,6 +46,33 @@ Color _getTextMuted(BuildContext context) =>
 
 Color _getBorder(BuildContext context) =>
     _isDark(context) ? const Color(0xFF2B3442) : _border;
+
+/// Badge text for a favorite card: reuses the home screen's tag/discount/new
+/// logic, but drops its generic "Featured" fallback so plain items in a
+/// personal wishlist don't all show a promo pill.
+String? _favoriteBadgeText(Product product) {
+  final text = homeProductBadgeText(product);
+  return text == 'Featured' ? null : text;
+}
+
+Color _badgeColor(String text) {
+  final lower = text.toLowerCase();
+  if (lower.contains('new')) return _success;
+  if (lower.contains('off') || lower.contains('sale') || lower.contains('hot')) {
+    return _danger;
+  }
+  return _brandBlue;
+}
+
+Future<void> _addToCart(BuildContext context, Product product) async {
+  final ok = await ensureLoggedIn(
+    context,
+    message: 'Please login to add items to your cart.',
+  );
+  if (!ok || !context.mounted) return;
+  CartService.instance.add(product);
+  await showCartAddedBottomBar(context);
+}
 
 class FavoriteScreen extends StatefulWidget {
   const FavoriteScreen({super.key});
@@ -134,7 +168,7 @@ class _FavoriteScreenState extends State<FavoriteScreen> {
         crossAxisCount: 2,
         mainAxisSpacing: 14,
         crossAxisSpacing: 14,
-        childAspectRatio: 0.66,
+        childAspectRatio: 0.6,
       ),
       itemCount: items.length,
       itemBuilder: (context, index) {
@@ -296,26 +330,69 @@ class _ProductImage extends StatelessWidget {
   }
 }
 
-class _SaleBadge extends StatelessWidget {
-  const _SaleBadge();
+class _ProductBadge extends StatelessWidget {
+  const _ProductBadge({required this.text});
+
+  final String text;
 
   @override
   Widget build(BuildContext context) {
+    final color = _badgeColor(text);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
       decoration: BoxDecoration(
-        color: _danger,
+        color: color,
         borderRadius: BorderRadius.circular(8),
+        boxShadow: [
+          BoxShadow(
+            color: color.withValues(alpha: 0.35),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
       ),
-      child: const Text(
-        'SALE',
-        style: TextStyle(
+      child: Text(
+        text,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: const TextStyle(
           color: Colors.white,
           fontSize: 10,
           fontWeight: FontWeight.w800,
-          letterSpacing: 0.4,
+          letterSpacing: 0.3,
         ),
       ),
+    );
+  }
+}
+
+class _RatingRow extends StatelessWidget {
+  const _RatingRow({required this.rating, required this.ratingCount});
+
+  final double rating;
+  final int ratingCount;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Icon(HugeIcons.strokeRoundedStar, size: 14, color: _amber),
+        const SizedBox(width: 3),
+        Text(
+          rating.toStringAsFixed(1),
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+            color: _getTextPrimary(context),
+          ),
+        ),
+        const SizedBox(width: 3),
+        Text(
+          '($ratingCount)',
+          style: TextStyle(fontSize: 11.5, color: _getTextMuted(context)),
+        ),
+      ],
     );
   }
 }
@@ -332,7 +409,7 @@ class _PriceTag extends StatelessWidget {
       return Text(
         _currencyFormat.format(product.salePrice),
         style: const TextStyle(
-          fontSize: 14,
+          fontSize: 15,
           fontWeight: FontWeight.w800,
           color: _brandBlue,
         ),
@@ -342,7 +419,7 @@ class _PriceTag extends StatelessWidget {
       Text(
         _currencyFormat.format(product.salePrice),
         style: const TextStyle(
-          fontSize: 14,
+          fontSize: 15,
           fontWeight: FontWeight.w800,
           color: _danger,
         ),
@@ -414,6 +491,8 @@ class _GridProductCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final badge = _favoriteBadgeText(product);
+    final ratingCount = product.ratingCount;
     return _CardChrome(
       onTap: () {
         Navigator.of(context).push(
@@ -425,8 +504,7 @@ class _GridProductCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          AspectRatio(
-            aspectRatio: 1.15,
+          Expanded(
             child: Stack(
               fit: StackFit.expand,
               children: [
@@ -446,8 +524,8 @@ class _GridProductCard extends StatelessWidget {
                     ),
                   ),
                 ),
-                if (product.hasDiscount)
-                  Positioned(top: 8, left: 8, child: const _SaleBadge()),
+                if (badge != null)
+                  Positioned(top: 8, left: 8, child: _ProductBadge(text: badge)),
                 Positioned(
                   top: 6,
                   right: 6,
@@ -460,6 +538,7 @@ class _GridProductCard extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
                   product.brand ?? 'Unknown',
@@ -484,8 +563,22 @@ class _GridProductCard extends StatelessWidget {
                     height: 1.25,
                   ),
                 ),
+                if (ratingCount > 0) ...[
+                  const SizedBox(height: 6),
+                  _RatingRow(rating: product.rating, ratingCount: ratingCount),
+                ],
                 const SizedBox(height: 8),
-                _PriceTag(product: product),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Expanded(child: _PriceTag(product: product)),
+                    const SizedBox(width: 6),
+                    _AddToCartButton(
+                      product: product,
+                      onAdded: () => _addToCart(context, product),
+                    ),
+                  ],
+                ),
               ],
             ),
           ),
@@ -502,6 +595,8 @@ class _ListProductCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final badge = _favoriteBadgeText(product);
+    final ratingCount = product.ratingCount;
     return Dismissible(
       key: ValueKey(product.id),
       direction: DismissDirection.endToStart,
@@ -524,10 +619,11 @@ class _ListProductCard extends StatelessWidget {
           );
         },
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             SizedBox(
-              height: 104,
-              width: 104,
+              height: 128,
+              width: 128,
               child: Stack(
                 fit: StackFit.expand,
                 children: [
@@ -547,17 +643,17 @@ class _ListProductCard extends StatelessWidget {
                       ),
                     ),
                   ),
-                  if (product.hasDiscount)
-                    Positioned(top: 6, left: 6, child: const _SaleBadge()),
+                  if (badge != null)
+                    Positioned(top: 8, left: 8, child: _ProductBadge(text: badge)),
                 ],
               ),
             ),
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                padding: const EdgeInsets.fromLTRB(14, 12, 10, 12),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
                       product.brand ?? 'Unknown',
@@ -580,6 +676,10 @@ class _ListProductCard extends StatelessWidget {
                         height: 1.25,
                       ),
                     ),
+                    if (ratingCount > 0) ...[
+                      const SizedBox(height: 6),
+                      _RatingRow(rating: product.rating, ratingCount: ratingCount),
+                    ],
                     const SizedBox(height: 8),
                     _PriceTag(product: product, alignStart: false),
                   ],
@@ -587,8 +687,17 @@ class _ListProductCard extends StatelessWidget {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.only(right: 10),
-              child: _FavoriteButton(product: product, compact: false),
+              padding: const EdgeInsets.fromLTRB(0, 12, 10, 12),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  _FavoriteButton(product: product, compact: false),
+                  _AddToCartButton(
+                    product: product,
+                    onAdded: () => _addToCart(context, product),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -619,6 +728,33 @@ class _FavoriteButton extends StatelessWidget {
             HugeIcons.strokeRoundedFavourite,
             color: _danger,
             size: compact ? 17 : 19,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _AddToCartButton extends StatelessWidget {
+  const _AddToCartButton({required this.product, required this.onAdded});
+
+  final Product product;
+  final VoidCallback onAdded;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: _brandBlueSoft,
+      shape: const CircleBorder(),
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: onAdded,
+        child: const Padding(
+          padding: EdgeInsets.all(9),
+          child: Icon(
+            HugeIcons.strokeRoundedShoppingCartCheckOut01,
+            color: _brandBlue,
+            size: 18,
           ),
         ),
       ),

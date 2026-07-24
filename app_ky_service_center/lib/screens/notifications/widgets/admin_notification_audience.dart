@@ -14,7 +14,7 @@ extension AdminAudienceX on AdminAudience {
   String get label {
     switch (this) {
       case AdminAudience.all:
-        return 'Everyone';
+        return 'Customers + guests';
       case AdminAudience.registered:
         return 'Registered';
       case AdminAudience.guests:

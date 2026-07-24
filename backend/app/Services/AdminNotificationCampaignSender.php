@@ -19,8 +19,7 @@ class AdminNotificationCampaignSender
 
     public function __construct(
         private readonly FirebasePushNotificationService $pushNotificationService
-    ) {
-    }
+    ) {}
 
     /**
      * The guest/campaign columns ship in a migration that may not have run
@@ -62,7 +61,7 @@ class AdminNotificationCampaignSender
      * already have a stored row for this campaign are skipped, so retries
      * never duplicate notifications.
      *
-     * @return array<string, int>
+     * @return array<string, mixed>
      */
     public function send(AdminNotificationCampaign $campaign): array
     {
@@ -130,6 +129,7 @@ class AdminNotificationCampaignSender
                 $summary['delivered'] += $dispatch['delivered'];
                 $summary['failed'] += $dispatch['failed'];
                 $summary['removed_invalid_tokens'] += $dispatch['removed_invalid_tokens'];
+                $this->capturePushSetupError($summary, $dispatch);
             }
         }
 
@@ -169,6 +169,7 @@ class AdminNotificationCampaignSender
                 $summary['delivered'] += $dispatch['delivered'];
                 $summary['failed'] += $dispatch['failed'];
                 $summary['removed_invalid_tokens'] += $dispatch['removed_invalid_tokens'];
+                $this->capturePushSetupError($summary, $dispatch);
             }
         }
 
@@ -192,17 +193,7 @@ class AdminNotificationCampaignSender
 
     public function buildBaseRecipientQuery(): Builder
     {
-        return User::query()
-            ->where(function (Builder $builder) {
-                $builder
-                    ->whereNull('is_admin')
-                    ->orWhere('is_admin', false);
-            })
-            ->where(function (Builder $builder) {
-                $builder
-                    ->whereNull('role')
-                    ->orWhere('role', '!=', 'admin');
-            });
+        return User::query();
     }
 
     private function buildGuestDeviceQuery(): Builder
@@ -277,6 +268,16 @@ class AdminNotificationCampaignSender
         return filter_var(substr($deepLink, strlen('/orders/')), FILTER_VALIDATE_INT) ?: null;
     }
 
+    private function capturePushSetupError(array &$summary, array $dispatch): void
+    {
+        if (empty($dispatch['push_error'])) {
+            return;
+        }
+
+        $summary['push_disabled'] = 1;
+        $summary['push_error'] = (string) $dispatch['push_error'];
+    }
+
     /**
      * Stored/read counts per campaign for admin delivery statistics.
      *
@@ -291,7 +292,7 @@ class AdminNotificationCampaignSender
         }
 
         return OrderTrackingNotification::query()
-            ->selectRaw('campaign_id, COUNT(*) as stored, SUM(CASE WHEN read_at IS NOT NULL THEN 1 ELSE 0 END) as `read`')
+            ->selectRaw('campaign_id, COUNT(*) as `stored`, SUM(CASE WHEN read_at IS NOT NULL THEN 1 ELSE 0 END) as `read`')
             ->whereIn('campaign_id', $ids)
             ->groupBy('campaign_id')
             ->get()

@@ -182,9 +182,13 @@ class _CheckoutKhqrPaymentSheetState extends State<CheckoutKhqrPaymentSheet>
     if (expiresAt == null) return 200;
     final remaining = expiresAt.difference(DateTime.now()).inSeconds;
     if (remaining <= 0) return 1;
+    // Real stop condition is the QR's own expiry (`_isExpired`, checked every
+    // tick); this is only a sanity ceiling so polling can't run away forever.
+    // There's no manual "check now" button to fall back on, so this must
+    // cover the full expiry window rather than cutting auto-check off early.
     final attempts = (remaining / _checkInterval.inSeconds).ceil() + 2;
     if (attempts < 10) return 10;
-    if (attempts > 400) return 400;
+    if (attempts > 2000) return 2000;
     return attempts;
   }
 
@@ -232,25 +236,16 @@ class _CheckoutKhqrPaymentSheetState extends State<CheckoutKhqrPaymentSheet>
           _lastStatus = 'EXPIRED';
         });
         _logKhqrEvent(event: 'expired', status: 'EXPIRED');
-      } else {
-        setState(() {});
       }
+      // No setState here for the non-expired tick: the countdown text below
+      // repaints itself on its own timer so this screen doesn't rebuild
+      // (and visibly "flash") every second.
     });
   }
 
   void _stopCountdown() {
     _countdownTimer?.cancel();
     _countdownTimer = null;
-  }
-
-  String get _expiresCountdown {
-    final expiresAt = _expiresAt;
-    if (expiresAt == null) return '--:--';
-    final remaining = expiresAt.difference(DateTime.now());
-    if (remaining.isNegative) return '00:00';
-    final minutes = remaining.inMinutes.remainder(60).toString().padLeft(2, '0');
-    final seconds = remaining.inSeconds.remainder(60).toString().padLeft(2, '0');
-    return '$minutes:$seconds';
   }
 
   Future<void> _checkStatus({bool fromTimer = false}) async {
@@ -435,16 +430,6 @@ class _CheckoutKhqrPaymentSheetState extends State<CheckoutKhqrPaymentSheet>
     return null;
   }
 
-  Future<void> _checkStatusManually() async {
-    if (_isChecking) return;
-    if (_autoCheckStopped) {
-      setState(() {
-        _autoCheckStopped = false;
-      });
-    }
-    await _checkStatus(fromTimer: false);
-  }
-
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
@@ -542,8 +527,10 @@ class _CheckoutKhqrPaymentSheetState extends State<CheckoutKhqrPaymentSheet>
                         ? _buildScannedStep()
                         : _buildPaidStep(),
                   ),
-                  const SizedBox(height: 18),
-                  _buildActionButtons(l),
+                  if (_isSuccess || _isTerminalFailure) ...[
+                    const SizedBox(height: 18),
+                    _buildActionButtons(l),
+                  ],
                 ],
               ),
             ),
@@ -555,7 +542,7 @@ class _CheckoutKhqrPaymentSheetState extends State<CheckoutKhqrPaymentSheet>
 
   Widget _buildQrStep() {
     final l = AppLocalizations.of(context);
-    final expiresCountdownStr = _expiresAt == null ? null : _expiresCountdown;
+    final expiresAt = _expiresAt;
     return Container(
       key: const ValueKey('qr-step'),
       child: Column(
@@ -627,9 +614,9 @@ class _CheckoutKhqrPaymentSheetState extends State<CheckoutKhqrPaymentSheet>
                         ),
                         const SizedBox(height: 8),
                         _qrMetaRow(l.khqrNetwork, 'Bakong KHQR'),
-                        if (expiresCountdownStr != null) ...[
+                        if (expiresAt != null) ...[
                           const SizedBox(height: 8),
-                          _qrMetaRow(l.khqrExpiresIn, expiresCountdownStr, isTimer: true),
+                          _qrMetaTimerRow(l.khqrExpiresIn, expiresAt),
                         ],
                       ],
                     ),
@@ -786,6 +773,35 @@ class _CheckoutKhqrPaymentSheetState extends State<CheckoutKhqrPaymentSheet>
             color: isTimer ? const Color(0xFFE11D48) : checkoutInk(context),
             fontWeight: FontWeight.w800,
             forceColor: isTimer,   // red countdown must show even in Khmer
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _qrMetaTimerRow(String label, DateTime expiresAt) {
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            label,
+            style: kFont(
+              context,
+              fontSize: 12,
+              color: checkoutMuted(context),
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        _KhqrCountdownText(
+          expiresAt: expiresAt,
+          style: kFont(
+            context,
+            fontSize: 12,
+            color: const Color(0xFFE11D48),
+            fontWeight: FontWeight.w800,
+            forceColor: true, // red countdown must show even in Khmer
           ),
         ),
       ],
@@ -1180,39 +1196,10 @@ class _CheckoutKhqrPaymentSheetState extends State<CheckoutKhqrPaymentSheet>
       );
     }
 
-    return SizedBox(
-      width: double.infinity,
-      child: OutlinedButton.icon(
-        onPressed: _isChecking ? null : _checkStatusManually,
-        icon: _isChecking
-            ? SizedBox(
-                width: 18,
-                height: 18,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2.5,
-                  valueColor: AlwaysStoppedAnimation<Color>(
-                    isCheckoutDark(context) ? const Color(0xFF60A5FA) : const Color(0xFF1D4ED8),
-                  ),
-                ),
-              )
-            : const Icon(HugeIcons.strokeRoundedRefresh, size: 20),
-        label: Text(
-          _isChecking ? l.khqrChecking : l.khqrCheckPayment,
-          style: kFont(context, fontWeight: FontWeight.w800, fontSize: 15),
-        ),
-        style: OutlinedButton.styleFrom(
-          padding: const EdgeInsets.symmetric(vertical: 15),
-          side: BorderSide(
-            color: isCheckoutDark(context) ? const Color(0xFF60A5FA) : const Color(0xFF1D4ED8),
-            width: 1.8,
-          ),
-          foregroundColor: isCheckoutDark(context) ? const Color(0xFF60A5FA) : const Color(0xFF1D4ED8),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
-          ),
-        ),
-      ),
-    );
+    // Payment status is already checked automatically in the background and
+    // surfaced via the pending pill above the QR — no manual "Checking
+    // Payment..." button needed here.
+    return const SizedBox.shrink();
   }
 }
 
@@ -1258,6 +1245,50 @@ class _SuccessReceiptRow extends StatelessWidget {
 // ==========================================
 // Custom Animation Widgets
 // ==========================================
+
+/// Ticks its own mm:ss display once a second without rebuilding the parent
+/// sheet, so the rest of the payment screen stays static instead of
+/// flashing on every countdown tick.
+class _KhqrCountdownText extends StatefulWidget {
+  const _KhqrCountdownText({required this.expiresAt, required this.style});
+
+  final DateTime expiresAt;
+  final TextStyle style;
+
+  @override
+  State<_KhqrCountdownText> createState() => _KhqrCountdownTextState();
+}
+
+class _KhqrCountdownTextState extends State<_KhqrCountdownText> {
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  String get _text {
+    final remaining = widget.expiresAt.difference(DateTime.now());
+    if (remaining.isNegative) return '00:00';
+    final minutes = remaining.inMinutes.remainder(60).toString().padLeft(2, '0');
+    final seconds = remaining.inSeconds.remainder(60).toString().padLeft(2, '0');
+    return '$minutes:$seconds';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(_text, style: widget.style);
+  }
+}
 
 class PulsingStatusDot extends StatefulWidget {
   const PulsingStatusDot({super.key, this.color = const Color(0xFF0F6BFF)});

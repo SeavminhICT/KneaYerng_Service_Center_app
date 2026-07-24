@@ -52,9 +52,9 @@
                             <div>
                                 <label for="notification-type" class="text-sm font-semibold text-slate-700 dark:text-slate-200">{{ __('Notification Type') }}</label>
                                 <select id="notification-type" name="type" class="mt-2 h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-700 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100">
+                                    <option value="Alert">{{ __('Alert') }}</option>
                                     <option value="Announcement">{{ __('Announcement') }}</option>
                                     <option value="Promotion">{{ __('Promotion') }}</option>
-                                    <option value="Alert">{{ __('Alert') }}</option>
                                     <option value="Info">{{ __('Info') }}</option>
                                     <option value="Reminder">{{ __('Reminder') }}</option>
                                     <option value="Document">{{ __('Document') }}</option>
@@ -164,7 +164,7 @@
                                     </svg>
                                 </div>
                                 <div class="min-w-0 flex-1">
-                                    <p id="preview-type" class="text-xs font-semibold uppercase tracking-[0.24em] text-white/60">{{ __('Announcement') }}</p>
+                                    <p id="preview-type" class="text-xs font-semibold uppercase tracking-[0.24em] text-white/60">{{ __('Alert') }}</p>
                                     <p id="preview-title" class="mt-2 text-base font-semibold">{{ __('Title preview will appear here') }}</p>
                                     <p id="preview-message" class="mt-2 text-sm leading-6 text-white/80">{{ __('Message preview will update as you type into the form on the left.') }}</p>
                                     <img id="preview-image" src="" alt="" class="mt-3 hidden max-h-40 w-full rounded-2xl object-cover" />
@@ -231,7 +231,7 @@
             function syncPreview() {
                 previewTitle.textContent = titleInput.value.trim() || 'Title preview will appear here';
                 previewMessage.textContent = messageInput.value.trim() || 'Message preview will update as you type into the form on the left.';
-                previewType.textContent = typeInput.value || 'Announcement';
+                previewType.textContent = typeInput.value || 'Alert';
                 previewLink.textContent = deepLinkInput.value.trim() || 'No deep link';
             }
 
@@ -496,7 +496,7 @@
                     badges.appendChild(statusBadge(item.status));
                     var typeBadge = document.createElement('span');
                     typeBadge.className = 'inline-flex rounded-full bg-primary-50 px-2.5 py-0.5 text-[11px] font-semibold text-primary-700 dark:bg-primary-500/10 dark:text-primary-100';
-                    typeBadge.textContent = item.type || 'Announcement';
+                    typeBadge.textContent = item.type || 'Alert';
                     badges.appendChild(typeBadge);
                     info.appendChild(badges);
 
@@ -592,7 +592,7 @@
             function loadToForm(item) {
                 titleInput.value = item.title || '';
                 messageInput.value = item.message || '';
-                typeInput.value = item.type || 'Announcement';
+                typeInput.value = item.type || 'Alert';
                 deepLinkInput.value = item.deep_link || '';
                 var audience = (item.audience || 'all').toLowerCase();
                 var isCustom = audience === 'custom';
@@ -631,7 +631,7 @@
                 var body = new FormData();
                 body.append('title', item.title || '');
                 body.append('message', item.message || '');
-                body.append('type', item.type || 'Announcement');
+                body.append('type', item.type || 'Alert');
                 body.append('audience', item.audience || 'all');
                 body.append('deep_link', item.deep_link || '');
                 body.append('action', 'send_now');
@@ -783,7 +783,7 @@
                     var draft = JSON.parse(rawDraft);
                     titleInput.value = draft.title || '';
                     messageInput.value = draft.message || '';
-                    typeInput.value = draft.type || 'Announcement';
+                    typeInput.value = draft.type || 'Alert';
                     deepLinkInput.value = draft.deep_link || '';
                     if (targetUserSelect) {
                         targetUserSelect.value = draft.target_user_id || '';

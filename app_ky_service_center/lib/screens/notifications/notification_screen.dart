@@ -432,7 +432,9 @@ class _NotificationScreenState extends State<NotificationScreen> {
 NotificationCategory _categoryFromNotification(
   OrderTrackingNotificationItem item,
 ) {
-  final rawType = (item.displayType ?? item.type ?? '').trim().toLowerCase();
+  final displayType = (item.displayType ?? '').trim().toLowerCase();
+  final storedType = (item.type ?? '').trim().toLowerCase();
+  final rawType = '$displayType $storedType'.trim();
   if (rawType.contains('alert')) {
     return NotificationCategory.alert;
   }
@@ -442,6 +444,12 @@ NotificationCategory _categoryFromNotification(
   if (rawType.contains('message')) {
     return NotificationCategory.message;
   }
+  if (rawType.contains('order')) {
+    return NotificationCategory.order;
+  }
+  if (storedType.contains('admin_')) {
+    return NotificationCategory.alert;
+  }
   if (rawType.contains('promotion')) {
     return NotificationCategory.announcement;
   }
@@ -450,9 +458,6 @@ NotificationCategory _categoryFromNotification(
   }
   if (rawType.contains('reminder') || rawType == 'info') {
     return NotificationCategory.update;
-  }
-  if (rawType.contains('order')) {
-    return NotificationCategory.order;
   }
   return NotificationCategory.update;
 }

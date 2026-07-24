@@ -14,6 +14,7 @@ class NotificationCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final accent = categoryColor(item.category);
     final icon = categoryIcon(item.category);
+    final isAlert = item.category == NotificationCategory.alert;
 
     return Material(
       color: Colors.transparent,
@@ -23,9 +24,11 @@ class NotificationCard extends StatelessWidget {
         child: Ink(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: notificationSurface,
+            color: isAlert ? const Color(0xFFFFFBEB) : notificationSurface,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: notificationBorder),
+            border: Border.all(
+              color: isAlert ? const Color(0xFFFED7AA) : notificationBorder,
+            ),
             boxShadow: const [
               BoxShadow(
                 color: notificationShadow,
@@ -97,7 +100,9 @@ class NotificationCard extends StatelessWidget {
                             vertical: 5,
                           ),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFF1F5FD),
+                            color: isAlert
+                                ? const Color(0xFFFFEDD5)
+                                : const Color(0xFFF1F5FD),
                             borderRadius: BorderRadius.circular(999),
                           ),
                           child: Text(
@@ -114,8 +119,8 @@ class NotificationCard extends StatelessWidget {
                           Container(
                             width: 10,
                             height: 10,
-                            decoration: const BoxDecoration(
-                              color: notificationPrimary,
+                            decoration: BoxDecoration(
+                              color: isAlert ? accent : notificationPrimary,
                               shape: BoxShape.circle,
                             ),
                           ),

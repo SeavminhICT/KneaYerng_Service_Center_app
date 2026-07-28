@@ -181,6 +181,13 @@ class KhPayService
     /**
      * Common POST request helper
      */
+    // Statuses worth retrying: transient proxy/gateway timeouts and
+    // overload responses. Anything else (401/403/422/...) is a permanent
+    // failure and retrying would just waste the customer's wait time.
+    private const RETRYABLE_STATUSES = [408, 425, 429, 500, 502, 503, 504];
+    private const MAX_ATTEMPTS = 3;
+    private const RETRY_BACKOFF_MS = [300, 700];
+
     protected function post(string $path, array $payload): array
     {
         if (empty($this->apiKey)) {
@@ -191,46 +198,77 @@ class KhPayService
             ];
         }
 
-        try {
-            $response = $this->newRequest()
-                ->asJson()
-                ->post("{$this->baseUrl}{$path}", $payload);
+        for ($attempt = 1; $attempt <= self::MAX_ATTEMPTS; $attempt++) {
+            try {
+                $response = $this->newRequest()
+                    ->asJson()
+                    ->timeout(15)
+                    ->post("{$this->baseUrl}{$path}", $payload);
 
-            if ($response->failed()) {
-                Log::error("KHPAY POST request to {$path} failed.", [
-                    'status' => $response->status(),
-                    'body' => $response->body(),
-                ]);
-                $json = $response->json();
-                if ($json) {
-                    return $json;
+                if ($response->failed()) {
+                    $status = $response->status();
+                    $willRetry = $attempt < self::MAX_ATTEMPTS
+                        && in_array($status, self::RETRYABLE_STATUSES, true);
+
+                    Log::error("KHPAY POST request to {$path} failed.", [
+                        'status' => $status,
+                        'body' => $response->body(),
+                        'attempt' => $attempt,
+                        'will_retry' => $willRetry,
+                    ]);
+
+                    if ($willRetry) {
+                        usleep(self::RETRY_BACKOFF_MS[$attempt - 1] * 1000);
+                        continue;
+                    }
+
+                    $json = $response->json();
+                    if ($json) {
+                        return $json;
+                    }
+                    $snippet = trim(strip_tags(Str::limit($response->body(), 200)));
+                    return [
+                        'success' => false,
+                        'error' => $snippet !== ''
+                            ? "KHPAY gateway error (HTTP {$status}): {$snippet}"
+                            : "KHPAY gateway error (HTTP {$status}).",
+                        'code' => 'GATEWAY_ERROR',
+                        'status' => $status,
+                    ];
                 }
-                $status = $response->status();
-                $snippet = trim(strip_tags(Str::limit($response->body(), 200)));
+
+                return $response->json() ?: [
+                    'success' => false,
+                    'error' => 'Empty response from gateway',
+                ];
+            } catch (\Throwable $e) {
+                $willRetry = $attempt < self::MAX_ATTEMPTS;
+
+                Log::error("Exception calling KHPAY POST {$path}", [
+                    'exception' => $e->getMessage(),
+                    'attempt' => $attempt,
+                    'will_retry' => $willRetry,
+                ]);
+
+                if ($willRetry) {
+                    usleep(self::RETRY_BACKOFF_MS[$attempt - 1] * 1000);
+                    continue;
+                }
+
                 return [
                     'success' => false,
-                    'error' => $snippet !== ''
-                        ? "KHPAY gateway error (HTTP {$status}): {$snippet}"
-                        : "KHPAY gateway error (HTTP {$status}).",
-                    'code' => 'GATEWAY_ERROR',
-                    'status' => $status,
+                    'error' => 'KHPAY gateway connection error: '
+                        . Str::limit($e->getMessage(), 150),
+                    'code' => 'CONNECTION_ERROR',
                 ];
             }
-
-            return $response->json() ?: [
-                'success' => false,
-                'error' => 'Empty response from gateway',
-            ];
-        } catch (\Throwable $e) {
-            Log::error("Exception calling KHPAY POST {$path}", [
-                'exception' => $e->getMessage(),
-            ]);
-            return [
-                'success' => false,
-                'error' => 'KHPAY gateway connection error: '
-                    . Str::limit($e->getMessage(), 150),
-                'code' => 'CONNECTION_ERROR',
-            ];
         }
+
+        // Unreachable: the loop above always returns by its final attempt.
+        return [
+            'success' => false,
+            'error' => 'Unable to reach KHPAY gateway.',
+            'code' => 'UNKNOWN_ERROR',
+        ];
     }
 }

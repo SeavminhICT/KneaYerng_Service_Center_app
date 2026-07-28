@@ -1,4 +1,6 @@
-﻿import 'package:flutter/material.dart';
+﻿import 'dart:async';
+
+import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../theme/app_fonts.dart';
 import 'package:hugeicons/hugeicons.dart';
@@ -319,12 +321,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   (v == null || v.trim().isEmpty) ? l.requiredField : null,
             ),
             const SizedBox(height: 14),
-            _formField(
-              controller: _phoneCtrl,
-              label: l.phoneNumber,
-              icon: HugeIcons.strokeRoundedCall,
-              keyboard: TextInputType.phone,
-            ),
+            _phoneField(l),
             const SizedBox(height: 14),
             _dateField(),
             const SizedBox(height: 14),
@@ -415,6 +412,305 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         ),
       ),
     );
+  }
+
+  Widget _phoneField(AppLocalizations l) {
+    return TextFormField(
+      controller: _phoneCtrl,
+      readOnly: true,
+      onTap: _openChangePhoneSheet,
+      cursorColor: _primary,
+      style: kmFont(context, GoogleFonts.inter(
+        fontSize: 14,
+        fontWeight: FontWeight.w600,
+        color: _textPrimary,
+      )),
+      decoration: InputDecoration(
+        labelText: l.phoneNumber,
+        labelStyle: kmFont(context, GoogleFonts.inter(fontSize: 13, color: _textMuted)),
+        prefixIcon: Icon(HugeIcons.strokeRoundedCall, color: _primary, size: 20),
+        suffixIcon: TextButton(
+          onPressed: _openChangePhoneSheet,
+          child: Text(
+            l.isKhmer ? 'ប្តូរ' : 'Change',
+            style: kmFont(context, GoogleFonts.inter(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: _primary,
+            )),
+          ),
+        ),
+        filled: true,
+        fillColor: _bg,
+        isDense: true,
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 16,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(color: _border),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(color: _primary, width: 1.5),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openChangePhoneSheet() async {
+    final newPhoneCtrl = TextEditingController(text: _phoneCtrl.text);
+    final otpCtrl = TextEditingController();
+    var step = 1;
+    var busy = false;
+    String? error;
+    var resendSeconds = 0;
+    Timer? timer;
+
+    void tick(void Function(void Function()) setModalState) {
+      timer?.cancel();
+      timer = Timer.periodic(const Duration(seconds: 1), (t) {
+        if (resendSeconds <= 1) {
+          t.cancel();
+          setModalState(() => resendSeconds = 0);
+        } else {
+          setModalState(() => resendSeconds -= 1);
+        }
+      });
+    }
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            Future<void> sendOtp() async {
+              final phone = newPhoneCtrl.text.trim();
+              if (phone.isEmpty) {
+                setModalState(() => error = 'Please enter a phone number');
+                return;
+              }
+              setModalState(() {
+                busy = true;
+                error = null;
+              });
+              final result = await ApiService.requestPhoneChangeOtp(phone);
+              setModalState(() {
+                busy = false;
+                if (result.ok) {
+                  step = 2;
+                  resendSeconds = result.resendInSec ?? 60;
+                } else {
+                  error = result.message;
+                }
+              });
+              if (result.ok) tick(setModalState);
+            }
+
+            Future<void> verifyOtp() async {
+              final phone = newPhoneCtrl.text.trim();
+              final otp = otpCtrl.text.trim();
+              if (otp.isEmpty) {
+                setModalState(() => error = 'Please enter the verification code');
+                return;
+              }
+              setModalState(() {
+                busy = true;
+                error = null;
+              });
+              final err = await ApiService.confirmPhoneChangeOtp(
+                phone: phone,
+                otp: otp,
+              );
+              setModalState(() => busy = false);
+              if (err == null) {
+                timer?.cancel();
+                if (mounted) {
+                  setState(() => _phoneCtrl.text = phone);
+                }
+                if (sheetContext.mounted) Navigator.of(sheetContext).pop();
+              } else {
+                setModalState(() => error = err);
+              }
+            }
+
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom,
+              ),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: _surface,
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(24),
+                  ),
+                ),
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 4,
+                      margin: const EdgeInsets.only(bottom: 16),
+                      decoration: BoxDecoration(
+                        color: _border,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                    Text(
+                      step == 1 ? 'Change Phone Number' : 'Enter Verification Code',
+                      style: kFont(
+                        context,
+                        fontSize: 17,
+                        fontWeight: FontWeight.w700,
+                        color: _textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      step == 1
+                          ? 'Enter your new phone number. We will send a code to verify it.'
+                          : 'Enter the code we sent to ${newPhoneCtrl.text.trim()}.',
+                      style: kmFont(context, GoogleFonts.inter(
+                        fontSize: 13,
+                        color: _textMuted,
+                      )),
+                    ),
+                    const SizedBox(height: 16),
+                    if (step == 1)
+                      TextField(
+                        controller: newPhoneCtrl,
+                        keyboardType: TextInputType.phone,
+                        autofocus: true,
+                        style: kmFont(context, GoogleFonts.inter(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: _textPrimary,
+                        )),
+                        decoration: InputDecoration(
+                          hintText: '0XX XXX XXX',
+                          filled: true,
+                          fillColor: _bg,
+                          isDense: true,
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 16,
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: BorderSide(color: _border),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: BorderSide(color: _primary, width: 1.5),
+                          ),
+                        ),
+                      )
+                    else
+                      TextField(
+                        controller: otpCtrl,
+                        keyboardType: TextInputType.number,
+                        autofocus: true,
+                        style: kmFont(context, GoogleFonts.inter(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: _textPrimary,
+                          letterSpacing: 4,
+                        )),
+                        decoration: InputDecoration(
+                          hintText: '••••••',
+                          filled: true,
+                          fillColor: _bg,
+                          isDense: true,
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 16,
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: BorderSide(color: _border),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: BorderSide(color: _primary, width: 1.5),
+                          ),
+                        ),
+                      ),
+                    if (error != null) ...[
+                      const SizedBox(height: 10),
+                      Text(
+                        error!,
+                        style: kmFont(context, GoogleFonts.inter(
+                          fontSize: 12.5,
+                          color: _danger,
+                          fontWeight: FontWeight.w600,
+                        )),
+                      ),
+                    ],
+                    const SizedBox(height: 18),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 50,
+                      child: ElevatedButton(
+                        onPressed: busy ? null : (step == 1 ? sendOtp : verifyOtp),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _primary,
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
+                        child: busy
+                            ? const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : Text(
+                                step == 1 ? 'Send Code' : 'Verify & Save',
+                                style: kmFont(context, GoogleFonts.inter(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w700,
+                                )),
+                              ),
+                      ),
+                    ),
+                    if (step == 2) ...[
+                      const SizedBox(height: 10),
+                      Center(
+                        child: TextButton(
+                          onPressed: (resendSeconds > 0 || busy) ? null : sendOtp,
+                          child: Text(
+                            resendSeconds > 0
+                                ? 'Resend code in ${resendSeconds}s'
+                                : 'Resend code',
+                            style: kmFont(context, GoogleFonts.inter(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: resendSeconds > 0 ? _textMuted : _primary,
+                            )),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+    timer?.cancel();
   }
 
   Widget _genderDropdown() {
@@ -701,7 +997,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         firstName: firstName,
         lastName: lastName,
         email: isValidEmail ? rawEmail : '',
-        phone: _phoneCtrl.text.trim(),
         birth: _birthCtrl.text,
         gender: _gender ?? '',
         avatarPath: null,
@@ -777,7 +1072,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         firstName: firstName2,
         lastName: lastName2,
         email: isValidEmail2 ? rawEmail2 : '',
-        phone: _phoneCtrl.text.trim(),
         birth: _birthCtrl.text,
         gender: _gender ?? '',
         avatarPath: file.path,

@@ -80,6 +80,7 @@ class _WarrantyScreenState extends State<WarrantyScreen>
         headerSliverBuilder: (context, innerBoxIsScrolled) => [
           SliverAppBar(
             pinned: true,
+            automaticallyImplyLeading: false,
             expandedHeight: 200,
             backgroundColor: _kGrad1,
             foregroundColor: Colors.white,

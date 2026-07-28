@@ -10,144 +10,187 @@
 ═══════════════════════════════════════════════════════════════════════ --}}
 <style>
 /* ── Edit-modal custom styles ─────────────────────────────────────── */
+/* Simple edit modal styles */
 #edit-category-modal { font-family: 'Inter', sans-serif; }
-
-/* Animated gradient header bar */
+#ecm-backdrop {
+    background: rgba(15,23,42,.38)!important;
+    backdrop-filter: none!important;
+}
+#ecm-panel {
+    max-width: 460px!important;
+    border-radius: 12px!important;
+    box-shadow: 0 18px 40px rgba(15,23,42,.2)!important;
+}
 #ecm-header-bar {
-    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a855f7 100%);
+    background: #fff!important;
+    border-bottom: 1px solid #e2e8f0!important;
+    padding: 18px 20px!important;
 }
-
-/* Drop-zone pulse ring on drag-over */
-#ecm-dropzone.dragover {
-    border-color: #8b5cf6;
-    background: #f5f3ff;
-    box-shadow: 0 0 0 4px rgba(139,92,246,.18);
+#ecm-title {
+    color: #0f172a!important;
+    font-size: 16px!important;
 }
-
-/* Custom file button */
-#ecm-file-btn {
-    background: linear-gradient(135deg,#6366f1,#8b5cf6);
-    color:#fff;
-    border:none;
-    padding:6px 18px;
-    border-radius:8px;
-    font-size:12px;
-    font-weight:600;
-    cursor:pointer;
-    letter-spacing:.03em;
-    transition: box-shadow .2s, opacity .2s;
+#ecm-header-bar p {
+    color: #64748b!important;
 }
-#ecm-file-btn:hover { box-shadow: 0 4px 14px rgba(139,92,246,.45); opacity:.92; }
-
-/* Inputs */
+#ecm-close-btn {
+    background: transparent!important;
+    border: 1px solid #e2e8f0!important;
+    color: #64748b!important;
+    border-radius: 8px!important;
+}
+#ecm-close-btn:hover {
+    background: #f8fafc!important;
+}
+#ecm-header-bar + div {
+    padding: 20px!important;
+    gap: 14px!important;
+}
+.ecm-label {
+    color: #475569!important;
+    font-size: 13px!important;
+    font-weight: 600!important;
+    letter-spacing: 0!important;
+    text-transform: none!important;
+}
 .ecm-input {
-    width:100%;
-    padding:10px 14px;
-    border-radius:12px;
-    border:1.5px solid #e2e8f0;
-    background:#f8fafc;
-    font-size:13px;
-    color:#1e293b;
-    outline:none;
-    transition:border-color .18s, box-shadow .18s;
-    font-family:inherit;
+    background: #fff!important;
+    border: 1px solid #cbd5e1!important;
+    border-radius: 8px!important;
+    color: #0f172a!important;
+    font-size: 14px!important;
+    padding: 9px 12px!important;
 }
 .ecm-input:focus {
-    border-color:#8b5cf6;
-    box-shadow: 0 0 0 3px rgba(139,92,246,.15);
-    background:#fff;
+    border-color: #64748b!important;
+    box-shadow: 0 0 0 2px rgba(100,116,139,.12)!important;
 }
 .ecm-input:disabled {
-    background:#f1f5f9;
-    color:#94a3b8;
-    cursor:not-allowed;
+    background: #f8fafc!important;
+    color: #64748b!important;
 }
-.ecm-select { appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%238b5cf6' stroke-width='2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 12px center; background-size:16px; padding-right:38px; }
-
-/* Label */
-.ecm-label {
-    display:block;
-    font-size:11px;
-    font-weight:700;
-    letter-spacing:.07em;
-    text-transform:uppercase;
-    color:#64748b;
-    margin-bottom:6px;
+.ecm-select {
+    appearance: auto!important;
+    background-image: none!important;
+    padding-right: 12px!important;
 }
-
-/* Error text */
-.ecm-error {
-    font-size:11px;
-    color:#ef4444;
-    margin-top:4px;
-    display:flex;
-    align-items:center;
-    gap:4px;
+#ecm-dropzone {
+    background: #fff!important;
+    border: 1px solid #cbd5e1!important;
+    border-radius: 8px!important;
+    min-height: auto!important;
+    padding: 12px!important;
 }
-
-/* Save button */
+#ecm-dropzone.dragover {
+    background: #f8fafc!important;
+    border-color: #64748b!important;
+    box-shadow: none!important;
+}
+#ecm-img-circle {
+    width: 56px!important;
+    height: 56px!important;
+    border-radius: 8px!important;
+    background: #f8fafc!important;
+    border: 1px solid #e2e8f0!important;
+}
+#ecm-img-icon {
+    stroke: #94a3b8!important;
+}
+#ecm-dropzone p {
+    color: #64748b!important;
+}
+#ecm-dropzone p:first-child {
+    color: #334155!important;
+}
+#ecm-file-btn,
+#ecm-cancel-btn,
 #ecm-save-btn {
-    background: linear-gradient(135deg,#6366f1,#8b5cf6);
-    color:#fff;
-    border:none;
-    height:42px;
-    padding:0 28px;
-    border-radius:12px;
-    font-size:13px;
-    font-weight:700;
-    cursor:pointer;
-    display:inline-flex;
-    align-items:center;
-    gap:8px;
-    letter-spacing:.02em;
-    transition: box-shadow .2s, transform .15s, opacity .2s;
-    box-shadow: 0 4px 18px rgba(139,92,246,.35);
+    height: 38px!important;
+    border-radius: 8px!important;
+    box-shadow: none!important;
+    font-size: 13px!important;
+    font-weight: 600!important;
+    letter-spacing: 0!important;
+    transform: none!important;
+}
+#ecm-file-btn {
+    background: #f8fafc!important;
+    border: 1px solid #cbd5e1!important;
+    color: #334155!important;
+    padding: 0 14px!important;
+}
+#ecm-file-btn:hover,
+#ecm-cancel-btn:hover {
+    background: #f1f5f9!important;
+    border-color: #94a3b8!important;
+}
+#ecm-cancel-btn {
+    background: #fff!important;
+    border: 1px solid #cbd5e1!important;
+    color: #475569!important;
+    padding: 0 16px!important;
+}
+#ecm-save-btn {
+    background: #1e293b!important;
+    border: 1px solid #1e293b!important;
+    color: #fff!important;
+    padding: 0 18px!important;
 }
 #ecm-save-btn:hover:not(:disabled) {
-    box-shadow: 0 8px 28px rgba(139,92,246,.5);
-    transform:translateY(-1px);
+    background: #334155!important;
+    border-color: #334155!important;
+    box-shadow: none!important;
 }
-#ecm-save-btn:disabled { opacity:.55; cursor:not-allowed; transform:none; }
-
-/* Cancel button */
-#ecm-cancel-btn {
-    background:#f1f5f9;
-    color:#475569;
-    border:1.5px solid #e2e8f0;
-    height:42px;
-    padding:0 22px;
-    border-radius:12px;
-    font-size:13px;
-    font-weight:600;
-    cursor:pointer;
-    transition: background .18s, border-color .18s;
+#ecm-remove-img {
+    background: #fff!important;
+    border: 1px solid #fecaca!important;
+    border-radius: 6px!important;
+    color: #dc2626!important;
 }
-#ecm-cancel-btn:hover { background:#e2e8f0; border-color:#cbd5e1; }
-
-/* Status pill badges inside select */
-.status-badge-active  { color:#059669; }
-.status-badge-inactive{ color:#94a3b8; }
-
-/* Dark mode overrides */
-@media (prefers-color-scheme: dark) {
-    .ecm-input { background:#1e293b; border-color:#334155; color:#e2e8f0; }
-    .ecm-input:focus { background:#1e293b; }
-    .ecm-input:disabled { background:#0f172a; color:#475569; }
-    .ecm-label { color:#94a3b8; }
-    #ecm-cancel-btn { background:#1e293b; color:#94a3b8; border-color:#334155; }
-    #ecm-cancel-btn:hover { background:#334155; }
+#ecm-footer {
+    background: #fff!important;
+    border-top: 1px solid #e2e8f0!important;
+    padding: 14px 20px!important;
 }
-/* Tailwind dark class support */
-html.dark .ecm-input { background:#1e293b!important; border-color:#334155!important; color:#e2e8f0!important; }
-html.dark .ecm-input:focus { background:#1e293b!important; }
-html.dark .ecm-input:disabled { background:#0f172a!important; color:#475569!important; }
-html.dark .ecm-label { color:#94a3b8!important; }
-html.dark #ecm-cancel-btn { background:#1e293b!important; color:#94a3b8!important; border-color:#334155!important; }
-html.dark #ecm-cancel-btn:hover { background:#334155!important; }
-html.dark #ecm-dropzone { background:#1e293b!important; border-color:#334155!important; }
-html.dark #ecm-dropzone.dragover { background:#1e1b4b!important; }
-html.dark #ecm-footer { background:#0f172a!important; border-color:#1e293b!important; }
-html.dark #ecm-panel { background:#0f172a!important; border-color:#1e293b!important; }
+#ecm-form-error {
+    border-radius: 8px!important;
+}
+html.dark #ecm-panel,
+html.dark #ecm-header-bar,
+html.dark #ecm-footer {
+    background: #0f172a!important;
+    border-color: #1e293b!important;
+}
+html.dark #ecm-title {
+    color: #f8fafc!important;
+}
+html.dark #ecm-header-bar p,
+html.dark .ecm-label {
+    color: #94a3b8!important;
+}
+html.dark .ecm-input,
+html.dark #ecm-dropzone {
+    background: #111827!important;
+    border-color: #334155!important;
+    color: #e5e7eb!important;
+}
+html.dark .ecm-input:disabled,
+html.dark #ecm-img-circle {
+    background: #0b1120!important;
+    color: #64748b!important;
+}
+html.dark #ecm-file-btn,
+html.dark #ecm-cancel-btn,
+html.dark #ecm-close-btn {
+    background: #111827!important;
+    border-color: #334155!important;
+    color: #cbd5e1!important;
+}
+html.dark #ecm-save-btn {
+    background: #e5e7eb!important;
+    border-color: #e5e7eb!important;
+    color: #0f172a!important;
+}
 </style>
 
 {{-- ═══════════════════════════════════════════════════════════════════════
@@ -240,40 +283,28 @@ html.dark #ecm-panel { background:#0f172a!important; border-color:#1e293b!import
 
     {{-- Backdrop --}}
     <div id="ecm-backdrop"
-         style="position:absolute; inset:0; background:rgba(15,23,42,.65); backdrop-filter:blur(6px);
-                opacity:0; transition:opacity .28s ease;"></div>
+         style="position:absolute; inset:0; background:rgba(15,23,42,.38);
+                opacity:0; transition:opacity .16s ease;"></div>
 
     {{-- Panel --}}
     <div id="ecm-panel"
-         style="position:relative; width:100%; max-width:520px; border-radius:20px;
+         style="position:relative; width:100%; max-width:460px; border-radius:12px;
                 background:#fff; border:1px solid #e2e8f0; overflow:hidden;
-                box-shadow:0 32px 80px -12px rgba(0,0,0,.35), 0 0 0 1px rgba(139,92,246,.08);
-                opacity:0; transform:scale(.94) translateY(18px);
-                transition:opacity .28s ease, transform .28s cubic-bezier(.34,1.5,.64,1);">
+                box-shadow:0 18px 40px rgba(15,23,42,.2);
+                opacity:0; transform:translateY(10px);
+                transition:opacity .16s ease, transform .16s ease;">
 
-        {{-- ── Gradient Header ───────────────────────────────────────── --}}
-        <div id="ecm-header-bar" style="padding:24px 24px 20px; position:relative; overflow:hidden;">
-            {{-- Decorative circles --}}
-            <div style="position:absolute;top:-30px;right:-30px;width:120px;height:120px;border-radius:50%;background:rgba(255,255,255,.1);"></div>
-            <div style="position:absolute;bottom:-20px;right:60px;width:70px;height:70px;border-radius:50%;background:rgba(255,255,255,.07);"></div>
+        {{-- Header --}}
+        <div id="ecm-header-bar" style="padding:18px 20px; border-bottom:1px solid #e2e8f0;">
 
             <div style="display:flex; align-items:flex-start; justify-content:space-between; position:relative;">
                 <div>
-                    <div style="display:inline-flex; align-items:center; gap:10px; margin-bottom:6px;">
-                        <div style="width:34px;height:34px;border-radius:10px;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;">
-                            <svg width="18" height="18" fill="none" stroke="#fff" stroke-width="2" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-                            </svg>
-                        </div>
-                        <h3 id="ecm-title" style="font-size:17px;font-weight:700;color:#fff;letter-spacing:-.01em;">Edit Category</h3>
-                    </div>
-                    <p style="font-size:12px;color:rgba(255,255,255,.75);margin:0;">Update details and sync to the API catalog.</p>
+                    <h3 id="ecm-title" style="font-size:16px;font-weight:700;color:#0f172a;margin:0;">Edit Category</h3>
+                    <p style="font-size:12px;color:#64748b;margin:0;">Update category details.</p>
                 </div>
                 {{-- Close X --}}
                 <button id="ecm-close-btn" aria-label="Close"
-                        style="width:32px;height:32px;border-radius:8px;background:rgba(255,255,255,.15);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#fff;transition:background .18s;flex-shrink:0;margin-top:2px;"
-                        onmouseover="this.style.background='rgba(255,255,255,.28)'"
-                        onmouseout="this.style.background='rgba(255,255,255,.15)'">
+                        style="width:32px;height:32px;border-radius:8px;background:#fff;border:1px solid #e2e8f0;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#64748b;transition:background .18s;flex-shrink:0;margin-top:2px;">
                     <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
                     </svg>
@@ -288,9 +319,9 @@ html.dark #ecm-panel { background:#0f172a!important; border-color:#1e293b!import
             <div>
                 <label class="ecm-label">Category Image</label>
                 <div id="ecm-dropzone"
-                     style="position:relative; border:2px dashed #c4b5fd; border-radius:16px; background:#faf5ff;
-                            padding:20px 16px; display:flex; align-items:center; gap:16px;
-                            cursor:pointer; transition:all .2s; min-height:100px;"
+                     style="position:relative; border:1px solid #cbd5e1; border-radius:8px; background:#fff;
+                            padding:12px; display:flex; align-items:center; gap:16px;
+                            cursor:pointer; transition:all .2s;"
                      onclick="document.getElementById('ecm-file-input').click()"
                      ondragover="event.preventDefault();this.classList.add('dragover')"
                      ondragleave="this.classList.remove('dragover')"
@@ -298,22 +329,22 @@ html.dark #ecm-panel { background:#0f172a!important; border-color:#1e293b!import
 
                     {{-- Preview / placeholder --}}
                     <div id="ecm-img-circle"
-                         style="width:68px;height:68px;border-radius:14px;overflow:hidden;flex-shrink:0;
-                                background:linear-gradient(135deg,#ede9fe,#ddd6fe);
+                         style="width:56px;height:56px;border-radius:8px;overflow:hidden;flex-shrink:0;
+                                background:#f8fafc;
                                 display:flex;align-items:center;justify-content:center;
-                                border:2px solid rgba(139,92,246,.25);">
+                                border:1px solid #e2e8f0;">
                         <img id="ecm-preview-img" src="" alt="" style="width:100%;height:100%;object-fit:cover;display:none;" />
-                        <svg id="ecm-img-icon" width="28" height="28" fill="none" stroke="#a78bfa" stroke-width="1.5" viewBox="0 0 24 24">
+                        <svg id="ecm-img-icon" width="28" height="28" fill="none" stroke="#94a3b8" stroke-width="1.5" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
                         </svg>
                     </div>
 
                     <div style="flex:1; min-width:0;">
-                        <p style="font-size:13px;font-weight:600;color:#7c3aed;margin:0 0 3px;">
+                        <p style="font-size:13px;font-weight:600;color:#334155;margin:0 0 3px;">
                             Click or drag &amp; drop to upload
                         </p>
                         <p id="ecm-file-name" style="font-size:11px;color:#94a3b8;margin:0 0 10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
-                            PNG, JPG, WEBP — max 5 MB
+                            PNG, JPG, WEBP - max 5 MB
                         </p>
                         <button id="ecm-file-btn" type="button"
                                 onclick="event.stopPropagation();document.getElementById('ecm-file-input').click()">
@@ -329,7 +360,7 @@ html.dark #ecm-panel { background:#0f172a!important; border-color:#1e293b!import
                                    width:26px;height:26px;border-radius:50%;background:#ef4444;
                                    border:none;cursor:pointer;color:#fff;font-size:14px;
                                    align-items:center;justify-content:center;"
-                            title="Remove image">✕</button>
+                            title="Remove image">x</button>
                 </div>
                 <p id="ecm-image-error" class="ecm-error" style="display:none;">
                     <svg width="12" height="12" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
@@ -351,7 +382,7 @@ html.dark #ecm-panel { background:#0f172a!important; border-color:#1e293b!import
             <div>
                 <label class="ecm-label" for="ecm-slug-input">
                     Slug
-                    <span style="font-size:10px;font-weight:500;color:#a78bfa;margin-left:6px;text-transform:none;letter-spacing:0;">auto-generated</span>
+                    <span style="font-size:10px;font-weight:500;color:#64748b;margin-left:6px;text-transform:none;letter-spacing:0;">auto-generated</span>
                 </label>
                 <div style="position:relative;">
                     <input id="ecm-slug-input" type="text" disabled class="ecm-input"
@@ -368,8 +399,8 @@ html.dark #ecm-panel { background:#0f172a!important; border-color:#1e293b!import
                 <label class="ecm-label" for="ecm-status-select">Status</label>
                 <div style="position:relative;">
                     <select id="ecm-status-select" class="ecm-input ecm-select">
-                        <option value="active">✅  Active</option>
-                        <option value="inactive">⏸  Inactive</option>
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
                     </select>
                 </div>
             </div>
@@ -388,7 +419,7 @@ html.dark #ecm-panel { background:#0f172a!important; border-color:#1e293b!import
         {{-- ── Footer ───────────────────────────────────────────────── --}}
         <div id="ecm-footer"
              style="display:flex; align-items:center; justify-content:flex-end; gap:10px;
-                    padding:16px 24px; background:#f8fafc;
+                    padding:14px 20px; background:#fff;
                     border-top:1px solid #e2e8f0;">
             <button id="ecm-cancel-btn">Cancel</button>
             <button id="ecm-save-btn">
@@ -487,7 +518,7 @@ document.addEventListener('DOMContentLoaded', function () {
         previewImg.src = '';
         previewImg.style.display = 'none';
         imgIcon.style.display    = 'block';
-        fileName.textContent     = 'PNG, JPG, WEBP — max 5 MB';
+        fileName.textContent     = 'PNG, JPG, WEBP - max 5 MB';
         removeImgBtn.style.display = 'none';
         fileInput.value = '';
         existingImageUrl = '';
@@ -535,14 +566,14 @@ document.addEventListener('DOMContentLoaded', function () {
         requestAnimationFrame(function () { requestAnimationFrame(function () {
             backdrop.style.opacity  = '1';
             panel.style.opacity     = '1';
-            panel.style.transform   = 'scale(1) translateY(0)';
+            panel.style.transform   = 'translateY(0)';
         }); });
     }
 
     function closeModal() {
         backdrop.style.opacity  = '0';
         panel.style.opacity     = '0';
-        panel.style.transform   = 'scale(.94) translateY(18px)';
+        panel.style.transform   = 'translateY(10px)';
         setTimeout(function () {
             modal.style.display  = 'none';
             document.body.style.overflow = '';
@@ -551,7 +582,7 @@ document.addEventListener('DOMContentLoaded', function () {
             slugInput.value = '';
             clearPreview();
             clearErrors();
-        }, 290);
+        }, 180);
     }
 
     closeBtn.addEventListener('click',  closeModal);

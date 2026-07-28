@@ -28,6 +28,9 @@ class SearchController extends Controller
             ]);
         }
 
+        $terms = $this->searchTerms($query);
+        $poolLimit = min(60, max($limit * 6, 24));
+
         $products = Product::query()
             ->with('category')
             ->where('status', 'active')
@@ -35,16 +38,22 @@ class SearchController extends Controller
                 $this->applyProductSearch($builder, $query);
             })
             ->orderByDesc('id')
-            ->limit($limit)
-            ->get();
+            ->limit($poolLimit)
+            ->get()
+            ->sortByDesc(fn (Product $product) => $this->productScore($product, $query, $terms))
+            ->take($limit)
+            ->values();
 
         $accessories = Accessory::query()
             ->where(function (Builder $builder) use ($query) {
                 $this->applyAccessorySearch($builder, $query);
             })
             ->orderByDesc('id')
-            ->limit($limit)
-            ->get();
+            ->limit($poolLimit)
+            ->get()
+            ->sortByDesc(fn (Accessory $accessory) => $this->accessoryScore($accessory, $query, $terms))
+            ->take($limit)
+            ->values();
 
         $categories = Category::query()
             ->withCount('products')
@@ -54,8 +63,11 @@ class SearchController extends Controller
             })
             ->orderBy('sort_order')
             ->orderBy('name')
-            ->limit(4)
-            ->get();
+            ->limit(12)
+            ->get()
+            ->sortByDesc(fn (Category $category) => $this->categoryScore($category, $query, $terms))
+            ->take(4)
+            ->values();
 
         $brands = $this->matchingBrands($query)->take(4);
         $repairServices = $this->repairServiceMatches($query)->take(4);
@@ -135,6 +147,8 @@ class SearchController extends Controller
             ]);
         }
 
+        $terms = $this->searchTerms($query);
+
         $products = Product::query()
             ->with('category')
             ->where('status', 'active')
@@ -142,16 +156,22 @@ class SearchController extends Controller
                 $this->applyProductSearch($builder, $query);
             })
             ->orderByDesc('id')
-            ->limit(24)
-            ->get();
+            ->limit(80)
+            ->get()
+            ->sortByDesc(fn (Product $product) => $this->productScore($product, $query, $terms))
+            ->take(24)
+            ->values();
 
         $accessories = Accessory::query()
             ->where(function (Builder $builder) use ($query) {
                 $this->applyAccessorySearch($builder, $query);
             })
             ->orderByDesc('id')
-            ->limit(16)
-            ->get();
+            ->limit(50)
+            ->get()
+            ->sortByDesc(fn (Accessory $accessory) => $this->accessoryScore($accessory, $query, $terms))
+            ->take(16)
+            ->values();
 
         $categories = Category::query()
             ->withCount('products')
@@ -161,8 +181,11 @@ class SearchController extends Controller
             })
             ->orderBy('sort_order')
             ->orderBy('name')
-            ->limit(8)
-            ->get();
+            ->limit(20)
+            ->get()
+            ->sortByDesc(fn (Category $category) => $this->categoryScore($category, $query, $terms))
+            ->take(8)
+            ->values();
 
         $brands = $this->matchingBrands($query)->take(8)->values();
         $repairServices = $this->repairServiceMatches($query)->take(8)->values();
@@ -238,7 +261,12 @@ class SearchController extends Controller
             ->filter(fn ($brand) => is_string($brand) && trim($brand) !== '')
             ->map(fn (string $brand) => trim($brand))
             ->unique(fn (string $brand) => strtolower($brand))
-            ->sort()
+            ->sort(function (string $a, string $b) use ($query, $terms) {
+                $scoreA = $this->fieldScore($a, $query, $terms, 100, 70, 40, 10);
+                $scoreB = $this->fieldScore($b, $query, $terms, 100, 70, 40, 10);
+
+                return $scoreA === $scoreB ? strcasecmp($a, $b) : $scoreB <=> $scoreA;
+            })
             ->values();
     }
 
@@ -247,19 +275,10 @@ class SearchController extends Controller
         $terms = $this->searchTerms($query);
 
         return collect($this->repairServices())
-            ->map(function (array $service) use ($terms) {
-                $haystack = strtolower(implode(' ', [
-                    $service['title'],
-                    $service['description'],
-                    implode(' ', $service['keywords']),
-                ]));
-
-                $score = 0;
-                foreach ($terms as $term) {
-                    if (str_contains($haystack, strtolower($term))) {
-                        $score++;
-                    }
-                }
+            ->map(function (array $service) use ($query, $terms) {
+                $score = $this->fieldScore($service['title'], $query, $terms, 100, 70, 40, 12)
+                    + $this->fieldScore(implode(' ', $service['keywords']), $query, $terms, 30, 20, 12, 5)
+                    + $this->fieldScore($service['description'], $query, $terms, 10, 7, 4, 1);
 
                 if ($score === 0) {
                     return null;
@@ -294,6 +313,72 @@ class SearchController extends Controller
             ->all();
 
         return $terms;
+    }
+
+    /**
+     * Relevance score for a single text field against the query. An exact
+     * match scores highest, a prefix match next, then a plain substring
+     * match. Individual word matches (e.g. a lone "13") add a small bonus
+     * on top so short/generic terms can't outrank a real name match.
+     */
+    private function fieldScore(?string $haystack, string $query, array $terms, int $exact, int $prefix, int $contains, int $term): int
+    {
+        $haystack = trim((string) $haystack);
+        if ($haystack === '') {
+            return 0;
+        }
+
+        $h = mb_strtolower($haystack);
+        $q = mb_strtolower(trim($query));
+        if ($q === '') {
+            return 0;
+        }
+
+        if ($h === $q) {
+            $score = $exact;
+        } elseif (str_starts_with($h, $q)) {
+            $score = $prefix;
+        } elseif (str_contains($h, $q)) {
+            $score = $contains;
+        } else {
+            $score = 0;
+        }
+
+        foreach ($terms as $t) {
+            $t = mb_strtolower($t);
+            if ($t === '' || $t === $q || mb_strlen($t) < 2) {
+                continue;
+            }
+            if (str_contains($h, $t)) {
+                $score += $term;
+            }
+        }
+
+        return $score;
+    }
+
+    private function productScore(Product $product, string $query, array $terms): int
+    {
+        return $this->fieldScore($product->name, $query, $terms, 100, 70, 40, 10)
+            + $this->fieldScore($product->sku, $query, $terms, 50, 35, 20, 6)
+            + $this->fieldScore($product->category?->name, $query, $terms, 25, 18, 10, 4)
+            + $this->fieldScore($product->brand, $query, $terms, 20, 14, 8, 3)
+            + $this->fieldScore($product->tag, $query, $terms, 20, 14, 8, 3)
+            + $this->fieldScore($product->description, $query, $terms, 10, 7, 4, 1);
+    }
+
+    private function accessoryScore(Accessory $accessory, string $query, array $terms): int
+    {
+        return $this->fieldScore($accessory->name, $query, $terms, 100, 70, 40, 10)
+            + $this->fieldScore($accessory->tag, $query, $terms, 20, 14, 8, 3)
+            + $this->fieldScore($accessory->brand, $query, $terms, 20, 14, 8, 3)
+            + $this->fieldScore($accessory->description, $query, $terms, 10, 7, 4, 1);
+    }
+
+    private function categoryScore(Category $category, string $query, array $terms): int
+    {
+        return $this->fieldScore($category->name, $query, $terms, 100, 70, 40, 10)
+            + $this->fieldScore($category->slug, $query, $terms, 40, 28, 16, 4);
     }
 
     private function sanitizeQuery(?string $value): string

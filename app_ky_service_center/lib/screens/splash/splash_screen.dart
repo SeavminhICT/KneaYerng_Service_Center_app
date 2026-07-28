@@ -19,8 +19,6 @@ class _SplashScreenState extends State<SplashScreen>
   late final AnimationController _pulse;
 
   // Orb pop-in
-  late final Animation<double> _orb1Scale;
-  late final Animation<double> _orb1Opacity;
   late final Animation<double> _orb2Scale;
   late final Animation<double> _orb2Opacity;
 
@@ -50,12 +48,6 @@ class _SplashScreenState extends State<SplashScreen>
     _float  = AnimationController(duration: const Duration(milliseconds: 2200), vsync: this)..repeat(reverse: true);
     _pulse  = AnimationController(duration: const Duration(milliseconds: 1600), vsync: this)..repeat(reverse: true);
 
-    _orb1Scale = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _main, curve: const Interval(0.00, 0.32, curve: Curves.elasticOut)),
-    );
-    _orb1Opacity = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _main, curve: const Interval(0.00, 0.18, curve: Curves.easeOut)),
-    );
     _orb2Scale = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _main, curve: const Interval(0.04, 0.38, curve: Curves.elasticOut)),
     );
@@ -132,52 +124,6 @@ class _SplashScreenState extends State<SplashScreen>
                       Color(0xFF7B1FCC),
                     ],
                     stops: [0.0, 0.30, 0.62, 1.0],
-                  ),
-                ),
-              ),
-            ),
-
-            // ── Dark concentric orb — top right ──────────────────────────
-            Positioned(
-              top: size.height * 0.03,
-              right: -size.width * 0.08,
-              child: Transform.scale(
-                scale: _orb1Scale.value.clamp(0, 1),
-                alignment: Alignment.topRight,
-                child: Opacity(
-                  opacity: _orb1Opacity.value,
-                  child: SizedBox(
-                    width: 130,
-                    height: 130,
-                    child: Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        Container(
-                          width: 130,
-                          height: 130,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: const Color(0xFF1A1870).withValues(alpha: 0.85),
-                          ),
-                        ),
-                        Container(
-                          width: 100,
-                          height: 100,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: const Color(0xFF1A1A88).withValues(alpha: 0.7),
-                          ),
-                        ),
-                        Container(
-                          width: 68,
-                          height: 68,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: const Color(0xFF2222AA).withValues(alpha: 0.6),
-                          ),
-                        ),
-                      ],
-                    ),
                   ),
                 ),
               ),

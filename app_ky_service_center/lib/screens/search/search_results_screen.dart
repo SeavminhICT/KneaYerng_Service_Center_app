@@ -121,7 +121,15 @@ class _SearchResultsScreenState extends State<SearchResultsScreen> {
       message: 'Please login to add items to your cart.',
     );
     if (!ok || !mounted) return;
-    CartService.instance.add(product);
+    final variant = product.defaultVariant;
+    CartService.instance.add(
+      product,
+      variant: variant?.label,
+      variantId: variant?.id,
+      variantImageUrl: variant?.imageUrl,
+      variantStock: variant?.stock,
+      unitPrice: variant?.price,
+    );
     await showCartAddedBottomBar(context);
   }
 

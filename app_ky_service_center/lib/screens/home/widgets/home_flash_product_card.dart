@@ -29,9 +29,10 @@ class HomeFlashProductCard extends StatelessWidget {
     final l = AppLocalizations.of(context);
     final imageUrl = product.imageUrl;
     final badge = homeProductBadgeText(product);
-    final hasDiscount = product.hasDiscount;
-    final originalPrice = product.price;
-    final discountedPrice = product.salePrice;
+    final discountedPrice = product.effectivePrice;
+    final originalPrice = product.effectiveOriginalPrice;
+    final hasDiscount = originalPrice != null;
+    final isOutOfStock = product.isOutOfStock;
 
     return Material(
       color: homeSurface(context),
@@ -135,7 +136,7 @@ class HomeFlashProductCard extends StatelessWidget {
                                 : homeTextPrimary(context),
                           ),
                         ),
-                        if (hasDiscount && discountedPrice < originalPrice) ...[
+                        if (originalPrice != null) ...[
                           const SizedBox(height: 2),
                           Text(
                             '\$${originalPrice.toStringAsFixed(2)}',
@@ -147,11 +148,11 @@ class HomeFlashProductCard extends StatelessWidget {
                           ),
                         ] else
                           Text(
-                            l.inStock,
+                            isOutOfStock ? l.outOfStock : l.inStock,
                             style: kmFont(context, GoogleFonts.manrope(
                               fontSize: 11,
                               fontWeight: FontWeight.w700,
-                              color: homeSuccess,
+                              color: isOutOfStock ? homeDanger : homeSuccess,
                             )),
                           ),
                       ],
@@ -302,7 +303,7 @@ class _FavoriteButton extends StatelessWidget {
               border: Border.all(color: homeCardBorder(context)),
             ),
             child: Icon(
-              HugeIcons.strokeRoundedFavourite,
+              isFavorite ? Icons.favorite_rounded : HugeIcons.strokeRoundedFavourite,
               size: 18,
               color: isFavorite ? const Color(0xFFE11D48) : homeTextMuted(context),
             ),

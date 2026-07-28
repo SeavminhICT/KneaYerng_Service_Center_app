@@ -577,6 +577,10 @@ class _CheckoutFlowScreenState extends State<CheckoutFlowScreen> {
     }
 
     if (_step == 2) {
+      if (!_isPickup && _phoneController.text.trim().isEmpty) {
+        _showNotice('Please enter a contact phone number for delivery.');
+        return;
+      }
       setState(() => _step = 3);
       return;
     }
@@ -595,11 +599,23 @@ class _CheckoutFlowScreenState extends State<CheckoutFlowScreen> {
   // session. If the backend's product_variants have since changed, the
   // stale id fails the "exists:product_variants,id" check on order create.
   // Re-fetch each product live and re-resolve the matching variant right
-  // before submitting.
-  Future<void> _revalidateItemVariants() async {
+  // before submitting. Also flags items that were added before the product
+  // had any variants but now require one — the backend rejects those with
+  // no way for the user to fix it from the confirm screen, so we catch it
+  // here and let the caller offer to remove them instead.
+  Future<List<CartItem>> _revalidateItemVariants() async {
+    final needsVariant = <CartItem>[];
     for (var i = 0; i < _items.length; i++) {
       final item = _items[i];
-      if (item.variantId == null) continue;
+      if (item.variantId == null) {
+        final fresh = await ApiService.fetchProductById(item.product.id);
+        if (fresh == null) continue;
+        final hasActiveVariants = fresh.variants.any((v) => v.isActive);
+        if (hasActiveVariants) {
+          needsVariant.add(item);
+        }
+        continue;
+      }
 
       final fresh = await ApiService.fetchProductById(item.product.id);
       if (fresh == null) continue;
@@ -634,6 +650,63 @@ class _CheckoutFlowScreenState extends State<CheckoutFlowScreen> {
           unitPrice: match.price,
         );
       }
+    }
+    return needsVariant;
+  }
+
+  // These items were added to the cart before the product had any options
+  // (color/storage/etc.) configured. There's no variant picker on the
+  // confirm screen, so the only way forward is to drop them from this order
+  // and let the user re-add them from the product page, where they'll be
+  // required to choose an option.
+  Future<void> _resolveItemsNeedingVariant(List<CartItem> needsVariant) async {
+    if (!mounted) return;
+    final names = needsVariant.map((item) => item.product.name).join(', ');
+    final plural = needsVariant.length > 1;
+    final shouldRemove = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Options required'),
+        content: Text(
+          '$names ${plural ? 'now have' : 'now has'} options (like color or '
+          'storage) that must be selected before checkout. Remove '
+          '${plural ? 'them' : 'it'} from this order? You can add '
+          '${plural ? 'them' : 'it'} back after choosing an option on the '
+          'product page.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text(AppLocalizations.of(context).cancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Remove'),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldRemove != true) return;
+
+    for (final item in needsVariant) {
+      _items.removeWhere(
+        (i) => i.product.id == item.product.id && i.variantId == null,
+      );
+      for (final globalItem in CartService.instance.items) {
+        if (globalItem.product.id == item.product.id &&
+            globalItem.variantId == null) {
+          CartService.instance.remove(globalItem);
+          break;
+        }
+      }
+    }
+
+    if (!mounted) return;
+    setState(() {});
+
+    if (_items.isEmpty) {
+      Navigator.of(context).pop();
     }
   }
 
@@ -698,7 +771,13 @@ class _CheckoutFlowScreenState extends State<CheckoutFlowScreen> {
               ? profile!.email!.trim()
               : 'Customer');
 
-    await _revalidateItemVariants();
+    final needsVariant = await _revalidateItemVariants();
+    if (needsVariant.isNotEmpty) {
+      if (!mounted) return;
+      setState(() => _placingOrder = false);
+      await _resolveItemsNeedingVariant(needsVariant);
+      return;
+    }
 
     final payload = _items
         .map(
@@ -725,6 +804,11 @@ class _CheckoutFlowScreenState extends State<CheckoutFlowScreen> {
     if (!_isPickup && !_hasValidDeliveryAddress) {
       setState(() => _placingOrder = false);
       _showNotice('Please complete your delivery address.');
+      return;
+    }
+    if (!_isPickup && _phoneController.text.trim().isEmpty) {
+      setState(() => _placingOrder = false);
+      _showNotice('Please enter a contact phone number for delivery.');
       return;
     }
     final slot = _options.deliverySlots.isEmpty

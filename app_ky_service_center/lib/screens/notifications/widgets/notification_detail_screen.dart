@@ -7,10 +7,13 @@ import 'notification_item.dart';
 import 'notification_tone.dart';
 
 class _NotificationStatus {
-  const _NotificationStatus(this.label, this.color, this.icon);
+  const _NotificationStatus(this.label, this.color, this.icon, {this.isOverride = false});
   final String label;
   final Color color;
   final IconData icon;
+  /// Whether this status is a distinct outcome (approved/cancelled/pending)
+  /// worth badging on top of the category icon, vs. just the plain category.
+  final bool isOverride;
 }
 
 _NotificationStatus _statusFor(NotificationItem item) {
@@ -21,6 +24,7 @@ _NotificationStatus _statusFor(NotificationItem item) {
       'Approved',
       const Color(0xFF16A34A),
       HugeIcons.strokeRoundedCheckmarkCircle02,
+      isOverride: true,
     );
   }
   if (title.contains('cancel') || title.contains('reject') ||
@@ -29,6 +33,7 @@ _NotificationStatus _statusFor(NotificationItem item) {
       'Cancelled',
       const Color(0xFFDC2626),
       HugeIcons.strokeRoundedCancelCircle,
+      isOverride: true,
     );
   }
   if (title.contains('pending') || title.contains('process')) {
@@ -36,6 +41,7 @@ _NotificationStatus _statusFor(NotificationItem item) {
       'Pending',
       const Color(0xFFD97706),
       HugeIcons.strokeRoundedClock01,
+      isOverride: true,
     );
   }
   return _NotificationStatus(
@@ -92,6 +98,10 @@ class NotificationDetailScreen extends StatelessWidget {
         scrolledUnderElevation: 0,
         foregroundColor: detailTitle,
         titleSpacing: 0,
+        leading: IconButton(
+          icon: const Icon(HugeIcons.strokeRoundedArrowLeft01),
+          onPressed: () => Navigator.of(context).maybePop(),
+        ),
         title: Text(
           l.notifications,
           style: TextStyle(
@@ -107,55 +117,61 @@ class NotificationDetailScreen extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             const SizedBox(height: 12),
-            SizedBox(
-              width: 104,
-              height: 104,
-              child: Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  Container(
-                    width: 104,
-                    height: 104,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          accent.withValues(alpha: 0.14),
-                          accent.withValues(alpha: 0.28),
-                        ],
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: accent.withValues(alpha: 0.18),
-                          blurRadius: 28,
-                          offset: const Offset(0, 16),
-                        ),
-                      ],
-                    ),
-                    child: Icon(icon, color: accent, size: 42),
-                  ),
-                  Positioned(
-                    right: -4,
-                    bottom: -4,
-                    child: Container(
-                      padding: const EdgeInsets.all(4),
+            Semantics(
+              label: '${status.label} notification',
+              child: SizedBox(
+                width: 104,
+                height: 104,
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Container(
+                      width: 104,
+                      height: 104,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: detailBackground,
-                      ),
-                      child: Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: status.color,
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            accent.withValues(alpha: 0.14),
+                            accent.withValues(alpha: 0.28),
+                          ],
                         ),
-                        child: Icon(status.icon, color: Colors.white, size: 16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: accent.withValues(alpha: 0.18),
+                            blurRadius: 28,
+                            offset: const Offset(0, 16),
+                          ),
+                        ],
                       ),
+                      child: Icon(icon, color: accent, size: 42),
                     ),
-                  ),
-                ],
+                    // Only badge a distinct outcome (approved/cancelled/pending) —
+                    // for a plain category, badging would just repeat `icon` above it.
+                    if (status.isOverride)
+                      Positioned(
+                        right: -4,
+                        bottom: -4,
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: detailBackground,
+                          ),
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: status.color,
+                            ),
+                            child: Icon(status.icon, color: Colors.white, size: 16),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
               ),
             ),
             const SizedBox(height: 24),

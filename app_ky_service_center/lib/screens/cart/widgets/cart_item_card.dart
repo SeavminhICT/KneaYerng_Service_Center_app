@@ -29,7 +29,14 @@ class CartItemCard extends StatelessWidget {
     final imageUrl = item.variantImageUrl ?? product.imageUrl;
     final variant  = item.variant?.trim().isNotEmpty == true ? item.variant!.trim() : '';
     final unitPrice = item.effectiveUnitPrice;
-    final oldPrice  = product.hasDiscount && product.price > unitPrice ? product.price : null;
+    // Variant items don't carry a per-variant "original" price, so — same
+    // as ProductDetailScreen — only compare against the aggregate discount
+    // price when this line item isn't tied to a specific variant.
+    final oldPrice  = item.variantId == null &&
+            product.hasDiscount &&
+            product.price > unitPrice
+        ? product.price
+        : null;
 
     return Container(
       padding: const EdgeInsets.all(14),

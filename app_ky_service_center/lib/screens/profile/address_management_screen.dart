@@ -5,6 +5,7 @@ import 'package:skeletonizer/skeletonizer.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/saved_address.dart';
 import '../../services/address_book_service.dart';
+import '../../widgets/circle_back_button.dart';
 import '../../widgets/empty_state_view.dart';
 import 'address_form_screen.dart';
 
@@ -61,6 +62,13 @@ class _AddressManagementScreenState extends State<AddressManagementScreen> {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
+        leading: Padding(
+          padding: const EdgeInsets.all(8),
+          child: CircleBackButton(
+            onPressed: () => Navigator.of(context).maybePop(),
+            color: textPrimary,
+          ),
+        ),
         title: Text(
           l.savedAddresses,
           style: const TextStyle(fontWeight: FontWeight.w700),

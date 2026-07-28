@@ -51,6 +51,7 @@ Route::prefix('admin')->name('admin.')->middleware(['admin'])->group(function ()
         ]);
     })->name('notifications.index')->middleware('permission:view_notification');
     Route::post('/notifications/send', [AdminNotificationController::class, 'store'])->name('notifications.store')->middleware('permission:create_notification');
+    Route::post('/notifications/generate-message', [AdminNotificationController::class, 'generateMessage'])->name('notifications.generate-message')->middleware('permission:create_notification');
     Route::get('/notifications/history', [AdminNotificationController::class, 'history'])->name('notifications.history')->middleware('permission:view_notification');
 
     Route::view('/categories', 'admin.categories.index')->name('categories.index')->middleware('permission:view_category');

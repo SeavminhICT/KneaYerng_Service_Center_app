@@ -29,16 +29,16 @@ class CheckPermission
             return redirect()->route('login');
         }
 
-        if (! $user->hasAnyPermission(...$permissions)) {
-            $message = 'Access Denied. Missing permission: '.implode(' or ', $permissions);
-
-            if ($request->expectsJson()) {
-                return response()->json(['message' => $message], 403);
-            }
-
-            abort(403, $message);
+        if ($user->canAccessAdminPanel() || $user->isAdmin() || $user->isStaff() || $user->hasAnyPermission(...$permissions)) {
+            return $next($request);
         }
 
-        return $next($request);
+        $message = 'Access Denied. Missing permission: '.implode(' or ', $permissions);
+
+        if ($request->expectsJson()) {
+            return response()->json(['message' => $message], 403);
+        }
+
+        abort(403, $message);
     }
 }

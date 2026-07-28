@@ -2,7 +2,7 @@
     $activeClass = 'bg-primary-600 text-white shadow-sm';
     $inactiveClass = 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-900 dark:hover:text-white';
     $navUser = auth()->user();
-    $can = fn (string ...$permissions) => $navUser instanceof \App\Models\User && $navUser->hasAnyPermission(...$permissions);
+    $can = fn (string ...$permissions) => $navUser instanceof \App\Models\User && ($navUser->isAdmin() || $navUser->hasAnyPermission(...$permissions));
 @endphp
 
 <aside class="fixed inset-y-0 left-0 z-40 flex w-72 flex-col border-r border-slate-200 bg-white/90 backdrop-blur dark:border-slate-800 dark:bg-slate-900/90 lg:translate-x-0" :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'" x-transition.duration.300ms>

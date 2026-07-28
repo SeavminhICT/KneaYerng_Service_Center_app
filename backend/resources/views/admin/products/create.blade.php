@@ -91,8 +91,18 @@
                         </div>
                     </div>
                     <div>
-                        <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="description">{{ __('Description') }}</label>
+                        <div class="flex items-center justify-between gap-2">
+                            <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="description">{{ __('Description') }}</label>
+                            <button id="ai-generate-description-btn" type="button" class="inline-flex items-center gap-1.5 rounded-lg border border-primary-200 bg-primary-50 px-2.5 py-1 text-xs font-semibold text-primary-700 hover:bg-primary-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-primary-500/40 dark:bg-primary-500/10 dark:text-primary-200">
+                                <svg id="ai-generate-spinner" class="hidden h-3.5 w-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-80" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+                                </svg>
+                                <span>{{ __('✨ Generate from AI') }}</span>
+                            </button>
+                        </div>
                         <textarea id="description" name="description" rows="4" class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200"></textarea>
+                        <p id="ai-generate-error" class="mt-1 text-xs text-danger-600"></p>
                     </div>
                 </div>
             </div>
@@ -234,7 +244,13 @@
             </div>
 
             <div class="flex items-center gap-3 border-t border-slate-200 pt-4 dark:border-slate-800">
-                <button class="inline-flex h-10 items-center rounded-xl bg-primary-600 px-6 text-sm font-semibold text-white shadow-sm hover:bg-primary-700">{{ __('Save Product') }}</button>
+                <button id="product-save-btn" type="submit" class="inline-flex h-10 items-center gap-2 rounded-xl bg-primary-600 px-6 text-sm font-semibold text-white shadow-sm hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-70">
+                    <svg id="product-save-spinner" class="hidden h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-80" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+                    </svg>
+                    <span id="product-save-label">{{ __('Save Product') }}</span>
+                </button>
                 <a href="{{ route('admin.products.index') }}" class="text-sm font-semibold text-slate-500 hover:text-slate-700">{{ __('Cancel') }}</a>
             </div>
             <p id="product-form-error" class="text-sm text-danger-600"></p>
@@ -272,6 +288,17 @@
                     <span id="variant-count-badge" class="inline-flex rounded-full border border-primary-300 bg-primary-100 px-3 py-1 text-xs font-semibold text-primary-700 dark:border-primary-500/40 dark:bg-primary-500/20 dark:text-primary-200">0 variants</span>
                 </div>
             </div>
+        </div>
+    </div>
+
+    {{-- Full-screen saving overlay --}}
+    <div id="product-save-overlay" class="fixed inset-0 z-50 hidden items-center justify-center bg-white/60 backdrop-blur-sm dark:bg-slate-950/60">
+        <div class="flex flex-col items-center gap-3">
+            <svg class="h-10 w-10 animate-spin text-primary-600" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-80" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+            </svg>
+            <p class="text-sm font-semibold text-slate-700 dark:text-slate-200">{{ __('Saving product…') }}</p>
         </div>
     </div>
 
@@ -365,6 +392,12 @@
             const variantSectionHint = document.getElementById('variant-section-hint');
             const productPriceInput = document.getElementById('price');
             const productStockInput = document.getElementById('stock');
+            const descriptionField = document.getElementById('description');
+            const aiGenerateBtn = document.getElementById('ai-generate-description-btn');
+            const aiGenerateSpinner = document.getElementById('ai-generate-spinner');
+            const aiGenerateError = document.getElementById('ai-generate-error');
+            const categorySelect = document.getElementById('category');
+            const tagSelect = document.getElementById('tag');
 
             const CUSTOM_NAME = '__custom__';
             let masterOptions = {};
@@ -584,6 +617,51 @@
             });
 
             brandInput.addEventListener('input', scheduleSkuPreviewRefresh);
+
+            // ── AI description generation ────────────────────────────────
+            async function generateDescriptionFromAi() {
+                aiGenerateError.textContent = '';
+                const name = cleanText(nameInput.value);
+                if (!name) {
+                    aiGenerateError.textContent = @json(__('Enter a product name first.'));
+                    return;
+                }
+
+                aiGenerateBtn.disabled = true;
+                aiGenerateSpinner.classList.remove('hidden');
+
+                try {
+                    await window.adminApi.ensureCsrfCookie();
+                    const response = await window.adminApi.request('/api/products/generate-description', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            name: name,
+                            brand: cleanText(brandInput.value),
+                            category: categorySelect && categorySelect.selectedIndex > -1
+                                ? categorySelect.options[categorySelect.selectedIndex].text
+                                : '',
+                            tag: tagSelect ? cleanText(tagSelect.value) : '',
+                        }),
+                    });
+
+                    const payload = await response.json();
+
+                    if (!response.ok) {
+                        aiGenerateError.textContent = payload.message || @json(__('Unable to generate a description.'));
+                        return;
+                    }
+
+                    descriptionField.value = payload.description || '';
+                } catch (error) {
+                    aiGenerateError.textContent = @json(__('Unable to generate a description.'));
+                } finally {
+                    aiGenerateBtn.disabled = false;
+                    aiGenerateSpinner.classList.add('hidden');
+                }
+            }
+
+            aiGenerateBtn.addEventListener('click', generateDescriptionFromAi);
 
             Object.keys(VARIANT_FIELDS).forEach(function (key) {
                 const select = fieldSelect(key);
@@ -912,6 +990,19 @@
                 });
             }
 
+            const saveBtn = document.getElementById('product-save-btn');
+            const saveSpinner = document.getElementById('product-save-spinner');
+            const saveLabel = document.getElementById('product-save-label');
+            const saveOverlay = document.getElementById('product-save-overlay');
+
+            function setSaving(isSaving) {
+                saveBtn.disabled = isSaving;
+                saveSpinner.classList.toggle('hidden', !isSaving);
+                saveLabel.textContent = isSaving ? @json(__('Saving…')) : @json(__('Save Product'));
+                saveOverlay.classList.toggle('hidden', !isSaving);
+                saveOverlay.classList.toggle('flex', isSaving);
+            }
+
             document.getElementById('product-create-form').addEventListener('submit', async function (event) {
                 event.preventDefault();
                 const errorBox = document.getElementById('product-form-error');
@@ -926,6 +1017,8 @@
                     errorBox.textContent = @json(__('Please add at least one variant.'));
                     return;
                 }
+
+                setSaving(true);
 
                 const formData = new FormData(event.target);
                 formData.set('variants', JSON.stringify(variants.map((item) => ({
@@ -974,11 +1067,13 @@
                     if (window.adminSwalError) {
                         window.adminSwalError('Create failed', errorData.message || 'Unable to create product.');
                     }
+                    setSaving(false);
                 } catch (error) {
                     errorBox.textContent = 'Unable to create product.';
                     if (window.adminSwalError) {
                         window.adminSwalError('Create failed', 'Unable to create product.');
                     }
+                    setSaving(false);
                 }
             });
 

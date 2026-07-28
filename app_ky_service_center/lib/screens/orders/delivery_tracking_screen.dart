@@ -9,6 +9,7 @@ import '../../l10n/app_localizations.dart';
 import '../../models/pickup_ticket.dart';
 import '../../services/api_service.dart';
 import '../../services/app_notification_service.dart';
+import '../../widgets/circle_back_button.dart';
 import 'widgets/delivery_tracking_colors.dart';
 import 'widgets/delivery_tracking_detail_line.dart';
 import 'widgets/delivery_tracking_empty_hint.dart';
@@ -297,6 +298,13 @@ class _DeliveryTrackingScreenState extends State<DeliveryTrackingScreen> {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
+        leading: Padding(
+          padding: const EdgeInsets.all(8),
+          child: CircleBackButton(
+            onPressed: () => Navigator.of(context).maybePop(),
+            color: TrackingUiColors.ink,
+          ),
+        ),
         title: Text(
           l.deliveryTracking,
           style: const TextStyle(fontWeight: FontWeight.w800),

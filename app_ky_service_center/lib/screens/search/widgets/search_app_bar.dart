@@ -41,9 +41,26 @@ class SearchAppBar extends StatelessWidget implements PreferredSizeWidget {
               height: kToolbarHeight,
               child: Row(
                 children: [
-                  IconButton(
-                    icon: const Icon(Icons.arrow_back_rounded, color: searchInk),
-                    onPressed: () => Navigator.maybePop(context),
+                  const SizedBox(width: 12),
+                  Material(
+                    color: searchBg,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      side: const BorderSide(color: searchBorder),
+                    ),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(12),
+                      onTap: () => Navigator.maybePop(context),
+                      child: const SizedBox(
+                        width: 36,
+                        height: 36,
+                        child: Icon(
+                          Icons.arrow_back_rounded,
+                          size: 20,
+                          color: searchInk,
+                        ),
+                      ),
+                    ),
                   ),
                   const Expanded(
                     child: Text(

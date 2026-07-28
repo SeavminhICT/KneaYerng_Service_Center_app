@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\AdminNotificationCampaign;
 use App\Models\User;
 use App\Services\AdminNotificationCampaignSender;
+use App\Services\AiDescriptionService;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
@@ -209,23 +210,55 @@ class AdminNotificationController extends Controller
         ]);
     }
 
+    public function generateMessage(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'title' => ['required', 'string', 'max:150'],
+            'type' => ['nullable', 'string', Rule::in(self::TYPE_OPTIONS)],
+        ]);
+
+        $service = app(AiDescriptionService::class);
+
+        if (! $service->isEnabled()) {
+            return response()->json([
+                'message' => 'AI message generation is not configured. Set GEMINI_API_KEY in the backend .env.',
+            ], 422);
+        }
+
+        $message = $service->generateNotificationMessage($validated['title'], $validated['type'] ?? null);
+
+        if ($message === null) {
+            return response()->json([
+                'message' => 'Unable to generate a message right now. Please try again.',
+            ], 502);
+        }
+
+        return response()->json(['generated_message' => $message]);
+    }
+
     public function history(Request $request): JsonResponse
     {
-        $limit = (int) $request->input('limit', 30);
-        $limit = max(5, min(100, $limit));
+        $perPage = (int) $request->input('per_page', 10);
+        $perPage = max(5, min(50, $perPage));
 
-        $items = AdminNotificationCampaign::query()
+        $paginator = AdminNotificationCampaign::query()
             ->with('adminUser:id,first_name,last_name,email')
             ->latest('created_at')
-            ->limit($limit)
-            ->get();
+            ->paginate($perPage);
 
+        $items = $paginator->getCollection();
         $receipts = $this->campaignSender->receiptCounts($items->pluck('id'));
 
         return response()->json([
             'data' => $items
                 ->map(fn (AdminNotificationCampaign $campaign) => $this->transformCampaign($campaign, $receipts->get($campaign->id)))
                 ->values(),
+            'meta' => [
+                'current_page' => $paginator->currentPage(),
+                'last_page' => $paginator->lastPage(),
+                'per_page' => $paginator->perPage(),
+                'total' => $paginator->total(),
+            ],
         ]);
     }
 

@@ -1,117 +1,163 @@
 @php
-    $metrics   = $report['metrics']    ?? [];
-    $lowStock  = $report['low_stock']  ?? [];
-    $topMovers = $report['top_movers'] ?? [];
-    $reportType = __('Inventory Report');
+    $metrics    = $report['metrics']   ?? [];
+    $lowStock   = $report['low_stock']  ?? [];
+    $topMovers  = $report['top_movers'] ?? [];
+    $categories = $report['categories'] ?? [];
+    $reportType = __('Inventory & Stock Report');
     $rangeLabel = $rangeLabel ?? '';
 @endphp
 @extends('admin.reports.pdf._layout')
 
 @section('body')
 
-    {{-- KPIs --}}
-    <div class="section-title">{{ __('Inventory Overview') }}</div>
-    <table class="kpi-table">
-        <tr>
-            <td class="kpi-cell">
-                <div class="kpi-label">{{ __('Products') }}</div>
-                <div class="kpi-value kpi-accent">{{ number_format($metrics['total_products'] ?? 0) }}</div>
-            </td>
-            <td class="kpi-cell">
-                <div class="kpi-label">{{ __('Accessories') }}</div>
-                <div class="kpi-value kpi-accent">{{ number_format($metrics['total_accessories'] ?? 0) }}</div>
-            </td>
-            <td class="kpi-cell">
-                <div class="kpi-label">{{ __('Parts') }}</div>
-                <div class="kpi-value kpi-accent">{{ number_format($metrics['total_parts'] ?? 0) }}</div>
-            </td>
-            <td class="kpi-cell">
-                <div class="kpi-label">{{ __('Low Stock Items') }}</div>
-                <div class="kpi-value {{ ($metrics['low_stock_count'] ?? 0) > 0 ? 'kpi-red' : 'kpi-green' }}">
-                    {{ number_format($metrics['low_stock_count'] ?? 0) }}
-                </div>
-            </td>
-        </tr>
+    {{-- Inventory Summary --}}
+    <div class="section-title">{{ __('Inventory & Stock Summary') }}</div>
+    <table class="data-table" style="margin-bottom:20px">
+        <thead>
+            <tr>
+                <th>{{ __('Stock Metric') }}</th>
+                <th class="text-right">{{ __('Value / Quantity') }}</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td class="font-bold">{{ __('Total Product Catalogs') }}</td>
+                <td class="text-right font-bold">{{ number_format($metrics['total_products'] ?? 0) }}</td>
+            </tr>
+            <tr>
+                <td>{{ __('Available Stock Units') }}</td>
+                <td class="text-right text-green font-bold">{{ number_format($metrics['available_stock'] ?? 0) }}</td>
+            </tr>
+            <tr>
+                <td>{{ __('Low Stock Items (Below Threshold)') }}</td>
+                <td class="text-right text-amber font-bold">{{ number_format($metrics['low_stock_count'] ?? 0) }}</td>
+            </tr>
+            <tr>
+                <td>{{ __('Out of Stock Items') }}</td>
+                <td class="text-right text-red font-bold">{{ number_format($metrics['out_of_stock_count'] ?? 0) }}</td>
+            </tr>
+            <tr>
+                <td>{{ __('Incoming Stock Orders') }}</td>
+                <td class="text-right text-indigo font-bold">{{ number_format($metrics['incoming_stock'] ?? 0) }}</td>
+            </tr>
+            <tr>
+                <td>{{ __('Damaged / Defective Items') }}</td>
+                <td class="text-right text-muted">{{ number_format($metrics['damaged_items'] ?? 0) }}</td>
+            </tr>
+            <tr style="background:#f0fdf4">
+                <td class="font-bold text-green" style="font-size:11px">{{ __('Total Inventory Value ($)') }}</td>
+                <td class="text-right font-bold text-green" style="font-size:11px">${{ number_format($metrics['inventory_value'] ?? 0, 2) }}</td>
+            </tr>
+        </tbody>
     </table>
 
-    <table class="two-col" style="margin-bottom:18px">
-        {{-- Low stock --}}
-        <tr>
-            <td>
-                <div class="section-title">{{ __('Low / Out of Stock Items') }}</div>
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>#</th>
-                            <th>{{ __('Item Name') }}</th>
-                            <th>{{ __('Type') }}</th>
-                            <th>{{ __('SKU') }}</th>
-                            <th class="text-right">{{ __('Stock') }}</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @forelse ($lowStock as $i => $item)
-                            <tr>
-                                <td class="text-center" style="width:22px">{{ $i + 1 }}</td>
-                                <td class="font-bold">{{ $item['name'] ?? '—' }}</td>
-                                <td><span class="badge badge-slate">{{ ucfirst($item['type'] ?? '—') }}</span></td>
-                                <td class="text-muted" style="font-size:8px">{{ $item['sku'] ?? '—' }}</td>
-                                <td class="text-right {{ ($item['stock'] ?? 1) == 0 ? 'text-red' : 'text-amber' }}">
-                                    {{ $item['stock'] ?? 0 }}
-                                </td>
-                            </tr>
-                        @empty
-                            <tr><td colspan="5" style="text-align:center;color:#16a34a;padding:12px">✓ {{ __('All items above threshold') }}</td></tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </td>
-
-            {{-- Top movers --}}
-            <td>
-                <div class="section-title">{{ __('Top Movers (Qty Sold)') }}</div>
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>#</th>
-                            <th>{{ __('Item Name') }}</th>
-                            <th>{{ __('Type') }}</th>
-                            <th class="text-right">{{ __('Qty') }}</th>
-                            <th class="text-right">{{ __('Revenue') }}</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @forelse ($topMovers as $i => $item)
-                            <tr>
-                                <td class="text-center"><span class="rank">{{ $i + 1 }}</span></td>
-                                <td class="font-bold">{{ $item['name'] ?? '—' }}</td>
-                                <td><span class="badge badge-purple">{{ ucfirst($item['item_type'] ?? '—') }}</span></td>
-                                <td class="text-right font-bold">{{ number_format($item['quantity'] ?? 0) }}</td>
-                                <td class="text-right text-green">${{ number_format($item['sales'] ?? 0, 2) }}</td>
-                            </tr>
-                        @empty
-                            <tr><td colspan="5" style="text-align:center;color:#94a3b8;padding:12px">{{ __('No movement data') }}</td></tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </td>
-        </tr>
+    <div class="section-title">{{ __('Charts') }}</div>
+    <div style="font-weight:bold;margin-bottom:6px">{{ __('Inventory Value') }}</div>
+    @php
+        $valueMax = max(array_map(fn ($row) => (float) ($row['value'] ?? 0), $categories ?: [['value' => 0]])) ?: 1;
+    @endphp
+    <table class="chart-table">
+        <tbody>
+            @foreach ($categories as $cat)
+                @php
+                    $catValue = (float) ($cat['value'] ?? 0);
+                    $barWidth = max(2, (int) round(($catValue / $valueMax) * 160));
+                @endphp
+                <tr>
+                    <td style="width:120px">{{ $cat['name'] ?? '-' }}</td>
+                    <td style="width:180px"><div class="bar-bg"><div class="bar-fill" style="width:{{ $barWidth }}px"></div></div></td>
+                    <td class="text-right">${{ number_format($catValue, 2) }}</td>
+                </tr>
+            @endforeach
+        </tbody>
     </table>
 
-    {{-- Summary note --}}
-    <div class="box" style="background:#fff7ed;border-color:#fed7aa">
-        <div class="box-title" style="color:#9a3412">{{ __('Stock Health Summary') }}</div>
-        <div style="font-size:9.5px;color:#374151;line-height:1.6">
-            @php
-                $total    = ($metrics['total_products'] ?? 0) + ($metrics['total_accessories'] ?? 0) + ($metrics['total_parts'] ?? 0);
-                $lowCount = $metrics['low_stock_count'] ?? 0;
-                $healthPct = $total > 0 ? round((($total - $lowCount) / $total) * 100, 1) : 100;
-            @endphp
-            {{ __('Total catalogue items') }}: <strong>{{ number_format($total) }}</strong> &nbsp;·&nbsp;
-            {{ __('Low stock') }}: <strong style="color:#dc2626">{{ $lowCount }}</strong> &nbsp;·&nbsp;
-            {{ __('Healthy stock') }}: <strong style="color:#16a34a">{{ $total - $lowCount }}</strong>
-            &nbsp; (<strong>{{ $healthPct }}%</strong> {{ __('of catalogue is adequately stocked') }})
-        </div>
-    </div>
+    {{-- Inventory Value by Category --}}
+    <div class="section-title">{{ __('Inventory Value by Category') }}</div>
+    <table class="data-table" style="margin-bottom:20px">
+        <thead>
+            <tr>
+                <th>{{ __('Category') }}</th>
+                <th class="text-right">{{ __('Catalog Count') }}</th>
+                <th class="text-right">{{ __('Category Value ($)') }}</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach ($categories as $cat)
+                <tr>
+                    <td class="font-bold">{{ $cat['name'] }}</td>
+                    <td class="text-right font-bold">{{ number_format($cat['count']) }}</td>
+                    <td class="text-right text-green font-bold">${{ number_format($cat['value'], 2) }}</td>
+                </tr>
+            @endforeach
+        </tbody>
+    </table>
+
+    {{-- Low Stock Warning Table --}}
+    <div class="section-title">{{ __('Low Stock Warning Items') }}</div>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th style="width:25px">#</th>
+                <th>{{ __('Item Name') }}</th>
+                <th>{{ __('SKU') }}</th>
+                <th>{{ __('Type') }}</th>
+                <th class="text-right">{{ __('Stock Level') }}</th>
+                <th class="text-right">{{ __('Reorder Level') }}</th>
+                <th class="text-right">{{ __('Status') }}</th>
+            </tr>
+        </thead>
+        <tbody>
+            @forelse ($lowStock as $i => $item)
+                @php $isOut = ($item['stock'] ?? 0) == 0; @endphp
+                <tr>
+                    <td class="text-center"><span class="rank">{{ $i + 1 }}</span></td>
+                    <td class="font-bold">{{ $item['name'] ?? '—' }}</td>
+                    <td class="text-muted" style="font-size:8.5px;font-family:monospace">{{ $item['sku'] ?? '—' }}</td>
+                    <td><span class="badge badge-slate">{{ ucfirst($item['type'] ?? 'item') }}</span></td>
+                    <td class="text-right font-bold {{ $isOut ? 'text-red' : 'text-amber' }}">{{ number_format($item['stock'] ?? 0) }}</td>
+                    <td class="text-right text-muted">{{ number_format($item['reorder_level'] ?? 10) }}</td>
+                    <td class="text-right">
+                        <span class="badge {{ $isOut ? 'badge-red' : 'badge-amber' }}">{{ $item['status'] ?? 'Low Stock' }}</span>
+                    </td>
+                </tr>
+            @empty
+                <tr><td colspan="7" style="text-align:center;color:#94a3b8;padding:14px">{{ __('All inventory stock levels are healthy.') }}</td></tr>
+            @endforelse
+        </tbody>
+    </table>
+
+    <div class="section-title">{{ __('Stock Movement') }}</div>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>{{ __('Date') }}</th>
+                <th>{{ __('Product') }}</th>
+                <th class="text-right">{{ __('IN') }}</th>
+                <th class="text-right">{{ __('OUT') }}</th>
+            </tr>
+        </thead>
+        <tbody>
+            @forelse ($topMovers as $item)
+                <tr>
+                    <td>{{ $end->format('d M Y') }}</td>
+                    <td class="font-bold">{{ $item['name'] ?? '-' }}</td>
+                    <td class="text-right">0</td>
+                    <td class="text-right font-bold">{{ number_format($item['quantity'] ?? 0) }}</td>
+                </tr>
+            @empty
+                <tr><td colspan="4" style="text-align:center;color:#94a3b8;padding:14px">{{ __('No stock movement data available.') }}</td></tr>
+            @endforelse
+        </tbody>
+    </table>
+
+    <div class="section-title">{{ __('Recommendations') }}</div>
+    <table class="data-table">
+        <tbody>
+            <tr><td>{{ __('Review all products at or below reorder level.') }}</td></tr>
+            <tr><td>{{ __('Prioritize purchasing for out-of-stock and low-stock items.') }}</td></tr>
+            <tr><td>{{ __('Use inventory value by category before approving new stock purchases.') }}</td></tr>
+        </tbody>
+    </table>
 
 @endsection

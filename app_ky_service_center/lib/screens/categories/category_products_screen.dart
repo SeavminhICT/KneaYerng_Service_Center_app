@@ -336,7 +336,8 @@ class _ProductCardState extends State<_ProductCard> {
     final brand = product.brand?.trim();
     final hasBrand = brand != null && brand.isNotEmpty;
     final hasRating = product.rating > 0;
-    final hasStock = product.stock != null;
+    final effectiveStock = product.effectiveStock;
+    final hasStock = effectiveStock != null;
 
     return AnimatedScale(
       scale: _pressed ? 0.97 : 1,
@@ -411,7 +412,7 @@ class _ProductCardState extends State<_ProductCard> {
                       Positioned(
                         right: 14,
                         top: 14,
-                        child: _StockChip(stock: product.stock!),
+                        child: _StockChip(stock: effectiveStock),
                       ),
                   ],
                 ),
@@ -449,18 +450,20 @@ class _ProductCardState extends State<_ProductCard> {
                     Row(
                       children: [
                         Text(
-                          '\$${product.salePrice.toStringAsFixed(2)}',
+                          '\$${product.effectivePrice.toStringAsFixed(2)}',
                           style: TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w800,
-                            color: product.hasDiscount ? _danger : _primary,
+                            color: product.effectiveOriginalPrice != null
+                                ? _danger
+                                : _primary,
                           ),
                         ),
-                        if (product.hasDiscount) ...[
+                        if (product.effectiveOriginalPrice != null) ...[
                           const SizedBox(width: 6),
                           Expanded(
                             child: Text(
-                              '\$${product.price.toStringAsFixed(2)}',
+                              '\$${product.effectiveOriginalPrice!.toStringAsFixed(2)}',
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(

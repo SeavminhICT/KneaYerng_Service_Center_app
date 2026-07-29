@@ -102,8 +102,18 @@
             </div>
 
             <div>
-                <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="description">Description</label>
+                <div class="flex items-center justify-between gap-2">
+                    <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="description">Description</label>
+                    <button id="ai-generate-description-btn" type="button" class="inline-flex items-center gap-1.5 rounded-lg border border-primary-200 bg-primary-50 px-2.5 py-1 text-xs font-semibold text-primary-700 hover:bg-primary-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-primary-500/40 dark:bg-primary-500/10 dark:text-primary-200">
+                        <svg id="ai-generate-spinner" class="hidden h-3.5 w-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-80" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+                        </svg>
+                        <span>✨ Generate from AI</span>
+                    </button>
+                </div>
                 <textarea id="description" name="description" rows="4" class="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200">{{ old('description', $product->description ?? '') }}</textarea>
+                <p id="ai-generate-error" class="mt-1 text-xs text-danger-600"></p>
             </div>
 
             <div class="rounded-2xl border border-slate-200 p-4 dark:border-slate-800">
@@ -322,6 +332,14 @@
             const variantSectionHint = document.getElementById('variant-section-hint');
             const productPriceInput = document.getElementById('price');
             const productStockInput = document.getElementById('stock');
+            const nameInput = document.getElementById('name');
+            const brandInput = document.getElementById('brand');
+            const categorySelect = document.getElementById('category');
+            const tagSelect = document.getElementById('tag');
+            const descriptionField = document.getElementById('description');
+            const aiGenerateBtn = document.getElementById('ai-generate-description-btn');
+            const aiGenerateSpinner = document.getElementById('ai-generate-spinner');
+            const aiGenerateError = document.getElementById('ai-generate-error');
 
             function currentConfig() {
                 return TYPE_CONFIG[productTypeSelect.value] || TYPE_CONFIG.mobile;
@@ -563,6 +581,51 @@
 
             variantAddBtn.addEventListener('click', addOrUpdateVariant);
             variantClearBtn.addEventListener('click', resetVariantForm);
+
+            // ── AI description generation ────────────────────────────────
+            async function generateDescriptionFromAi() {
+                aiGenerateError.textContent = '';
+                const name = cleanText(nameInput.value);
+                if (!name) {
+                    aiGenerateError.textContent = 'Enter a product name first.';
+                    return;
+                }
+
+                aiGenerateBtn.disabled = true;
+                aiGenerateSpinner.classList.remove('hidden');
+
+                try {
+                    await window.adminApi.ensureCsrfCookie();
+                    const response = await window.adminApi.request('/api/products/generate-description', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            name: name,
+                            brand: cleanText(brandInput.value),
+                            category: categorySelect && categorySelect.selectedIndex > -1
+                                ? categorySelect.options[categorySelect.selectedIndex].text
+                                : '',
+                            tag: tagSelect ? cleanText(tagSelect.value) : '',
+                        }),
+                    });
+
+                    const payload = await response.json();
+
+                    if (!response.ok) {
+                        aiGenerateError.textContent = payload.message || 'Unable to generate a description.';
+                        return;
+                    }
+
+                    descriptionField.value = payload.description || '';
+                } catch (error) {
+                    aiGenerateError.textContent = 'Unable to generate a description.';
+                } finally {
+                    aiGenerateBtn.disabled = false;
+                    aiGenerateSpinner.classList.add('hidden');
+                }
+            }
+
+            aiGenerateBtn.addEventListener('click', generateDescriptionFromAi);
 
             productTypeSelect.addEventListener('change', function () {
                 resetVariantForm();

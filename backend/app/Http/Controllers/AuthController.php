@@ -207,7 +207,6 @@ class AuthController extends Controller
             'first_name' => ['sometimes', 'required', 'string', 'max:255'],
             'last_name' => ['sometimes', 'required', 'string', 'max:255'],
             'email' => ['sometimes', 'required', 'string', 'lowercase', 'email', 'max:255', 'unique:users,email,'.$user->id],
-            'phone' => ['sometimes', 'required', 'string', 'max:20'],
             'current_password' => ['required_with:password', 'string'],
             'password' => [
                 'required_with:current_password',
@@ -220,16 +219,6 @@ class AuthController extends Controller
             'avatar' => ['sometimes', 'nullable', 'image', 'max:2048'],
         ]);
 
-        $normalizedPhone = null;
-        if (array_key_exists('phone', $validated)) {
-            $normalizedPhone = $this->otpService->normalizeDestination('phone', $validated['phone']);
-            if ($normalizedPhone !== '' && User::where('phone', $normalizedPhone)->where('id', '!=', $user->id)->exists()) {
-                throw ValidationException::withMessages([
-                    'phone' => ['The phone number has already been taken.'],
-                ]);
-            }
-        }
-
         if (array_key_exists('first_name', $validated)) {
             $user->first_name = $validated['first_name'];
         }
@@ -240,10 +229,6 @@ class AuthController extends Controller
 
         if (array_key_exists('email', $validated)) {
             $user->email = $validated['email'];
-        }
-
-        if (array_key_exists('phone', $validated)) {
-            $user->phone = $normalizedPhone;
         }
 
         if (array_key_exists('password', $validated)) {
@@ -274,6 +259,79 @@ class AuthController extends Controller
 
         return response()->json([
             'message' => 'User updated successfully',
+            'user' => $user,
+        ]);
+    }
+
+    public function requestPhoneChangeOtp(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        $validated = $request->validate([
+            'phone' => ['required', 'string', 'max:20'],
+        ]);
+
+        $normalizedPhone = $this->otpService->normalizeDestination('phone', $validated['phone']);
+        if ($normalizedPhone === '') {
+            throw ValidationException::withMessages([
+                'phone' => ['Please enter a valid phone number.'],
+            ]);
+        }
+
+        if (User::where('phone', $normalizedPhone)->where('id', '!=', $user->id)->exists()) {
+            throw ValidationException::withMessages([
+                'phone' => ['The phone number has already been taken.'],
+            ]);
+        }
+
+        $result = $this->otpService->requestOtp(
+            'phone',
+            $normalizedPhone,
+            'change_phone',
+            $user->id,
+            $request->ip(),
+            $request->header('X-Device-Id')
+        );
+
+        return response()->json([
+            'message' => $result['message'] ?? 'OTP request processed.',
+            'expires_in_sec' => $result['expires_in_sec'] ?? (int) config('otp.ttl_seconds', 300),
+            'resend_in_sec' => $result['resend_in_sec'] ?? (int) config('otp.resend_cooldown_seconds', 60),
+        ], $result['status'] ?? 200);
+    }
+
+    public function confirmPhoneChangeOtp(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        $validated = $request->validate([
+            'phone' => ['required', 'string', 'max:20'],
+            'otp' => ['required', 'string', 'max:12'],
+        ]);
+
+        $normalizedPhone = $this->otpService->normalizeDestination('phone', $validated['phone']);
+        if ($normalizedPhone === '') {
+            throw ValidationException::withMessages([
+                'phone' => ['Please enter a valid phone number.'],
+            ]);
+        }
+
+        $verify = $this->otpService->verifyOtp('phone', $normalizedPhone, 'change_phone', $validated['otp']);
+        if (! ($verify['ok'] ?? false)) {
+            return response()->json(['message' => $verify['message'] ?? 'OTP verification failed.'], $verify['status'] ?? 422);
+        }
+
+        if (User::where('phone', $normalizedPhone)->where('id', '!=', $user->id)->exists()) {
+            throw ValidationException::withMessages([
+                'phone' => ['The phone number has already been taken.'],
+            ]);
+        }
+
+        $user->phone = $normalizedPhone;
+        $user->save();
+
+        return response()->json([
+            'message' => 'Phone number updated successfully',
             'user' => $user,
         ]);
     }

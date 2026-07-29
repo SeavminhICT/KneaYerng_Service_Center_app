@@ -15,7 +15,7 @@
                     <h1 class="mt-3 text-2xl font-semibold text-slate-900 dark:text-white">{{ __('Send Notifications With Delivery Context') }}</h1>
                     <p class="mt-2 max-w-3xl text-sm text-slate-500">{{ __('Design and preview the notification payload, choose the audience, and resend past notifications in one click.') }}</p>
                 </div>
-                <div class="flex flex-wrap gap-3">
+                {{-- <div class="flex flex-wrap gap-3">
                     <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-center dark:border-slate-800 dark:bg-slate-950">
                         <p id="stat-sent" class="text-xl font-bold text-slate-900 dark:text-white">--</p>
                         <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">{{ __('Sent') }}</p>
@@ -28,7 +28,7 @@
                         <p id="stat-failed" class="text-xl font-bold text-rose-600 dark:text-rose-400">--</p>
                         <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">{{ __('Failed') }}</p>
                     </div>
-                </div>
+                </div> --}}
             </div>
         </div>
 
@@ -43,7 +43,7 @@
                         <span class="rounded-full bg-primary-50 px-3 py-1 text-xs font-semibold text-primary-700 dark:bg-primary-500/10 dark:text-primary-100">{{ __('Ready to send') }}</span>
                     </div>
 
-                    <form id="notification-form" class="mt-6 space-y-5" data-send-url="{{ route('admin.notifications.store', [], false) }}">
+                    <form id="notification-form" class="mt-6 space-y-5" data-send-url="{{ route('admin.notifications.store', [], false) }}" data-generate-message-url="{{ route('admin.notifications.generate-message', [], false) }}">
                         <div class="grid gap-5 md:grid-cols-2">
                             <div>
                                 <label for="notification-title" class="text-sm font-semibold text-slate-700 dark:text-slate-200">{{ __('Title') }}</label>
@@ -64,8 +64,18 @@
                         </div>
 
                         <div>
-                            <label for="notification-message" class="text-sm font-semibold text-slate-700 dark:text-slate-200">{{ __('Message') }}</label>
+                            <div class="flex items-center justify-between gap-2">
+                                <label for="notification-message" class="text-sm font-semibold text-slate-700 dark:text-slate-200">{{ __('Message') }}</label>
+                                <button id="ai-generate-message-btn" type="button" class="inline-flex items-center gap-1.5 rounded-lg border border-primary-200 bg-primary-50 px-2.5 py-1 text-xs font-semibold text-primary-700 hover:bg-primary-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-primary-500/40 dark:bg-primary-500/10 dark:text-primary-200">
+                                    <svg id="ai-generate-message-spinner" class="hidden h-3.5 w-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-80" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+                                    </svg>
+                                    <span>{{ __('✨ Generate from AI') }}</span>
+                                </button>
+                            </div>
                             <textarea id="notification-message" name="message" rows="5" placeholder="{{ __('Write the message users should see on the device and inside the app.') }}" class="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 placeholder:text-slate-400 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"></textarea>
+                            <p id="ai-generate-message-error" class="mt-1 text-xs text-rose-600"></p>
                         </div>
 
                         <div class="grid gap-5 md:grid-cols-2">
@@ -141,6 +151,7 @@
                     <div id="history-list" class="mt-5 space-y-3">
                         <p id="history-empty" class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-950">{{ __('Loading history...') }}</p>
                     </div>
+                    <div id="history-pagination" class="mt-4 hidden items-center justify-between gap-3"></div>
                 </div>
             </div>
 
@@ -203,8 +214,14 @@
             var previewClock = document.getElementById('preview-clock');
             var saveDraftButton = document.getElementById('save-draft');
             var sendButton = document.getElementById('send-notification');
+            var aiGenerateMessageBtn = document.getElementById('ai-generate-message-btn');
+            var aiGenerateMessageSpinner = document.getElementById('ai-generate-message-spinner');
+            var aiGenerateMessageError = document.getElementById('ai-generate-message-error');
             var refreshHistoryButton = document.getElementById('refresh-history');
             var historyList = document.getElementById('history-list');
+            var historyPagination = document.getElementById('history-pagination');
+            var historyPage = 1;
+            var historyPerPage = 10;
             var statSent = document.getElementById('stat-sent');
             var statDelivered = document.getElementById('stat-delivered');
             var statFailed = document.getElementById('stat-failed');
@@ -569,9 +586,62 @@
                 });
             }
 
+            function renderHistoryPagination(meta) {
+                if (!historyPagination) {
+                    return;
+                }
+                historyPagination.innerHTML = '';
+
+                if (!meta || meta.last_page <= 1) {
+                    historyPagination.classList.add('hidden');
+                    historyPagination.classList.remove('flex');
+                    return;
+                }
+
+                historyPagination.classList.remove('hidden');
+                historyPagination.classList.add('flex');
+
+                var info = document.createElement('p');
+                info.className = 'text-xs text-slate-500 dark:text-slate-400';
+                info.textContent = 'Page ' + meta.current_page + ' of ' + meta.last_page + ' (' + meta.total + ' total)';
+                historyPagination.appendChild(info);
+
+                var controls = document.createElement('div');
+                controls.className = 'flex items-center gap-2';
+
+                var prevBtn = document.createElement('button');
+                prevBtn.type = 'button';
+                prevBtn.className = 'inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200';
+                prevBtn.textContent = 'Previous';
+                prevBtn.disabled = meta.current_page <= 1;
+                prevBtn.addEventListener('click', function () {
+                    if (historyPage > 1) {
+                        historyPage -= 1;
+                        loadHistory();
+                    }
+                });
+                controls.appendChild(prevBtn);
+
+                var nextBtn = document.createElement('button');
+                nextBtn.type = 'button';
+                nextBtn.className = 'inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200';
+                nextBtn.textContent = 'Next';
+                nextBtn.disabled = meta.current_page >= meta.last_page;
+                nextBtn.addEventListener('click', function () {
+                    if (historyPage < meta.last_page) {
+                        historyPage += 1;
+                        loadHistory();
+                    }
+                });
+                controls.appendChild(nextBtn);
+
+                historyPagination.appendChild(controls);
+            }
+
             async function loadHistory() {
                 try {
-                    var response = await fetch(historyUrl, {
+                    var url = historyUrl + '?page=' + historyPage + '&per_page=' + historyPerPage;
+                    var response = await fetch(url, {
                         headers: { 'Accept': 'application/json' },
                         credentials: 'same-origin',
                     });
@@ -580,12 +650,17 @@
                     }
                     var result = await response.json();
                     renderHistory(Array.isArray(result.data) ? result.data : []);
+                    renderHistoryPagination(result.meta);
                 } catch (error) {
                     historyList.innerHTML = '';
                     var failed = document.createElement('p');
                     failed.className = 'rounded-2xl border border-dashed border-rose-300 bg-rose-50 px-4 py-6 text-center text-sm text-rose-600 dark:border-rose-800 dark:bg-rose-500/10 dark:text-rose-300';
                     failed.textContent = 'Could not load notification history. Try Refresh.';
                     historyList.appendChild(failed);
+                    if (historyPagination) {
+                        historyPagination.classList.add('hidden');
+                        historyPagination.classList.remove('flex');
+                    }
                 }
             }
 
@@ -672,6 +747,7 @@
                     }
 
                     showSendResult('Notification resent', payload);
+                    historyPage = 1;
                     loadHistory();
                 } catch (error) {
                     if (window.adminSwalError) {
@@ -683,6 +759,59 @@
                         button.innerHTML = originalHtml;
                     }
                 }
+            }
+
+            // ---- AI message generation ----
+
+            async function generateMessageFromAi() {
+                if (!aiGenerateMessageError) {
+                    return;
+                }
+                aiGenerateMessageError.textContent = '';
+                var title = titleInput.value.trim();
+                if (!title) {
+                    aiGenerateMessageError.textContent = 'Enter a notification title first.';
+                    return;
+                }
+
+                aiGenerateMessageBtn.disabled = true;
+                aiGenerateMessageSpinner.classList.remove('hidden');
+
+                try {
+                    var response = await fetch(form.dataset.generateMessageUrl || '/admin/notifications/generate-message', {
+                        method: 'POST',
+                        headers: {
+                            'Accept': 'application/json',
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': csrfToken ? csrfToken.content : '',
+                        },
+                        credentials: 'same-origin',
+                        body: JSON.stringify({ title: title, type: typeInput.value || '' }),
+                    });
+                    var payload = {};
+                    try {
+                        payload = await response.json();
+                    } catch (error) {
+                        payload = {};
+                    }
+
+                    if (!response.ok) {
+                        aiGenerateMessageError.textContent = payload.message || 'Unable to generate a message.';
+                        return;
+                    }
+
+                    messageInput.value = payload.generated_message || '';
+                    syncPreview();
+                } catch (error) {
+                    aiGenerateMessageError.textContent = 'Unable to generate a message.';
+                } finally {
+                    aiGenerateMessageBtn.disabled = false;
+                    aiGenerateMessageSpinner.classList.add('hidden');
+                }
+            }
+
+            if (aiGenerateMessageBtn) {
+                aiGenerateMessageBtn.addEventListener('click', generateMessageFromAi);
             }
 
             // ---- Wire up ----
@@ -701,7 +830,10 @@
             }
 
             if (refreshHistoryButton) {
-                refreshHistoryButton.addEventListener('click', loadHistory);
+                refreshHistoryButton.addEventListener('click', function () {
+                    historyPage = 1;
+                    loadHistory();
+                });
             }
 
             if (saveDraftButton) {
@@ -766,6 +898,7 @@
 
                         resetFormState();
                         showSendResult('Notification sent', result);
+                        historyPage = 1;
                         loadHistory();
                     } catch (error) {
                         if (window.adminSwalError) {

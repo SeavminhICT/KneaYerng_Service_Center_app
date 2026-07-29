@@ -9,6 +9,7 @@ use App\Http\Resources\ProductResource;
 use App\Models\Part;
 use App\Models\Product;
 use App\Models\ProductVariant;
+use App\Services\AiDescriptionService;
 use App\Services\RemoveBgService;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
@@ -135,6 +136,35 @@ class ProductController extends Controller
         return response()->json([
             'sku' => $this->generateSku($validated['name'], $validated['brand'] ?? null),
         ]);
+    }
+
+    public function generateDescription(Request $request)
+    {
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'brand' => ['nullable', 'string', 'max:255'],
+            'category' => ['nullable', 'string', 'max:255'],
+            'tag' => ['nullable', 'string', 'max:255'],
+            'condition' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $service = app(AiDescriptionService::class);
+
+        if (! $service->isEnabled()) {
+            return response()->json([
+                'message' => 'AI description generation is not configured. Set GEMINI_API_KEY in the backend .env.',
+            ], 422);
+        }
+
+        $description = $service->generateProductDescription($validated);
+
+        if ($description === null) {
+            return response()->json([
+                'message' => 'Unable to generate a description right now. Please try again.',
+            ], 502);
+        }
+
+        return response()->json(['description' => $description]);
     }
 
     public function store(StoreProductRequest $request)
@@ -509,7 +539,11 @@ class ProductController extends Controller
         $prices = array_map(fn ($row) => (float) ($row['price'] ?? 0), $variantRows);
         $stocks = array_map(fn ($row) => (int) ($row['stock'] ?? 0), $variantRows);
 
-        $validated['price'] = min($prices);
+        // A variant left blank/priced at 0 by mistake must not drag the
+        // whole product's displayed price down to 0 while its siblings are
+        // priced normally — only fall back to 0 if every variant is unpriced.
+        $pricedVariants = array_filter($prices, fn ($price) => $price > 0);
+        $validated['price'] = $pricedVariants !== [] ? min($pricedVariants) : 0;
         $validated['stock'] = array_sum($stocks);
 
         $validated['storage_capacity'] = $this->uniqueVariantValues($variantRows, 'storage_capacity');
@@ -699,14 +733,12 @@ class ProductController extends Controller
         $source = $raw !== false ? @imagecreatefromstring($raw) : false;
         if (! $source) {
             if ($bgRemoved !== null) {
-                Storage::disk($disk)->put($targetPath, $bgRemoved);
+                $this->putImageOrFail($disk, $targetPath, $bgRemoved);
 
                 return 'storage/'.$targetPath;
             }
 
-            $storedPath = $file->store($directory, $disk);
-
-            return 'storage/'.$storedPath;
+            return 'storage/'.$this->storeFileOrFail($file, $directory, $disk);
         }
 
         $width = imagesx($source);
@@ -738,12 +770,38 @@ class ProductController extends Controller
         imagedestroy($source);
 
         if (! is_string($encoded) || $encoded === '') {
-            $storedPath = $file->store($directory, $disk);
-            return 'storage/'.$storedPath;
+            return 'storage/'.$this->storeFileOrFail($file, $directory, $disk);
         }
 
-        Storage::disk($disk)->put($targetPath, $encoded);
+        $this->putImageOrFail($disk, $targetPath, $encoded);
 
         return 'storage/'.$targetPath;
+    }
+
+    /**
+     * Storage::put() returns false (rather than throwing) on failure when a
+     * disk is configured with 'throw' => false — as ours is, so a transient
+     * R2/S3 hiccup would otherwise be saved as a DB image path pointing at a
+     * file that was never actually written, breaking every future load of it.
+     */
+    private function putImageOrFail(string $disk, string $path, string $contents): void
+    {
+        if (! Storage::disk($disk)->put($path, $contents)) {
+            throw ValidationException::withMessages([
+                'image' => ['Failed to upload image to storage. Please check your connection and try again.'],
+            ]);
+        }
+    }
+
+    private function storeFileOrFail(UploadedFile $file, string $directory, string $disk): string
+    {
+        $stored = $file->store($directory, $disk);
+        if ($stored === false) {
+            throw ValidationException::withMessages([
+                'image' => ['Failed to upload image to storage. Please check your connection and try again.'],
+            ]);
+        }
+
+        return $stored;
     }
 }

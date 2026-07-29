@@ -14,8 +14,8 @@ class SearchProductCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final hasDiscount =
-        product.hasDiscount && product.salePrice < product.price;
+    final originalPrice = product.effectiveOriginalPrice;
+    final hasDiscount = originalPrice != null;
 
     return GestureDetector(
       onTap: () => Navigator.of(context).push(
@@ -116,16 +116,16 @@ class SearchProductCard extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              searchCurrency.format(product.salePrice),
+                              searchCurrency.format(product.effectivePrice),
                               style: TextStyle(
                                 fontSize: 15,
                                 fontWeight: FontWeight.w800,
                                 color: hasDiscount ? searchRed : searchInk,
                               ),
                             ),
-                            if (hasDiscount)
+                            if (originalPrice != null)
                               Text(
-                                searchCurrency.format(product.price),
+                                searchCurrency.format(originalPrice),
                                 style: const TextStyle(
                                   fontSize: 10.5,
                                   color: searchMuted,

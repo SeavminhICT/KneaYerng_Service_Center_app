@@ -1763,6 +1763,99 @@ class ApiService {
     }
   }
 
+  static Future<OtpRequestResult> requestPhoneChangeOtp(String phone) async {
+    final token = await getToken();
+    if (token == null || token.isEmpty) {
+      return const OtpRequestResult(ok: false, message: 'Not authenticated');
+    }
+
+    http.Response res;
+    try {
+      res = await http
+          .post(
+            Uri.parse('$baseUrl/auth/user/phone/request-otp'),
+            headers: _buildHeaders({
+              'Authorization': 'Bearer $token',
+              'Content-Type': 'application/json',
+            }),
+            body: jsonEncode({'phone': phone.trim()}),
+          )
+          .timeout(const Duration(seconds: 15));
+    } catch (_) {
+      return const OtpRequestResult(
+        ok: false,
+        message: 'Unable to request OTP. Please try again.',
+      );
+    }
+
+    dynamic decoded;
+    try {
+      decoded = jsonDecode(res.body);
+    } catch (_) {}
+
+    final map = decoded is Map ? Map<String, dynamic>.from(decoded) : <String, dynamic>{};
+    final ok = res.statusCode >= 200 && res.statusCode < 300;
+    String message = map['message']?.toString() ?? 'OTP request completed.';
+    if (!ok && map['errors'] is Map && (map['errors'] as Map)['phone'] is List) {
+      final errs = (map['errors'] as Map)['phone'] as List;
+      if (errs.isNotEmpty) message = errs.first.toString();
+    }
+    return OtpRequestResult(
+      ok: ok,
+      message: message,
+      expiresInSec: _parseInt(map['expiresInSec'] ?? map['expires_in_sec']),
+      resendInSec: _parseInt(map['resendInSec'] ?? map['resend_in_sec']),
+    );
+  }
+
+  static Future<String?> confirmPhoneChangeOtp({
+    required String phone,
+    required String otp,
+  }) async {
+    final token = await getToken();
+    if (token == null || token.isEmpty) {
+      return 'Not authenticated';
+    }
+
+    http.Response res;
+    try {
+      res = await http
+          .post(
+            Uri.parse('$baseUrl/auth/user/phone/confirm'),
+            headers: _buildHeaders({
+              'Authorization': 'Bearer $token',
+              'Content-Type': 'application/json',
+            }),
+            body: jsonEncode({'phone': phone.trim(), 'otp': otp.trim()}),
+          )
+          .timeout(const Duration(seconds: 15));
+    } catch (_) {
+      return 'Unable to verify OTP right now.';
+    }
+
+    if (res.statusCode == 200 || res.statusCode == 201) {
+      try {
+        final data = jsonDecode(res.body);
+        final profile = _extractUserProfile(data, fallbackPhone: phone.trim());
+        if (profile != null) {
+          await _saveUserProfile(profile);
+        }
+      } catch (_) {}
+      return null;
+    }
+
+    try {
+      final data = jsonDecode(res.body);
+      if (data is Map && data['errors'] is Map && (data['errors'] as Map)['phone'] is List) {
+        final errs = (data['errors'] as Map)['phone'] as List;
+        if (errs.isNotEmpty) return errs.first.toString();
+      }
+      return data['message'] ?? 'Failed to verify OTP.';
+    } catch (_) {
+      return 'Failed to verify OTP.';
+    }
+  }
+
   // ================= PRODUCTS =================
   static Future<List<SearchSuggestion>> fetchSearchSuggestions(
     String query, {

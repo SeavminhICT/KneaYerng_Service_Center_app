@@ -4,6 +4,7 @@ namespace App\Services;
 
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 class KhPayService
 {
@@ -201,10 +202,18 @@ class KhPayService
                     'body' => $response->body(),
                 ]);
                 $json = $response->json();
-                return $json ?: [
+                if ($json) {
+                    return $json;
+                }
+                $status = $response->status();
+                $snippet = trim(strip_tags(Str::limit($response->body(), 200)));
+                return [
                     'success' => false,
-                    'error' => 'API connection failure',
+                    'error' => $snippet !== ''
+                        ? "KHPAY gateway error (HTTP {$status}): {$snippet}"
+                        : "KHPAY gateway error (HTTP {$status}).",
                     'code' => 'GATEWAY_ERROR',
+                    'status' => $status,
                 ];
             }
 
@@ -218,7 +227,8 @@ class KhPayService
             ]);
             return [
                 'success' => false,
-                'error' => 'KHPAY gateway connection error.',
+                'error' => 'KHPAY gateway connection error: '
+                    . Str::limit($e->getMessage(), 150),
                 'code' => 'CONNECTION_ERROR',
             ];
         }

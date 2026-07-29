@@ -63,6 +63,8 @@ Route::prefix('auth')->group(function () {
     Route::post('google', [AuthController::class, 'googleLogin']);
     Route::post('logout', [AuthController::class, 'logout'])->middleware('auth:sanctum');
     Route::put('user/update', [AuthController::class, 'update'])->middleware('auth:sanctum');
+    Route::post('user/phone/request-otp', [AuthController::class, 'requestPhoneChangeOtp'])->middleware('auth:sanctum');
+    Route::post('user/phone/confirm', [AuthController::class, 'confirmPhoneChangeOtp'])->middleware('auth:sanctum');
 });
 
 Route::post('otp/request', [OtpController::class, 'request']);
@@ -225,6 +227,7 @@ Route::middleware('admin')->group(function () {
     Route::match(['put', 'patch'], 'categories/{category}', [CategoryController::class, 'update'])->middleware('permission:update_category');
     Route::delete('categories/{category}', [CategoryController::class, 'destroy'])->middleware('permission:delete_category');
     Route::get('products/next-sku', [ProductController::class, 'nextSku'])->middleware('permission:create_product,update_product');
+    Route::post('products/generate-description', [ProductController::class, 'generateDescription'])->middleware('permission:create_product,update_product');
     Route::post('products/bulk-action', [ProductController::class, 'bulkAction'])->middleware('permission:update_product,delete_product,view_product');
     Route::post('products', [ProductController::class, 'store'])->middleware('permission:create_product');
     Route::match(['put', 'patch'], 'products/{product}', [ProductController::class, 'update'])->whereNumber('product')->middleware('permission:update_product');

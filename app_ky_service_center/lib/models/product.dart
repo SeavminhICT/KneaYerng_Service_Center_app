@@ -178,6 +178,42 @@ class Product {
     return value < 0 ? 0 : value;
   }
 
+  /// The variant [ProductDetailScreen] shows by default (first active
+  /// variant, in the same catalog order the API returns) — used so list
+  /// cards show the same price/stock the detail screen opens on, instead
+  /// of the product-level aggregate (min price / summed stock across all
+  /// variants), which can legitimately differ from any single variant.
+  ProductVariant? get defaultVariant {
+    for (final variant in variants) {
+      if (variant.isActive) return variant;
+    }
+    return null;
+  }
+
+  /// Price to show on cards: the default variant's own price when this
+  /// product has variants (matching the detail screen), otherwise the
+  /// regular sale price.
+  double get effectivePrice => defaultVariant?.price ?? salePrice;
+
+  /// Struck-through "was" price to pair with [effectivePrice], or null
+  /// when there's nothing meaningful to compare against — a specific
+  /// variant's price isn't a discount off the product-level aggregate,
+  /// so [ProductDetailScreen] hides this comparison for variant products too.
+  double? get effectiveOriginalPrice {
+    if (defaultVariant != null) return null;
+    return hasDiscount && salePrice < price ? price : null;
+  }
+
+  /// Stock to show on cards: the default variant's own stock when this
+  /// product has variants (matching the detail screen), otherwise the
+  /// product-level stock.
+  int? get effectiveStock => defaultVariant?.stock ?? stock;
+
+  bool get isOutOfStock {
+    final stockValue = effectiveStock;
+    return stockValue != null && stockValue <= 0;
+  }
+
   factory Product.fromJson(Map<String, dynamic> json) {
     final category = json['category'];
     final resolvedCategoryName = category is Map

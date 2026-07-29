@@ -7,6 +7,10 @@
 
         <title>@yield('title', __('Admin')) - {{ config('app.name', 'Laravel') }}</title>
 
+        <link rel="icon" type="image/png" href="{{ asset('images/Logo_KYSC.png') }}">
+        <link rel="shortcut icon" href="{{ asset('images/Logo_KYSC.png') }}">
+        <link rel="apple-touch-icon" href="{{ asset('images/Logo_KYSC.png') }}">
+
         <link rel="preconnect" href="https://fonts.bunny.net">
         <link href="https://fonts.bunny.net/css?family=inter:400,500,600,700&display=swap" rel="stylesheet" />
 
@@ -217,6 +221,27 @@
                     return window.location.pathname.indexOf('/admin/support') === 0;
                 }
 
+                window.adminShowDesktopNotification = function (title, options) {
+                    if (!('Notification' in window) || Notification.permission !== 'granted') {
+                        return;
+                    }
+                    var logoUrl = '{{ asset('images/Logo_KYSC.png') }}';
+                    var defaultOpts = {
+                        icon: logoUrl,
+                        badge: logoUrl,
+                    };
+                    var finalOpts = Object.assign({}, defaultOpts, options || {});
+                    try {
+                        var notif = new Notification(title, finalOpts);
+                        if (finalOpts.href) {
+                            notif.onclick = function () {
+                                window.focus();
+                                window.location.href = finalOpts.href;
+                            };
+                        }
+                    } catch (e) {}
+                };
+
                 window.addEventListener('admin:realtime-order-created', function (event) {
                     var payload = event && event.detail ? event.detail : {};
                     var order = payload.order || {};
@@ -224,6 +249,15 @@
 
                     if (typeof window.adminToast === 'function') {
                         window.adminToast(message, { type: 'success', duration: 5200 });
+                    }
+
+                    if (typeof window.adminShowDesktopNotification === 'function') {
+                        window.adminShowDesktopNotification('{{ config('app.name', 'KY Service Center') }}', {
+                            body: message,
+                            href: order.id ? '/admin/orders/' + order.id : '/admin/orders',
+                            tag: 'order-' + (order.id || Date.now()),
+                            renotify: true,
+                        });
                     }
                 });
 
@@ -252,6 +286,15 @@
                             type: 'success',
                             duration: 5200,
                             href: supportUrl,
+                        });
+                    }
+
+                    if (typeof window.adminShowDesktopNotification === 'function') {
+                        window.adminShowDesktopNotification('Notifications - ' + '{{ config('app.name', 'KY Service Center') }}', {
+                            body: message,
+                            href: supportUrl,
+                            tag: 'support-' + (conversation.id || Date.now()),
+                            renotify: true,
                         });
                     }
                 });

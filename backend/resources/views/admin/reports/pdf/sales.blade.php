@@ -1,182 +1,159 @@
 @php
-    $metrics     = $report['metrics']     ?? [];
-    $daily       = $report['daily']       ?? [];
-    $topItems    = $report['top_items']   ?? [];
-    $totalSales  = (float) ($metrics['total_sales']          ?? 0);
-    $totalOrders = (int)   ($metrics['total_orders']         ?? 0);
-    $avgOrder    = (float) ($metrics['average_order_value']  ?? 0);
-    $paidOrders  = (int)   ($metrics['paid_orders']          ?? 0);
-    $unpaidOrders= (int)   ($metrics['unpaid_orders']        ?? 0);
-    $failedOrders= (int)   ($metrics['failed_orders']        ?? 0);
-    $paidRate    = $totalOrders > 0 ? round(($paidOrders / $totalOrders) * 100, 1) : 0;
-    $reportType  = __('Sales Report');
-    $rangeLabel  = $rangeLabel ?? '';
+    $metrics      = $report['metrics']      ?? [];
+    $daily        = $report['daily']        ?? [];
+    $topItems     = $report['top_items']    ?? [];
+    $topCustomers = $report['top_customers']?? [];
+    $totalSales   = (float) ($metrics['total_sales']         ?? 0);
+    $totalOrders  = (int)   ($metrics['total_orders']        ?? 0);
+    $netRevenue   = (float) ($metrics['net_revenue']          ?? $totalSales);
+    $discount     = (float) ($metrics['discount_amount']     ?? 0);
+    $tax          = (float) ($metrics['tax_amount']          ?? 0);
+    $shipping     = (float) ($metrics['shipping_amount']     ?? 0);
+    $returned     = (int)   ($metrics['returned_orders']     ?? 0);
+    $refund       = (float) ($metrics['refund_amount']       ?? 0);
+    $avgOrder     = (float) ($metrics['average_order_value'] ?? 0);
+    $profit       = (float) ($metrics['profit']              ?? 0);
+    $reportType   = __('Sales Report');
+    $rangeLabel   = $rangeLabel ?? '';
 @endphp
 @extends('admin.reports.pdf._layout')
 
 @section('body')
 
-    {{-- ── KPI Row ── --}}
-    <div class="section-title">{{ __('Key Metrics') }}</div>
-    <table class="kpi-table">
-        <tr>
-            <td class="kpi-cell">
-                <div class="kpi-label">{{ __('Total Revenue') }}</div>
-                <div class="kpi-value kpi-green">${{ number_format($totalSales, 2) }}</div>
-            </td>
-            <td class="kpi-cell">
-                <div class="kpi-label">{{ __('Total Orders') }}</div>
-                <div class="kpi-value kpi-accent">{{ number_format($totalOrders) }}</div>
-            </td>
-            <td class="kpi-cell">
-                <div class="kpi-label">{{ __('Avg Order Value') }}</div>
-                <div class="kpi-value">${{ number_format($avgOrder, 2) }}</div>
-            </td>
-            <td class="kpi-cell">
-                <div class="kpi-label">{{ __('Payment Rate') }}</div>
-                <div class="kpi-value {{ $paidRate >= 70 ? 'kpi-green' : ($paidRate >= 40 ? 'kpi-amber' : 'kpi-red') }}">{{ $paidRate }}%</div>
-            </td>
-        </tr>
-    </table>
-
-    {{-- ── Payment breakdown + daily summary ── --}}
-    <table class="two-col" style="margin-bottom:18px">
-        <tr>
-            {{-- Payment breakdown --}}
-            <td>
-                <div class="section-title">{{ __('Payment Breakdown') }}</div>
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>{{ __('Status') }}</th>
-                            <th class="text-right">{{ __('Orders') }}</th>
-                            <th class="text-right">{{ __('Share') }}</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td><span class="badge badge-green">{{ __('Paid') }}</span></td>
-                            <td class="text-right font-bold">{{ $paidOrders }}</td>
-                            <td class="text-right text-green">{{ $totalOrders > 0 ? round($paidOrders/$totalOrders*100,1) : 0 }}%</td>
-                        </tr>
-                        <tr>
-                            <td><span class="badge badge-amber">{{ __('Unpaid') }}</span></td>
-                            <td class="text-right font-bold">{{ $unpaidOrders }}</td>
-                            <td class="text-right text-amber">{{ $totalOrders > 0 ? round($unpaidOrders/$totalOrders*100,1) : 0 }}%</td>
-                        </tr>
-                        <tr>
-                            <td><span class="badge badge-red">{{ __('Failed') }}</span></td>
-                            <td class="text-right font-bold">{{ $failedOrders }}</td>
-                            <td class="text-right text-red">{{ $totalOrders > 0 ? round($failedOrders/$totalOrders*100,1) : 0 }}%</td>
-                        </tr>
-                    </tbody>
-                    <tfoot>
-                        <tr>
-                            <td>{{ __('Total') }}</td>
-                            <td class="text-right">{{ $totalOrders }}</td>
-                            <td class="text-right">100%</td>
-                        </tr>
-                    </tfoot>
-                </table>
-            </td>
-
-            {{-- Daily summary (top 10 days) --}}
-            <td>
-                <div class="section-title">{{ __('Top Revenue Days') }}</div>
-                @php $topDays = collect($daily)->sortByDesc('total')->take(8)->values(); @endphp
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>{{ __('Date') }}</th>
-                            <th class="text-right">{{ __('Orders') }}</th>
-                            <th class="text-right">{{ __('Revenue') }}</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @forelse ($topDays as $day)
-                            <tr>
-                                <td class="text-muted">{{ \Carbon\Carbon::parse($day['day'])->format('d M Y') }}</td>
-                                <td class="text-right">{{ $day['count'] }}</td>
-                                <td class="text-right text-green">${{ number_format($day['total'], 2) }}</td>
-                            </tr>
-                        @empty
-                            <tr><td colspan="3" style="text-align:center;color:#94a3b8;padding:12px">{{ __('No data') }}</td></tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </td>
-        </tr>
-    </table>
-
-    {{-- ── Top Products ── --}}
-    <div class="section-title">{{ __('Top Products by Revenue') }}</div>
-    <table class="data-table">
+    {{-- ── Sales Summary Table ── --}}
+    <div class="section-title">{{ __('Sales Summary') }}</div>
+    <table class="data-table" style="margin-bottom:20px">
         <thead>
             <tr>
-                <th style="width:30px">#</th>
-                <th>{{ __('Product Name') }}</th>
+                <th>{{ __('Metric Description') }}</th>
+                <th class="text-right">{{ __('Amount / Count') }}</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td class="font-bold">{{ __('Total Orders') }}</td>
+                <td class="text-right font-bold">{{ number_format($totalOrders) }}</td>
+            </tr>
+            <tr>
+                <td>{{ __('Total Revenue') }}</td>
+                <td class="text-right text-green font-bold">${{ number_format($totalSales, 2) }}</td>
+            </tr>
+            <tr>
+                <td>{{ __('Net Revenue') }}</td>
+                <td class="text-right font-bold text-accent">${{ number_format($netRevenue, 2) }}</td>
+            </tr>
+            <tr>
+                <td>{{ __('Discount') }}</td>
+                <td class="text-right text-amber">${{ number_format($discount, 2) }}</td>
+            </tr>
+            <tr>
+                <td>{{ __('Tax') }}</td>
+                <td class="text-right">${{ number_format($tax, 2) }}</td>
+            </tr>
+            <tr>
+                <td>{{ __('Shipping Fee') }}</td>
+                <td class="text-right">${{ number_format($shipping, 2) }}</td>
+            </tr>
+            <tr>
+                <td>{{ __('Returned Orders') }}</td>
+                <td class="text-right text-red">{{ number_format($returned) }}</td>
+            </tr>
+            <tr>
+                <td>{{ __('Refund Amount') }}</td>
+                <td class="text-right text-red">${{ number_format($refund, 2) }}</td>
+            </tr>
+            <tr>
+                <td>{{ __('Average Order Value (AOV)') }}</td>
+                <td class="text-right font-bold">${{ number_format($avgOrder, 2) }}</td>
+            </tr>
+            <tr style="background:#f0fdf4">
+                <td class="font-bold text-green" style="font-size:11px">{{ __('Estimated Net Profit') }}</td>
+                <td class="text-right font-bold text-green" style="font-size:11px">${{ number_format($profit, 2) }}</td>
+            </tr>
+        </tbody>
+    </table>
+
+    {{-- ── Product Performance Table ── --}}
+    <div class="section-title">{{ __('Charts') }}</div>
+    <div style="font-weight:bold;margin-bottom:6px">{{ __('Sales Trend') }}</div>
+    @php
+        $trendRows = array_slice($daily, -8);
+        $trendMax = max(array_map(fn ($row) => (float) ($row['total'] ?? 0), $trendRows ?: [['total' => 0]])) ?: 1;
+    @endphp
+    <table class="chart-table">
+        <tbody>
+            @forelse ($trendRows as $row)
+                @php
+                    $trendValue = (float) ($row['total'] ?? 0);
+                    $barWidth = max(2, (int) round(($trendValue / $trendMax) * 160));
+                @endphp
+                <tr>
+                    <td style="width:80px">{{ \Illuminate\Support\Carbon::parse($row['day'])->format('d M') }}</td>
+                    <td style="width:180px"><div class="bar-bg"><div class="bar-fill" style="width:{{ $barWidth }}px"></div></div></td>
+                    <td class="text-right">${{ number_format($trendValue, 2) }}</td>
+                </tr>
+            @empty
+                <tr><td>{{ __('No sales trend data available.') }}</td></tr>
+            @endforelse
+        </tbody>
+    </table>
+
+    <div class="section-title">{{ __('Product Performance') }}</div>
+    <table class="data-table" style="margin-bottom:20px">
+        <thead>
+            <tr>
+                <th style="width:25px">#</th>
+                <th>{{ __('Product') }}</th>
                 <th>{{ __('Type') }}</th>
-                <th class="text-right">{{ __('Qty Sold') }}</th>
+                <th class="text-right">{{ __('Sold') }}</th>
                 <th class="text-right">{{ __('Revenue') }}</th>
-                <th class="text-right">{{ __('Revenue Share') }}</th>
+                <th class="text-right">{{ __('Est. Profit') }}</th>
             </tr>
         </thead>
         <tbody>
             @forelse ($topItems as $i => $item)
-                @php $share = $totalSales > 0 ? round($item['sales']/$totalSales*100,1) : 0; @endphp
+                @php
+                    $itemSales = (float)($item['sales'] ?? 0);
+                    $itemProfit = round($itemSales * 0.35, 2);
+                @endphp
                 <tr>
                     <td class="text-center"><span class="rank">{{ $i + 1 }}</span></td>
                     <td class="font-bold">{{ $item['name'] ?? '—' }}</td>
-                    <td><span class="badge badge-slate">{{ ucfirst($item['item_type'] ?? '—') }}</span></td>
-                    <td class="text-right">{{ number_format($item['quantity'] ?? 0) }}</td>
-                    <td class="text-right text-green">${{ number_format($item['sales'] ?? 0, 2) }}</td>
-                    <td class="text-right text-muted">{{ $share }}%</td>
+                    <td><span class="badge badge-slate">{{ ucfirst($item['item_type'] ?? 'product') }}</span></td>
+                    <td class="text-right font-bold">{{ number_format($item['quantity'] ?? 0) }}</td>
+                    <td class="text-right text-green font-bold">${{ number_format($itemSales, 2) }}</td>
+                    <td class="text-right text-accent font-bold">${{ number_format($itemProfit, 2) }}</td>
                 </tr>
             @empty
-                <tr><td colspan="6" style="text-align:center;color:#94a3b8;padding:14px">{{ __('No sales data for this period.') }}</td></tr>
+                <tr><td colspan="6" style="text-align:center;color:#94a3b8;padding:14px">{{ __('No product sales recorded in this period.') }}</td></tr>
             @endforelse
         </tbody>
-        @if (count($topItems))
-        <tfoot>
-            <tr>
-                <td colspan="3">{{ __('Total (shown)') }}</td>
-                <td class="text-right">{{ number_format(collect($topItems)->sum('quantity')) }}</td>
-                <td class="text-right">${{ number_format(collect($topItems)->sum('sales'), 2) }}</td>
-                <td></td>
-            </tr>
-        </tfoot>
-        @endif
     </table>
 
-    {{-- ── Daily breakdown (all days) ── --}}
-    @if (count($daily))
-    <div class="section-title" style="margin-top:4px">{{ __('Daily Breakdown') }}</div>
+    {{-- ── Top Customers Table ── --}}
+    @if (count($topCustomers))
+    <div class="section-title">{{ __('Top Customers') }}</div>
     <table class="data-table">
         <thead>
             <tr>
-                <th>{{ __('Date') }}</th>
-                <th>{{ __('Day') }}</th>
+                <th style="width:25px">#</th>
+                <th>{{ __('Customer Name') }}</th>
+                <th>{{ __('Email / Phone') }}</th>
                 <th class="text-right">{{ __('Orders') }}</th>
-                <th class="text-right">{{ __('Revenue') }}</th>
+                <th class="text-right">{{ __('Spending') }}</th>
             </tr>
         </thead>
         <tbody>
-            @foreach ($daily as $day)
+            @foreach ($topCustomers as $i => $c)
                 <tr>
-                    <td class="text-muted">{{ \Carbon\Carbon::parse($day['day'])->format('d M Y') }}</td>
-                    <td class="text-muted">{{ \Carbon\Carbon::parse($day['day'])->format('D') }}</td>
-                    <td class="text-right">{{ $day['count'] }}</td>
-                    <td class="text-right text-green">${{ number_format($day['total'], 2) }}</td>
+                    <td class="text-center"><span class="rank">{{ $i + 1 }}</span></td>
+                    <td class="font-bold">{{ $c['name'] ?? 'Guest Customer' }}</td>
+                    <td class="text-muted" style="font-size:8.5px">{{ $c['email'] ?? $c['phone'] ?? '—' }}</td>
+                    <td class="text-right font-bold">{{ $c['orders_count'] ?? 0 }}</td>
+                    <td class="text-right text-green font-bold">${{ number_format($c['total_spent'] ?? 0, 2) }}</td>
                 </tr>
             @endforeach
         </tbody>
-        <tfoot>
-            <tr>
-                <td colspan="2">{{ __('Total') }}</td>
-                <td class="text-right">{{ number_format(collect($daily)->sum('count')) }}</td>
-                <td class="text-right">${{ number_format(collect($daily)->sum('total'), 2) }}</td>
-            </tr>
-        </tfoot>
     </table>
     @endif
 

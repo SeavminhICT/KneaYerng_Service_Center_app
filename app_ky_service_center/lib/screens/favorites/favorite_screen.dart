@@ -10,6 +10,7 @@ import '../../widgets/auth_guard.dart';
 import '../../widgets/cart_added_bottom_bar.dart';
 import '../../widgets/empty_state_view.dart';
 import '../home/widgets/home_flash_product_card.dart' show homeProductBadgeText;
+import '../products/all_products_screen.dart';
 import '../products/product_detail_screen.dart';
 
 const _surface = Color(0xFFFFFFFF);
@@ -70,7 +71,15 @@ Future<void> _addToCart(BuildContext context, Product product) async {
     message: 'Please login to add items to your cart.',
   );
   if (!ok || !context.mounted) return;
-  CartService.instance.add(product);
+  final variant = product.defaultVariant;
+  CartService.instance.add(
+    product,
+    variant: variant?.label,
+    variantId: variant?.id,
+    variantImageUrl: variant?.imageUrl,
+    variantStock: variant?.stock,
+    unitPrice: variant?.price,
+  );
   await showCartAddedBottomBar(context);
 }
 
@@ -405,9 +414,10 @@ class _PriceTag extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (!product.hasDiscount) {
+    final originalPrice = product.effectiveOriginalPrice;
+    if (originalPrice == null) {
       return Text(
-        _currencyFormat.format(product.salePrice),
+        _currencyFormat.format(product.effectivePrice),
         style: const TextStyle(
           fontSize: 15,
           fontWeight: FontWeight.w800,
@@ -417,7 +427,7 @@ class _PriceTag extends StatelessWidget {
     }
     final priceWidgets = [
       Text(
-        _currencyFormat.format(product.salePrice),
+        _currencyFormat.format(product.effectivePrice),
         style: const TextStyle(
           fontSize: 15,
           fontWeight: FontWeight.w800,
@@ -425,7 +435,7 @@ class _PriceTag extends StatelessWidget {
         ),
       ),
       Text(
-        _currencyFormat.format(product.price),
+        _currencyFormat.format(originalPrice),
         style: TextStyle(
           fontSize: 11,
           fontWeight: FontWeight.w500,
@@ -773,7 +783,11 @@ class _EmptyState extends StatelessWidget {
       title: l.noFavorites,
       subtitle: 'Add items to your favorites to see them here',
       actionLabel: 'Continue Shopping',
-      onAction: () => Navigator.of(context).pop(),
+      onAction: () => Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => AllProductsScreen(title: l.allProducts),
+        ),
+      ),
     );
   }
 }

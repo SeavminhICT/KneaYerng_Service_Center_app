@@ -478,7 +478,7 @@ class _SupportHeader extends StatelessWidget {
               borderRadius: BorderRadius.circular(14),
             ),
             child: Icon(
-              HugeIcons.strokeRoundedCustomerSupport,
+              HugeIcons.strokeRoundedHeadset,
               color: theme.primary,
             ),
           ),
@@ -898,7 +898,7 @@ class _GuestSupportState extends StatelessWidget {
                 shape: BoxShape.circle,
               ),
               child: const Icon(
-                HugeIcons.strokeRoundedCustomerSupport,
+                HugeIcons.strokeRoundedHeadset,
                 color: Colors.white,
                 size: 38,
               ),

@@ -214,10 +214,13 @@ document.addEventListener('DOMContentLoaded', function() {
             return false;
         }
 
+        const logoUrl = '{{ asset("images/Logo_KYSC.png") }}';
         const testNote = new Notification('Support Alerts Active', {
             body: 'You will receive new support messages here.',
             tag: 'support-test-alert',
             renotify: true,
+            icon: logoUrl,
+            badge: logoUrl,
         });
 
         setTimeout(() => {
@@ -347,12 +350,15 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
+        const logoUrl = '{{ asset("images/Logo_KYSC.png") }}';
         const customerName = conversation.customer?.name || 'Customer';
         const preview = getMessagePreview(latestMessage, conversation.subject || 'New support request');
         const browserNote = new Notification('New Support Message', {
             body: `${customerName}: ${preview}`,
             tag: `support-${conversation.id}`,
             renotify: true,
+            icon: logoUrl,
+            badge: logoUrl,
         });
 
         browserNote.onclick = () => {

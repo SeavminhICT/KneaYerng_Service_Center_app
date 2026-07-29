@@ -1,13 +1,13 @@
 @extends('layouts.admin')
 
-@section('title', __('Accessories'))
-@section('page-title', __('Accessories'))
+@section('title', __('Repair Parts'))
+@section('page-title', __('Repair Parts'))
 
 @section('content')
     <div class="space-y-6">
         <div class="flex flex-wrap items-center justify-between gap-4">
             <div>
-                <h2 class="text-lg font-semibold text-slate-900 dark:text-white">{{ __('Accessories & Repair Parts') }}</h2>
+                <h2 class="text-lg font-semibold text-slate-900 dark:text-white">{{ __('Repair Parts') }}</h2>
                 <p class="text-sm text-slate-500">{{ __('Manage accessories and repair parts for iPhone and Samsung.') }}</p>
             </div>
             @if (auth()->user()?->hasPermission('create_accessory'))

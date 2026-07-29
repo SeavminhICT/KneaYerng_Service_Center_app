@@ -70,7 +70,7 @@ class ProductDetailAppBar extends StatelessWidget {
               ),
               const Spacer(),
               ProductDetailIconBtn(
-                icon:      HugeIcons.strokeRoundedFavourite,
+                icon:      isFavorite ? Icons.favorite_rounded : HugeIcons.strokeRoundedFavourite,
                 iconColor: isFavorite ? pdRed : tone.textSub,
                 bg:        isFavorite ? tone.redLight : null,
                 onTap:     onFavorite,

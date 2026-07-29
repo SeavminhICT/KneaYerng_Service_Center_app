@@ -3,275 +3,252 @@
 <head>
 <meta charset="UTF-8">
 <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-
+    * { box-sizing: border-box; }
     body {
-        font-family: DejaVu Sans, sans-serif;
+        margin: 0;
+        font-family: DejaVu Sans, Arial, sans-serif;
         font-size: 10px;
-        color: #1e293b;
+        color: #111827;
         background: #ffffff;
     }
-
-    /* ── Page layout ── */
-    .page { padding: 0; }
-
-    /* ── Header ── */
-    .header {
-        background: #1e293b;
-        padding: 22px 30px 18px;
-        color: #fff;
+    .page { padding: 24px 28px 18px; }
+    .doc-header {
+        border: 1px solid #d1d5db;
+        padding: 16px 18px 12px;
+        margin-bottom: 18px;
     }
-    .header-top {
-        display: flex; /* dompdf supports basic flex */
-        justify-content: space-between;
-        align-items: flex-start;
+    .header-table, .meta-table, .filter-table, .data-table, .kpi-table, .chart-table, .two-col {
+        width: 100%;
+        border-collapse: collapse;
     }
+    .logo-cell { width: 86px; vertical-align: middle; }
+    .logo-box {
+        width: 66px;
+        height: 48px;
+        border: 1px solid #d1d5db;
+        text-align: center;
+        line-height: 48px;
+        font-size: 9px;
+        font-weight: bold;
+        color: #374151;
+        background: #f9fafb;
+    }
+    .logo-img { max-width: 70px; max-height: 52px; }
     .company-name {
+        font-size: 17px;
+        font-weight: bold;
+        text-align: center;
+        letter-spacing: .6px;
+        color: #111827;
+    }
+    .system-name {
+        margin-top: 3px;
+        font-size: 10px;
+        text-align: center;
+        color: #4b5563;
+        text-transform: uppercase;
+        letter-spacing: .7px;
+    }
+    .report-name {
+        margin-top: 10px;
+        padding-top: 10px;
+        border-top: 1px solid #d1d5db;
+        text-align: center;
         font-size: 18px;
         font-weight: bold;
-        color: #f8fafc;
-        letter-spacing: 0.5px;
-    }
-    .company-sub {
-        font-size: 9px;
-        color: #94a3b8;
-        margin-top: 3px;
-        letter-spacing: 1px;
+        letter-spacing: .8px;
         text-transform: uppercase;
     }
-    .report-badge {
-        background: #4f46e5;
-        color: #fff;
-        padding: 5px 14px;
-        border-radius: 20px;
-        font-size: 9px;
-        font-weight: bold;
-        letter-spacing: 1px;
-        text-transform: uppercase;
+    .meta-table { margin-top: 12px; }
+    .meta-table td, .filter-table td {
+        border: 1px solid #e5e7eb;
+        padding: 6px 8px;
+        vertical-align: top;
     }
-    .header-divider {
-        height: 1px;
-        background: rgba(255,255,255,0.12);
-        margin: 14px 0 12px;
-    }
-    .header-meta {
-        font-size: 9px;
-        color: #94a3b8;
-    }
-    .header-meta span {
-        color: #e2e8f0;
+    .meta-label, .filter-label {
+        width: 18%;
+        background: #f3f4f6;
+        color: #374151;
         font-weight: bold;
     }
-
-    /* ── Content area ── */
-    .content { padding: 22px 30px; }
-
-    /* ── Section title ── */
     .section-title {
+        margin: 16px 0 8px;
+        padding: 6px 8px;
+        border-left: 4px solid #6b7280;
+        background: #f3f4f6;
         font-size: 11px;
         font-weight: bold;
-        color: #0f172a;
+        color: #111827;
         text-transform: uppercase;
-        letter-spacing: 1px;
-        margin-bottom: 10px;
-        padding-bottom: 6px;
-        border-bottom: 2px solid #4f46e5;
+        letter-spacing: .6px;
     }
-
-    /* ── KPI cards (table-based for dompdf) ── */
-    .kpi-table { width: 100%; border-collapse: separate; border-spacing: 6px; margin-bottom: 20px; }
+    .kpi-table { border-spacing: 0; margin-bottom: 12px; }
     .kpi-cell {
-        background: #f8fafc;
-        border: 1px solid #e2e8f0;
-        border-radius: 8px;
-        padding: 12px 14px;
+        border: 1px solid #d1d5db;
+        background: #f9fafb;
+        padding: 10px;
         width: 25%;
         vertical-align: top;
     }
     .kpi-label {
+        color: #6b7280;
         font-size: 8px;
-        color: #64748b;
-        text-transform: uppercase;
-        letter-spacing: 0.8px;
         font-weight: bold;
+        text-transform: uppercase;
+        letter-spacing: .6px;
     }
     .kpi-value {
-        font-size: 18px;
+        margin-top: 4px;
+        color: #111827;
+        font-size: 15px;
         font-weight: bold;
-        color: #0f172a;
-        margin-top: 5px;
     }
-    .kpi-accent { color: #4f46e5; }
-    .kpi-green  { color: #16a34a; }
-    .kpi-red    { color: #dc2626; }
-    .kpi-amber  { color: #d97706; }
-
-    /* ── Data table ── */
-    .data-table {
-        width: 100%;
-        border-collapse: collapse;
-        margin-bottom: 20px;
-        font-size: 9.5px;
-    }
-    .data-table thead tr {
-        background: #1e293b;
-        color: #fff;
-    }
-    .data-table thead th {
-        padding: 8px 10px;
+    .data-table { margin-bottom: 14px; }
+    .data-table th {
+        background: #e5e7eb;
+        border: 1px solid #9ca3af;
+        color: #111827;
+        padding: 7px 8px;
         text-align: left;
-        font-size: 8px;
+        font-size: 8.5px;
         text-transform: uppercase;
-        letter-spacing: 0.8px;
-        font-weight: bold;
+        letter-spacing: .5px;
     }
-    .data-table thead th.text-right { text-align: right; }
-    .data-table thead th.text-center { text-align: center; }
-
-    .data-table tbody tr:nth-child(even)  { background: #f8fafc; }
-    .data-table tbody tr:nth-child(odd)   { background: #ffffff; }
-    .data-table tbody td {
-        padding: 7px 10px;
-        border-bottom: 1px solid #e2e8f0;
-        vertical-align: middle;
+    .data-table td {
+        border: 1px solid #d1d5db;
+        padding: 7px 8px;
+        vertical-align: top;
     }
-    .data-table tbody td.text-right  { text-align: right; }
-    .data-table tbody td.text-center { text-align: center; }
-    .data-table tbody td.font-bold   { font-weight: bold; }
-    .data-table tbody td.text-green  { color: #16a34a; font-weight: bold; }
-    .data-table tbody td.text-red    { color: #dc2626; font-weight: bold; }
-    .data-table tbody td.text-amber  { color: #d97706; font-weight: bold; }
-    .data-table tbody td.text-muted  { color: #64748b; }
+    .data-table tbody tr:nth-child(even) td { background: #f9fafb; }
     .data-table tfoot td {
-        padding: 8px 10px;
+        background: #f3f4f6;
+        border-top: 2px solid #9ca3af;
         font-weight: bold;
-        font-size: 10px;
-        background: #f1f5f9;
-        border-top: 2px solid #cbd5e1;
     }
-    .data-table tfoot td.text-right { text-align: right; }
-
-    /* ── Badge ── */
+    .text-right { text-align: right; }
+    .text-center { text-align: center; }
+    .font-bold { font-weight: bold; }
+    .text-muted { color: #6b7280; }
+    .text-green { color: #047857; }
+    .text-red { color: #b91c1c; }
+    .text-amber { color: #b45309; }
+    .text-indigo, .text-purple, .text-accent { color: #374151; }
     .badge {
         display: inline-block;
-        padding: 2px 8px;
-        border-radius: 10px;
+        padding: 2px 6px;
+        border: 1px solid #d1d5db;
+        background: #f9fafb;
+        color: #374151;
         font-size: 8px;
         font-weight: bold;
     }
-    .badge-green  { background: #dcfce7; color: #166534; }
-    .badge-amber  { background: #fef9c3; color: #854d0e; }
-    .badge-red    { background: #fee2e2; color: #991b1b; }
-    .badge-blue   { background: #dbeafe; color: #1e40af; }
-    .badge-purple { background: #ede9fe; color: #5b21b6; }
-    .badge-slate  { background: #f1f5f9; color: #334155; }
-
-    /* ── 2-column layout ── */
-    .two-col { width: 100%; border-collapse: separate; border-spacing: 10px; }
-    .two-col td { width: 50%; vertical-align: top; }
-
-    /* ── Box ── */
-    .box {
-        border: 1px solid #e2e8f0;
-        border-radius: 8px;
-        padding: 14px;
-        background: #f8fafc;
-        margin-bottom: 14px;
-    }
-    .box-title {
-        font-size: 9px;
-        font-weight: bold;
-        color: #64748b;
-        text-transform: uppercase;
-        letter-spacing: 0.8px;
-        margin-bottom: 8px;
-    }
-
-    /* ── Divider ── */
-    .divider { height: 1px; background: #e2e8f0; margin: 16px 0; }
-
-    /* ── Footer ── */
-    .footer {
-        background: #f8fafc;
-        border-top: 1px solid #e2e8f0;
-        padding: 10px 30px;
-        font-size: 8px;
-        color: #94a3b8;
-    }
-    .footer-inner { display: flex; justify-content: space-between; }
-
-    /* ── Rank circle ── */
     .rank {
         display: inline-block;
-        width: 18px;
-        height: 18px;
-        line-height: 18px;
-        border-radius: 50%;
-        background: #e0e7ff;
-        color: #4338ca;
+        min-width: 18px;
+        padding: 2px 4px;
+        border: 1px solid #d1d5db;
+        background: #f3f4f6;
+        text-align: center;
         font-size: 8px;
         font-weight: bold;
-        text-align: center;
     }
-
-    /* ── Progress bar ── */
-    .progress-bg {
-        background: #e2e8f0;
-        border-radius: 4px;
-        height: 6px;
-        width: 100%;
+    .two-col { margin-bottom: 14px; }
+    .two-col td { width: 50%; vertical-align: top; padding-right: 8px; }
+    .chart-table { margin-bottom: 12px; }
+    .chart-table td {
+        border: 1px solid #e5e7eb;
+        padding: 5px 7px;
     }
-    .progress-fill {
-        background: #16a34a;
-        border-radius: 4px;
-        height: 6px;
+    .bar-bg { width: 160px; height: 8px; background: #e5e7eb; }
+    .bar-fill { height: 8px; background: #4b5563; }
+    .footer {
+        border-top: 1px solid #d1d5db;
+        margin-top: 16px;
+        padding-top: 8px;
+        font-size: 8px;
+        color: #6b7280;
     }
 </style>
+@php
+    $logoPath = public_path('images/Logo_KYSC.png');
+    $logoSrc = file_exists($logoPath) ? 'data:image/png;base64,'.base64_encode(file_get_contents($logoPath)) : '';
+    $generatedBy = $generatedBy ?? 'Admin';
+    $filters = $filters ?? [];
+    $branch = $filters['branch'] ?? '';
+    $activeFilters = array_filter($filters, fn ($value) => trim((string) $value) !== '');
+@endphp
 </head>
 <body>
 <div class="page">
-
-    {{-- Header --}}
-    <div class="header">
-        <table style="width:100%;border-collapse:collapse">
+    <div class="doc-header">
+        <table class="header-table">
             <tr>
+                <td class="logo-cell">
+                    @if ($logoSrc)
+                        <img class="logo-img" src="{{ $logoSrc }}" alt="Logo">
+                    @else
+                        <div class="logo-box">LOGO</div>
+                    @endif
+                </td>
                 <td>
-                    <div class="company-name">KneaYerng Service Center</div>
-                    <div class="company-sub">Mobile App Sales Platform · Phnom Penh, Cambodia</div>
+                    <div class="company-name">LNK STORE MANAGEMENT SYSTEM</div>
+                    <div class="system-name">Knea Yerng Service Center</div>
+                    <div class="report-name">{{ strtoupper($reportType ?? 'Report') }}</div>
                 </td>
-                <td style="text-align:right;vertical-align:top">
-                    <span class="report-badge">{{ strtoupper($reportType ?? __('Report')) }}</span>
-                </td>
+                <td class="logo-cell">&nbsp;</td>
             </tr>
         </table>
-        <div class="header-divider"></div>
-        <div class="header-meta">
-            <table style="width:100%;border-collapse:collapse">
+
+        <table class="meta-table">
+            <tr>
+                <td class="meta-label">Report Date</td>
+                <td>{{ $rangeLabel ?? '-' }}</td>
+                <td class="meta-label">Generated By</td>
+                <td>{{ $generatedBy }}</td>
+            </tr>
+            <tr>
+                <td class="meta-label">Generated Time</td>
+                <td>{{ now()->format('d M Y H:i') }}</td>
+                <td class="meta-label">Branch</td>
+                <td>{{ $branch !== '' ? $branch : 'All' }}</td>
+            </tr>
+        </table>
+
+        @if (count($activeFilters))
+            <table class="filter-table" style="margin-top:8px">
                 <tr>
-                    <td>{{ __('Period') }}: <span>{{ $rangeLabel ?? '—' }}</span></td>
-                    <td style="text-align:center">{{ __('From') }}: <span>{{ $start->format('d M Y') }}</span> &nbsp;→&nbsp; {{ __('To') }}: <span>{{ $end->format('d M Y') }}</span></td>
-                    <td style="text-align:right">{{ __('Generated') }}: <span>{{ now()->format('d M Y, H:i') }} ICT</span></td>
+                    <td class="filter-label">Employee</td>
+                    <td>{{ ($filters['employee'] ?? '') ?: 'All' }}</td>
+                    <td class="filter-label">Payment Method</td>
+                    <td>{{ ($filters['payment_method'] ?? '') ?: 'All' }}</td>
+                </tr>
+                <tr>
+                    <td class="filter-label">Order Status</td>
+                    <td>{{ ($filters['order_status'] ?? '') ?: 'All' }}</td>
+                    <td class="filter-label">Customer</td>
+                    <td>{{ ($filters['customer'] ?? '') ?: 'All' }}</td>
+                </tr>
+                <tr>
+                    <td class="filter-label">Product Category</td>
+                    <td>{{ ($filters['product_category'] ?? '') ?: 'All' }}</td>
+                    <td class="filter-label">Product</td>
+                    <td>{{ ($filters['product'] ?? '') ?: 'All' }}</td>
                 </tr>
             </table>
-        </div>
+        @endif
     </div>
 
-    {{-- Body --}}
-    <div class="content">
-        @yield('body')
-    </div>
+    @yield('body')
 
-    {{-- Footer --}}
     <div class="footer">
         <table style="width:100%;border-collapse:collapse">
             <tr>
-                <td>KneaYerng Service Center — {{ __('Confidential Report') }}</td>
-                <td style="text-align:center">{{ __('Generated via Admin Portal') }}</td>
-                <td style="text-align:right">{{ __('Page') }} 1</td>
+                <td>Generated by LNK Ecommerce Management System</td>
+                <td style="text-align:center">Confidential</td>
+                <td style="text-align:right">Page 1</td>
             </tr>
         </table>
     </div>
-
 </div>
 </body>
 </html>

@@ -151,8 +151,8 @@ class _CardTopRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tag = _tagFor(product.tag);
-    final stockLabel = _stockLabel(product.stock);
-    final stockColor = _stockColor(product.stock);
+    final stockLabel = _stockLabel(product.effectiveStock);
+    final stockColor = _stockColor(product.effectiveStock);
 
     return Row(
       children: [
@@ -210,8 +210,8 @@ class _PriceRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final hasDiscount =
-        product.hasDiscount && product.salePrice < product.price;
+    final originalPrice = product.effectiveOriginalPrice;
+    final hasDiscount = originalPrice != null;
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.end,
@@ -222,7 +222,7 @@ class _PriceRow extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                apCurrencyFormat.format(product.salePrice),
+                apCurrencyFormat.format(product.effectivePrice),
                 style: kmFont(context, TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w800,
@@ -232,8 +232,8 @@ class _PriceRow extends StatelessWidget {
               ),
               const SizedBox(height: 2),
               Text(
-                hasDiscount
-                    ? 'Regular ${apCurrencyFormat.format(product.price)}'
+                originalPrice != null
+                    ? 'Regular ${apCurrencyFormat.format(originalPrice)}'
                     : 'Per unit',
                 style: kmFont(context, TextStyle(
                   fontSize: 11.5,

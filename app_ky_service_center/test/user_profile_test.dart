@@ -2,6 +2,13 @@ import 'package:app_ky_service_center/models/user_profile.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test('keeps the profile id for API payloads', () {
+    final profile = UserProfile.fromMap({'id': '42'});
+
+    expect(profile.id, 42);
+    expect(profile.toMap()['id'], 42);
+  });
+
   test('keeps a valid optional email', () {
     final profile = UserProfile.fromMap({'email': ' customer@example.com '});
 

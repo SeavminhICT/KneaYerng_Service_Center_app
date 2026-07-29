@@ -74,7 +74,7 @@ class KhqrPaymentController extends Controller
             $transactionId = $data['transaction_id'] ?? null;
             $qrString = $data['qr'] ?? null;
             $md5 = $data['md5'] ?? md5($qrString);
-            $expiresAt = isset($data['expires_at']) ? now()->parse($data['expires_at']) : now()->addMinutes(10);
+            $expiresAt = now()->addMinute();
             
             if (! $transactionId || ! $qrString) {
                 return response()->json([
@@ -298,7 +298,7 @@ class KhqrPaymentController extends Controller
 
         return response()->json([
             'status' => 'PENDING',
-            'message' => 'Transaction is still pending.',
+            // 'message' => 'Transaction is still pending.',
             'data' => $responseData,
         ]);
     }

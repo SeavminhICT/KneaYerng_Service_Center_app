@@ -118,6 +118,19 @@
                 }
             }
 
+            function showPickupSuccessAlert(order) {
+                if (!window.Swal) { return; }
+                var orderLabel = order && (order.order_number || ('Order #' + order.id));
+                window.Swal.fire({
+                    icon: 'success',
+                    title: '{{ __('Pickup Verified') }}',
+                    text: orderLabel ? '{{ __('Order') }} ' + orderLabel + ' {{ __('verified successfully.') }}' : '{{ __('Ticket verified successfully.') }}',
+                    confirmButtonColor: '#2563eb',
+                    timer: 2500,
+                    timerProgressBar: true,
+                });
+            }
+
             function canUseLiveCamera() {
                 return !!(window.isSecureContext && navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
             }
@@ -197,6 +210,7 @@
                     pickupQrStatus.textContent = '{{ __('Ticket verified and marked completed.') }}';
                     renderPickupOrder(order);
                     playPickupSuccessSound();
+                    showPickupSuccessAlert(order);
                 } catch (error) {
                     pickupQrStatus.textContent = '{{ __('Verification failed.') }}';
                     renderPickupOrder(null, pickupQrStatus.textContent);
@@ -239,6 +253,7 @@
                     pickupQrStatus.textContent = '{{ __('Ticket verified and marked completed.') }}';
                     renderPickupOrder(order);
                     playPickupSuccessSound();
+                    showPickupSuccessAlert(order);
                 } catch (error) {
                     pickupQrStatus.textContent = '{{ __('Verification failed.') }}';
                     renderPickupOrder(null, pickupQrStatus.textContent);

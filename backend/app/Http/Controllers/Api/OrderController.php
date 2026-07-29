@@ -352,7 +352,7 @@ class OrderController extends Controller
                 'voucher_code' => ['Voucher requires an authenticated customer.'],
             ]);
         }
-        if ($voucherCode && $actor && method_exists($actor, 'isAdmin') && $actor->isAdmin() && empty($validated['user_id'])) {
+        if ($voucherCode && $actor && $this->requiresExplicitCustomerForVoucher($request, $actor, $validated)) {
             throw ValidationException::withMessages([
                 'voucher_code' => ['Voucher requires a registered customer (user_id).'],
             ]);
@@ -1091,6 +1091,27 @@ class OrderController extends Controller
         }
 
         return $actor->id;
+    }
+
+    private function requiresExplicitCustomerForVoucher(Request $request, $actor, array $validated): bool
+    {
+        if (! method_exists($actor, 'isAdmin') || ! $actor->isAdmin()) {
+            return false;
+        }
+
+        if (! empty($validated['user_id'])) {
+            return false;
+        }
+
+        return ! $this->isCustomerOrderRoute($request);
+    }
+
+    private function isCustomerOrderRoute(Request $request): bool
+    {
+        $routeUri = $request->route()?->uri();
+
+        return in_array($routeUri, ['user/orders', 'api/user/orders'], true)
+            || $request->is('user/orders', 'api/user/orders');
     }
 
     private function resolveCatalogItem(?string $itemType, int $itemId): ?array

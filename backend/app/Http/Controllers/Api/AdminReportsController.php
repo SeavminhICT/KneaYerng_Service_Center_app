@@ -15,25 +15,13 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class AdminReportsController extends Controller
 {
-    private function authorizeAccess(): void
-    {
-        $user = auth()->user();
-        if ($user && ($user->isAdmin() || $user->isStaff() || (method_exists($user, 'hasPermissionTo') && $user->hasPermissionTo('view_sales_report')))) {
-            return;
-        }
-        Gate::authorize('admin-access');
-    }
-
     public function sales(Request $request)
     {
-        $this->authorizeAccess();
-
         [$start, $end, $label, $preset] = $this->resolveRange($request);
         $filters = $this->resolveReportFilters($request);
         $report = $this->buildSalesReport($start, $end, $filters);
@@ -49,8 +37,6 @@ class AdminReportsController extends Controller
 
     public function inventory(Request $request)
     {
-        $this->authorizeAccess();
-
         [$start, $end, $label, $preset] = $this->resolveRange($request);
         $threshold = $this->resolveThreshold($request);
         $report = $this->buildInventoryReport($start, $end, $threshold);
@@ -66,8 +52,6 @@ class AdminReportsController extends Controller
 
     public function customers(Request $request)
     {
-        $this->authorizeAccess();
-
         [$start, $end, $label, $preset] = $this->resolveRange($request);
         $filters = $this->resolveReportFilters($request);
         $report = $this->buildCustomerReport($start, $end, $filters);
@@ -82,8 +66,6 @@ class AdminReportsController extends Controller
 
     public function repairs(Request $request)
     {
-        $this->authorizeAccess();
-
         [$start, $end, $label, $preset] = $this->resolveRange($request);
         $report = $this->buildRepairsReport($start, $end);
 
@@ -99,8 +81,6 @@ class AdminReportsController extends Controller
 
     public function export(Request $request)
     {
-        $this->authorizeAccess();
-
         $validated = $request->validate([
             'type' => ['required', 'string', 'in:sales,inventory,customers,repairs'],
             'format' => ['required', 'string', 'in:excel,csv,pdf'],
@@ -176,8 +156,6 @@ class AdminReportsController extends Controller
 
     public function exports()
     {
-        $this->authorizeAccess();
-
         $disk = Storage::disk('local');
         $exports = [];
 
@@ -204,8 +182,6 @@ class AdminReportsController extends Controller
 
     public function download(string $exportId)
     {
-        $this->authorizeAccess();
-
         $export = $this->findExport($exportId);
         if (! $export) {
             return response()->json(['message' => 'Export not found.'], 404);

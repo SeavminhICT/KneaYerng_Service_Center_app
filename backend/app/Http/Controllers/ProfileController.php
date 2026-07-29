@@ -17,7 +17,7 @@ class ProfileController extends Controller
     public function edit(Request $request): View
     {
         $user = $request->user();
-        $view = $user && method_exists($user, 'isAdmin') && $user->isAdmin()
+        $view = $user && method_exists($user, 'canAccessAdminPanel') && $user->canAccessAdminPanel()
             ? 'profile.edit-admin'
             : 'profile.edit';
 

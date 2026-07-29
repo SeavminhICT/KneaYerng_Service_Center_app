@@ -2,7 +2,10 @@
     $user = auth()->user();
     $displayName = trim((string) ($user?->name ?? 'User'));
     $email = (string) ($user?->email ?? 'No email on file');
-    $roleName = $user?->isAdmin() ? 'Super Administrator' : ($user?->role ?? 'User');
+    $assignedRole = $user?->roles->first();
+    $roleName = $user?->isAdmin()
+        ? 'Super Administrator'
+        : ($assignedRole?->name ?? $user?->role ?? 'User');
     $parts = preg_split('/\s+/', $displayName) ?: [];
     $initials = '';
 
@@ -28,7 +31,7 @@
 <div x-data="{ activeTab: 'details' }" class="space-y-6">
 
     {{-- ── 1. Clean Profile Header Card ────────────────────────────────────── --}}
-    <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+    <div class="rounded-2xl border border-slate-300 bg-white p-6 shadow-md dark:border-slate-800 dark:bg-slate-900">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-5">
 
             {{-- Avatar & Identity --}}
@@ -67,7 +70,7 @@
     </div>
 
     {{-- ── 2. Navigation Tabs Bar ────────────────────────────────────────── --}}
-    <div class="rounded-2xl border border-slate-200 bg-white p-2 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+    <div class="rounded-2xl border border-slate-300 bg-white p-2 shadow-md dark:border-slate-800 dark:bg-slate-900">
         <div class="flex flex-wrap items-center gap-2">
             <button @click="activeTab = 'details'"
                     :class="activeTab === 'details' ? 'bg-primary-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'"
@@ -99,12 +102,12 @@
         <div class="lg:col-span-2 space-y-6">
 
             {{-- Tab 1: Profile Details --}}
-            <div x-show="activeTab === 'details'" class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+            <div x-show="activeTab === 'details'" class="rounded-2xl border border-slate-300 bg-white p-6 shadow-md dark:border-slate-800 dark:bg-slate-900">
                 @include('profile.partials.update-profile-information-form')
             </div>
 
             {{-- Tab 2: Password & Security --}}
-            <div x-show="activeTab === 'security'" x-cloak class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+            <div x-show="activeTab === 'security'" x-cloak class="rounded-2xl border border-slate-300 bg-white p-6 shadow-md dark:border-slate-800 dark:bg-slate-900">
                 @include('profile.partials.update-password-form')
             </div>
 
@@ -118,7 +121,7 @@
         <div class="space-y-6">
 
             {{-- Account Summary Card --}}
-            <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 space-y-4">
+            <div class="rounded-2xl border border-slate-300 bg-white p-5 shadow-md dark:border-slate-800 dark:bg-slate-900 space-y-4">
                 <h3 class="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
                     <svg class="h-4 w-4 text-indigo-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                     {{ __('Account Summary') }}

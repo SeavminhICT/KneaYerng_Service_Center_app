@@ -835,6 +835,7 @@ class _CheckoutFlowScreenState extends State<CheckoutFlowScreen> {
       deliveryNote: deliveryNote,
       deliveryLat: _isPickup ? null : _selectedDeliveryLatLng?.latitude,
       deliveryLng: _isPickup ? null : _selectedDeliveryLatLng?.longitude,
+      userId: profile?.id,
       voucherCode: voucherCode,
     );
 

@@ -1,4 +1,5 @@
 class UserProfile {
+  final int? id;
   final String? firstName;
   final String? lastName;
   final String? email;
@@ -10,6 +11,7 @@ class UserProfile {
   final bool isAdmin;
 
   const UserProfile({
+    this.id,
     this.firstName,
     this.lastName,
     this.email,
@@ -31,6 +33,7 @@ class UserProfile {
 
   factory UserProfile.fromMap(Map<String, dynamic> map) {
     return UserProfile(
+      id: _parseOptionalInt(map['id'] ?? map['user_id']),
       firstName: map['first_name'],
       lastName: map['last_name'],
       email: _normalizeOptionalEmail(map['email']),
@@ -46,6 +49,12 @@ class UserProfile {
     );
   }
 
+  static int? _parseOptionalInt(dynamic value) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    return int.tryParse(value?.toString() ?? '');
+  }
+
   static String? _normalizeOptionalEmail(dynamic value) {
     final email = value?.toString().trim() ?? '';
     if (email.isEmpty) return null;
@@ -56,6 +65,7 @@ class UserProfile {
 
   Map<String, dynamic> toMap() {
     return {
+      'id': id,
       'first_name': firstName,
       'last_name': lastName,
       'email': email,

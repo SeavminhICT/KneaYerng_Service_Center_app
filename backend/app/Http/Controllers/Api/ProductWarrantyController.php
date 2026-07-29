@@ -7,7 +7,6 @@ use App\Models\ProductWarranty;
 use App\Services\ProductWarrantyService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Gate;
 
 class ProductWarrantyController extends Controller
 {
@@ -58,8 +57,6 @@ class ProductWarrantyController extends Controller
 
     public function adminIndex(Request $request): JsonResponse
     {
-        Gate::authorize('admin-access');
-
         ProductWarranty::syncExpiredStatuses();
 
         $query = ProductWarranty::query()
@@ -94,8 +91,6 @@ class ProductWarrantyController extends Controller
 
     public function void(Request $request, ProductWarranty $productWarranty): JsonResponse
     {
-        Gate::authorize('admin-access');
-
         $request->validate(['notes' => ['nullable', 'string', 'max:500']]);
 
         $productWarranty->update([

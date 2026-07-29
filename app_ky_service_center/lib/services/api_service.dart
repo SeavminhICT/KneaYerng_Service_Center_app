@@ -1088,17 +1088,18 @@ class ApiService {
         user['is_admin'] == true ||
         user['is_admin']?.toString().toLowerCase() == 'true' ||
         role?.toLowerCase() == 'admin';
-    return UserProfile(
-      firstName: user['first_name'] ?? fallbackFirstName,
-      lastName: user['last_name'] ?? fallbackLastName,
-      email: _normalizeOptionalEmail(user['email'] ?? fallbackEmail),
-      phone: user['phone'] ?? fallbackPhone,
-      birth: user['birth'] ?? fallbackBirth,
-      gender: user['gender'] ?? fallbackGender,
-      avatarUrl: normalizedAvatar ?? fallbackAvatarUrl,
-      role: role,
-      isAdmin: isAdmin,
-    );
+    return UserProfile.fromMap({
+      'id': user['id'] ?? user['user_id'],
+      'first_name': user['first_name'] ?? fallbackFirstName,
+      'last_name': user['last_name'] ?? fallbackLastName,
+      'email': user['email'] ?? fallbackEmail,
+      'phone': user['phone'] ?? fallbackPhone,
+      'birth': user['birth'] ?? fallbackBirth,
+      'gender': user['gender'] ?? fallbackGender,
+      'avatar_url': normalizedAvatar ?? fallbackAvatarUrl,
+      'role': role,
+      'is_admin': isAdmin,
+    });
   }
 
   static bool _containsUserPayload(Map<String, dynamic> data) {
@@ -2694,6 +2695,7 @@ class ApiService {
     String? deliveryNote,
     double? deliveryLat,
     double? deliveryLng,
+    int? userId,
     String? voucherCode,
   }) async {
     final token = await getToken();
@@ -2715,6 +2717,7 @@ class ApiService {
       'order_type': orderType,
       'payment_method': paymentMethod,
       'payment_status': paymentStatus,
+      'user_id': ?userId,
       'items': items,
     };
 

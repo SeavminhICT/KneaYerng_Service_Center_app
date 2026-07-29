@@ -267,7 +267,7 @@
                 nameField.value = '';
                 descriptionField.value = '';
                 formTitle.textContent = '{{ __('Create Role') }}';
-                submitButton.textContent = '{{ __('Save role & permissions') }}';
+                submitButton.textContent = '{!! __('Save role & permissions') !!}';
                 cancelButton.classList.add('hidden');
                 formStatus.textContent = '';
                 renderMatrix([]);
@@ -383,7 +383,7 @@
                 nameField.value = role.name;
                 descriptionField.value = role.description || '';
                 formTitle.textContent = '{{ __('Edit Role') }}: ' + role.name;
-                submitButton.textContent = '{{ __('Update role & permissions') }}';
+                submitButton.textContent = '{!! __('Update role & permissions') !!}';
                 cancelButton.classList.remove('hidden');
                 formStatus.textContent = '';
                 renderMatrix(checkedIds);

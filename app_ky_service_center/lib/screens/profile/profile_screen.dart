@@ -11,7 +11,6 @@ import '../../services/app_notification_service.dart';
 import '../../services/language_service.dart';
 import '../../services/theme_service.dart';
 import '../Auth/login_screen.dart';
-import '../notifications/admin_notification_panel_screen.dart';
 import '../notifications/notification_screen.dart';
 import 'edit_profile_screen.dart';
 import 'reviews_preview_screen.dart';
@@ -294,18 +293,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
           );
         },
       ),
-      if (profile.isAdmin)
-        ProfileSettingsItem(
-          icon: HugeIcons.strokeRoundedMegaphone01,
-          title: l.adminPanel,
-          onTap: () {
-            Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (_) => const AdminNotificationPanelScreen(),
-              ),
-            );
-          },
-        ),
       ProfileSettingsItem(
         icon: HugeIcons.strokeRoundedGlobe02,
         title: l.language,

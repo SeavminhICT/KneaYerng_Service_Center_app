@@ -29,7 +29,7 @@ class CheckPermission
             return redirect()->route('login');
         }
 
-        if ($user->canAccessAdminPanel() || $user->isAdmin() || $user->isStaff() || $user->hasAnyPermission(...$permissions)) {
+        if ($user->hasAnyPermission(...$permissions)) {
             return $next($request);
         }
 

@@ -236,6 +236,8 @@ Route::middleware('admin')->group(function () {
     Route::post('accessories', [AccessoryController::class, 'store'])->middleware('permission:create_accessory');
     Route::match(['put', 'patch'], 'accessories/{accessory}', [AccessoryController::class, 'update'])->middleware('permission:update_accessory');
     Route::delete('accessories/{accessory}', [AccessoryController::class, 'destroy'])->middleware('permission:delete_accessory');
+    Route::get('admin/parts/export-excel', [PartController::class, 'exportExcel'])->middleware('permission:view_parts_inventory');
+    Route::get('admin/parts/export-pdf', [PartController::class, 'exportPdf'])->middleware('permission:view_parts_inventory');
     Route::get('parts', [PartController::class, 'index'])->middleware('permission:view_parts_inventory');
     Route::post('parts', [PartController::class, 'store'])->middleware('permission:create_parts_inventory');
     Route::get('parts/{part}', [PartController::class, 'show'])->middleware('permission:view_parts_inventory');

@@ -12,6 +12,8 @@ import '../../../theme/app_fonts.dart';
 import '../../main_navigation_screen.dart';
 import 'checkout_colors.dart';
 
+const Duration _khqrVisibleExpiryLimit = Duration(seconds: 60);
+
 /// Bottom sheet shown after placing a Bakong-QR order: renders the KHQR
 /// code, polls the backend for payment status, and surfaces success /
 /// failure / pickup-ticket actions. Self-contained: it only talks to
@@ -54,7 +56,6 @@ class _CheckoutKhqrPaymentSheetState extends State<CheckoutKhqrPaymentSheet>
   bool _isSuccess = false;
   final bool _isScanned = false;
   bool _isTerminalFailure = false;
-  bool _autoCheckStopped = false;
   bool _isOpeningTicket = false;
   int _checkAttempts = 0;
   int _maxCheckAttempts = 200;
@@ -144,13 +145,13 @@ class _CheckoutKhqrPaymentSheetState extends State<CheckoutKhqrPaymentSheet>
       parent: _entryController,
       curve: Curves.easeOut,
     );
-    _entrySlideAnimation = Tween<Offset>(
-      begin: const Offset(0.0, 0.12),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _entryController,
-      curve: const Interval(0.0, 0.9, curve: Curves.easeOutBack),
-    ));
+    _entrySlideAnimation =
+        Tween<Offset>(begin: const Offset(0.0, 0.12), end: Offset.zero).animate(
+          CurvedAnimation(
+            parent: _entryController,
+            curve: const Interval(0.0, 0.9, curve: Curves.easeOutBack),
+          ),
+        );
     _entryController.forward();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -171,7 +172,12 @@ class _CheckoutKhqrPaymentSheetState extends State<CheckoutKhqrPaymentSheet>
   DateTime? _parseExpiresAt(String? value) {
     if (value == null || value.trim().isEmpty) return null;
     try {
-      return DateTime.parse(value).toLocal();
+      final parsedExpiresAt = DateTime.parse(value).toLocal();
+      final visibleExpiresAt = DateTime.now().add(_khqrVisibleExpiryLimit);
+      if (parsedExpiresAt.isAfter(visibleExpiresAt)) {
+        return visibleExpiresAt;
+      }
+      return parsedExpiresAt;
     } catch (_) {
       return null;
     }
@@ -201,7 +207,6 @@ class _CheckoutKhqrPaymentSheetState extends State<CheckoutKhqrPaymentSheet>
   void _startChecking() {
     _stopChecking();
     _startCountdown();
-    _autoCheckStopped = false;
     _checkAttempts = 0;
     _maxCheckAttempts = _deriveMaxAttempts();
     _checkStatus(fromTimer: true);
@@ -228,14 +233,7 @@ class _CheckoutKhqrPaymentSheetState extends State<CheckoutKhqrPaymentSheet>
         return;
       }
       if (_isExpired) {
-        _stopChecking();
-        _stopCountdown();
-        setState(() {
-          _isTerminalFailure = true;
-          _statusMessage = 'QR expired. Please generate a new one.';
-          _lastStatus = 'EXPIRED';
-        });
-        _logKhqrEvent(event: 'expired', status: 'EXPIRED');
+        _markExpired(event: 'expired');
       }
       // No setState here for the non-expired tick: the countdown text below
       // repaints itself on its own timer so this screen doesn't rebuild
@@ -248,25 +246,34 @@ class _CheckoutKhqrPaymentSheetState extends State<CheckoutKhqrPaymentSheet>
     _countdownTimer = null;
   }
 
+  // Single place that flips the sheet into the "expired" terminal state.
+  // Called from three independent triggers (the 1s countdown tick, the
+  // visible countdown text's own timer, and the periodic status check) so
+  // that however expiry is first noticed, the QR/"checking" view can never
+  // keep showing after the on-screen timer has already hit 00:00.
+  void _markExpired({required String event}) {
+    if (!mounted || _isSuccess || _isTerminalFailure) return;
+    _stopChecking();
+    _stopCountdown();
+    setState(() {
+      _isTerminalFailure = true;
+      _statusMessage = AppLocalizations.of(context).khqrQrExpired;
+      _lastStatus = 'EXPIRED';
+    });
+    _logKhqrEvent(event: event, status: 'EXPIRED');
+  }
+
   Future<void> _checkStatus({bool fromTimer = false}) async {
     if (_isChecking || _isSuccess || _isTerminalFailure) return;
     if (_checkAttempts >= _maxCheckAttempts) {
       if (fromTimer) {
         _stopChecking();
-        _autoCheckStopped = true;
         _setStatusMessage('Payment pending. Automatic check paused.');
       }
       return;
     }
     if (_isExpired) {
-      _stopChecking();
-      _stopCountdown();
-      setState(() {
-        _isTerminalFailure = true;
-        _statusMessage = 'QR expired. Please generate a new one.';
-        _lastStatus = 'EXPIRED';
-      });
-      _logKhqrEvent(event: 'expired_on_check', status: 'EXPIRED');
+      _markExpired(event: 'expired_on_check');
       return;
     }
 
@@ -321,27 +328,18 @@ class _CheckoutKhqrPaymentSheetState extends State<CheckoutKhqrPaymentSheet>
 
       if (normStatus == 'NOT_FOUND') {
         if (_isExpired) {
-          _stopChecking();
-          _stopCountdown();
-          setState(() {
-            _isTerminalFailure = true;
-            _statusMessage = AppLocalizations.of(context).khqrQrExpired;
-            _lastStatus = 'EXPIRED';
-          });
-          _logKhqrEvent(event: 'expired_not_found', status: 'EXPIRED');
-        } else if (fromTimer) {
-          if (_autoCheckStopped) {
-            _setStatusMessage(AppLocalizations.of(context).khqrPendingPaused);
-          } else {
-            _setStatusMessage(AppLocalizations.of(context).khqrCheckingAuto);
-          }
+          _markExpired(event: 'expired_not_found');
         } else {
-          _setStatusMessage(result.message ?? AppLocalizations.of(context).khqrNoPaymentYet);
+          _setStatusMessage(
+            result.message ?? AppLocalizations.of(context).khqrNoPaymentYet,
+          );
         }
         return;
       }
 
-      _setStatusMessage(result.message ?? 'Status: ${result.status}');
+      if (!fromTimer) {
+        _setStatusMessage(result.message ?? 'Status: ${result.status}');
+      }
     } catch (e) {
       if (!mounted) return;
       _isChecking = false;
@@ -624,55 +622,52 @@ class _CheckoutKhqrPaymentSheetState extends State<CheckoutKhqrPaymentSheet>
                 ),
                 ClipRRect(
                   borderRadius: BorderRadius.circular(18),
-                  child: Stack(
-                    children: [
-                      KhqrCardWidget(
-                        width: 240,
-                        qr: widget.qrString,
-                        receiverName: 'KneaYerng Service Center',
-                        amount: widget.amount,
-                        currency: KhqrCurrency.usd,
-                        duration: null,
-                        isLoading: false,
-                        isError: false,
-                      ),
-                      Positioned.fill(
-                        child: IgnorePointer(
-                          child: Align(
-                            alignment: const Alignment(0, 0.42),
-                            child: Container(
-                              width: 46,
-                              height: 46,
-                              padding: const EdgeInsets.all(6),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: const Color(0xFFE2E8F0),
-                                  width: 1.5,
-                                ),
-                                boxShadow: const [
-                                  BoxShadow(
-                                    color: Color(0x14000000),
-                                    blurRadius: 10,
-                                    offset: Offset(0, 4),
+                  child: RepaintBoundary(
+                    child: Stack(
+                      children: [
+                        KhqrCardWidget(
+                          width: 240,
+                          qr: widget.qrString,
+                          receiverName: 'KneaYerng Service Center',
+                          amount: widget.amount,
+                          currency: KhqrCurrency.usd,
+                          duration: null,
+                          isLoading: false,
+                          isError: false,
+                        ),
+                        Positioned.fill(
+                          child: IgnorePointer(
+                            child: Align(
+                              alignment: const Alignment(0, 0.42),
+                              child: Container(
+                                width: 46,
+                                height: 46,
+                                padding: const EdgeInsets.all(6),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: const Color(0xFFE2E8F0),
+                                    width: 1.5,
                                   ),
-                                ],
-                              ),
-                              child: Image.asset(
-                                'assets/images/logo_bakong.png',
-                                fit: BoxFit.contain,
+                                  boxShadow: const [
+                                    BoxShadow(
+                                      color: Color(0x14000000),
+                                      blurRadius: 10,
+                                      offset: Offset(0, 4),
+                                    ),
+                                  ],
+                                ),
+                                child: Image.asset(
+                                  'assets/images/logo_bakong.png',
+                                  fit: BoxFit.contain,
+                                ),
                               ),
                             ),
                           ),
                         ),
-                      ),
-                      const Positioned.fill(
-                        child: IgnorePointer(
-                          child: QrScannerOverlay(),
-                        ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ],
@@ -718,7 +713,7 @@ class _CheckoutKhqrPaymentSheetState extends State<CheckoutKhqrPaymentSheet>
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   if (!_isTerminalFailure) ...[
-                    const PulsingStatusDot(color: Color(0xFF3B82F6)),
+                    const _StaticStatusDot(color: Color(0xFF3B82F6)),
                     const SizedBox(width: 10),
                   ] else ...[
                     const Icon(
@@ -772,7 +767,7 @@ class _CheckoutKhqrPaymentSheetState extends State<CheckoutKhqrPaymentSheet>
             fontSize: 12,
             color: isTimer ? const Color(0xFFE11D48) : checkoutInk(context),
             fontWeight: FontWeight.w800,
-            forceColor: isTimer,   // red countdown must show even in Khmer
+            forceColor: isTimer, // red countdown must show even in Khmer
           ),
         ),
       ],
@@ -796,6 +791,7 @@ class _CheckoutKhqrPaymentSheetState extends State<CheckoutKhqrPaymentSheet>
         const SizedBox(width: 8),
         _KhqrCountdownText(
           expiresAt: expiresAt,
+          onExpired: () => _markExpired(event: 'expired_countdown_text'),
           style: kFont(
             context,
             fontSize: 12,
@@ -978,7 +974,7 @@ class _CheckoutKhqrPaymentSheetState extends State<CheckoutKhqrPaymentSheet>
                 fontSize: 14,
                 color: const Color(0xFFDC2626),
                 fontWeight: FontWeight.w700,
-                forceColor: true,   // error red must show even in Khmer
+                forceColor: true, // error red must show even in Khmer
               ),
             ),
           ),
@@ -1095,11 +1091,15 @@ class _CheckoutKhqrPaymentSheetState extends State<CheckoutKhqrPaymentSheet>
                   value: widget.orderNumber ?? '#${widget.orderId}',
                 ),
                 const SizedBox(height: 12),
-                _SuccessReceiptRow(label: AppLocalizations.of(context).khqrPaymentMethod, value: 'Bakong KHQR'),
+                _SuccessReceiptRow(
+                  label: AppLocalizations.of(context).khqrPaymentMethod,
+                  value: 'Bakong KHQR',
+                ),
                 const SizedBox(height: 12),
                 _SuccessReceiptRow(
                   label: AppLocalizations.of(context).khqrReferenceCode,
-                  value: '#${widget.transactionId.substring(0, 8).toUpperCase()}',
+                  value:
+                      '#${widget.transactionId.substring(0, 8).toUpperCase()}',
                 ),
               ],
             ),
@@ -1146,7 +1146,11 @@ class _CheckoutKhqrPaymentSheetState extends State<CheckoutKhqrPaymentSheet>
                   _isOpeningTicket
                       ? l.khqrOpeningTicket
                       : l.khqrViewPickupTicket,
-                  style: kFont(context, fontWeight: FontWeight.w800, fontSize: 15),
+                  style: kFont(
+                    context,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 15,
+                  ),
                 ),
               ),
             ),
@@ -1157,8 +1161,12 @@ class _CheckoutKhqrPaymentSheetState extends State<CheckoutKhqrPaymentSheet>
             child: ElevatedButton(
               onPressed: () => Navigator.of(context).pop(true),
               style: ElevatedButton.styleFrom(
-                backgroundColor: isCheckoutDark(context) ? Colors.white : const Color(0xFF0F172A),
-                foregroundColor: isCheckoutDark(context) ? const Color(0xFF0F172A) : Colors.white,
+                backgroundColor: isCheckoutDark(context)
+                    ? Colors.white
+                    : const Color(0xFF0F172A),
+                foregroundColor: isCheckoutDark(context)
+                    ? const Color(0xFF0F172A)
+                    : Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 15),
                 elevation: 0,
                 shape: RoundedRectangleBorder(
@@ -1167,7 +1175,11 @@ class _CheckoutKhqrPaymentSheetState extends State<CheckoutKhqrPaymentSheet>
               ),
               child: Text(
                 l.done,
-                style: kFont(context, fontWeight: FontWeight.w800, fontSize: 15),
+                style: kFont(
+                  context,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 15,
+                ),
               ),
             ),
           ),
@@ -1242,18 +1254,38 @@ class _SuccessReceiptRow extends StatelessWidget {
   }
 }
 
+class _StaticStatusDot extends StatelessWidget {
+  const _StaticStatusDot({required this.color});
+
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 9,
+      height: 9,
+      decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+    );
+  }
+}
+
 // ==========================================
 // Custom Animation Widgets
 // ==========================================
 
-/// Ticks its own mm:ss display once a second without rebuilding the parent
+/// Ticks its own seconds display once a second without rebuilding the parent
 /// sheet, so the rest of the payment screen stays static instead of
 /// flashing on every countdown tick.
 class _KhqrCountdownText extends StatefulWidget {
-  const _KhqrCountdownText({required this.expiresAt, required this.style});
+  const _KhqrCountdownText({
+    required this.expiresAt,
+    required this.style,
+    this.onExpired,
+  });
 
   final DateTime expiresAt;
   final TextStyle style;
+  final VoidCallback? onExpired;
 
   @override
   State<_KhqrCountdownText> createState() => _KhqrCountdownTextState();
@@ -1261,13 +1293,31 @@ class _KhqrCountdownText extends StatefulWidget {
 
 class _KhqrCountdownTextState extends State<_KhqrCountdownText> {
   Timer? _timer;
+  bool _firedExpired = false;
 
   @override
   void initState() {
     super.initState();
+    // Defer the first check past the current build: calling onExpired
+    // synchronously here (if expiresAt is already in the past) would call
+    // setState on the parent while it's still mid-build.
+    WidgetsBinding.instance.addPostFrameCallback((_) => _checkExpiredAndTick());
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (mounted) setState(() {});
+      if (!mounted) return;
+      setState(() {});
+      _checkExpiredAndTick();
     });
+  }
+
+  // Fires onExpired the moment this widget's own clock shows 00:00, so the
+  // parent sheet's terminal-failure state can never lag behind what the
+  // countdown text on screen is already displaying.
+  void _checkExpiredAndTick() {
+    if (_firedExpired) return;
+    if (widget.expiresAt.difference(DateTime.now()).isNegative) {
+      _firedExpired = true;
+      widget.onExpired?.call();
+    }
   }
 
   @override
@@ -1278,10 +1328,12 @@ class _KhqrCountdownTextState extends State<_KhqrCountdownText> {
 
   String get _text {
     final remaining = widget.expiresAt.difference(DateTime.now());
-    if (remaining.isNegative) return '00:00';
-    final minutes = remaining.inMinutes.remainder(60).toString().padLeft(2, '0');
-    final seconds = remaining.inSeconds.remainder(60).toString().padLeft(2, '0');
-    return '$minutes:$seconds';
+    if (remaining.isNegative) return '0s';
+    final seconds = ((remaining.inMilliseconds + 999) ~/ 1000).clamp(
+      0,
+      _khqrVisibleExpiryLimit.inSeconds,
+    );
+    return '${seconds}s';
   }
 
   @override
@@ -1331,7 +1383,9 @@ class _PulsingStatusDotState extends State<PulsingStatusDot>
               height: 18 * (1.0 + _controller.value * 1.2),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: widget.color.withValues(alpha: (1.0 - _controller.value) * 0.4),
+                color: widget.color.withValues(
+                  alpha: (1.0 - _controller.value) * 0.4,
+                ),
               ),
             ),
             Container(
@@ -1339,7 +1393,9 @@ class _PulsingStatusDotState extends State<PulsingStatusDot>
               height: 14 * (1.0 + _controller.value * 0.6),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: widget.color.withValues(alpha: (1.0 - _controller.value) * 0.6),
+                color: widget.color.withValues(
+                  alpha: (1.0 - _controller.value) * 0.6,
+                ),
               ),
             ),
             Container(
@@ -1358,80 +1414,6 @@ class _PulsingStatusDotState extends State<PulsingStatusDot>
               ),
             ),
           ],
-        );
-      },
-    );
-  }
-}
-
-class QrScannerOverlay extends StatefulWidget {
-  const QrScannerOverlay({super.key});
-
-  @override
-  State<QrScannerOverlay> createState() => _QrScannerOverlayState();
-}
-
-class _QrScannerOverlayState extends State<QrScannerOverlay>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 2500),
-    )..repeat(reverse: true);
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final height = constraints.maxHeight;
-        final startY = height * 0.38;
-        final endY = height * 0.92;
-        final sweepHeight = endY - startY;
-
-        return AnimatedBuilder(
-          animation: _controller,
-          builder: (context, child) {
-            final position = startY + (_controller.value * sweepHeight);
-            return Stack(
-              children: [
-                Positioned(
-                  top: position,
-                  left: 20,
-                  right: 20,
-                  child: Container(
-                    height: 3,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          const Color(0xFFDC2626).withValues(alpha: 0.0),
-                          const Color(0xFFDC2626).withValues(alpha: 0.8),
-                          const Color(0xFFDC2626).withValues(alpha: 0.0),
-                        ],
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFFDC2626).withValues(alpha: 0.5),
-                          blurRadius: 8,
-                          spreadRadius: 1,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            );
-          },
         );
       },
     );
@@ -1468,23 +1450,28 @@ class _AnimatedSuccessCheckState extends State<AnimatedSuccessCheck>
       duration: const Duration(milliseconds: 1000),
     );
 
-    _scaleAnimation = TweenSequence<double>([
-      TweenSequenceItem(
-        tween: Tween<double>(begin: 0.0, end: 1.1)
-            .chain(CurveTween(curve: Curves.easeOut)),
-        weight: 60,
-      ),
-      TweenSequenceItem(
-        tween: Tween<double>(begin: 1.1, end: 1.0)
-            .chain(CurveTween(curve: Curves.easeIn)),
-        weight: 40,
-      ),
-    ]).animate(
-      CurvedAnimation(
-        parent: _controller,
-        curve: const Interval(0.0, 0.5, curve: Curves.easeOut),
-      ),
-    );
+    _scaleAnimation =
+        TweenSequence<double>([
+          TweenSequenceItem(
+            tween: Tween<double>(
+              begin: 0.0,
+              end: 1.1,
+            ).chain(CurveTween(curve: Curves.easeOut)),
+            weight: 60,
+          ),
+          TweenSequenceItem(
+            tween: Tween<double>(
+              begin: 1.1,
+              end: 1.0,
+            ).chain(CurveTween(curve: Curves.easeIn)),
+            weight: 40,
+          ),
+        ]).animate(
+          CurvedAnimation(
+            parent: _controller,
+            curve: const Interval(0.0, 0.5, curve: Curves.easeOut),
+          ),
+        );
 
     _checkAnimation = CurvedAnimation(
       parent: _controller,
@@ -1598,7 +1585,11 @@ class _CheckmarkPainter extends CustomPainter {
 }
 
 class DashedDivider extends StatelessWidget {
-  const DashedDivider({super.key, this.height = 1, this.color = const Color(0xFFE2E8F0)});
+  const DashedDivider({
+    super.key,
+    this.height = 1,
+    this.color = const Color(0xFFE2E8F0),
+  });
 
   final double height;
   final Color color;
@@ -1618,9 +1609,7 @@ class DashedDivider extends StatelessWidget {
             return SizedBox(
               width: dashWidth,
               height: dashHeight,
-              child: DecoratedBox(
-                decoration: BoxDecoration(color: color),
-              ),
+              child: DecoratedBox(decoration: BoxDecoration(color: color)),
             );
           }),
         );

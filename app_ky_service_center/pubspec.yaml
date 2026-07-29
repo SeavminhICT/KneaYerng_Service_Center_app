@@ -94,6 +94,7 @@ flutter:
     - assets/images/google-color.png
     - assets/images/logo_bakong.png
     - assets/images/Logo_KYSC.png
+    - assets/images/Logo_KYSC_adaptive_fg.png
 
   fonts:
     - family: KantumruyPro
@@ -107,7 +108,7 @@ flutter_launcher_icons:
   ios: true
   image_path: "assets/images/Logo_KYSC.png"
   adaptive_icon_background: "#FFFFFF"
-  adaptive_icon_foreground: "assets/images/Logo_KYSC.png"
+  adaptive_icon_foreground: "assets/images/Logo_KYSC_adaptive_fg.png"
   remove_alpha_ios: true
 
   # To add assets to your application, add an assets section, like this:

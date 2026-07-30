@@ -92,3 +92,82 @@ it('returns a clear push setup error for placeholder firebase credentials', func
         ->and($summary['push_error'])->toContain('Firebase Admin credentials file is missing')
         ->and($summary['push_error'])->toContain('Do not use google-services.json');
 });
+
+it('schedules a campaign with a specific date and time', function () {
+    $admin = User::factory()->create([
+        'role' => 'admin',
+        'is_admin' => true,
+    ]);
+
+    $futureDate = now()->addDays(2)->toDateTimeString();
+
+    $response = $this
+        ->actingAs($admin)
+        ->postJson('/api/admin/notifications/send', [
+            'title' => 'Scheduled Notification',
+            'message' => 'This is a scheduled message.',
+            'type' => 'Announcement',
+            'audience' => 'all',
+            'action' => 'schedule',
+            'schedule_type' => 'date',
+            'scheduled_for' => $futureDate,
+        ]);
+
+    $response->assertOk();
+    $this->assertDatabaseHas('admin_notification_campaigns', [
+        'title' => 'Scheduled Notification',
+        'status' => 'scheduled',
+        'scheduled_for' => $futureDate,
+    ]);
+});
+
+it('schedules a campaign with a preset delay', function () {
+    $admin = User::factory()->create([
+        'role' => 'admin',
+        'is_admin' => true,
+    ]);
+
+    $response = $this
+        ->actingAs($admin)
+        ->postJson('/api/admin/notifications/send', [
+            'title' => 'Delayed Notification',
+            'message' => 'This message is delayed.',
+            'type' => 'Announcement',
+            'audience' => 'all',
+            'action' => 'schedule',
+            'schedule_type' => 'delay',
+            'schedule_delay' => '3_days',
+        ]);
+
+    $response->assertOk();
+    $campaign = \App\Models\AdminNotificationCampaign::where('title', 'Delayed Notification')->first();
+    expect($campaign)->not->toBeNull();
+    expect($campaign->status)->toBe('scheduled');
+    // It should be scheduled roughly 3 days from now
+    $diffInDays = now()->diffInDays($campaign->scheduled_for);
+    expect((int) round($diffInDays))->toBe(3);
+});
+
+it('cancels a scheduled campaign', function () {
+    $admin = User::factory()->create([
+        'role' => 'admin',
+        'is_admin' => true,
+    ]);
+
+    $campaign = \App\Models\AdminNotificationCampaign::create([
+        'admin_user_id' => $admin->id,
+        'title' => 'Scheduled to cancel',
+        'type' => 'Announcement',
+        'audience' => 'all',
+        'status' => 'scheduled',
+        'scheduled_for' => now()->addDay(),
+    ]);
+
+    $response = $this
+        ->actingAs($admin)
+        ->postJson("/api/admin/notifications/{$campaign->id}/cancel");
+
+    $response->assertOk();
+    $campaign->refresh();
+    expect($campaign->status)->toBe('cancelled');
+});

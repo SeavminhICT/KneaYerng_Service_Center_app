@@ -166,6 +166,7 @@ Route::middleware('admin')->group(function () {
     Route::post('admin/notifications/send', [AdminNotificationController::class, 'store'])->middleware('permission:create_notification');
     Route::get('admin/notifications/history', [AdminNotificationController::class, 'history'])->middleware('permission:view_notification');
     Route::get('admin/notifications/recipients', [AdminNotificationController::class, 'recipients'])->middleware('permission:view_notification');
+    Route::post('admin/notifications/{campaign}/cancel', [AdminNotificationController::class, 'cancel'])->middleware('permission:delete_notification');
     Route::get('admin/metrics', AdminMetricsController::class)->middleware('permission:view_dashboard');
     Route::middleware('permission:view_sales_report')->group(function () {
         Route::get('admin/reports/sales', [AdminReportsController::class, 'sales']);

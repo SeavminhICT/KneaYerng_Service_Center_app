@@ -125,6 +125,41 @@
                             </div>
                         </div>
 
+                        <input type="hidden" id="notification-action" name="action" value="send_now" />
+
+                        <div class="border-t border-slate-100 pt-5 dark:border-slate-800/60">
+                            <label class="text-sm font-semibold text-slate-700 dark:text-slate-200">{{ __('Delivery Timing') }}</label>
+                            <div class="mt-2 grid gap-3 sm:grid-cols-3">
+                                <label class="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200 cursor-pointer">
+                                    <input type="radio" name="schedule_type" value="now" checked class="h-4 w-4 border-slate-300 text-primary-600 focus:ring-primary-500" />
+                                    {{ __('Send Immediately') }}
+                                </label>
+                                <label class="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200 cursor-pointer">
+                                    <input type="radio" name="schedule_type" value="date" class="h-4 w-4 border-slate-300 text-primary-600 focus:ring-primary-500" />
+                                    {{ __('Specific Date & Time') }}
+                                </label>
+                                <label class="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200 cursor-pointer">
+                                    <input type="radio" name="schedule_type" value="delay" class="h-4 w-4 border-slate-300 text-primary-600 focus:ring-primary-500" />
+                                    {{ __('Pre-set Delay') }}
+                                </label>
+                            </div>
+                        </div>
+
+                        <div id="schedule-date-panel" class="hidden">
+                            <label for="scheduled-for-input" class="text-sm font-semibold text-slate-700 dark:text-slate-200">{{ __('Choose Date & Time') }}</label>
+                            <input id="scheduled-for-input" name="scheduled_for" type="datetime-local" class="mt-2 h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-700 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100" />
+                        </div>
+
+                        <div id="schedule-delay-panel" class="hidden">
+                            <label for="schedule-delay-select" class="text-sm font-semibold text-slate-700 dark:text-slate-200">{{ __('Choose Delay Duration') }}</label>
+                            <select id="schedule-delay-select" name="schedule_delay" class="mt-2 h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-700 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100">
+                                <option value="1_day">{{ __('1 Day') }}</option>
+                                <option value="3_days">{{ __('3 Days') }}</option>
+                                <option value="5_days">{{ __('5 Days') }}</option>
+                                <option value="1_week">{{ __('1 Week') }}</option>
+                            </select>
+                        </div>
+
                         <div class="flex flex-wrap gap-3 pt-2">
                             @if (auth()->user()?->hasPermission('create_notification'))
                             <button id="send-notification" type="submit" class="inline-flex items-center justify-center rounded-2xl bg-[#4A88F7] px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-primary-500/20 transition hover:bg-[#3977E6]">{{ __('Send Notification') }}</button>
@@ -228,6 +263,13 @@
             var draftKey = 'admin.notification.draft';
             var csrfToken = document.querySelector('meta[name="csrf-token"]');
 
+            var scheduleTypeInputs = document.querySelectorAll('input[name="schedule_type"]');
+            var scheduleDatePanel = document.getElementById('schedule-date-panel');
+            var scheduleDelayPanel = document.getElementById('schedule-delay-panel');
+            var scheduledForInput = document.getElementById('scheduled-for-input');
+            var scheduleDelaySelect = document.getElementById('schedule-delay-select');
+            var actionInput = document.getElementById('notification-action');
+
             if (previewClock) {
                 var now = new Date();
                 previewClock.textContent = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
@@ -242,6 +284,19 @@
                     if (!isSpecific) {
                         targetUserSelect.value = '';
                     }
+                }
+            }
+
+            function updateScheduleState() {
+                var scheduleType = (document.querySelector('input[name="schedule_type"]:checked') || {}).value || 'now';
+                if (scheduleDatePanel) {
+                    scheduleDatePanel.classList.toggle('hidden', scheduleType !== 'date');
+                }
+                if (scheduleDelayPanel) {
+                    scheduleDelayPanel.classList.toggle('hidden', scheduleType !== 'delay');
+                }
+                if (actionInput) {
+                    actionInput.value = (scheduleType === 'now') ? 'send_now' : 'schedule';
                 }
             }
 
@@ -360,7 +415,7 @@
             }
 
             function resetFieldErrors() {
-                [titleInput, messageInput, typeInput, deepLinkInput, imageInput, targetUserSelect].forEach(function (field) {
+                [titleInput, messageInput, typeInput, deepLinkInput, imageInput, targetUserSelect, scheduledForInput, scheduleDelaySelect].forEach(function (field) {
                     setFieldError(field, false);
                 });
             }
@@ -388,6 +443,12 @@
                 if (errors.target_user_id || errors.custom_user_ids) {
                     setFieldError(targetUserSelect, true);
                 }
+                if (errors.scheduled_for) {
+                    setFieldError(scheduledForInput, true);
+                }
+                if (errors.schedule_delay) {
+                    setFieldError(scheduleDelaySelect, true);
+                }
             }
 
             function resetFormState() {
@@ -395,8 +456,13 @@
                 if (targetModeInputs[0]) {
                     targetModeInputs[0].checked = true;
                 }
+                var defaultSchedule = document.querySelector('input[name="schedule_type"][value="now"]');
+                if (defaultSchedule) {
+                    defaultSchedule.checked = true;
+                }
                 localStorage.removeItem(draftKey);
                 updateSpecificUserState();
+                updateScheduleState();
                 syncPreview();
                 syncImagePreview();
             }
@@ -545,6 +611,9 @@
                             parts.push('push setup issue');
                         }
                     }
+                    if (item.status === 'scheduled' && item.scheduled_for) {
+                        parts.push('Scheduled: ' + new Date(item.scheduled_for).toLocaleString());
+                    }
                     var when = relativeTime(item.created_at);
                     if (when) {
                         parts.push(when);
@@ -560,7 +629,16 @@
                     var actions = document.createElement('div');
                     actions.className = 'flex shrink-0 flex-col gap-2 sm:flex-row';
 
-                    if (canSend) {
+                    if (item.status === 'scheduled' && canSend) {
+                        var cancelBtn = document.createElement('button');
+                        cancelBtn.type = 'button';
+                        cancelBtn.className = 'inline-flex items-center justify-center gap-1.5 rounded-xl bg-rose-50 px-3.5 py-2 text-xs font-semibold text-rose-600 shadow-sm transition hover:bg-rose-100 dark:bg-rose-500/10 dark:text-rose-400 dark:hover:bg-rose-500/20';
+                        cancelBtn.textContent = 'Cancel';
+                        cancelBtn.addEventListener('click', function () {
+                            cancelCampaign(item, cancelBtn);
+                        });
+                        actions.appendChild(cancelBtn);
+                    } else if (item.status !== 'scheduled' && item.status !== 'cancelled' && canSend) {
                         var resendBtn = document.createElement('button');
                         resendBtn.type = 'button';
                         resendBtn.className = 'inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#4A88F7] px-3.5 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-[#3977E6] disabled:opacity-60';
@@ -682,6 +760,30 @@
                 if (isCustom && targetUserSelect && Array.isArray(item.custom_user_ids) && item.custom_user_ids.length) {
                     targetUserSelect.value = String(item.custom_user_ids[0]);
                 }
+
+                // Load schedule settings from item.meta or scheduled_for
+                var meta = item.meta || {};
+                var scheduleType = meta.schedule_type || (item.scheduled_for ? 'date' : 'now');
+                var radioSchedule = document.querySelector('input[name="schedule_type"][value="' + scheduleType + '"]');
+                if (radioSchedule) {
+                    radioSchedule.checked = true;
+                }
+                if (scheduleType === 'date' && item.scheduled_for && scheduledForInput) {
+                    // Convert ISO string to local datetime-local string (YYYY-MM-DDTHH:mm)
+                    var date = new Date(item.scheduled_for);
+                    var pad = function(num) { return String(num).padStart(2, '0'); };
+                    var localString = date.getFullYear() + '-' + pad(date.getMonth() + 1) + '-' + pad(date.getDate()) + 'T' + pad(date.getHours()) + ':' + pad(date.getMinutes());
+                    scheduledForInput.value = localString;
+                } else if (scheduledForInput) {
+                    scheduledForInput.value = '';
+                }
+                if (scheduleType === 'delay' && meta.schedule_delay && scheduleDelaySelect) {
+                    scheduleDelaySelect.value = meta.schedule_delay;
+                } else if (scheduleDelaySelect) {
+                    scheduleDelaySelect.value = '1_day';
+                }
+                updateScheduleState();
+
                 syncPreview();
                 form.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 if (window.adminToast) {
@@ -752,6 +854,73 @@
                 } catch (error) {
                     if (window.adminSwalError) {
                         window.adminSwalError('Network error', 'The dashboard could not reach the send endpoint.');
+                    }
+                } finally {
+                    if (button) {
+                        button.disabled = false;
+                        button.innerHTML = originalHtml;
+                    }
+                }
+            }
+
+            async function cancelCampaign(item, button) {
+                var confirmed = false;
+                if (window.adminSwalConfirm) {
+                    var result = await window.adminSwalConfirm(
+                        'Cancel this scheduled notification?',
+                        'This notification will not be sent.',
+                        'Yes, cancel it'
+                    );
+                    confirmed = !!(result && result.isConfirmed);
+                } else {
+                    confirmed = confirm('Are you sure you want to cancel this scheduled notification?');
+                }
+                if (!confirmed) {
+                    return;
+                }
+
+                var originalHtml = button ? button.innerHTML : '';
+                if (button) {
+                    button.disabled = true;
+                    button.textContent = 'Cancelling...';
+                }
+
+                try {
+                    var cancelUrl = '/admin/notifications/' + item.id + '/cancel';
+                    var response = await fetch(cancelUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Accept': 'application/json',
+                            'X-CSRF-TOKEN': csrfToken ? csrfToken.content : '',
+                        },
+                        credentials: 'same-origin',
+                    });
+                    var payload = {};
+                    try {
+                        payload = await response.json();
+                    } catch (error) {
+                        payload = {};
+                    }
+
+                    if (!response.ok) {
+                        if (window.adminSwalError) {
+                            window.adminSwalError('Cancel failed', payload.message || 'Notification could not be cancelled.');
+                        } else {
+                            alert(payload.message || 'Notification could not be cancelled.');
+                        }
+                        return;
+                    }
+
+                    if (window.adminToast) {
+                        window.adminToast('Scheduled notification cancelled.', { type: 'success' });
+                    }
+                    historyPage = 1;
+                    loadHistory();
+                } catch (error) {
+                    if (window.adminSwalError) {
+                        window.adminSwalError('Network error', 'The dashboard could not reach the cancel endpoint.');
+                    } else {
+                        alert('The dashboard could not reach the cancel endpoint.');
                     }
                 } finally {
                     if (button) {
@@ -845,6 +1014,9 @@
                         deep_link: deepLinkInput.value,
                         target_mode: (document.querySelector('input[name="target_mode"]:checked') || {}).value || 'all',
                         target_user_id: targetUserSelect ? targetUserSelect.value : '',
+                        schedule_type: (document.querySelector('input[name="schedule_type"]:checked') || {}).value || 'now',
+                        scheduled_for: scheduledForInput ? scheduledForInput.value : '',
+                        schedule_delay: scheduleDelaySelect ? scheduleDelaySelect.value : '1_day',
                     };
                     localStorage.setItem(draftKey, JSON.stringify(payload));
                     saveDraftToast();
@@ -925,12 +1097,27 @@
                     if (draftTarget) {
                         draftTarget.checked = true;
                     }
+                    var draftSchedule = document.querySelector('input[name="schedule_type"][value="' + (draft.schedule_type || 'now') + '"]');
+                    if (draftSchedule) {
+                        draftSchedule.checked = true;
+                    }
+                    if (scheduledForInput) {
+                        scheduledForInput.value = draft.scheduled_for || '';
+                    }
+                    if (scheduleDelaySelect) {
+                        scheduleDelaySelect.value = draft.schedule_delay || '1_day';
+                    }
                 }
             } catch (error) {
                 localStorage.removeItem(draftKey);
             }
 
+            scheduleTypeInputs.forEach(function (input) {
+                input.addEventListener('change', updateScheduleState);
+            });
+
             updateSpecificUserState();
+            updateScheduleState();
             syncPreview();
             loadHistory();
         });

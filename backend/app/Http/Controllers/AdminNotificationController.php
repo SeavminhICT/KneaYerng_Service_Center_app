@@ -56,7 +56,9 @@ class AdminNotificationController extends Controller
             'deep_link' => ['nullable', 'string', 'max:1000'],
             'image' => ['nullable', 'image', 'max:5120'],
             'action' => ['nullable', 'string', Rule::in(['send_now', 'schedule', 'save_draft', 'send', 'draft'])],
-            'scheduled_for' => ['nullable', 'date'],
+            'scheduled_for' => ['required_if:schedule_type,date', 'nullable', 'date'],
+            'schedule_type' => ['nullable', 'string', Rule::in(['now', 'date', 'delay'])],
+            'schedule_delay' => ['required_if:schedule_type,delay', 'nullable', 'string', Rule::in(['1_day', '3_days', '5_days', '1_week'])],
         ]);
 
         $action = $this->normalizeAction($validated['action'] ?? null);
@@ -85,7 +87,9 @@ class AdminNotificationController extends Controller
         }
 
         $scheduledFor = null;
-        if (! empty($validated['scheduled_for'])) {
+        $scheduleType = $validated['schedule_type'] ?? 'now';
+
+        if ($scheduleType === 'date' && ! empty($validated['scheduled_for'])) {
             try {
                 $scheduledFor = Carbon::parse((string) $validated['scheduled_for']);
             } catch (Throwable) {
@@ -96,6 +100,14 @@ class AdminNotificationController extends Controller
                     ],
                 ], 422);
             }
+        } elseif ($scheduleType === 'delay' && ! empty($validated['schedule_delay'])) {
+            $scheduledFor = match ($validated['schedule_delay']) {
+                '1_day' => now()->addDay(),
+                '3_days' => now()->addDays(3),
+                '5_days' => now()->addDays(5),
+                '1_week' => now()->addWeek(),
+                default => null,
+            };
         }
 
         if ($action === 'schedule') {
@@ -165,6 +177,8 @@ class AdminNotificationController extends Controller
             ],
             'meta' => [
                 'image_url' => $imageUrl,
+                'schedule_type' => $scheduleType,
+                'schedule_delay' => $validated['schedule_delay'] ?? null,
             ],
         ]);
 
@@ -206,6 +220,19 @@ class AdminNotificationController extends Controller
         return response()->json([
             'message' => $messageText,
             'summary' => $campaign->summary ?? [],
+            'history_item' => $this->transformCampaign($campaign),
+        ]);
+    }
+
+    public function cancel(Request $request, AdminNotificationCampaign $campaign): JsonResponse
+    {
+        abort_unless($campaign->status === 'scheduled', 409, 'Only scheduled notifications can be cancelled.');
+
+        $campaign->status = 'cancelled';
+        $campaign->save();
+
+        return response()->json([
+            'message' => 'Notification campaign cancelled successfully.',
             'history_item' => $this->transformCampaign($campaign),
         ]);
     }
@@ -395,6 +422,7 @@ class AdminNotificationController extends Controller
             'status' => $campaign->status,
             'scheduled_for' => $campaign->scheduled_for?->toISOString(),
             'summary' => $summary,
+            'meta' => $campaign->meta ?? [],
             'created_at' => $campaign->created_at?->toISOString(),
             'created_by' => [
                 'id' => $campaign->adminUser?->id,

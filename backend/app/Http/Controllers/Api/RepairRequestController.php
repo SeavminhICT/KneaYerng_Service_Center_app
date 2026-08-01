@@ -68,6 +68,8 @@ class RepairRequestController extends Controller
             'issue_type' => ['required', 'string', 'max:255'],
             'service_type' => ['required', 'string'],
             'appointment_datetime' => ['nullable', 'date'],
+            'technician_id' => ['nullable', 'exists:technicians,id'],
+            'auto_assign' => ['nullable', 'boolean'],
         ]);
 
         $actor = $request->user() ?? $request->user('sanctum');
@@ -95,9 +97,32 @@ class RepairRequestController extends Controller
         ]);
 
         $this->logStatus($repair, $actor, $repair->status);
+
+        $technician = null;
+        if (! empty($validated['technician_id'])) {
+            $technician = Technician::find($validated['technician_id']);
+        } elseif (! empty($validated['auto_assign'])) {
+            $technician = $this->selectTechnician($repair);
+        }
+
+        if ($technician) {
+            $this->applyTechnicianAssignment($repair, $technician);
+            if ($repair->status === 'received') {
+                RepairStatusService::transition($repair, 'waiting_diagnosis', $actor);
+            }
+            RepairNotificationService::notify(
+                $repair->customer_id,
+                $repair->id,
+                'Technician assigned',
+                'Technician '.$technician->name.' assigned to repair #'.$repair->id.'.',
+                'assignment',
+                ['deep_link' => '/repairs/'.$repair->id]
+            );
+        }
+
         RepairNotificationService::notifyAdmin($repair->id, 'New repair request', 'Repair #'.$repair->id.' created.');
 
-        return new RepairRequestResource($repair->load(['customer']));
+        return new RepairRequestResource($repair->load(['customer', 'technician']));
     }
 
     public function my(Request $request)

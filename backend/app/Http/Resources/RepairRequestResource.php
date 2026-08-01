@@ -24,6 +24,7 @@ class RepairRequestResource extends JsonResource
                     'name' => $this->customer?->name,
                     'email' => $this->customer?->email,
                     'phone' => $this->customer?->phone,
+                    'is_app_user' => $this->customer ? ($this->customer->mobileDeviceTokens()->exists() || ! empty($this->customer->otp_verified_at)) : false,
                 ];
             }),
             'technician' => new TechnicianResource($this->whenLoaded('technician')),

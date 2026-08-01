@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Contracts\PushableNotification;
 use App\Models\MobileDeviceToken;
 use App\Models\OrderTrackingNotification;
 use App\Models\User;
@@ -76,7 +77,7 @@ class FirebasePushNotificationService
         $this->sendStoredNotification($user, $notification);
     }
 
-    public function sendStoredNotification(User $user, OrderTrackingNotification $notification): array
+    public function sendStoredNotification(User $user, PushableNotification $notification): array
     {
         $tokens = $user->mobileDeviceTokens()
             ->pluck('token')
@@ -84,10 +85,7 @@ class FirebasePushNotificationService
             ->unique()
             ->values();
 
-        $badgeCount = max(1, OrderTrackingNotification::query()
-            ->where('user_id', $user->id)
-            ->whereNull('read_at')
-            ->count());
+        $badgeCount = $notification->getPushBadgeCount($user);
 
         return $this->sendNotificationToTokens($tokens, $notification, $badgeCount);
     }
@@ -96,7 +94,7 @@ class FirebasePushNotificationService
      * Push a stored notification to an explicit set of FCM tokens (used for
      * guest devices that have no associated user account).
      */
-    public function sendNotificationToTokens(iterable $tokens, OrderTrackingNotification $notification, int $badgeCount = 1): array
+    public function sendNotificationToTokens(iterable $tokens, PushableNotification $notification, int $badgeCount = 1): array
     {
         $tokens = collect($tokens)->filter()->unique()->values();
 
@@ -119,25 +117,19 @@ class FirebasePushNotificationService
             return $summary;
         }
 
-        $payload = is_array($notification->payload) ? $notification->payload : [];
+        $payload = $notification->getPushPayload();
         $badgeCount = max(1, $badgeCount);
-        $data = $this->normalizeData([
-            'title' => $notification->title,
-            'body' => $notification->body ?? 'Your order tracking status was updated.',
-            'type' => $notification->type,
+        $data = $this->normalizeData(array_merge([
+            'title' => $notification->getPushTitle(),
+            'body' => $notification->getPushBody(),
+            'type' => $notification->getPushType(),
             'notification_id' => $notification->id,
             'badge' => $badgeCount,
-            'order_id' => $notification->order_id,
-            'order_number' => $payload['order_number'] ?? null,
-            'from_status' => $payload['from_status'] ?? null,
-            'to_status' => $payload['to_status'] ?? null,
-            'deep_link' => $payload['deep_link'] ?? ($notification->order_id ? '/orders/'.$notification->order_id : null),
-            'image_url' => $payload['image_url'] ?? null,
-        ]);
+        ], $payload));
         $androidConfig = AndroidConfig::fromArray([
             'priority' => 'high',
             'notification' => [
-                'channel_id' => 'order_tracking_updates_v2',
+                'channel_id' => $notification->getPushAndroidChannelId(),
                 'sound' => 'default',
                 'default_sound' => true,
                 'default_vibrate_timings' => true,
@@ -174,8 +166,8 @@ class FirebasePushNotificationService
                 $message = CloudMessage::new()
                     ->withToken($token)
                     ->withNotification(Notification::create(
-                        $notification->title,
-                        $notification->body ?? 'Your order tracking status was updated.'
+                        $notification->getPushTitle(),
+                        $notification->getPushBody()
                     ))
                     ->withAndroidConfig($androidConfig)
                     ->withApnsConfig($apnsConfig)

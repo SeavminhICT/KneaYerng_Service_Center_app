@@ -48,6 +48,11 @@ class RepairRequest extends Model
         return $this->hasOne(Quotation::class, 'repair_id');
     }
 
+    public function qcCheck()
+    {
+        return $this->hasOne(QcCheck::class, 'repair_id');
+    }
+
     public function statusLogs()
     {
         return $this->hasMany(RepairStatusLog::class, 'repair_id')->orderByDesc('logged_at');

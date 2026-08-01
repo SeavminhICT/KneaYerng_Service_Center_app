@@ -5,6 +5,12 @@
 
 @section('content')
     <div class="space-y-6">
+        @if (auth()->user()?->hasPermission('create_repair'))
+        <div class="flex justify-end">
+            <a href="{{ route('admin.repairs.create') }}" class="inline-flex h-10 items-center rounded-xl bg-primary-600 px-4 text-sm font-semibold text-white shadow-sm">{{ __('New Repair Job') }}</a>
+        </div>
+        @endif
+
         <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
             <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
                 <p class="text-xs font-semibold uppercase tracking-widest text-slate-400">{{ __('Today repairs') }}</p>
@@ -120,7 +126,7 @@
                 }
                 query.set('page', currentPage);
 
-                var response = await window.adminApi.request('/api/repairs-' + query.toString());
+                var response = await window.adminApi.request('/api/repairs?' + query.toString());
                 if (!response.ok) {
                     rows.innerHTML = '<tr><td class="px-4 py-6 text-center text-sm text-slate-500" colspan="7">{{ __('Unable to load repairs.') }}</td></tr>';
                     return;
@@ -129,23 +135,23 @@
                 var list = data.data || [];
 
                 rows.innerHTML = list.map(function (repair) {
-                    var appointment = repair.appointment_datetime - new Date(repair.appointment_datetime).toLocaleString() : '-';
+                    var appointment = repair.appointment_datetime ? new Date(repair.appointment_datetime).toLocaleString() : '-';
                     return `
                         <tr>
                             <td class="px-4 py-3 font-semibold text-slate-900 dark:text-white">#${repair.id}</td>
-                            <td class="px-4 py-3">${repair.customer - (repair.customer.name || repair.customer.email || '-') : '-'}</td>
+                            <td class="px-4 py-3">${repair.customer ? (repair.customer.name || repair.customer.email || '-') : '-'}</td>
                             <td class="px-4 py-3">${repair.device_model}</td>
                             <td class="px-4 py-3">${appointment}</td>
                             <td class="px-4 py-3">${toTitle(repair.status)}</td>
-                            <td class="px-4 py-3">${repair.technician - repair.technician.name : '-'}</td>
+                            <td class="px-4 py-3">${repair.technician ? repair.technician.name : '-'}</td>
                             <td class="px-4 py-3 text-right"><a href="/admin/repairs/${repair.id}" class="text-xs font-semibold text-primary-600">{{ __('Details') }}</a></td>
                         </tr>
                     `;
                 }).join('') || '<tr><td class="px-4 py-6 text-center text-sm text-slate-500" colspan="7">{{ __('No repairs found.') }}</td></tr>';
 
-                info.textContent = '{{ __('Showing') }} ' + list.length + ' {{ __('of') }} ' + (data.meta-.total -- list.length) + ' {{ __('repairs') }}';
-                prevButton.disabled = !data.links-.prev;
-                nextButton.disabled = !data.links-.next;
+                info.textContent = '{{ __('Showing') }} ' + list.length + ' {{ __('of') }} ' + (data.meta?.total ?? list.length) + ' {{ __('repairs') }}';
+                prevButton.disabled = !data.links?.prev;
+                nextButton.disabled = !data.links?.next;
 
                 var todayLabel = new Date().toDateString();
                 var todayCount = list.filter(function (repair) {
@@ -159,7 +165,7 @@
             }
 
             async function loadInvoiceSummary() {
-                var response = await window.adminApi.request('/api/invoices-per_page=20');
+                var response = await window.adminApi.request('/api/invoices?per_page=20');
                 if (!response.ok) {
                     return;
                 }

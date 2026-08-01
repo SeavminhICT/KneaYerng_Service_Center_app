@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hugeicons/hugeicons.dart';
 
@@ -20,34 +21,38 @@ class ProductPriceQuantityCard extends StatelessWidget {
     required this.total,
     required this.onMinus,
     required this.onPlus,
+    required this.onChanged,
+    this.onLimitExceeded,
     this.showQuantity = true,
   });
 
   final ProductDetailTone tone;
-  final double            unitPrice;
-  final double?           oldPrice;
-  final int               quantity;
-  final int?              stock;
-  final bool              isOutOfStock;
-  final double            total;
-  final VoidCallback      onMinus;
-  final VoidCallback      onPlus;
-  final bool              showQuantity;
+  final double unitPrice;
+  final double? oldPrice;
+  final int quantity;
+  final int? stock;
+  final bool isOutOfStock;
+  final double total;
+  final VoidCallback onMinus;
+  final VoidCallback onPlus;
+  final ValueChanged<int> onChanged;
+  final ValueChanged<int>? onLimitExceeded;
+  final bool showQuantity;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      width:   double.infinity,
+      width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color:        tone.white,
+        color: tone.white,
         borderRadius: BorderRadius.circular(16),
-        border:       Border.all(color: tone.border),
+        border: Border.all(color: tone.border),
         boxShadow: [
           BoxShadow(
-            color:      tone.shadow,
+            color: tone.shadow,
             blurRadius: 8,
-            offset:     const Offset(0, 2),
+            offset: const Offset(0, 2),
           ),
         ],
       ),
@@ -65,9 +70,9 @@ class ProductPriceQuantityCard extends StatelessWidget {
                     Text(
                       'UNIT PRICE',
                       style: TextStyle(
-                        fontSize:      10.5,
-                        fontWeight:    FontWeight.w700,
-                        color:         tone.textHint,
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w700,
+                        color: tone.textHint,
                         letterSpacing: 0.8,
                       ),
                     ),
@@ -77,12 +82,15 @@ class ProductPriceQuantityCard extends StatelessWidget {
                       children: [
                         Text(
                           '\$${unitPrice.toStringAsFixed(2)}',
-                          style: kmFont(context, GoogleFonts.inter(
-                            fontSize:   30,
-                            fontWeight: FontWeight.w800,
-                            color:      pdAccent,
-                            height:     1,
-                          )),
+                          style: kmFont(
+                            context,
+                            GoogleFonts.inter(
+                              fontSize: 30,
+                              fontWeight: FontWeight.w800,
+                              color: pdAccent,
+                              height: 1,
+                            ),
+                          ),
                         ),
                         const SizedBox(width: 6),
                         if (oldPrice != null) ...[
@@ -91,8 +99,8 @@ class ProductPriceQuantityCard extends StatelessWidget {
                             child: Text(
                               '\$${oldPrice!.toStringAsFixed(2)}',
                               style: TextStyle(
-                                fontSize:   13,
-                                color:      tone.textHint,
+                                fontSize: 13,
+                                color: tone.textHint,
                                 decoration: TextDecoration.lineThrough,
                               ),
                             ),
@@ -103,8 +111,8 @@ class ProductPriceQuantityCard extends StatelessWidget {
                           child: Text(
                             '/ unit',
                             style: TextStyle(
-                              fontSize:   12,
-                              color:      tone.textSub,
+                              fontSize: 12,
+                              color: tone.textSub,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
@@ -116,8 +124,10 @@ class ProductPriceQuantityCard extends StatelessWidget {
               ),
               // Stock badge
               ProductDetailStockBadge(
-                tone:         tone,
-                label:        isOutOfStock ? AppLocalizations.of(context).outOfStock : AppLocalizations.of(context).inStock,
+                tone: tone,
+                label: isOutOfStock
+                    ? AppLocalizations.of(context).outOfStock
+                    : AppLocalizations.of(context).inStock,
                 isOutOfStock: isOutOfStock,
               ),
             ],
@@ -138,19 +148,22 @@ class ProductPriceQuantityCard extends StatelessWidget {
                     Text(
                       'QUANTITY',
                       style: TextStyle(
-                        fontSize:      10.5,
-                        fontWeight:    FontWeight.w700,
-                        color:         tone.textHint,
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w700,
+                        color: tone.textHint,
                         letterSpacing: 0.8,
                       ),
                     ),
                     const SizedBox(height: 8),
                     ProductQuantityControl(
-                      tone:      tone,
-                      quantity:  quantity,
-                      onMinus:   onMinus,
-                      onPlus:    onPlus,
-                      disabled:  isOutOfStock,
+                      tone: tone,
+                      quantity: quantity,
+                      onMinus: onMinus,
+                      onPlus: onPlus,
+                      onChanged: onChanged,
+                      maxQuantity: stock,
+                      onLimitExceeded: onLimitExceeded,
+                      disabled: isOutOfStock,
                     ),
                   ],
                 ),
@@ -168,8 +181,8 @@ class ProductPriceQuantityCard extends StatelessWidget {
                         Text(
                           '$stock in stock',
                           style: TextStyle(
-                            fontSize:   11.5,
-                            color:      tone.textSub,
+                            fontSize: 11.5,
+                            color: tone.textSub,
                             fontWeight: FontWeight.w500,
                           ),
                         ),
@@ -177,8 +190,8 @@ class ProductPriceQuantityCard extends StatelessWidget {
                         const Text(
                           'Currently unavailable',
                           style: TextStyle(
-                            fontSize:   11.5,
-                            color:      pdRed,
+                            fontSize: 11.5,
+                            color: pdRed,
                             fontWeight: FontWeight.w500,
                           ),
                         ),
@@ -186,21 +199,24 @@ class ProductPriceQuantityCard extends StatelessWidget {
                       Text(
                         'TOTAL',
                         style: TextStyle(
-                          fontSize:      10.5,
-                          fontWeight:    FontWeight.w700,
-                          color:         tone.textHint,
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.w700,
+                          color: tone.textHint,
                           letterSpacing: 0.8,
                         ),
                       ),
                       const SizedBox(height: 2),
                       Text(
                         '\$${total.toStringAsFixed(2)}',
-                        style: kmFont(context, GoogleFonts.inter(
-                          fontSize:   20,
-                          fontWeight: FontWeight.w800,
-                          color:      tone.textPrimary,
-                          height:     1,
-                        )),
+                        style: kmFont(
+                          context,
+                          GoogleFonts.inter(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w800,
+                            color: tone.textPrimary,
+                            height: 1,
+                          ),
+                        ),
                       ),
                     ],
                   ),
@@ -217,56 +233,147 @@ class ProductPriceQuantityCard extends StatelessWidget {
 // ─────────────────────────────────────────────────────────────────────────────
 //  Quantity Control
 // ─────────────────────────────────────────────────────────────────────────────
-class ProductQuantityControl extends StatelessWidget {
+class ProductQuantityControl extends StatefulWidget {
   const ProductQuantityControl({
     super.key,
     required this.tone,
     required this.quantity,
     required this.onMinus,
     required this.onPlus,
+    required this.onChanged,
+    this.maxQuantity,
+    this.onLimitExceeded,
     this.disabled = false,
   });
 
   final ProductDetailTone tone;
-  final int               quantity;
-  final VoidCallback      onMinus;
-  final VoidCallback      onPlus;
-  final bool              disabled;
+  final int quantity;
+  final VoidCallback onMinus;
+  final VoidCallback onPlus;
+  final ValueChanged<int> onChanged;
+  final int? maxQuantity;
+  final ValueChanged<int>? onLimitExceeded;
+  final bool disabled;
+
+  @override
+  State<ProductQuantityControl> createState() => _ProductQuantityControlState();
+}
+
+class _ProductQuantityControlState extends State<ProductQuantityControl> {
+  bool _editing = false;
+  late final TextEditingController _controller = TextEditingController(
+    text: '${widget.quantity}',
+  );
+  late final FocusNode _focusNode = FocusNode()
+    ..addListener(() {
+      if (!_focusNode.hasFocus && _editing) _commit();
+    });
+
+  @override
+  void didUpdateWidget(covariant ProductQuantityControl oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!_editing && oldWidget.quantity != widget.quantity) {
+      _controller.text = '${widget.quantity}';
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  void _startEditing() {
+    if (widget.disabled) return;
+    setState(() {
+      _editing = true;
+      _controller.text = '${widget.quantity}';
+      _controller.selection = TextSelection(
+        baseOffset: 0,
+        extentOffset: _controller.text.length,
+      );
+    });
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => _focusNode.requestFocus(),
+    );
+  }
+
+  void _commit() {
+    final parsed = int.tryParse(_controller.text.trim());
+    var next = (parsed == null || parsed < 1) ? 1 : parsed;
+    final max = widget.maxQuantity;
+    if (max != null && max > 0 && next > max) {
+      next = max;
+      widget.onLimitExceeded?.call(max);
+    }
+    setState(() {
+      _editing = false;
+      _controller.text = '$next';
+    });
+    if (next != widget.quantity) widget.onChanged(next);
+  }
 
   @override
   Widget build(BuildContext context) {
+    final tone = widget.tone;
     return Container(
       decoration: BoxDecoration(
-        color:        tone.surfaceAlt,
+        color: tone.surfaceAlt,
         borderRadius: BorderRadius.circular(12),
-        border:       Border.all(color: tone.border),
+        border: Border.all(color: tone.border),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           _QBtn(
-            tone:     tone,
-            icon:     HugeIcons.strokeRoundedMinusSign,
-            onTap:    onMinus,
-            disabled: quantity <= 1 || disabled,
+            tone: tone,
+            icon: HugeIcons.strokeRoundedMinusSign,
+            onTap: widget.onMinus,
+            disabled: widget.quantity <= 1 || widget.disabled,
           ),
-          Container(
-            width:  44,
-            alignment: Alignment.center,
-            child: Text(
-              '$quantity',
-              style: TextStyle(
-                fontSize:   16,
-                fontWeight: FontWeight.w700,
-                color:      tone.textPrimary,
-              ),
+          GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: _editing ? null : _startEditing,
+            child: Container(
+              width: 44,
+              alignment: Alignment.center,
+              child: _editing
+                  ? TextField(
+                      controller: _controller,
+                      focusNode: _focusNode,
+                      autofocus: true,
+                      textAlign: TextAlign.center,
+                      keyboardType: TextInputType.number,
+                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: tone.textPrimary,
+                      ),
+                      decoration: const InputDecoration(
+                        isDense: true,
+                        contentPadding: EdgeInsets.zero,
+                        border: InputBorder.none,
+                      ),
+                      onSubmitted: (_) => _commit(),
+                      onTapOutside: (_) => _commit(),
+                    )
+                  : Text(
+                      '${widget.quantity}',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: tone.textPrimary,
+                      ),
+                    ),
             ),
           ),
           _QBtn(
-            tone:     tone,
-            icon:     HugeIcons.strokeRoundedAdd01,
-            onTap:    onPlus,
-            disabled: disabled,
+            tone: tone,
+            icon: HugeIcons.strokeRoundedAdd01,
+            onTap: widget.onPlus,
+            disabled: widget.disabled,
           ),
         ],
       ),
@@ -283,21 +390,21 @@ class _QBtn extends StatelessWidget {
   });
 
   final ProductDetailTone tone;
-  final IconData          icon;
-  final VoidCallback      onTap;
-  final bool              disabled;
+  final IconData icon;
+  final VoidCallback onTap;
+  final bool disabled;
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: disabled ? null : onTap,
       child: Container(
-        width:  38,
+        width: 38,
         height: 38,
         alignment: Alignment.center,
         child: Icon(
           icon,
-          size:  18,
+          size: 18,
           color: disabled ? tone.textHint : tone.textPrimary,
         ),
       ),

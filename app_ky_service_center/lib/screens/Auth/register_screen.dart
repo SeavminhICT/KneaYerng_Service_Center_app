@@ -170,7 +170,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
             Expanded(
               child: SingleChildScrollView(
                 physics: const ClampingScrollPhysics(),
-                keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+                keyboardDismissBehavior:
+                    ScrollViewKeyboardDismissBehavior.onDrag,
                 padding: EdgeInsets.fromLTRB(20, 24, 20, bottomInset + 24),
                 child: Form(
                   key: _formKey,
@@ -621,32 +622,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     final email = _emailCtrl.text.trim();
     final phone = _phoneCtrl.text.trim();
-    final error = await ApiService.register(
-      firstName: firstName,
-      lastName: lastName,
-      email: email,
-      phone: phone,
-      password: _passwordCtrl.text,
-      confirmPassword: _confirmPasswordCtrl.text,
-    );
-
-    if (!mounted) return;
-
-    if (error != null) {
-      setState(() => _loading = false);
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(error)));
-      return;
-    }
-
-    // Send OTP to phone for signup verification
-    const otpType = 'phone';
-    final request = await ApiService.requestOtp(
-      destination: phone,
-      type: otpType,
-      purpose: 'signup',
-    );
+    final request = await ApiService.requestPhoneAuthOtp(phone: phone);
 
     if (!mounted) return;
     setState(() => _loading = false);
@@ -659,7 +635,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     Navigator.push(
       context,
-      _buildOtpRoute(phone, otpType, initialResendInSec: request.resendInSec),
+      _buildOtpRoute(
+        phone,
+        'phone',
+        initialResendInSec: request.resendInSec,
+        firstName: firstName,
+        lastName: lastName,
+        email: email,
+        password: _passwordCtrl.text,
+        confirmPassword: _confirmPasswordCtrl.text,
+      ),
     );
   }
 
@@ -736,6 +721,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
     String type, {
     bool autoRequest = false,
     int? initialResendInSec,
+    String? firstName,
+    String? lastName,
+    String? email,
+    String? password,
+    String? confirmPassword,
   }) {
     return PageRouteBuilder<void>(
       transitionDuration: const Duration(milliseconds: 450),
@@ -743,9 +733,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
       pageBuilder: (context, animation, secondaryAnimation) => OtpScreen(
         destination: destination,
         type: type,
-        purpose: 'signup',
+        purpose: 'phone_auth',
         autoRequest: autoRequest,
         initialResendInSec: initialResendInSec,
+        firstName: firstName,
+        lastName: lastName,
+        email: email,
+        password: password,
+        confirmPassword: confirmPassword,
       ),
       transitionsBuilder: (context, animation, secondaryAnimation, child) {
         final curved = CurvedAnimation(

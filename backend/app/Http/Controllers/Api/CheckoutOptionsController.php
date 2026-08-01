@@ -3,11 +3,12 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Services\DeliveryFeeService;
 use Illuminate\Http\Request;
 
 class CheckoutOptionsController extends Controller
 {
-    public function __invoke(Request $request)
+    public function __invoke(Request $request, DeliveryFeeService $deliveryFeeService)
     {
         return response()->json([
             'data' => [
@@ -15,6 +16,8 @@ class CheckoutOptionsController extends Controller
                 'tax_rate' => (float) config('orders.tax_rate', 0),
                 'payment_methods' => config('orders.payment_methods', []),
                 'delivery_slots' => config('orders.delivery_slots', []),
+                'shop_location' => $deliveryFeeService->shopLocation(),
+                'delivery_fee_tiers' => $deliveryFeeService->tiers(),
             ],
         ]);
     }

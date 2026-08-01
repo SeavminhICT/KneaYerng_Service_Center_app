@@ -6,39 +6,73 @@
 @section('content')
     @if (auth()->user()?->hasPermission('view_dashboard'))
     <section class="space-y-6">
+        <div class="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+            <div>
+                <h2 class="text-lg font-semibold text-slate-900 dark:text-white">{{ __('Overview') }}</h2>
+                <p class="text-sm text-slate-500">{{ __('Filter sales and orders by date range.') }}</p>
+            </div>
+            <div class="flex flex-wrap items-end gap-3">
+                <div class="min-w-[170px]">
+                    <label class="text-xs font-semibold uppercase tracking-wider text-slate-400">{{ __('Date Range') }}</label>
+                    <select id="dashboard-range" class="mt-2 h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200">
+                        <option value="all" selected>{{ __('All time') }}</option>
+                        <option value="today">{{ __('Today') }}</option>
+                        <option value="yesterday">{{ __('Yesterday') }}</option>
+                        <option value="7_days">{{ __('Last 7 days') }}</option>
+                        <option value="1_month">{{ __('Last 1 month') }}</option>
+                        <option value="2_months">{{ __('Last 2 months') }}</option>
+                        <option value="3_months">{{ __('Last 3 months') }}</option>
+                        <option value="6_months">{{ __('Last 6 months') }}</option>
+                        <option value="1_year">{{ __('Last 1 year') }}</option>
+                        <option value="custom">{{ __('Custom range') }}</option>
+                    </select>
+                </div>
+                <div id="dashboard-range-start-wrap" class="hidden min-w-[150px]">
+                    <label class="text-xs font-semibold uppercase tracking-wider text-slate-400">{{ __('From') }}</label>
+                    <input id="dashboard-range-start" type="date" class="mt-2 h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200" />
+                </div>
+                <div id="dashboard-range-end-wrap" class="hidden min-w-[150px]">
+                    <label class="text-xs font-semibold uppercase tracking-wider text-slate-400">{{ __('To') }}</label>
+                    <input id="dashboard-range-end" type="date" class="mt-2 h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200" />
+                </div>
+                <button id="dashboard-range-apply" type="button" class="hidden h-10 inline-flex items-center rounded-xl bg-primary-600 px-4 text-sm font-semibold text-white shadow-sm hover:bg-primary-700">
+                    {{ __('Apply') }}
+                </button>
+            </div>
+        </div>
         <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                <a id="metric-sales-card" href="{{ route('admin.orders.index') }}" class="block rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-primary-200 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-primary-500/40 dark:focus:ring-offset-slate-950">
                     <p class="text-xs font-semibold uppercase tracking-widest text-slate-400">{{ __('Total Sales') }}</p>
                     <div class="mt-4 flex items-end justify-between">
                         <p id="metric-sales" class="text-2xl font-semibold text-slate-900 dark:text-white">--</p>
                         <span class="rounded-full bg-success-50 px-2 py-1 text-xs font-medium text-success-700 dark:bg-success-500/10 dark:text-success-100">{{ __('Live') }}</span>
                     </div>
-                    <p class="mt-2 text-xs text-slate-500">{{ __('All time') }}</p>
-                </div>
-                <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                    <p id="metric-sales-caption" class="mt-2 text-xs text-slate-500">{{ __('All time') }}</p>
+                </a>
+                <a id="metric-orders-card" href="{{ route('admin.orders.index') }}" class="block rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-primary-200 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-primary-500/40 dark:focus:ring-offset-slate-950">
                     <p class="text-xs font-semibold uppercase tracking-widest text-slate-400">{{ __('Total Orders') }}</p>
                     <div class="mt-4 flex items-end justify-between">
                         <p id="metric-orders" class="text-2xl font-semibold text-slate-900 dark:text-white">--</p>
                         <span class="rounded-full bg-primary-50 px-2 py-1 text-xs font-medium text-primary-700 dark:bg-primary-500/10 dark:text-primary-100">{{ __('Live') }}</span>
                     </div>
-                    <p class="mt-2 text-xs text-slate-500">{{ __('All time') }}</p>
-                </div>
-                <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                    <p id="metric-orders-caption" class="mt-2 text-xs text-slate-500">{{ __('All time') }}</p>
+                </a>
+                <a href="{{ route('admin.products.index') }}" class="block rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-primary-200 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-primary-500/40 dark:focus:ring-offset-slate-950">
                     <p class="text-xs font-semibold uppercase tracking-widest text-slate-400">{{ __('Total Products') }}</p>
                     <div class="mt-4 flex items-end justify-between">
                         <p id="metric-products" class="text-2xl font-semibold text-slate-900 dark:text-white">--</p>
                         <span class="rounded-full bg-warning-50 px-2 py-1 text-xs font-medium text-warning-700 dark:bg-warning-500/10 dark:text-warning-100">{{ __('Live') }}</span>
                     </div>
                     <p class="mt-2 text-xs text-slate-500">{{ __('All time') }}</p>
-                </div>
-                <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                </a>
+                <a href="{{ route('admin.customers.index') }}" class="block rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-primary-200 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-primary-500/40 dark:focus:ring-offset-slate-950">
                     <p class="text-xs font-semibold uppercase tracking-widest text-slate-400">{{ __('Total Customers') }}</p>
                     <div class="mt-4 flex items-end justify-between">
                         <p id="metric-customers" class="text-2xl font-semibold text-slate-900 dark:text-white">--</p>
                         <span class="rounded-full bg-success-50 px-2 py-1 text-xs font-medium text-success-700 dark:bg-success-500/10 dark:text-success-100">{{ __('Live') }}</span>
                     </div>
                     <p class="mt-2 text-xs text-slate-500">{{ __('All time') }}</p>
-                </div>
+                </a>
             </div>
 
             <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
@@ -116,7 +150,7 @@
                 <div class="flex flex-wrap items-center justify-between gap-3">
                     <div>
                         <h2 class="text-lg font-semibold text-slate-900 dark:text-white">{{ __('Sales Overview') }}</h2>
-                        <p class="text-sm text-slate-500">{{ __('Revenue performance for the last 12 weeks.') }}</p>
+                        <p id="sales-overview-subtitle" class="text-sm text-slate-500">{{ __('Revenue performance for the selected period.') }}</p>
                     </div>
                     <div class="flex items-center gap-2 text-xs text-slate-500">
                         <span class="inline-flex h-2 w-2 rounded-full bg-primary-500"></span>
@@ -128,8 +162,8 @@
                         {{ __('No sales data available yet.') }}
                     </div>
                     <div id="sales-overview-chart" class="hidden">
-                        <div id="sales-overview-bars" class="grid h-40 grid-cols-12 items-end gap-2"></div>
-                        <div id="sales-overview-labels" class="mt-3 grid grid-cols-12 gap-2 text-[10px] uppercase tracking-widest text-slate-400"></div>
+                        <div id="sales-overview-bars" class="grid h-40 items-end gap-2"></div>
+                        <div id="sales-overview-labels" class="mt-3 grid gap-2 text-[10px] uppercase tracking-widest text-slate-400"></div>
                     </div>
                 </div>
             </div>
@@ -137,7 +171,7 @@
             <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
                 <div class="flex items-center justify-between">
                     <h2 class="text-lg font-semibold text-slate-900 dark:text-white">{{ __('Low Stock Alerts') }}</h2>
-                    <a href="{{ route('admin.products.index') }}" class="text-xs font-semibold text-primary-600">{{ __('View all') }}</a>
+                    <a href="{{ route('admin.products.index', ['low_stock' => 1, 'threshold' => 10]) }}" class="text-xs font-semibold text-primary-600">{{ __('View all') }}</a>
                 </div>
                 <div id="low-stock-list" class="mt-5 space-y-4 text-sm text-slate-500">
                     {{ __('Loading low stock items...') }}
@@ -158,6 +192,7 @@
             unableLowStock: @json(__('Unable to load low stock items.')),
             noRecentOrders: @json(__('No recent orders.')),
             view: @json(__('View')),
+            overviewSubtitlePrefix: @json(__('Revenue performance for')),
             paymentStatusLabels: {
                 unpaid: @json(__('unpaid')),
                 paid: @json(__('paid')),
@@ -197,7 +232,7 @@
                 return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value || 0);
             }
 
-            function renderSalesOverview(weeklySales) {
+            function renderSalesOverview(series) {
                 const chart = document.getElementById('sales-overview-chart');
                 const emptyState = document.getElementById('sales-overview-empty');
                 const bars = document.getElementById('sales-overview-bars');
@@ -207,13 +242,13 @@
                     return;
                 }
 
-                if (!Array.isArray(weeklySales) || weeklySales.length === 0) {
+                if (!Array.isArray(series) || series.length === 0) {
                     chart.classList.add('hidden');
                     emptyState.classList.remove('hidden');
                     return;
                 }
 
-                const maxValue = weeklySales.reduce(function (carry, entry) {
+                const maxValue = series.reduce(function (carry, entry) {
                     const total = Number(entry.total || 0);
                     return total > carry ? total : carry;
                 }, 0);
@@ -224,9 +259,16 @@
                     return;
                 }
 
+                const columns = 'repeat(' + series.length + ', minmax(0, 1fr))';
+                bars.style.gridTemplateColumns = columns;
+                labels.style.gridTemplateColumns = columns;
+
+                // Avoid overcrowding the axis when a range produces many buckets (e.g. hourly/daily views).
+                const labelStep = Math.max(1, Math.ceil(series.length / 12));
+
                 bars.innerHTML = '';
                 labels.innerHTML = '';
-                weeklySales.forEach(function (entry) {
+                series.forEach(function (entry, index) {
                     const total = Number(entry.total || 0);
                     const count = Number(entry.order_count || 0);
                     const height = total > 0 ? Math.max(6, Math.round((total / maxValue) * 100)) : 0;
@@ -239,7 +281,7 @@
 
                     const label = document.createElement('div');
                     label.className = 'truncate text-center';
-                    label.textContent = entry.label || '';
+                    label.textContent = (index % labelStep === 0) ? (entry.label || '') : '';
                     labels.appendChild(label);
                 });
 
@@ -247,21 +289,99 @@
                 chart.classList.remove('hidden');
             }
 
-            try {
-                await window.adminApi.ensureCsrfCookie();
-                const response = await window.adminApi.request('/api/admin/metrics');
-                if (!response.ok) {
-                    return;
-                }
-                const data = await response.json();
-                document.getElementById('metric-sales').textContent = formatCurrency(data.total_sales || 0);
-                document.getElementById('metric-orders').textContent = data.total_orders ?? '--';
-                document.getElementById('metric-products').textContent = data.total_products ?? '--';
-                document.getElementById('metric-customers').textContent = data.total_customers ?? '--';
-                renderSalesOverview(data.weekly_sales || []);
-            } catch (error) {
-                console.error(error);
+            const rangeSelect = document.getElementById('dashboard-range');
+            const rangeStartInput = document.getElementById('dashboard-range-start');
+            const rangeEndInput = document.getElementById('dashboard-range-end');
+            const rangeStartWrap = document.getElementById('dashboard-range-start-wrap');
+            const rangeEndWrap = document.getElementById('dashboard-range-end-wrap');
+            const rangeApplyBtn = document.getElementById('dashboard-range-apply');
+            const salesCaption = document.getElementById('metric-sales-caption');
+            const ordersCaption = document.getElementById('metric-orders-caption');
+            const overviewSubtitle = document.getElementById('sales-overview-subtitle');
+            const salesCard = document.getElementById('metric-sales-card');
+            const ordersCard = document.getElementById('metric-orders-card');
+            const ordersIndexUrl = @json(route('admin.orders.index'));
+            let latestMetricsRange = null;
+
+            function toggleCustomRangeInputs() {
+                const isCustom = rangeSelect.value === 'custom';
+                rangeStartWrap.classList.toggle('hidden', !isCustom);
+                rangeEndWrap.classList.toggle('hidden', !isCustom);
+                rangeApplyBtn.classList.toggle('hidden', !isCustom);
             }
+
+            function currentRangeCaption() {
+                if (rangeSelect.value === 'custom' && rangeStartInput.value && rangeEndInput.value) {
+                    return rangeStartInput.value + ' → ' + rangeEndInput.value;
+                }
+                const selectedOption = rangeSelect.options[rangeSelect.selectedIndex];
+                return selectedOption ? selectedOption.textContent : '';
+            }
+
+            function updateMetricCardLinks() {
+                const params = new URLSearchParams();
+                if (latestMetricsRange && latestMetricsRange.start) {
+                    params.set('from_date', latestMetricsRange.start);
+                    if (latestMetricsRange.end) {
+                        params.set('to_date', latestMetricsRange.end);
+                    }
+                }
+
+                const query = params.toString();
+                const ordersUrl = ordersIndexUrl + (query ? '?' + query : '');
+                if (salesCard) salesCard.href = ordersUrl;
+                if (ordersCard) ordersCard.href = ordersUrl;
+            }
+
+            async function loadMetrics() {
+                try {
+                    await window.adminApi.ensureCsrfCookie();
+                    const params = new URLSearchParams({ range: rangeSelect.value });
+                    if (rangeSelect.value === 'custom') {
+                        if (!rangeStartInput.value || !rangeEndInput.value) {
+                            return;
+                        }
+                        params.set('start_date', rangeStartInput.value);
+                        params.set('end_date', rangeEndInput.value);
+                    }
+
+                    const response = await window.adminApi.request('/api/admin/metrics?' + params.toString());
+                    if (!response.ok) {
+                        return;
+                    }
+                    const data = await response.json();
+                    latestMetricsRange = data.range || null;
+                    document.getElementById('metric-sales').textContent = formatCurrency(data.total_sales || 0);
+                    document.getElementById('metric-orders').textContent = data.total_orders ?? '--';
+                    document.getElementById('metric-products').textContent = data.total_products ?? '--';
+                    document.getElementById('metric-customers').textContent = data.total_customers ?? '--';
+
+                    const caption = currentRangeCaption();
+                    if (salesCaption) salesCaption.textContent = caption;
+                    if (ordersCaption) ordersCaption.textContent = caption;
+                    if (overviewSubtitle) {
+                        overviewSubtitle.textContent = i18n.overviewSubtitlePrefix + ' ' + caption;
+                    }
+
+                    updateMetricCardLinks();
+                    renderSalesOverview(data.sales_series || []);
+                } catch (error) {
+                    console.error(error);
+                }
+            }
+
+            if (rangeSelect) {
+                toggleCustomRangeInputs();
+                rangeSelect.addEventListener('change', function () {
+                    toggleCustomRangeInputs();
+                    if (rangeSelect.value !== 'custom') {
+                        loadMetrics();
+                    }
+                });
+                rangeApplyBtn.addEventListener('click', loadMetrics);
+            }
+
+            await loadMetrics();
 
             try {
                 const lowStockResponse = await window.adminApi.request('/api/products?low_stock=1&threshold=10');
@@ -327,7 +447,7 @@
                         }).join('');
 
                         return `
-                            <tr>
+                            <tr class="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/60" onclick="window.location.href='/admin/orders/${order.id}'">
                                 <td class="px-4 py-3 font-semibold text-slate-900 dark:text-white">${order.order_number}</td>
                                 <td class="px-4 py-3">${order.customer_name}</td>
                                 <td class="px-4 py-3">${order.placed_at ? new Date(order.placed_at).toLocaleDateString() : '-'}</td>
@@ -335,7 +455,7 @@
                                 <td class="px-4 py-3">
                                     <span class="payment-badge rounded-full px-2 py-1 text-xs font-semibold ${paymentClass}" data-order-id="${order.id}">${i18n.paymentStatusLabels[normalizedPaymentStatus] || normalizedPaymentStatus}</span>
                                 </td>
-                                <td class="px-4 py-3 text-right">
+                                <td class="px-4 py-3 text-right" onclick="event.stopPropagation()">
                                     <div class="flex items-center justify-end gap-2">
                                         <select class="payment-status-select h-9 rounded-lg border border-slate-200 bg-white px-2 text-xs text-slate-700 shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200" data-order-id="${order.id}" data-current="${normalizedPaymentStatus}">
                                             ${paymentSelectOptions}

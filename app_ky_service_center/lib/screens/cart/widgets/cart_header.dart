@@ -17,7 +17,7 @@ class CartHeader extends StatelessWidget {
     final l = AppLocalizations.of(context);
     return Row(
       children: [
-        CircleBackButton(onPressed: onBack, color: cartInk),
+        CircleBackButton(onPressed: onBack, iconColor: cartInk),
         const SizedBox(width: 14),
         Expanded(
           child: Column(

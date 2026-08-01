@@ -4,54 +4,75 @@
 @section('page-title', __('Notifications'))
 
 @section('content')
+    @php
+        $panelClass = 'rounded-lg border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900';
+        $inputClass = 'mt-2 h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 placeholder:text-slate-400 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100';
+        $textareaClass = 'mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm text-slate-700 placeholder:text-slate-400 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100';
+        $radioCardClass = 'flex min-h-[54px] cursor-pointer items-center gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 transition hover:border-primary-300 hover:bg-primary-50/50 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200 dark:hover:border-primary-500/60 dark:hover:bg-primary-500/10';
+        $sectionClass = 'border-t border-slate-100 pt-5 dark:border-slate-800/70';
+    @endphp
+
     <section class="space-y-6"
         id="notification-page"
         data-can-send="{{ auth()->user()?->hasPermission('create_notification') ? '1' : '0' }}"
+        data-can-cancel="{{ auth()->user()?->hasPermission('delete_notification') ? '1' : '0' }}"
         data-history-url="{{ route('admin.notifications.history', [], false) }}">
-        <div class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-            <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-                <div>
-                    <span class="inline-flex rounded-full bg-primary-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.22em] text-primary-700 dark:bg-primary-500/10 dark:text-primary-100">{{ __('Push Center') }}</span>
-                    <h1 class="mt-3 text-2xl font-semibold text-slate-900 dark:text-white">{{ __('Send Notifications With Delivery Context') }}</h1>
-                    <p class="mt-2 max-w-3xl text-sm text-slate-500">{{ __('Design and preview the notification payload, choose the audience, and resend past notifications in one click.') }}</p>
+        <div class="{{ $panelClass }} p-5 sm:p-6">
+            <div class="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+                <div class="max-w-3xl">
+                    <div class="flex flex-wrap items-center gap-2">
+                        <span class="inline-flex rounded-full bg-primary-50 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-primary-700 dark:bg-primary-500/10 dark:text-primary-100">{{ __('Push Center') }}</span>
+                        <span class="inline-flex rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">{{ __('Admin Notifications') }}</span>
+                    </div>
+                    <h1 class="mt-3 text-2xl font-semibold text-slate-900 dark:text-white">{{ __('Notifications') }}</h1>
+                    <p class="mt-2 text-sm leading-6 text-slate-500 dark:text-slate-400">{{ __('Compose, schedule, preview, and review delivery results from one organized workspace.') }}</p>
                 </div>
-                {{-- <div class="flex flex-wrap gap-3">
-                    <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-center dark:border-slate-800 dark:bg-slate-950">
-                        <p id="stat-sent" class="text-xl font-bold text-slate-900 dark:text-white">--</p>
-                        <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">{{ __('Sent') }}</p>
+
+                <div class="grid w-full gap-3 sm:grid-cols-3 lg:w-auto lg:min-w-[420px]">
+                    <div class="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-800 dark:bg-slate-950">
+                        <p class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ __('Sent') }}</p>
+                        <p id="stat-sent" class="mt-1 text-2xl font-semibold text-slate-900 dark:text-white">--</p>
                     </div>
-                    <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-center dark:border-slate-800 dark:bg-slate-950">
-                        <p id="stat-delivered" class="text-xl font-bold text-emerald-600 dark:text-emerald-400">--</p>
-                        <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">{{ __('Delivered') }}</p>
+                    <div class="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 dark:border-emerald-500/30 dark:bg-emerald-500/10">
+                        <p class="text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">{{ __('Delivered') }}</p>
+                        <p id="stat-delivered" class="mt-1 text-2xl font-semibold text-emerald-700 dark:text-emerald-300">--</p>
                     </div>
-                    <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-center dark:border-slate-800 dark:bg-slate-950">
-                        <p id="stat-failed" class="text-xl font-bold text-rose-600 dark:text-rose-400">--</p>
-                        <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">{{ __('Failed') }}</p>
+                    <div class="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 dark:border-rose-500/30 dark:bg-rose-500/10">
+                        <p class="text-xs font-semibold uppercase tracking-wide text-rose-700 dark:text-rose-300">{{ __('Failed') }}</p>
+                        <p id="stat-failed" class="mt-1 text-2xl font-semibold text-rose-700 dark:text-rose-300">--</p>
                     </div>
-                </div> --}}
+                </div>
             </div>
         </div>
 
-        <div class="grid gap-6 xl:grid-cols-[1.6fr_1fr]">
+        <div class="grid gap-6 xl:grid-cols-[minmax(0,1.45fr)_minmax(340px,0.85fr)]">
             <div class="space-y-6">
-                <div class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-                    <div class="flex items-center justify-between gap-4">
+                <div class="{{ $panelClass }} p-5 sm:p-6">
+                    <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                         <div>
                             <h2 class="text-lg font-semibold text-slate-900 dark:text-white">{{ __('Compose Notification') }}</h2>
-                            <p class="mt-1 text-sm text-slate-500">{{ __('Create a reusable payload for announcements, alerts, documents, and order updates.') }}</p>
+                            <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">{{ __('Required payload, target audience, delivery timing, and optional routing.') }}</p>
                         </div>
-                        <span class="rounded-full bg-primary-50 px-3 py-1 text-xs font-semibold text-primary-700 dark:bg-primary-500/10 dark:text-primary-100">{{ __('Ready to send') }}</span>
+                        <span class="inline-flex w-fit rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700 dark:bg-amber-500/10 dark:text-amber-300">{{ __('Draft ready') }}</span>
                     </div>
 
                     <form id="notification-form" class="mt-6 space-y-5" data-send-url="{{ route('admin.notifications.store', [], false) }}" data-generate-message-url="{{ route('admin.notifications.generate-message', [], false) }}">
-                        <div class="grid gap-5 md:grid-cols-2">
+                        <div class="flex items-center gap-3">
+                            <span class="flex h-7 w-7 items-center justify-center rounded-lg bg-primary-50 text-sm font-semibold text-primary-700 dark:bg-primary-500/10 dark:text-primary-200">1</span>
+                            <div>
+                                <h3 class="text-sm font-semibold text-slate-900 dark:text-white">{{ __('Content') }}</h3>
+                                <p class="text-xs text-slate-500 dark:text-slate-400">{{ __('Title, type, and message') }}</p>
+                            </div>
+                        </div>
+
+                        <div class="grid gap-4 md:grid-cols-2">
                             <div>
                                 <label for="notification-title" class="text-sm font-semibold text-slate-700 dark:text-slate-200">{{ __('Title') }}</label>
-                                <input id="notification-title" name="title" type="text" placeholder="{{ __('Enter notification title') }}" class="mt-2 h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-700 placeholder:text-slate-400 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100" />
+                                <input id="notification-title" name="title" type="text" placeholder="{{ __('Enter notification title') }}" class="{{ $inputClass }}" />
                             </div>
                             <div>
-                                <label for="notification-type" class="text-sm font-semibold text-slate-700 dark:text-slate-200">{{ __('Notification Type') }}</label>
-                                <select id="notification-type" name="type" class="mt-2 h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-700 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100">
+                                <label for="notification-type" class="text-sm font-semibold text-slate-700 dark:text-slate-200">{{ __('Type') }}</label>
+                                <select id="notification-type" name="type" class="{{ $inputClass }}">
                                     <option value="Alert">{{ __('Alert') }}</option>
                                     <option value="Announcement">{{ __('Announcement') }}</option>
                                     <option value="Promotion">{{ __('Promotion') }}</option>
@@ -64,119 +85,170 @@
                         </div>
 
                         <div>
-                            <div class="flex items-center justify-between gap-2">
+                            <div class="flex flex-wrap items-center justify-between gap-2">
                                 <label for="notification-message" class="text-sm font-semibold text-slate-700 dark:text-slate-200">{{ __('Message') }}</label>
-                                <button id="ai-generate-message-btn" type="button" class="inline-flex items-center gap-1.5 rounded-lg border border-primary-200 bg-primary-50 px-2.5 py-1 text-xs font-semibold text-primary-700 hover:bg-primary-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-primary-500/40 dark:bg-primary-500/10 dark:text-primary-200">
+                                <button id="ai-generate-message-btn" type="button" class="inline-flex h-8 items-center gap-2 rounded-lg border border-primary-200 bg-primary-50 px-3 text-xs font-semibold text-primary-700 transition hover:bg-primary-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-primary-500/40 dark:bg-primary-500/10 dark:text-primary-200">
                                     <svg id="ai-generate-message-spinner" class="hidden h-3.5 w-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
                                         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                                         <path class="opacity-80" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
                                     </svg>
-                                    <span>{{ __('✨ Generate from AI') }}</span>
+                                    <span>{{ __('Generate') }}</span>
                                 </button>
                             </div>
-                            <textarea id="notification-message" name="message" rows="5" placeholder="{{ __('Write the message users should see on the device and inside the app.') }}" class="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 placeholder:text-slate-400 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"></textarea>
+                            <textarea id="notification-message" name="message" rows="5" placeholder="{{ __('Write the message users should see on the device and inside the app.') }}" class="{{ $textareaClass }}"></textarea>
                             <p id="ai-generate-message-error" class="mt-1 text-xs text-rose-600"></p>
                         </div>
 
-                        <div class="grid gap-5 md:grid-cols-2">
-                            <div>
-                                <label class="text-sm font-semibold text-slate-700 dark:text-slate-200">{{ __('Target Users') }}</label>
-                                <div class="mt-2 grid gap-3 sm:grid-cols-2">
-                                    <label class="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200">
-                                        <input type="radio" name="target_mode" value="all" checked class="h-4 w-4 border-slate-300 text-primary-600 focus:ring-primary-500" />
-                                        {{ __('Customers + guest devices') }}
-                                    </label>
-                                    <label class="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200">
-                                        <input type="radio" name="target_mode" value="registered" class="h-4 w-4 border-slate-300 text-primary-600 focus:ring-primary-500" />
-                                        {{ __('Registered Users') }}
-                                    </label>
-                                    <label class="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200">
-                                        <input type="radio" name="target_mode" value="guests" class="h-4 w-4 border-slate-300 text-primary-600 focus:ring-primary-500" />
-                                        {{ __('Guest Devices') }}
-                                    </label>
-                                    <label class="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200">
-                                        <input type="radio" name="target_mode" value="specific" class="h-4 w-4 border-slate-300 text-primary-600 focus:ring-primary-500" />
-                                        {{ __('Specific User') }}
-                                    </label>
+                        <div class="{{ $sectionClass }}">
+                            <div class="flex items-center gap-3">
+                                <span class="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-50 text-sm font-semibold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">2</span>
+                                <div>
+                                    <h3 class="text-sm font-semibold text-slate-900 dark:text-white">{{ __('Audience') }}</h3>
+                                    <p class="text-xs text-slate-500 dark:text-slate-400">{{ __('Recipients and device groups') }}</p>
                                 </div>
                             </div>
-                            <div id="specific-user-panel" class="hidden">
-                                <label for="target-user-id" class="text-sm font-semibold text-slate-700 dark:text-slate-200">{{ __('Choose User') }}</label>
-                                <select id="target-user-id" name="target_user_id" class="mt-2 h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-700 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100" disabled>
-                                    <option value="">{{ __('Select a user') }}</option>
-                                    @foreach ($users as $user)
-                                        <option value="{{ $user->id }}">
-                                            {{ trim(($user->name ?: __('User')).' - '.($user->email ?: $user->phone ?: __('No contact'))) }}
-                                        </option>
-                                    @endforeach
-                                </select>
-                                <p class="mt-2 text-xs text-slate-500">{{ __('Only users who already opened the mobile app and registered a device token can receive push delivery.') }}</p>
+
+                            <div class="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(240px,0.75fr)]">
+                                <div class="grid gap-3 sm:grid-cols-2">
+                                    <label class="{{ $radioCardClass }}">
+                                        <input type="radio" name="target_mode" value="all" checked class="h-4 w-4 border-slate-300 text-primary-600 focus:ring-primary-500" />
+                                        <span>{{ __('All devices') }}</span>
+                                    </label>
+                                    <label class="{{ $radioCardClass }}">
+                                        <input type="radio" name="target_mode" value="registered" class="h-4 w-4 border-slate-300 text-primary-600 focus:ring-primary-500" />
+                                        <span>{{ __('Registered users') }}</span>
+                                    </label>
+                                    <label class="{{ $radioCardClass }}">
+                                        <input type="radio" name="target_mode" value="guests" class="h-4 w-4 border-slate-300 text-primary-600 focus:ring-primary-500" />
+                                        <span>{{ __('Guest devices') }}</span>
+                                    </label>
+                                    <label class="{{ $radioCardClass }}">
+                                        <input type="radio" name="target_mode" value="specific" class="h-4 w-4 border-slate-300 text-primary-600 focus:ring-primary-500" />
+                                        <span>{{ __('Specific user') }}</span>
+                                    </label>
+                                </div>
+
+                                <div id="specific-user-panel" class="hidden rounded-lg border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-950">
+                                    <label for="target-user-id" class="text-sm font-semibold text-slate-700 dark:text-slate-200">{{ __('Choose User') }}</label>
+                                    <select id="target-user-id" name="target_user_id" class="{{ $inputClass }}" disabled>
+                                        <option value="">{{ __('Select a user') }}</option>
+                                        @foreach ($users as $user)
+                                            <option value="{{ $user->id }}">
+                                                {{ trim(($user->name ?: __('User')).' - '.($user->email ?: $user->phone ?: __('No contact'))) }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                    <p class="mt-2 text-xs leading-5 text-slate-500 dark:text-slate-400">{{ __('Only users with registered device tokens can receive push delivery.') }}</p>
+                                </div>
                             </div>
                         </div>
 
-                        <div class="grid gap-5 md:grid-cols-2">
-                            <div>
-                                <label for="notification-image" class="text-sm font-semibold text-slate-700 dark:text-slate-200">{{ __('Upload Image') }}</label>
-                                <input id="notification-image" name="image" type="file" accept="image/*" class="mt-2 block w-full rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-3 text-sm text-slate-500 file:mr-4 file:rounded-xl file:border-0 file:bg-primary-50 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-primary-700 hover:file:bg-primary-100 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-400 dark:file:bg-primary-500/10 dark:file:text-primary-100" />
+                        <div class="{{ $sectionClass }}">
+                            <div class="flex items-center gap-3">
+                                <span class="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 text-sm font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200">3</span>
+                                <div>
+                                    <h3 class="text-sm font-semibold text-slate-900 dark:text-white">{{ __('Media & Link') }}</h3>
+                                    <p class="text-xs text-slate-500 dark:text-slate-400">{{ __('Optional image and deep link') }}</p>
+                                </div>
                             </div>
-                            <div>
-                                <label for="notification-link" class="text-sm font-semibold text-slate-700 dark:text-slate-200">{{ __('Deep Link') }}</label>
-                                <input id="notification-link" name="deep_link" type="text" placeholder="/document/6 or https://..." class="mt-2 h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-700 placeholder:text-slate-400 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100" />
+
+                            <div class="mt-4 grid gap-4 md:grid-cols-2">
+                                <div>
+                                    <label for="notification-image" class="text-sm font-semibold text-slate-700 dark:text-slate-200">{{ __('Image') }}</label>
+                                    <input id="notification-image" name="image" type="file" accept="image/*" class="mt-2 block w-full rounded-lg border border-dashed border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-500 file:mr-4 file:rounded-md file:border-0 file:bg-primary-50 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-primary-700 hover:file:bg-primary-100 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-400 dark:file:bg-primary-500/10 dark:file:text-primary-100" />
+                                </div>
+                                <div>
+                                    <label for="notification-link" class="text-sm font-semibold text-slate-700 dark:text-slate-200">{{ __('Deep Link') }}</label>
+                                    <input id="notification-link" name="deep_link" type="text" placeholder="/document/6 or https://..." class="{{ $inputClass }}" />
+                                </div>
                             </div>
                         </div>
 
                         <input type="hidden" id="notification-action" name="action" value="send_now" />
 
-                        <div class="border-t border-slate-100 pt-5 dark:border-slate-800/60">
-                            <label class="text-sm font-semibold text-slate-700 dark:text-slate-200">{{ __('Delivery Timing') }}</label>
-                            <div class="mt-2 grid gap-3 sm:grid-cols-3">
-                                <label class="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200 cursor-pointer">
+                        <div class="{{ $sectionClass }}">
+                            <div class="flex items-center gap-3">
+                                <span class="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-50 text-sm font-semibold text-amber-700 dark:bg-amber-500/10 dark:text-amber-300">4</span>
+                                <div>
+                                    <h3 class="text-sm font-semibold text-slate-900 dark:text-white">{{ __('Delivery') }}</h3>
+                                    <p class="text-xs text-slate-500 dark:text-slate-400">{{ __('Immediate send or scheduled campaign') }}</p>
+                                </div>
+                            </div>
+                            <div class="mt-4 grid gap-3 sm:grid-cols-3">
+                                <label class="{{ $radioCardClass }}">
                                     <input type="radio" name="schedule_type" value="now" checked class="h-4 w-4 border-slate-300 text-primary-600 focus:ring-primary-500" />
-                                    {{ __('Send Immediately') }}
+                                    <span>{{ __('Now') }}</span>
                                 </label>
-                                <label class="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200 cursor-pointer">
+                                <label class="{{ $radioCardClass }}">
                                     <input type="radio" name="schedule_type" value="date" class="h-4 w-4 border-slate-300 text-primary-600 focus:ring-primary-500" />
-                                    {{ __('Specific Date & Time') }}
+                                    <span>{{ __('Date & time') }}</span>
                                 </label>
-                                <label class="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200 cursor-pointer">
+                                <label class="{{ $radioCardClass }}">
                                     <input type="radio" name="schedule_type" value="delay" class="h-4 w-4 border-slate-300 text-primary-600 focus:ring-primary-500" />
-                                    {{ __('Pre-set Delay') }}
+                                    <span>{{ __('Preset delay') }}</span>
                                 </label>
                             </div>
                         </div>
 
-                        <div id="schedule-date-panel" class="hidden">
+                        <div id="schedule-date-panel" class="hidden rounded-lg border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-950">
                             <label for="scheduled-for-input" class="text-sm font-semibold text-slate-700 dark:text-slate-200">{{ __('Choose Date & Time') }}</label>
-                            <input id="scheduled-for-input" name="scheduled_for" type="datetime-local" class="mt-2 h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-700 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100" />
+                            <input id="scheduled-for-input" name="scheduled_for" type="datetime-local" class="{{ $inputClass }}" />
                         </div>
 
-                        <div id="schedule-delay-panel" class="hidden">
+                        <div id="schedule-delay-panel" class="hidden rounded-lg border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-950">
                             <label for="schedule-delay-select" class="text-sm font-semibold text-slate-700 dark:text-slate-200">{{ __('Choose Delay Duration') }}</label>
-                            <select id="schedule-delay-select" name="schedule_delay" class="mt-2 h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-700 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100">
+                            <select id="schedule-delay-select" name="schedule_delay" class="{{ $inputClass }}">
                                 <option value="1_day">{{ __('1 Day') }}</option>
                                 <option value="3_days">{{ __('3 Days') }}</option>
                                 <option value="5_days">{{ __('5 Days') }}</option>
                                 <option value="1_week">{{ __('1 Week') }}</option>
                             </select>
+                            <div class="mt-3 border-t border-slate-200 pt-3 dark:border-slate-700">
+                                <button id="add-delay-option-toggle" type="button" class="inline-flex h-8 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
+                                    <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                                    </svg>
+                                    <span>{{ __('Custom duration') }}</span>
+                                </button>
+
+                                <div id="add-delay-option-form" class="mt-3 hidden rounded-lg border border-dashed border-slate-300 bg-white p-3 dark:border-slate-700 dark:bg-slate-900">
+                                    <div class="grid gap-2 sm:grid-cols-[96px_minmax(0,1fr)_auto_auto]">
+                                        <input id="delay-option-amount" type="number" min="1" max="9999" value="1" class="h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100" />
+                                        <select id="delay-option-unit" class="h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100">
+                                            <option value="hours">{{ __('Hours') }}</option>
+                                            <option value="days" selected>{{ __('Days') }}</option>
+                                            <option value="weeks">{{ __('Weeks') }}</option>
+                                        </select>
+                                        <button id="delay-option-add" type="button" class="h-10 rounded-lg bg-[#4A88F7] px-4 text-sm font-semibold text-white transition hover:bg-[#3977E6]">{{ __('Add') }}</button>
+                                        <button id="delay-option-cancel" type="button" class="h-10 rounded-lg border border-slate-200 px-4 text-sm font-semibold text-slate-600 dark:border-slate-700 dark:text-slate-300">{{ __('Cancel') }}</button>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
-                        <div class="flex flex-wrap gap-3 pt-2">
+                        <div class="flex flex-col-reverse gap-3 border-t border-slate-100 pt-5 dark:border-slate-800/70 sm:flex-row sm:items-center sm:justify-between">
+                            <button id="save-draft" type="button" class="inline-flex h-10 items-center justify-center rounded-lg border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200">
+                                {{ __('Save Draft') }}
+                            </button>
                             @if (auth()->user()?->hasPermission('create_notification'))
-                            <button id="send-notification" type="submit" class="inline-flex items-center justify-center rounded-2xl bg-[#4A88F7] px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-primary-500/20 transition hover:bg-[#3977E6]">{{ __('Send Notification') }}</button>
+                                <button id="send-notification" type="submit" class="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-[#4A88F7] px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#3977E6] disabled:cursor-not-allowed disabled:opacity-60">
+                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 12L3.27 3.96a.6.6 0 01.8-.74L21 12 4.07 20.78a.6.6 0 01-.8-.74L6 12zm0 0h8" />
+                                    </svg>
+                                    <span>{{ __('Send Notification') }}</span>
+                                </button>
                             @endif
-                            <button id="save-draft" type="button" class="inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200">{{ __('Save Draft') }}</button>
                         </div>
-                        <p class="text-xs text-slate-500">{{ __('Dashboard send flow: save notification in backend, send through Firebase, then the phone receives it if that user has a valid mobile token.') }}</p>
                     </form>
                 </div>
 
-                <div class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-                    <div class="flex flex-wrap items-center justify-between gap-4">
+                <div class="{{ $panelClass }} p-5 sm:p-6">
+                    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                         <div>
-                            <h2 class="text-lg font-semibold text-slate-900 dark:text-white">{{ __('Sent History') }}</h2>
-                            <p class="mt-1 text-sm text-slate-500">{{ __('Recent notifications sent from this dashboard. Resend or reuse any of them.') }}</p>
+                            <h2 class="text-lg font-semibold text-slate-900 dark:text-white">{{ __('History') }}</h2>
+                            <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">{{ __('Latest campaigns and delivery outcomes') }}</p>
                         </div>
-                        <button id="refresh-history" type="button" class="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200">
+                        <button id="refresh-history" type="button" class="inline-flex h-10 w-fit items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200">
                             <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h5M20 20v-5h-5M5.07 15a7 7 0 0011.9 2.4M18.93 9a7 7 0 00-11.9-2.4" />
                             </svg>
@@ -184,17 +256,21 @@
                         </button>
                     </div>
                     <div id="history-list" class="mt-5 space-y-3">
-                        <p id="history-empty" class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-950">{{ __('Loading history...') }}</p>
+                        <p id="history-empty" class="rounded-lg border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-950">{{ __('Loading history...') }}</p>
                     </div>
                     <div id="history-pagination" class="mt-4 hidden items-center justify-between gap-3"></div>
                 </div>
             </div>
 
-            <div class="space-y-6">
-                <div class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-                    <h2 class="text-lg font-semibold text-slate-900 dark:text-white">{{ __('Push Preview') }}</h2>
-                    <p class="mt-1 text-sm text-slate-500">{{ __('Live preview of the content users will see on mobile.') }}</p>
-                    <div class="mt-5 rounded-[28px] border border-slate-200 bg-slate-950 p-4 text-white shadow-inner dark:border-slate-800">
+            <div class="space-y-6 xl:sticky xl:top-24 xl:self-start">
+                <div class="{{ $panelClass }} p-5 sm:p-6">
+                    <div class="flex items-start justify-between gap-4">
+                        <div>
+                            <h2 class="text-lg font-semibold text-slate-900 dark:text-white">{{ __('Mobile Preview') }}</h2>
+                            <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">{{ __('Payload snapshot') }}</p>
+                        </div>
+                    </div>
+                    <div class="mt-5 rounded-[28px] border border-slate-800 bg-slate-950 p-4 text-white shadow-inner">
                         <div class="mb-3 flex items-center justify-between px-2 text-[11px] font-semibold text-white/50">
                             <span id="preview-clock">9:41</span>
                             <span class="flex items-center gap-1">
@@ -210,10 +286,10 @@
                                     </svg>
                                 </div>
                                 <div class="min-w-0 flex-1">
-                                    <p id="preview-type" class="text-xs font-semibold uppercase tracking-[0.24em] text-white/60">{{ __('Alert') }}</p>
+                                    <p id="preview-type" class="text-xs font-semibold uppercase tracking-wide text-white/60">{{ __('Alert') }}</p>
                                     <p id="preview-title" class="mt-2 text-base font-semibold">{{ __('Title preview will appear here') }}</p>
                                     <p id="preview-message" class="mt-2 text-sm leading-6 text-white/80">{{ __('Message preview will update as you type into the form on the left.') }}</p>
-                                    <img id="preview-image" src="" alt="" class="mt-3 hidden max-h-40 w-full rounded-2xl object-cover" />
+                                    <img id="preview-image" src="" alt="" class="mt-3 hidden max-h-40 w-full rounded-lg object-cover" />
                                     <div class="mt-4 flex items-center justify-between text-xs text-white/55">
                                         <span>{{ __('now') }}</span>
                                         <span id="preview-link">{{ __('No deep link') }}</span>
@@ -222,6 +298,17 @@
                             </div>
                         </div>
                     </div>
+
+                    <dl class="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
+                        <div class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 dark:border-slate-800 dark:bg-slate-950">
+                            <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ __('Audience') }}</dt>
+                            <dd id="preview-audience" class="mt-1 text-sm font-semibold text-slate-900 dark:text-white">{{ __('All devices') }}</dd>
+                        </div>
+                        <div class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 dark:border-slate-800 dark:bg-slate-950">
+                            <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ __('Delivery') }}</dt>
+                            <dd id="preview-schedule" class="mt-1 text-sm font-semibold text-slate-900 dark:text-white">{{ __('Now') }}</dd>
+                        </div>
+                    </dl>
                 </div>
             </div>
         </div>
@@ -231,6 +318,7 @@
         document.addEventListener('DOMContentLoaded', function () {
             var page = document.getElementById('notification-page');
             var canSend = page && page.dataset.canSend === '1';
+            var canCancel = page && page.dataset.canCancel === '1';
             var historyUrl = page ? page.dataset.historyUrl : '/admin/notifications/history';
             var form = document.getElementById('notification-form');
             var titleInput = document.getElementById('notification-title');
@@ -247,6 +335,8 @@
             var previewLink = document.getElementById('preview-link');
             var previewImage = document.getElementById('preview-image');
             var previewClock = document.getElementById('preview-clock');
+            var previewAudience = document.getElementById('preview-audience');
+            var previewSchedule = document.getElementById('preview-schedule');
             var saveDraftButton = document.getElementById('save-draft');
             var sendButton = document.getElementById('send-notification');
             var aiGenerateMessageBtn = document.getElementById('ai-generate-message-btn');
@@ -269,22 +359,201 @@
             var scheduledForInput = document.getElementById('scheduled-for-input');
             var scheduleDelaySelect = document.getElementById('schedule-delay-select');
             var actionInput = document.getElementById('notification-action');
+            var addDelayToggle = document.getElementById('add-delay-option-toggle');
+            var addDelayForm = document.getElementById('add-delay-option-form');
+            var delayAmountInput = document.getElementById('delay-option-amount');
+            var delayUnitSelect = document.getElementById('delay-option-unit');
+            var delayAddButton = document.getElementById('delay-option-add');
+            var delayCancelButton = document.getElementById('delay-option-cancel');
+            var customDelayKey = 'admin.notification.customDelayOptions';
 
             if (previewClock) {
                 var now = new Date();
                 previewClock.textContent = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
             }
 
+            function delayOptionValue(amount, unit) {
+                var singularUnit = ({ hours: 'hour', days: 'day', weeks: 'week' })[unit] || 'day';
+                return amount + '_' + (amount === 1 ? singularUnit : singularUnit + 's');
+            }
+
+            function delayOptionLabel(amount, unit) {
+                var unitLabel = ({ hours: 'Hour', days: 'Day', weeks: 'Week' })[unit] || 'Day';
+                if (amount !== 1) {
+                    unitLabel += 's';
+                }
+                return amount + ' ' + unitLabel;
+            }
+
+            function delayLabelFromValue(value) {
+                var match = /^(\d{1,4})_(hour|hours|day|days|week|weeks)$/.exec(value || '');
+                if (!match) {
+                    return null;
+                }
+                var amount = parseInt(match[1], 10);
+                var unitWord = match[2].replace(/s$/, '');
+                var label = unitWord.charAt(0).toUpperCase() + unitWord.slice(1);
+                if (amount !== 1) {
+                    label += 's';
+                }
+                return amount + ' ' + label;
+            }
+
+            function persistCustomDelayOption(value, label) {
+                var saved = [];
+                try {
+                    saved = JSON.parse(localStorage.getItem(customDelayKey) || '[]');
+                } catch (error) {
+                    saved = [];
+                }
+                if (!saved.some(function (item) { return item && item.value === value; })) {
+                    saved.push({ value: value, label: label });
+                    localStorage.setItem(customDelayKey, JSON.stringify(saved));
+                }
+            }
+
+            function addDelayOption(value, label, shouldPersist, shouldSelect) {
+                if (!scheduleDelaySelect) {
+                    return;
+                }
+                var existing = scheduleDelaySelect.querySelector('option[value="' + value + '"]');
+                if (!existing) {
+                    var option = document.createElement('option');
+                    option.value = value;
+                    option.textContent = label;
+                    scheduleDelaySelect.appendChild(option);
+                    if (shouldPersist !== false) {
+                        persistCustomDelayOption(value, label);
+                    }
+                }
+                if (shouldSelect !== false) {
+                    scheduleDelaySelect.value = value;
+                    syncPreview();
+                }
+            }
+
+            function ensureDelayOptionExists(value) {
+                if (!value || !scheduleDelaySelect || scheduleDelaySelect.querySelector('option[value="' + value + '"]')) {
+                    return;
+                }
+                var label = delayLabelFromValue(value);
+                if (label) {
+                    addDelayOption(value, label, false, false);
+                }
+            }
+
+            function restoreCustomDelayOptions() {
+                if (!scheduleDelaySelect) {
+                    return;
+                }
+                var saved = [];
+                try {
+                    saved = JSON.parse(localStorage.getItem(customDelayKey) || '[]');
+                } catch (error) {
+                    saved = [];
+                }
+                saved.forEach(function (item) {
+                    if (item && item.value && item.label) {
+                        ensureDelayOptionExists(item.value);
+                    }
+                });
+            }
+
+            restoreCustomDelayOptions();
+
+            if (addDelayToggle && addDelayForm) {
+                addDelayToggle.addEventListener('click', function () {
+                    addDelayForm.classList.toggle('hidden');
+                    if (!addDelayForm.classList.contains('hidden') && delayAmountInput) {
+                        delayAmountInput.focus();
+                        delayAmountInput.select();
+                    }
+                });
+            }
+
+            if (delayCancelButton && addDelayForm) {
+                delayCancelButton.addEventListener('click', function () {
+                    addDelayForm.classList.add('hidden');
+                });
+            }
+
+            if (delayAddButton) {
+                delayAddButton.addEventListener('click', function () {
+                    var amount = parseInt(delayAmountInput ? delayAmountInput.value : '', 10);
+                    if (!amount || amount < 1 || amount > 9999) {
+                        if (window.adminSwalError) {
+                            window.adminSwalError('Invalid duration', 'Enter a number from 1 to 9999.');
+                        }
+                        return;
+                    }
+                    var unit = delayUnitSelect ? delayUnitSelect.value : 'days';
+                    addDelayOption(delayOptionValue(amount, unit), delayOptionLabel(amount, unit), true, true);
+                    if (addDelayForm) {
+                        addDelayForm.classList.add('hidden');
+                    }
+                });
+            }
+
+            function setSendButtonLabel(label) {
+                if (!sendButton) {
+                    return;
+                }
+                var labelNode = sendButton.querySelector('span');
+                if (labelNode) {
+                    labelNode.textContent = label;
+                    return;
+                }
+                sendButton.textContent = label;
+            }
+
+            function sendButtonIdleLabel() {
+                var scheduleType = (document.querySelector('input[name="schedule_type"]:checked') || {}).value || 'now';
+                return scheduleType === 'now' ? 'Send Notification' : 'Schedule Notification';
+            }
+
+            function audienceSelectionLabel() {
+                var mode = (document.querySelector('input[name="target_mode"]:checked') || {}).value || 'all';
+                if (mode === 'specific') {
+                    var selected = targetUserSelect && targetUserSelect.selectedOptions ? targetUserSelect.selectedOptions[0] : null;
+                    return selected && targetUserSelect.value ? selected.textContent.trim() : 'Specific user';
+                }
+                var labels = {
+                    all: 'All devices',
+                    registered: 'Registered users',
+                    guests: 'Guest devices',
+                };
+                return labels[mode] || 'All devices';
+            }
+
+            function scheduleSelectionLabel() {
+                var scheduleType = (document.querySelector('input[name="schedule_type"]:checked') || {}).value || 'now';
+                if (scheduleType === 'date') {
+                    if (!scheduledForInput || !scheduledForInput.value) {
+                        return 'Date & time';
+                    }
+                    var scheduledAt = new Date(scheduledForInput.value);
+                    return isNaN(scheduledAt.getTime()) ? 'Date & time' : scheduledAt.toLocaleString();
+                }
+                if (scheduleType === 'delay') {
+                    var selected = scheduleDelaySelect && scheduleDelaySelect.selectedOptions ? scheduleDelaySelect.selectedOptions[0] : null;
+                    return selected ? selected.textContent.trim() : 'Preset delay';
+                }
+                return 'Now';
+            }
+
             function updateSpecificUserState() {
                 var mode = document.querySelector('input[name="target_mode"]:checked');
                 var isSpecific = !!mode && mode.value === 'specific';
-                specificUserPanel.classList.toggle('hidden', !isSpecific);
+                if (specificUserPanel) {
+                    specificUserPanel.classList.toggle('hidden', !isSpecific);
+                }
                 if (targetUserSelect) {
                     targetUserSelect.disabled = !isSpecific;
                     if (!isSpecific) {
                         targetUserSelect.value = '';
                     }
                 }
+                syncPreview();
             }
 
             function updateScheduleState() {
@@ -298,6 +567,10 @@
                 if (actionInput) {
                     actionInput.value = (scheduleType === 'now') ? 'send_now' : 'schedule';
                 }
+                if (!sendButton || !sendButton.disabled) {
+                    setSendButtonLabel(sendButtonIdleLabel());
+                }
+                syncPreview();
             }
 
             function syncPreview() {
@@ -305,6 +578,12 @@
                 previewMessage.textContent = messageInput.value.trim() || 'Message preview will update as you type into the form on the left.';
                 previewType.textContent = typeInput.value || 'Alert';
                 previewLink.textContent = deepLinkInput.value.trim() || 'No deep link';
+                if (previewAudience) {
+                    previewAudience.textContent = audienceSelectionLabel();
+                }
+                if (previewSchedule) {
+                    previewSchedule.textContent = scheduleSelectionLabel();
+                }
             }
 
             function syncImagePreview() {
@@ -472,7 +751,7 @@
                     return;
                 }
                 sendButton.disabled = isSubmitting;
-                sendButton.textContent = isSubmitting ? 'Sending...' : 'Send Notification';
+                setSendButtonLabel(isSubmitting ? 'Sending...' : sendButtonIdleLabel());
             }
 
             // ---- History + resend ----
@@ -551,6 +830,28 @@
                 statFailed.textContent = String(failed);
             }
 
+            function metricPill(label, value, tone) {
+                var pill = document.createElement('div');
+                var tones = {
+                    slate: 'border-slate-200 bg-white text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-white',
+                    emerald: 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300',
+                    rose: 'border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-300',
+                };
+                pill.className = 'rounded-lg border px-3 py-2 ' + (tones[tone] || tones.slate);
+
+                var number = document.createElement('p');
+                number.className = 'text-sm font-semibold';
+                number.textContent = value;
+
+                var caption = document.createElement('p');
+                caption.className = 'mt-0.5 text-[11px] font-semibold uppercase tracking-wide opacity-70';
+                caption.textContent = label;
+
+                pill.appendChild(number);
+                pill.appendChild(caption);
+                return pill;
+            }
+
             function renderHistory(items) {
                 historyItems = items;
                 historyList.innerHTML = '';
@@ -558,25 +859,27 @@
 
                 if (!items.length) {
                     var empty = document.createElement('p');
-                    empty.className = 'rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-950';
+                    empty.className = 'rounded-lg border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-950';
                     empty.textContent = 'No notifications sent yet. Compose one above to get started.';
                     historyList.appendChild(empty);
                     return;
                 }
 
                 items.forEach(function (item) {
-                    var card = document.createElement('div');
-                    card.className = 'rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950';
+                    var summary = item.summary || {};
+                    var row = document.createElement('article');
+                    row.className = 'rounded-lg border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950';
 
-                    var top = document.createElement('div');
-                    top.className = 'flex flex-wrap items-start justify-between gap-3';
+                    var layout = document.createElement('div');
+                    layout.className = 'grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(220px,auto)]';
 
                     var info = document.createElement('div');
-                    info.className = 'min-w-0 flex-1';
+                    info.className = 'min-w-0';
 
                     var badges = document.createElement('div');
                     badges.className = 'flex flex-wrap items-center gap-2';
                     badges.appendChild(statusBadge(item.status));
+
                     var typeBadge = document.createElement('span');
                     typeBadge.className = 'inline-flex rounded-full bg-primary-50 px-2.5 py-0.5 text-[11px] font-semibold text-primary-700 dark:bg-primary-500/10 dark:text-primary-100';
                     typeBadge.textContent = item.type || 'Alert';
@@ -590,49 +893,64 @@
 
                     if (item.message) {
                         var message = document.createElement('p');
-                        message.className = 'mt-1 line-clamp-2 text-sm text-slate-500';
+                        message.className = 'mt-1 max-h-12 overflow-hidden text-sm leading-6 text-slate-500 dark:text-slate-400';
                         message.textContent = item.message;
                         info.appendChild(message);
                     }
 
-                    var meta = document.createElement('p');
-                    meta.className = 'mt-2 text-xs text-slate-400 dark:text-slate-500';
-                    var summary = item.summary || {};
-                    var parts = [audienceLabel(item)];
-                    if (item.status === 'sent') {
-                        if (Number(summary.saved_notifications || 0) > 0) {
-                            parts.push('inbox saved ' + Number(summary.saved_notifications || 0));
-                        }
-                        parts.push('delivered ' + Number(summary.delivered || 0) + '/' + Number(summary.device_tokens || 0) + ' device(s)');
-                        if (Number(summary.failed || 0) > 0) {
-                            parts.push(summary.failed + ' failed');
-                        }
-                        if (summary.push_error) {
-                            parts.push('push setup issue');
-                        }
-                    }
-                    if (item.status === 'scheduled' && item.scheduled_for) {
-                        parts.push('Scheduled: ' + new Date(item.scheduled_for).toLocaleString());
-                    }
-                    var when = relativeTime(item.created_at);
-                    if (when) {
-                        parts.push(when);
-                    }
-                    if (item.created_by && item.created_by.name) {
-                        parts.push('by ' + item.created_by.name);
-                    }
-                    meta.textContent = parts.join(' | ');
-                    info.appendChild(meta);
+                    var meta = document.createElement('div');
+                    meta.className = 'mt-3 flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-500 dark:text-slate-400';
 
-                    top.appendChild(info);
+                    [audienceLabel(item), relativeTime(item.created_at)].forEach(function (part) {
+                        if (!part) {
+                            return;
+                        }
+                        var span = document.createElement('span');
+                        span.textContent = part;
+                        meta.appendChild(span);
+                    });
+
+                    if (item.status === 'scheduled' && item.scheduled_for) {
+                        var scheduled = document.createElement('span');
+                        scheduled.textContent = 'Scheduled: ' + new Date(item.scheduled_for).toLocaleString();
+                        meta.appendChild(scheduled);
+                    }
+
+                    if (item.created_by && item.created_by.name) {
+                        var createdBy = document.createElement('span');
+                        createdBy.textContent = 'By ' + item.created_by.name;
+                        meta.appendChild(createdBy);
+                    }
+
+                    if (summary.push_error) {
+                        var issue = document.createElement('span');
+                        issue.className = 'font-semibold text-amber-700 dark:text-amber-300';
+                        issue.textContent = 'Push setup issue';
+                        meta.appendChild(issue);
+                    }
+
+                    info.appendChild(meta);
+                    layout.appendChild(info);
+
+                    var side = document.createElement('div');
+                    side.className = 'space-y-3';
+
+                    var metrics = document.createElement('div');
+                    metrics.className = 'grid grid-cols-3 gap-2';
+                    var saved = Number(summary.saved_notifications || summary.stored_notifications || 0);
+                    var delivered = Number(summary.delivered || 0) + '/' + Number(summary.device_tokens || 0);
+                    metrics.appendChild(metricPill('Saved', saved, 'slate'));
+                    metrics.appendChild(metricPill('Delivered', delivered, 'emerald'));
+                    metrics.appendChild(metricPill('Failed', Number(summary.failed || 0), 'rose'));
+                    side.appendChild(metrics);
 
                     var actions = document.createElement('div');
-                    actions.className = 'flex shrink-0 flex-col gap-2 sm:flex-row';
+                    actions.className = 'flex flex-wrap justify-end gap-2';
 
-                    if (item.status === 'scheduled' && canSend) {
+                    if (item.status === 'scheduled' && canCancel) {
                         var cancelBtn = document.createElement('button');
                         cancelBtn.type = 'button';
-                        cancelBtn.className = 'inline-flex items-center justify-center gap-1.5 rounded-xl bg-rose-50 px-3.5 py-2 text-xs font-semibold text-rose-600 shadow-sm transition hover:bg-rose-100 dark:bg-rose-500/10 dark:text-rose-400 dark:hover:bg-rose-500/20';
+                        cancelBtn.className = 'inline-flex h-9 items-center justify-center rounded-lg bg-rose-50 px-3 text-xs font-semibold text-rose-600 shadow-sm transition hover:bg-rose-100 dark:bg-rose-500/10 dark:text-rose-400 dark:hover:bg-rose-500/20';
                         cancelBtn.textContent = 'Cancel';
                         cancelBtn.addEventListener('click', function () {
                             cancelCampaign(item, cancelBtn);
@@ -641,8 +959,8 @@
                     } else if (item.status !== 'scheduled' && item.status !== 'cancelled' && canSend) {
                         var resendBtn = document.createElement('button');
                         resendBtn.type = 'button';
-                        resendBtn.className = 'inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#4A88F7] px-3.5 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-[#3977E6] disabled:opacity-60';
-                        resendBtn.innerHTML = '<svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 12L3.27 3.96a.6.6 0 01.8-.74L21 12 4.07 20.78a.6.6 0 01-.8-.74L6 12zm0 0h8"/></svg>' + 'Send Again';
+                        resendBtn.className = 'inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-[#4A88F7] px-3 text-xs font-semibold text-white shadow-sm transition hover:bg-[#3977E6] disabled:opacity-60';
+                        resendBtn.innerHTML = '<svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 12L3.27 3.96a.6.6 0 01.8-.74L21 12 4.07 20.78a.6.6 0 01-.8-.74L6 12zm0 0h8"/></svg><span>Send Again</span>';
                         resendBtn.addEventListener('click', function () {
                             resendCampaign(item, resendBtn);
                         });
@@ -651,16 +969,17 @@
 
                     var reuseBtn = document.createElement('button');
                     reuseBtn.type = 'button';
-                    reuseBtn.className = 'inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200';
+                    reuseBtn.className = 'inline-flex h-9 items-center justify-center rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 shadow-sm transition hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200';
                     reuseBtn.textContent = 'Load to Form';
                     reuseBtn.addEventListener('click', function () {
                         loadToForm(item);
                     });
                     actions.appendChild(reuseBtn);
 
-                    top.appendChild(actions);
-                    card.appendChild(top);
-                    historyList.appendChild(card);
+                    side.appendChild(actions);
+                    layout.appendChild(side);
+                    row.appendChild(layout);
+                    historyList.appendChild(row);
                 });
             }
 
@@ -689,7 +1008,7 @@
 
                 var prevBtn = document.createElement('button');
                 prevBtn.type = 'button';
-                prevBtn.className = 'inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200';
+                prevBtn.className = 'inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200';
                 prevBtn.textContent = 'Previous';
                 prevBtn.disabled = meta.current_page <= 1;
                 prevBtn.addEventListener('click', function () {
@@ -702,7 +1021,7 @@
 
                 var nextBtn = document.createElement('button');
                 nextBtn.type = 'button';
-                nextBtn.className = 'inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200';
+                nextBtn.className = 'inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200';
                 nextBtn.textContent = 'Next';
                 nextBtn.disabled = meta.current_page >= meta.last_page;
                 nextBtn.addEventListener('click', function () {
@@ -732,7 +1051,7 @@
                 } catch (error) {
                     historyList.innerHTML = '';
                     var failed = document.createElement('p');
-                    failed.className = 'rounded-2xl border border-dashed border-rose-300 bg-rose-50 px-4 py-6 text-center text-sm text-rose-600 dark:border-rose-800 dark:bg-rose-500/10 dark:text-rose-300';
+                    failed.className = 'rounded-lg border border-dashed border-rose-300 bg-rose-50 px-4 py-6 text-center text-sm text-rose-600 dark:border-rose-800 dark:bg-rose-500/10 dark:text-rose-300';
                     failed.textContent = 'Could not load notification history. Try Refresh.';
                     historyList.appendChild(failed);
                     if (historyPagination) {
@@ -778,7 +1097,8 @@
                     scheduledForInput.value = '';
                 }
                 if (scheduleType === 'delay' && meta.schedule_delay && scheduleDelaySelect) {
-                    scheduleDelaySelect.value = meta.schedule_delay;
+                    ensureDelayOptionExists(meta.schedule_delay);
+                    scheduleDelaySelect.value = scheduleDelaySelect.querySelector('option[value="' + meta.schedule_delay + '"]') ? meta.schedule_delay : '1_day';
                 } else if (scheduleDelaySelect) {
                     scheduleDelaySelect.value = '1_day';
                 }
@@ -989,6 +1309,10 @@
                 input.addEventListener('change', updateSpecificUserState);
             });
 
+            if (targetUserSelect) {
+                targetUserSelect.addEventListener('change', syncPreview);
+            }
+
             [titleInput, messageInput, typeInput, deepLinkInput].forEach(function (input) {
                 input.addEventListener('input', syncPreview);
                 input.addEventListener('change', syncPreview);
@@ -1105,7 +1429,9 @@
                         scheduledForInput.value = draft.scheduled_for || '';
                     }
                     if (scheduleDelaySelect) {
-                        scheduleDelaySelect.value = draft.schedule_delay || '1_day';
+                        var draftDelay = draft.schedule_delay || '1_day';
+                        ensureDelayOptionExists(draftDelay);
+                        scheduleDelaySelect.value = scheduleDelaySelect.querySelector('option[value="' + draftDelay + '"]') ? draftDelay : '1_day';
                     }
                 }
             } catch (error) {
@@ -1114,6 +1440,14 @@
 
             scheduleTypeInputs.forEach(function (input) {
                 input.addEventListener('change', updateScheduleState);
+            });
+
+            [scheduledForInput, scheduleDelaySelect].forEach(function (input) {
+                if (!input) {
+                    return;
+                }
+                input.addEventListener('input', syncPreview);
+                input.addEventListener('change', syncPreview);
             });
 
             updateSpecificUserState();

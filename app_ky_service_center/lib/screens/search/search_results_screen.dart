@@ -55,7 +55,9 @@ class _SearchResultsScreenState extends State<SearchResultsScreen> {
     super.initState();
     _controller = TextEditingController(text: widget.initialQuery);
     _loadRecent();
-    _focusNode.addListener(() { if (mounted) setState(() {}); });
+    _focusNode.addListener(() {
+      if (mounted) setState(() {});
+    });
     if (widget.initialQuery.trim().isNotEmpty) {
       _future = _load(widget.initialQuery);
     } else if (widget.autofocus) {
@@ -89,14 +91,20 @@ class _SearchResultsScreenState extends State<SearchResultsScreen> {
     final query = (raw ?? _controller.text).trim();
     _debounce?.cancel();
     if (query.isEmpty) {
-      setState(() { _suggestions = []; _loadingSuggestions = false; });
+      setState(() {
+        _suggestions = [];
+        _loadingSuggestions = false;
+      });
       return;
     }
     setState(() => _loadingSuggestions = true);
     _debounce = Timer(const Duration(milliseconds: 250), () async {
       final s = await ApiService.fetchSearchSuggestions(query);
       if (!mounted || _controller.text.trim() != query) return;
-      setState(() { _suggestions = s; _loadingSuggestions = false; });
+      setState(() {
+        _suggestions = s;
+        _loadingSuggestions = false;
+      });
     });
   }
 
@@ -105,13 +113,17 @@ class _SearchResultsScreenState extends State<SearchResultsScreen> {
     if (q.isEmpty) return;
     _controller.text = q;
     _focusNode.unfocus();
-    setState(() { _future = _load(q); });
+    setState(() {
+      _future = _load(q);
+    });
     _loadRecent();
   }
 
   Future<void> _refresh() async {
     if (_future == null) return;
-    setState(() { _future = _load(_controller.text); });
+    setState(() {
+      _future = _load(_controller.text);
+    });
     await _future;
   }
 
@@ -122,7 +134,7 @@ class _SearchResultsScreenState extends State<SearchResultsScreen> {
     );
     if (!ok || !mounted) return;
     final variant = product.defaultVariant;
-    CartService.instance.add(
+    final added = CartService.instance.add(
       product,
       variant: variant?.label,
       variantId: variant?.id,
@@ -130,6 +142,13 @@ class _SearchResultsScreenState extends State<SearchResultsScreen> {
       variantStock: variant?.stock,
       unitPrice: variant?.price,
     );
+    if (!added) {
+      showCartStockLimitSnackBar(
+        context,
+        variant?.stock ?? product.effectiveStock ?? 0,
+      );
+      return;
+    }
     await showCartAddedBottomBar(context);
   }
 
@@ -152,9 +171,9 @@ class _SearchResultsScreenState extends State<SearchResultsScreen> {
         },
         onSubmitted: _submit,
         onToggleView: () => setState(() => _isGrid = !_isGrid),
-        onCartTap: () => Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => const CartScreen()),
-        ),
+        onCartTap: () => Navigator.of(
+          context,
+        ).push(MaterialPageRoute(builder: (_) => const CartScreen())),
       ),
       body: RefreshIndicator(
         onRefresh: _refresh,
@@ -175,17 +194,17 @@ class _SearchResultsScreenState extends State<SearchResultsScreen> {
                         },
                       )
                     : showSuggestions
-                        ? SearchSuggestionPanel(
-                            items: _suggestions,
-                            query: query,
-                            isLoading: _loadingSuggestions,
-                            onSelect: (s) {
-                              _controller.text = s.value;
-                              _submit(s.value);
-                            },
-                            onSearchQuery: () => _submit(query),
-                          )
-                        : const SizedBox.shrink(),
+                    ? SearchSuggestionPanel(
+                        items: _suggestions,
+                        query: query,
+                        isLoading: _loadingSuggestions,
+                        onSelect: (s) {
+                          _controller.text = s.value;
+                          _submit(s.value);
+                        },
+                        onSearchQuery: () => _submit(query),
+                      )
+                    : const SizedBox.shrink(),
               ),
             ),
             if (!showDiscovery && !showSuggestions && _future != null)

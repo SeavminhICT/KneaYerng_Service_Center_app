@@ -7,6 +7,7 @@ import 'package:hugeicons/hugeicons.dart';
 import '../../l10n/app_localizations.dart';
 import '../../services/api_service.dart';
 import '../../services/app_notification_service.dart';
+import '../../services/cart_service.dart';
 import '../main_navigation_screen.dart';
 import 'registration_success_screen.dart';
 
@@ -18,6 +19,11 @@ class OtpScreen extends StatefulWidget {
     this.purpose = 'signup',
     this.autoRequest = false,
     this.initialResendInSec,
+    this.firstName,
+    this.lastName,
+    this.email,
+    this.password,
+    this.confirmPassword,
   });
 
   final String destination;
@@ -25,6 +31,11 @@ class OtpScreen extends StatefulWidget {
   final String purpose;
   final bool autoRequest;
   final int? initialResendInSec;
+  final String? firstName;
+  final String? lastName;
+  final String? email;
+  final String? password;
+  final String? confirmPassword;
 
   @override
   State<OtpScreen> createState() => _OtpScreenState();
@@ -93,11 +104,13 @@ class _OtpScreenState extends State<OtpScreen> {
     if (_isResending || _resendInSec > 0) return;
     setState(() => _isResending = true);
 
-    final result = await ApiService.requestOtp(
-      destination: widget.destination,
-      type: widget.type,
-      purpose: widget.purpose,
-    );
+    final result = widget.purpose == 'phone_auth'
+        ? await ApiService.requestPhoneAuthOtp(phone: widget.destination)
+        : await ApiService.requestOtp(
+            destination: widget.destination,
+            type: widget.type,
+            purpose: widget.purpose,
+          );
 
     if (!mounted) return;
     setState(() => _isResending = false);
@@ -148,12 +161,22 @@ class _OtpScreenState extends State<OtpScreen> {
       _isLoading = true;
       _hasError = false;
     });
-    final result = await ApiService.verifyOtp(
-      destination: widget.destination,
-      type: widget.type,
-      purpose: widget.purpose,
-      otp: otp,
-    );
+    final result = widget.purpose == 'phone_auth'
+        ? await ApiService.verifyPhoneAuthOtp(
+            phone: widget.destination,
+            otp: otp,
+            firstName: widget.firstName,
+            lastName: widget.lastName,
+            email: widget.email,
+            password: widget.password,
+            confirmPassword: widget.confirmPassword,
+          )
+        : await ApiService.verifyOtp(
+            destination: widget.destination,
+            type: widget.type,
+            purpose: widget.purpose,
+            otp: otp,
+          );
 
     if (!mounted) return;
     setState(() => _isLoading = false);
@@ -181,6 +204,18 @@ class _OtpScreenState extends State<OtpScreen> {
 
     if (widget.purpose == 'login') {
       await AppNotificationService.instance.syncTokenWithBackend(force: true);
+      if (!mounted) return;
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (_) => const MainNavigationScreen()),
+        (_) => false,
+      );
+      return;
+    }
+
+    if (widget.purpose == 'phone_auth') {
+      await AppNotificationService.instance.syncTokenWithBackend(force: true);
+      unawaited(CartService.instance.loadFromApi());
       if (!mounted) return;
       Navigator.pushAndRemoveUntil(
         context,
@@ -431,17 +466,20 @@ class _OtpScreenState extends State<OtpScreen> {
     return Align(
       alignment: Alignment.centerLeft,
       child: Material(
-        color: Colors.transparent,
+        color: Colors.white,
+        shape: const CircleBorder(
+          side: BorderSide(color: Color(0xFFE4ECF7), width: 1.1),
+        ),
+        clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: () => Navigator.maybePop(context),
-          borderRadius: BorderRadius.circular(14),
           child: const SizedBox(
-            width: 46,
-            height: 46,
+            width: 40,
+            height: 40,
             child: Icon(
-              HugeIcons.strokeRoundedArrowLeft01,
-              color: _textPrimary,
-              size: 31,
+              Icons.chevron_left_rounded,
+              color: Color(0xFF637083),
+              size: 22,
             ),
           ),
         ),

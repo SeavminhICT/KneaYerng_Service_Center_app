@@ -67,17 +67,16 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
   static const String _reviewsStoragePrefix = 'product_reviews_v1_';
 
   int _galleryIndex = 0;
-  int _quantity     = 1;
+  int _quantity = 1;
   final Map<String, int> _variantIndex = {};
   bool _descriptionExpanded = false;
-  bool _isReviewSheetOpen   = false;
+  bool _isReviewSheetOpen = false;
   final List<ProductReviewEntry> _reviews = [];
 
   late final AnimationController _fadeCtrl;
   late final Animation<double> _fadeAnim;
 
-  String get _reviewsStorageKey =>
-      '$_reviewsStoragePrefix${widget.product.id}';
+  String get _reviewsStorageKey => '$_reviewsStoragePrefix${widget.product.id}';
 
   @override
   void initState() {
@@ -99,14 +98,16 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
   Future<void> _loadSavedReviews() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final raw   = prefs.getString(_reviewsStorageKey);
+      final raw = prefs.getString(_reviewsStorageKey);
       if (raw == null || raw.isEmpty) return;
       final decoded = jsonDecode(raw);
       if (decoded is! List) return;
       final loaded = decoded
           .whereType<Map>()
-          .map((item) =>
-              ProductReviewEntry.fromMap(Map<String, dynamic>.from(item)))
+          .map(
+            (item) =>
+                ProductReviewEntry.fromMap(Map<String, dynamic>.from(item)),
+          )
           .toList();
       if (!mounted || loaded.isEmpty) return;
       setState(() {
@@ -120,27 +121,26 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
   Future<void> _persistReviews() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final payload =
-          _reviews.take(60).map((r) => r.toMap()).toList();
+      final payload = _reviews.take(60).map((r) => r.toMap()).toList();
       await prefs.setString(_reviewsStorageKey, jsonEncode(payload));
     } catch (_) {}
   }
 
   static const Map<String, Color> _namedColors = {
-    'black':             Color(0xFF111111),
-    'graphite':          Color(0xFF23272F),
-    'white':             Color(0xFFF8F8F8),
-    'silver':            Color(0xFFD1D5DB),
-    'grey':              Color(0xFF9CA3AF),
-    'gray':              Color(0xFF9CA3AF),
-    'blue':              Color(0xFF3B82F6),
-    'green':             Color(0xFF22C55E),
-    'red':               Color(0xFFEF4444),
-    'gold':              Color(0xFFEAB308),
-    'natural titanium':  Color(0xFFD6D3D1),
-    'white titanium':    Color(0xFFE5E7EB),
-    'black titanium':    Color(0xFF111827),
-    'desert titanium':   Color(0xFFBFA58A),
+    'black': Color(0xFF111111),
+    'graphite': Color(0xFF23272F),
+    'white': Color(0xFFF8F8F8),
+    'silver': Color(0xFFD1D5DB),
+    'grey': Color(0xFF9CA3AF),
+    'gray': Color(0xFF9CA3AF),
+    'blue': Color(0xFF3B82F6),
+    'green': Color(0xFF22C55E),
+    'red': Color(0xFFEF4444),
+    'gold': Color(0xFFEAB308),
+    'natural titanium': Color(0xFFD6D3D1),
+    'white titanium': Color(0xFFE5E7EB),
+    'black titanium': Color(0xFF111827),
+    'desert titanium': Color(0xFFBFA58A),
   };
 
   List<String> _splitOptions(String? raw) {
@@ -160,7 +160,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
   }
 
   List<String> _buildGallery(Product product, {String? preferredImage}) {
-    final images  = <String>[];
+    final images = <String>[];
     final preferred = preferredImage?.trim();
     if (preferred != null && preferred.isNotEmpty) images.add(preferred);
     if (product.thumbnailUrl?.isNotEmpty == true &&
@@ -199,7 +199,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
     List<ProductVariant> variants,
     String Function(ProductVariant) sel,
   ) {
-    final seen   = <String>{};
+    final seen = <String>{};
     final values = <String>[];
     for (final v in variants) {
       final value = sel(v).trim();
@@ -215,19 +215,19 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
   /// same order, most-defining first, so a Mac's storage/RAM/SSD win over
   /// its color/condition/country when narrowing down an exact variant.
   List<_VariantFieldSpec> _variantFieldSpecs(Product product) => [
-        _VariantFieldSpec('display', 'Display', (v) => v.display ?? ''),
-        _VariantFieldSpec('cpu', 'CPU', (v) => v.cpu ?? ''),
-        _VariantFieldSpec(
-          'storage',
-          product.productType == 'mac' ? 'Capacity' : 'Size / Model',
-          (v) => v.storageCapacity,
-        ),
-        _VariantFieldSpec('ram', 'RAM', (v) => v.ram ?? ''),
-        _VariantFieldSpec('ssd', 'SSD', (v) => v.ssd ?? ''),
-        _VariantFieldSpec('color', 'Color', (v) => v.color, isColor: true),
-        _VariantFieldSpec('condition', 'Condition', (v) => v.condition),
-        _VariantFieldSpec('country', 'Country', (v) => v.country ?? ''),
-      ];
+    _VariantFieldSpec('display', 'Display', (v) => v.display ?? ''),
+    _VariantFieldSpec('cpu', 'CPU', (v) => v.cpu ?? ''),
+    _VariantFieldSpec(
+      'storage',
+      product.productType == 'mac' ? 'Capacity' : 'Size / Model',
+      (v) => v.storageCapacity,
+    ),
+    _VariantFieldSpec('ram', 'RAM', (v) => v.ram ?? ''),
+    _VariantFieldSpec('ssd', 'SSD', (v) => v.ssd ?? ''),
+    _VariantFieldSpec('color', 'Color', (v) => v.color, isColor: true),
+    _VariantFieldSpec('condition', 'Condition', (v) => v.condition),
+    _VariantFieldSpec('country', 'Country', (v) => v.country ?? ''),
+  ];
 
   /// Options for each field: from live variant rows when present, otherwise
   /// falling back to the legacy product-level (non-variant) attribute lists.
@@ -277,7 +277,11 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
       return true;
     }
 
-    for (var considerCount = specs.length; considerCount >= 0; considerCount--) {
+    for (
+      var considerCount = specs.length;
+      considerCount >= 0;
+      considerCount--
+    ) {
       for (final v in variants) {
         if (matches(v, considerCount)) return v;
       }
@@ -317,34 +321,38 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
       final selectedValue = selected[spec.key] ?? values.first;
       final selectedIndex = values.indexOf(selectedValue);
 
-      widgets.add(ProductVariantRow(
-        tone: tone,
-        label: spec.label,
-        selected: selectedValue,
-      ));
+      widgets.add(
+        ProductVariantRow(
+          tone: tone,
+          label: spec.label,
+          selected: selectedValue,
+        ),
+      );
       widgets.add(const SizedBox(height: 10));
-      widgets.add(Wrap(
-        spacing: 8,
-        runSpacing: 8,
-        children: List.generate(values.length, (j) {
-          final isSelected = j == selectedIndex;
-          if (spec.isColor) {
-            return ProductColorChip(
+      widgets.add(
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: List.generate(values.length, (j) {
+            final isSelected = j == selectedIndex;
+            if (spec.isColor) {
+              return ProductColorChip(
+                tone: tone,
+                label: values[j],
+                color: _colorFromName(values[j]),
+                selected: isSelected,
+                onTap: () => setState(() => _variantIndex[spec.key] = j),
+              );
+            }
+            return ProductVariantChipButton(
               tone: tone,
               label: values[j],
-              color: _colorFromName(values[j]),
               selected: isSelected,
               onTap: () => setState(() => _variantIndex[spec.key] = j),
             );
-          }
-          return ProductVariantChipButton(
-            tone: tone,
-            label: values[j],
-            selected: isSelected,
-            onTap: () => setState(() => _variantIndex[spec.key] = j),
-          );
-        }),
-      ));
+          }),
+        ),
+      );
 
       if (i != visible.length - 1) {
         widgets.add(const SizedBox(height: 16));
@@ -398,18 +406,24 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
     ProductVariant? variant,
     String? variantLabel,
   }) async {
-    final ok = await ensureLoggedIn(context,
-        message: 'Please login or register to add items to your cart.');
-    if (!ok || !mounted) return;
-    CartService.instance.add(
-      product,
-      quantity:        quantity,
-      variant:         variantLabel?.isEmpty ?? true ? null : variantLabel,
-      variantId:       variant?.id,
-      variantImageUrl: variant?.imageUrl,
-      variantStock:    variant?.stock,
-      unitPrice:       variant?.price,
+    final ok = await ensureLoggedIn(
+      context,
+      message: 'Please login or register to add items to your cart.',
     );
+    if (!ok || !mounted) return;
+    final added = CartService.instance.add(
+      product,
+      quantity: quantity,
+      variant: variantLabel?.isEmpty ?? true ? null : variantLabel,
+      variantId: variant?.id,
+      variantImageUrl: variant?.imageUrl,
+      variantStock: variant?.stock,
+      unitPrice: variant?.price,
+    );
+    if (!added) {
+      _showStockLimitNotice(variant?.stock ?? product.stock ?? 0);
+      return;
+    }
     await showCartAddedBottomBar(context);
   }
 
@@ -419,27 +433,40 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
     ProductVariant? variant,
     String? variantLabel,
   }) async {
-    final ok = await ensureLoggedIn(context,
-        message: 'Please login or register to buy now.');
+    final ok = await ensureLoggedIn(
+      context,
+      message: 'Please login or register to buy now.',
+    );
     if (!ok || !mounted) return;
     final checkoutItem = CartItem(
-      product:         product,
-      quantity:        quantity,
-      variant:         variantLabel?.isEmpty ?? true ? null : variantLabel,
-      variantId:       variant?.id,
+      product: product,
+      quantity: quantity,
+      variant: variantLabel?.isEmpty ?? true ? null : variantLabel,
+      variantId: variant?.id,
       variantImageUrl: variant?.imageUrl,
-      variantStock:    variant?.stock,
-      unitPrice:       variant?.price,
+      variantStock: variant?.stock,
+      unitPrice: variant?.price,
     );
-    Navigator.of(context)
-        .push(fadeSlideRoute(CheckoutFlowScreen(items: [checkoutItem])));
+    Navigator.of(
+      context,
+    ).push(fadeSlideRoute(CheckoutFlowScreen(items: [checkoutItem])));
+  }
+
+  void _showStockLimitNotice(int stock) {
+    if (!mounted) return;
+    final l = AppLocalizations.of(context);
+    final message = l.isKhmer
+        ? 'មានស្តុកតែ $stock ប៉ុណ្ណោះ។'
+        : 'Only $stock in stock.';
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
   }
 
   double _displayRating(Product p) {
     final baseCount = p.ratingCount;
     final baseTotal = p.rating * baseCount;
-    final localTotal =
-        _reviews.fold<double>(0, (sum, r) => sum + r.rating);
+    final localTotal = _reviews.fold<double>(0, (sum, r) => sum + r.rating);
     final totalCount = baseCount + _reviews.length;
     if (totalCount == 0) return 0;
     return (baseTotal + localTotal) / totalCount;
@@ -450,18 +477,19 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
   // ignore: unused_element
   Future<void> _openReviewSheet(Product product) async {
     if (_isReviewSheetOpen) return;
-    final ok = await ensureLoggedIn(context,
-        message: 'Please login or register to leave a review.');
+    final ok = await ensureLoggedIn(
+      context,
+      message: 'Please login or register to leave a review.',
+    );
     if (!ok || !mounted) return;
     _isReviewSheetOpen = true;
     ProductReviewEntry? result;
     try {
       result = await showModalBottomSheet<ProductReviewEntry>(
-        context:              context,
-        isScrollControlled:   true,
-        backgroundColor:      Colors.transparent,
-        builder: (_) =>
-            ProductReviewComposerSheet(productName: product.name),
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (_) => ProductReviewComposerSheet(productName: product.name),
       );
     } finally {
       _isReviewSheetOpen = false;
@@ -475,24 +503,24 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
   // ignore: unused_element
   Future<void> _openAllReviewsSheet(Product product) async {
     await showModalBottomSheet<void>(
-      context:            context,
+      context: context,
       isScrollControlled: true,
-      backgroundColor:    Colors.transparent,
+      backgroundColor: Colors.transparent,
       builder: (_) => ProductAllReviewsSheet(
-        productName:   product.name,
+        productName: product.name,
         averageRating: _displayRating(product),
-        ratingCount:   _displayRatingCount(product),
-        reviews:       _reviews,
+        ratingCount: _displayRatingCount(product),
+        reviews: _reviews,
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final l                = AppLocalizations.of(context);
-    final product          = widget.product;
-    final variantRows      = _activeVariants(product);
-    final variantSpecs     = _variantFieldSpecs(product);
+    final l = AppLocalizations.of(context);
+    final product = widget.product;
+    final variantRows = _activeVariants(product);
+    final variantSpecs = _variantFieldSpecs(product);
 
     // Options + the currently-selected value for every variant attribute
     // that has at least one option for this product (storage/color/condition
@@ -521,31 +549,38 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
         }
       }
     }
-    final selectedVariant = _selectedVariantLabel(variantSpecs, selectedByField);
+    final selectedVariant = _selectedVariantLabel(
+      variantSpecs,
+      selectedByField,
+    );
 
-    final gallery   = _buildGallery(product,
-        preferredImage: selectedVariantEntity?.imageUrl);
+    final gallery = _buildGallery(
+      product,
+      preferredImage: selectedVariantEntity?.imageUrl,
+    );
     final safeIndex = gallery.isEmpty
         ? 0
         : _galleryIndex.clamp(0, gallery.length - 1);
-    final imageUrl  = gallery.isEmpty ? null : gallery[safeIndex];
+    final imageUrl = gallery.isEmpty ? null : gallery[safeIndex];
 
-    final unitPrice  = selectedVariantEntity?.price ?? product.salePrice;
-    final oldPrice   = selectedVariantEntity == null &&
+    final unitPrice = selectedVariantEntity?.price ?? product.salePrice;
+    final oldPrice =
+        selectedVariantEntity == null &&
             product.hasDiscount &&
             unitPrice < product.price
         ? product.price
         : null;
-    final stock      = selectedVariantEntity?.stock ?? product.stock;
+    final stock = selectedVariantEntity?.stock ?? product.stock;
     final isOutOfStock = stock != null && stock <= 0;
-    final quantity   =
-        stock != null && stock > 0 ? _quantity.clamp(1, stock) : _quantity;
-    final total      = unitPrice * quantity;
+    final quantity = stock != null && stock > 0
+        ? _quantity.clamp(1, stock)
+        : _quantity;
+    final total = unitPrice * quantity;
     final discountPct = _discountPercent(product);
     final descriptionText = _cleanValue(product.description);
-    final featureBullets  = _featureBullets(product);
-    final rating          = _displayRating(product);
-    final ratingCount     = _displayRatingCount(product);
+    final featureBullets = _featureBullets(product);
+    final rating = _displayRating(product);
+    final ratingCount = _displayRatingCount(product);
 
     return AnimatedBuilder(
       animation: FavoriteService.instance,
@@ -562,8 +597,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
         return Theme(
           data: Theme.of(context).copyWith(
             scaffoldBackgroundColor: Theme.of(context).scaffoldBackgroundColor,
-            textTheme:
-                GoogleFonts.soraTextTheme(Theme.of(context).textTheme),
+            textTheme: GoogleFonts.soraTextTheme(Theme.of(context).textTheme),
           ),
           child: Scaffold(
             backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -575,17 +609,18 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
                   children: [
                     // ── App Bar ──────────────────────────────────────────
                     ProductDetailAppBar(
-                      tone:       tone,
-                      title:      l.productDetails,
+                      tone: tone,
+                      title: l.productDetails,
                       isFavorite: isFavorite,
-                      onBack:     () => Navigator.of(context).pop(),
+                      onBack: () => Navigator.of(context).pop(),
                       onFavorite: () =>
                           FavoriteService.instance.toggle(product),
                       onCartTap: widget.showCartActions
                           ? () {
                               Navigator.of(context).push(
                                 MaterialPageRoute(
-                                    builder: (_) => const CartScreen()),
+                                  builder: (_) => const CartScreen(),
+                                ),
                               );
                             }
                           : null,
@@ -600,9 +635,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
                           children: [
                             // Image gallery
                             ProductImageGallery(
-                              tone:          tone,
-                              imageUrl:      imageUrl,
-                              gallery:       gallery,
+                              tone: tone,
+                              imageUrl: imageUrl,
+                              gallery: gallery,
                               selectedIndex: safeIndex,
                               stockLabel: isOutOfStock
                                   ? l.outOfStock
@@ -618,7 +653,11 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
                             // ── Content area ─────────────────────────────
                             Padding(
                               padding: EdgeInsets.fromLTRB(
-                                  16, 0, 16, widget.showCartActions ? 100 : 24),
+                                16,
+                                0,
+                                16,
+                                widget.showCartActions ? 100 : 24,
+                              ),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
@@ -628,20 +667,23 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
                                   // Product name
                                   Text(
                                     product.name,
-                                    style: kmFont(context, GoogleFonts.inter(
-                                      fontSize:   24,
-                                      fontWeight: FontWeight.w700,
-                                      color:      tone.textPrimary,
-                                      height:     1.2,
-                                    )),
+                                    style: kmFont(
+                                      context,
+                                      GoogleFonts.inter(
+                                        fontSize: 24,
+                                        fontWeight: FontWeight.w700,
+                                        color: tone.textPrimary,
+                                        height: 1.2,
+                                      ),
+                                    ),
                                   ),
                                   const SizedBox(height: 10),
 
                                   // Rating row
                                   if (ratingCount > 0) ...[
                                     ProductRatingRow(
-                                      tone:        tone,
-                                      rating:      rating,
+                                      tone: tone,
+                                      rating: rating,
                                       ratingCount: ratingCount,
                                     ),
                                     const SizedBox(height: 12),
@@ -649,13 +691,13 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
 
                                   // ── Price + Quantity card ─────────────
                                   ProductPriceQuantityCard(
-                                    tone:         tone,
-                                    unitPrice:    unitPrice,
-                                    oldPrice:     oldPrice,
-                                    quantity:     quantity,
-                                    stock:        stock,
+                                    tone: tone,
+                                    unitPrice: unitPrice,
+                                    oldPrice: oldPrice,
+                                    quantity: quantity,
+                                    stock: stock,
                                     isOutOfStock: isOutOfStock,
-                                    total:        total,
+                                    total: total,
                                     showQuantity: widget.showCartActions,
                                     onMinus: () {
                                       if (quantity <= 1) return;
@@ -664,16 +706,33 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
                                     onPlus: () {
                                       if (isOutOfStock) return;
                                       if (stock != null && quantity >= stock) {
+                                        _showStockLimitNotice(stock);
                                         return;
                                       }
                                       setState(() => _quantity = quantity + 1);
                                     },
+                                    onChanged: (value) {
+                                      if (isOutOfStock) return;
+                                      if (stock != null &&
+                                          stock > 0 &&
+                                          value > stock) {
+                                        _showStockLimitNotice(stock);
+                                      }
+                                      final next = stock != null && stock > 0
+                                          ? value.clamp(1, stock)
+                                          : (value < 1 ? 1 : value);
+                                      setState(() => _quantity = next);
+                                    },
+                                    onLimitExceeded: _showStockLimitNotice,
                                   ),
                                   const SizedBox(height: 16),
 
                                   // ── Variants section ──────────────────
                                   if (variantSectionWidgets.isNotEmpty) ...[
-                                    ProductDetailSectionTitle(title: l.filter, tone: tone),
+                                    ProductDetailSectionTitle(
+                                      title: l.filter,
+                                      tone: tone,
+                                    ),
                                     const SizedBox(height: 12),
                                     ProductDetailCard(
                                       tone: tone,
@@ -685,13 +744,16 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
                                           if (selectedVariant.isNotEmpty) ...[
                                             const SizedBox(height: 16),
                                             Divider(
-                                                color: tone.divider, height: 1),
+                                              color: tone.divider,
+                                              height: 1,
+                                            ),
                                             const SizedBox(height: 12),
                                             Row(
                                               children: [
                                                 Icon(
-                                                  HugeIcons.strokeRoundedFilterHorizontal,
-                                                  size:  15,
+                                                  HugeIcons
+                                                      .strokeRoundedFilterHorizontal,
+                                                  size: 15,
                                                   color: tone.textHint,
                                                 ),
                                                 const SizedBox(width: 6),
@@ -699,9 +761,10 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
                                                   child: Text(
                                                     'Selected: $selectedVariant',
                                                     style: TextStyle(
-                                                      fontSize:   12.5,
-                                                      color:      tone.textSub,
-                                                      fontWeight: FontWeight.w500,
+                                                      fontSize: 12.5,
+                                                      color: tone.textSub,
+                                                      fontWeight:
+                                                          FontWeight.w500,
                                                     ),
                                                   ),
                                                 ),
@@ -719,7 +782,10 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
                                   const SizedBox(height: 16),
 
                                   // ── Description ───────────────────────
-                                  ProductDetailSectionTitle(title: l.description, tone: tone),
+                                  ProductDetailSectionTitle(
+                                    title: l.description,
+                                    tone: tone,
+                                  ),
                                   const SizedBox(height: 12),
                                   ProductDetailCard(
                                     tone: tone,
@@ -733,21 +799,24 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
                                               ? descriptionText
                                               : 'No description available.',
                                           expanded: _descriptionExpanded,
-                                          onToggle:
-                                              descriptionText.length > 180
-                                                  ? () => setState(() =>
-                                                      _descriptionExpanded =
-                                                          !_descriptionExpanded)
-                                                  : null,
+                                          onToggle: descriptionText.length > 180
+                                              ? () => setState(
+                                                  () => _descriptionExpanded =
+                                                      !_descriptionExpanded,
+                                                )
+                                              : null,
                                         ),
                                         if (featureBullets.isNotEmpty) ...[
                                           const SizedBox(height: 16),
                                           Divider(
-                                              color: tone.divider, height: 1),
+                                            color: tone.divider,
+                                            height: 1,
+                                          ),
                                           const SizedBox(height: 16),
                                           ProductFeatureBulletList(
-                                              tone: tone,
-                                              items: featureBullets),
+                                            tone: tone,
+                                            items: featureBullets,
+                                          ),
                                         ],
                                       ],
                                     ),
@@ -766,20 +835,20 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
                       SafeArea(
                         top: false,
                         child: ProductBottomBar(
-                          tone:        tone,
-                          quantity:    quantity,
-                          total:       total,
+                          tone: tone,
+                          quantity: quantity,
+                          total: total,
                           canPurchase: !isOutOfStock,
                           onAddToCart: () => _addToCartWithGuard(
                             product,
-                            quantity:     quantity,
-                            variant:      selectedVariantEntity,
+                            quantity: quantity,
+                            variant: selectedVariantEntity,
                             variantLabel: selectedVariant,
                           ),
                           onBuyNow: () => _buyNowWithGuard(
                             product,
-                            quantity:     quantity,
-                            variant:      selectedVariantEntity,
+                            quantity: quantity,
+                            variant: selectedVariantEntity,
                             variantLabel: selectedVariant,
                           ),
                         ),

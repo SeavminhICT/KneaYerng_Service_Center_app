@@ -85,7 +85,7 @@
                     query.set('availability_status', normalize(statusFilter.value));
                 }
 
-                var response = await window.adminApi.request('/api/technicians-' + query.toString());
+                var response = await window.adminApi.request('/api/technicians?' + query.toString());
                 if (!response.ok) {
                     rows.innerHTML = '<tr><td class="px-4 py-6 text-center text-sm text-slate-500" colspan="4">{{ __('Unable to load technicians.') }}</td></tr>';
                     return;
@@ -94,7 +94,7 @@
                 var list = data.data || [];
 
                 rows.innerHTML = list.map(function (tech) {
-                    var skills = Array.isArray(tech.skill_set) - tech.skill_set.join(', ') : '';
+                    var skills = Array.isArray(tech.skill_set) ? tech.skill_set.join(', ') : '';
                     return `
                         <tr>
                             <td class="px-4 py-3 font-semibold text-slate-900 dark:text-white">${tech.name}</td>
@@ -123,7 +123,7 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
-                document.getElementById('technician-form-status').textContent = response.ok - '{{ __('Technician created.') }}' : '{{ __('Unable to create.') }}';
+                document.getElementById('technician-form-status').textContent = response.ok ? '{{ __('Technician created.') }}' : '{{ __('Unable to create.') }}';
                 if (response.ok) {
                     document.getElementById('technician-name').value = '';
                     document.getElementById('technician-skills').value = '';

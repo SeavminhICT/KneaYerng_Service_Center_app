@@ -27,7 +27,7 @@ class CartService extends ChangeNotifier {
     _replaceWithRemoteItems(result.items, preserveUnsynced: true);
   }
 
-  void add(
+  bool add(
     Product product, {
     int quantity = 1,
     String? variant,
@@ -36,8 +36,8 @@ class CartService extends ChangeNotifier {
     int? variantStock,
     double? unitPrice,
   }) {
-    if (quantity <= 0) return;
-    final normalizedVariant = variant?.trim();
+    if (quantity <= 0) return false;
+    final normalizedVariant = _normalizeVariant(variant);
     final existing = _items.indexWhere((item) {
       if (item.product.id != product.id) return false;
       if (variantId != null && item.variantId != null) {
@@ -45,10 +45,31 @@ class CartService extends ChangeNotifier {
       }
       return (item.variant ?? '') == (normalizedVariant ?? '');
     });
+
+    final existingItem = existing == -1 ? null : _items[existing];
+    final availableStock = _resolveAvailableStock(
+      product,
+      existingItem: existingItem,
+      variant: normalizedVariant,
+      variantId: variantId,
+      variantStock: variantStock,
+    );
+    final currentQuantity = existingItem?.quantity ?? 0;
+    if (availableStock != null && currentQuantity + quantity > availableStock) {
+      return false;
+    }
+
     CartItem changedItem;
     if (existing != -1) {
-      _items[existing].quantity += quantity;
-      changedItem = _items[existing];
+      final current = _items[existing];
+      changedItem = current.copyWith(
+        product: product,
+        quantity: current.quantity + quantity,
+        variantImageUrl: variantImageUrl,
+        variantStock: variantStock,
+        unitPrice: unitPrice,
+      );
+      _items[existing] = changedItem;
     } else {
       changedItem = CartItem(
         product: product,
@@ -64,17 +85,34 @@ class CartService extends ChangeNotifier {
     _markMutated();
     notifyListeners();
     _enqueueItemSync(changedItem);
+    return true;
   }
 
-  void updateQuantity(CartItem item, int quantity) {
+  bool updateQuantity(CartItem item, int quantity) {
     if (quantity <= 0) {
       remove(item);
-      return;
+      return true;
     }
-    item.quantity = quantity;
+    final current = _findCurrentItem(item);
+    if (current == null) return false;
+
+    final availableStock = _resolveAvailableStock(
+      current.product,
+      existingItem: current,
+      variant: current.variant,
+      variantId: current.variantId,
+    );
+    if (availableStock != null &&
+        quantity > availableStock &&
+        quantity > current.quantity) {
+      return false;
+    }
+
+    current.quantity = quantity;
     _markMutated();
     notifyListeners();
-    _enqueueItemSync(item);
+    _enqueueItemSync(current);
+    return true;
   }
 
   void remove(CartItem item) {
@@ -126,9 +164,7 @@ class CartService extends ChangeNotifier {
   }
 
   void _enqueueItemSync(CartItem item) {
-    _syncQueue = _syncQueue
-        .then((_) => _syncItemNow(item))
-        .catchError((_) {});
+    _syncQueue = _syncQueue.then((_) => _syncItemNow(item)).catchError((_) {});
   }
 
   Future<void> _syncItemNow(CartItem item) async {
@@ -214,8 +250,9 @@ class CartService extends ChangeNotifier {
 
     _items
       ..clear()
-      ..addAll(remoteItems.where(
-          (item) => !_pendingDeleteIds.contains(item.remoteId)));
+      ..addAll(
+        remoteItems.where((item) => !_pendingDeleteIds.contains(item.remoteId)),
+      );
 
     for (final item in unsynced) {
       final alreadyPresent = _items.any((remote) => _isSameItem(remote, item));
@@ -233,5 +270,52 @@ class CartService extends ChangeNotifier {
       return a.variantId == b.variantId;
     }
     return (a.variant ?? '') == (b.variant ?? '');
+  }
+
+  static String? _normalizeVariant(String? variant) {
+    final trimmed = variant?.trim();
+    return trimmed == null || trimmed.isEmpty ? null : trimmed;
+  }
+
+  static int? _resolveAvailableStock(
+    Product product, {
+    CartItem? existingItem,
+    String? variant,
+    int? variantId,
+    int? variantStock,
+  }) {
+    if (variantStock != null) return variantStock < 0 ? 0 : variantStock;
+    if (existingItem?.variantStock != null) return existingItem!.variantStock;
+
+    if (variantId != null) {
+      for (final row in product.variants) {
+        if (row.id == variantId) return row.stock < 0 ? 0 : row.stock;
+      }
+      for (final row
+          in existingItem?.product.variants ?? const <ProductVariant>[]) {
+        if (row.id == variantId) return row.stock < 0 ? 0 : row.stock;
+      }
+    }
+
+    final normalizedVariant = _normalizeVariant(variant);
+    if (normalizedVariant != null) {
+      for (final row in product.variants) {
+        if (row.label == normalizedVariant) {
+          return row.stock < 0 ? 0 : row.stock;
+        }
+      }
+      for (final row
+          in existingItem?.product.variants ?? const <ProductVariant>[]) {
+        if (row.label == normalizedVariant) {
+          return row.stock < 0 ? 0 : row.stock;
+        }
+      }
+      if (product.variants.isNotEmpty ||
+          (existingItem?.product.variants.isNotEmpty ?? false)) {
+        return null;
+      }
+    }
+
+    return product.effectiveStock ?? existingItem?.product.effectiveStock;
   }
 }

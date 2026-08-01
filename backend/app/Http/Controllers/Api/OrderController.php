@@ -16,6 +16,7 @@ use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\VoucherRedemption;
 use App\Services\PickupTicketService;
+use App\Services\DeliveryFeeService;
 use App\Services\OrderPaymentService;
 use App\Services\OrderInventoryService;
 use App\Services\OrderTrackingService;
@@ -360,7 +361,14 @@ class OrderController extends Controller
 
         $orderNumber = $validated['order_number'] ?? $this->generateOrderNumber();
         $orderType = $validated['order_type'] ?? 'pickup';
-        $deliveryFee = $this->resolveDeliveryFee($orderType, $validated['delivery_fee'] ?? null);
+        $deliveryLat = $orderType === 'delivery' ? ($validated['delivery_lat'] ?? null) : null;
+        $deliveryLng = $orderType === 'delivery' ? ($validated['delivery_lng'] ?? null) : null;
+        $deliveryFee = $this->resolveDeliveryFee(
+            $orderType,
+            $validated['delivery_fee'] ?? null,
+            $deliveryLat,
+            $deliveryLng
+        );
         $subtotal = $this->calculateSubtotal($items);
         $voucherService = app(VoucherService::class);
         $voucherData = $voucherService->evaluate(
@@ -383,8 +391,6 @@ class OrderController extends Controller
         $deliveryAddress = $orderType === 'delivery' ? ($validated['delivery_address'] ?? null) : null;
         $deliveryPhone = $orderType === 'delivery' ? ($validated['delivery_phone'] ?? null) : null;
         $deliveryNote = $orderType === 'delivery' ? ($validated['delivery_note'] ?? null) : null;
-        $deliveryLat = $orderType === 'delivery' ? ($validated['delivery_lat'] ?? null) : null;
-        $deliveryLng = $orderType === 'delivery' ? ($validated['delivery_lng'] ?? null) : null;
 
         try {
             $order = DB::transaction(function () use (
@@ -964,10 +970,24 @@ class OrderController extends Controller
         });
     }
 
-    private function resolveDeliveryFee(string $orderType, $deliveryFee): float
+    private function resolveDeliveryFee(string $orderType, $deliveryFee, $deliveryLat = null, $deliveryLng = null): float
     {
         if ($orderType !== 'delivery') {
             return 0;
+        }
+
+        // Distance from the shop is the source of truth whenever coordinates
+        // are available, so a customer can't under-report the fee by editing
+        // the request body. Falls back to the flat config fee (or an
+        // explicit override, e.g. from an admin editing an order) only when
+        // coordinates are missing.
+        $distanceFee = app(DeliveryFeeService::class)->feeForCoordinates(
+            $deliveryLat !== null ? (float) $deliveryLat : null,
+            $deliveryLng !== null ? (float) $deliveryLng : null
+        );
+
+        if ($distanceFee !== null) {
+            return $distanceFee;
         }
 
         if ($deliveryFee === null || $deliveryFee === '') {
@@ -1217,6 +1237,63 @@ class OrderController extends Controller
 
         if ($request->filled('order_type')) {
             $query->where('order_type', $request->string('order_type'));
+        }
+
+        if ($request->filled('payment_method')) {
+            $query->where('payment_method', trim((string) $request->input('payment_method')));
+        }
+
+        if ($request->filled('employee')) {
+            $employee = trim((string) $request->input('employee'));
+            $query->where(function (Builder $inner) use ($employee) {
+                if (ctype_digit($employee)) {
+                    $inner->where('assigned_staff_id', (int) $employee)
+                        ->orWhere('added_by', (int) $employee);
+                }
+
+                $inner->orWhereHas('assignedStaff', function (Builder $staff) use ($employee) {
+                    $staff->where('first_name', 'like', '%'.$employee.'%')
+                        ->orWhere('last_name', 'like', '%'.$employee.'%')
+                        ->orWhere('email', 'like', '%'.$employee.'%');
+                })->orWhereHas('addedBy', function (Builder $staff) use ($employee) {
+                    $staff->where('first_name', 'like', '%'.$employee.'%')
+                        ->orWhere('last_name', 'like', '%'.$employee.'%')
+                        ->orWhere('email', 'like', '%'.$employee.'%');
+                });
+            });
+        }
+
+        if ($request->filled('product')) {
+            $product = trim((string) $request->input('product'));
+            $query->whereHas('items', function (Builder $items) use ($product) {
+                $items->where(function (Builder $inner) use ($product) {
+                    $inner->where('product_name', 'like', '%'.$product.'%')
+                        ->orWhereHas('product', function (Builder $products) use ($product) {
+                            $products->where('name', 'like', '%'.$product.'%')
+                                ->orWhere('sku', 'like', '%'.$product.'%');
+                        });
+
+                    if (ctype_digit($product)) {
+                        $inner->orWhere('product_id', (int) $product)
+                            ->orWhere('item_id', (int) $product);
+                    }
+                });
+            });
+        }
+
+        if ($request->filled('product_category')) {
+            $category = trim((string) $request->input('product_category'));
+            $query->whereHas('items.product.category', function (Builder $categories) use ($category) {
+                if (ctype_digit($category)) {
+                    $categories->where('categories.id', (int) $category);
+                    return;
+                }
+
+                $categories->where(function (Builder $inner) use ($category) {
+                    $inner->where('categories.name', 'like', '%'.$category.'%')
+                        ->orWhere('categories.slug', 'like', '%'.$category.'%');
+                });
+            });
         }
 
         if ($request->filled('from_date')) {

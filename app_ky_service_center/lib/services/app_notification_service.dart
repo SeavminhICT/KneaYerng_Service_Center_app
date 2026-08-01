@@ -27,6 +27,20 @@ const AndroidNotificationChannel _orderTrackingChannel =
         'mixkit_bell_notification_933',
       ),
     );
+// Must match FirebasePushNotificationService::getPushAndroidChannelId() for
+// RepairNotification on the backend — a mismatch here silently drops
+// lock-screen/background pushes on Android (see order channel v1->v2 history).
+const AndroidNotificationChannel _repairTrackingChannel =
+    AndroidNotificationChannel(
+      'repair_tracking_updates_v1',
+      'Repair Tracking Updates',
+      description: 'Status updates for in-progress repair jobs.',
+      importance: Importance.max,
+      playSound: true,
+      sound: RawResourceAndroidNotificationSound(
+        'mixkit_bell_notification_933',
+      ),
+    );
 const String _fallbackNotificationTitle = 'Order Update';
 const String _fallbackNotificationBody =
     'Your order tracking status was updated.';
@@ -239,6 +253,7 @@ class AppNotificationService {
           AndroidFlutterLocalNotificationsPlugin
         >();
     await androidPlugin?.createNotificationChannel(_orderTrackingChannel);
+    await androidPlugin?.createNotificationChannel(_repairTrackingChannel);
   }
 
   Future<bool> syncTokenWithBackend({bool force = false}) async {

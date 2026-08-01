@@ -4,6 +4,17 @@ import 'package:hugeicons/hugeicons.dart';
 import '../screens/cart/cart_screen.dart';
 import '../services/cart_service.dart';
 
+void showCartStockLimitSnackBar(BuildContext context, int stock) {
+  if (!context.mounted) return;
+
+  final message = stock <= 0
+      ? 'This item is out of stock.'
+      : 'Only $stock in stock.';
+  ScaffoldMessenger.of(context)
+    ..hideCurrentSnackBar()
+    ..showSnackBar(SnackBar(content: Text(message)));
+}
+
 Future<void> showCartAddedBottomBar(BuildContext context) async {
   if (!context.mounted) return;
 
@@ -33,7 +44,9 @@ Future<void> showCartAddedBottomBar(BuildContext context) async {
           },
           child: Ink(
             decoration: BoxDecoration(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(24),
+              ),
               gradient: const LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,

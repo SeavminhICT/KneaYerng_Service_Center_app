@@ -4,6 +4,7 @@ namespace App\Http\Requests\Api;
 
 use Illuminate\Foundation\Http\FormRequest;
 use App\Models\Product;
+use Illuminate\Validation\Rule;
 
 class StoreProductRequest extends FormRequest
 {
@@ -19,7 +20,7 @@ class StoreProductRequest extends FormRequest
             'description' => ['nullable', 'string'],
             'sku' => ['nullable', 'string', 'max:100', 'unique:products,sku'],
             'category_id' => ['nullable', 'exists:categories,id'],
-            'product_type' => ['nullable', 'in:'.implode(',', Product::PRODUCT_TYPES)],
+            'product_type' => ['nullable', Rule::exists('product_types', 'slug')],
             'price' => ['nullable', 'numeric', 'min:0', 'required_without:variants'],
             'discount' => ['nullable', 'numeric', 'min:0'],
             'stock' => ['nullable', 'integer', 'min:0', 'required_without:variants'],

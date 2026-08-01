@@ -141,7 +141,7 @@ class _AllProductsScreenState extends State<AllProductsScreen> {
     );
     if (!ok || !mounted) return;
     final variant = product.defaultVariant;
-    CartService.instance.add(
+    final added = CartService.instance.add(
       product,
       variant: variant?.label,
       variantId: variant?.id,
@@ -149,6 +149,13 @@ class _AllProductsScreenState extends State<AllProductsScreen> {
       variantStock: variant?.stock,
       unitPrice: variant?.price,
     );
+    if (!added) {
+      showCartStockLimitSnackBar(
+        context,
+        variant?.stock ?? product.effectiveStock ?? 0,
+      );
+      return;
+    }
     await showCartAddedBottomBar(context);
   }
 
@@ -201,9 +208,9 @@ class _AllProductsScreenState extends State<AllProductsScreen> {
         actions: [
           AllProductsCartIconButton(
             onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const CartScreen()),
-              );
+              Navigator.of(
+                context,
+              ).push(MaterialPageRoute(builder: (_) => const CartScreen()));
             },
           ),
           const SizedBox(width: 8),
@@ -215,13 +222,18 @@ class _AllProductsScreenState extends State<AllProductsScreen> {
         child: FutureBuilder<List<Product>>(
           future: _future,
           builder: (context, snapshot) {
-            final isLoading = snapshot.connectionState == ConnectionState.waiting;
+            final isLoading =
+                snapshot.connectionState == ConnectionState.waiting;
             if (snapshot.hasError) {
               return AllProductsErrorState(onRetry: _refresh);
             }
 
             final products = isLoading
-                ? List.generate(8, (index) => Product(id: index, name: 'Loading...', price: 99.99))
+                ? List.generate(
+                    8,
+                    (index) =>
+                        Product(id: index, name: 'Loading...', price: 99.99),
+                  )
                 : (snapshot.data ?? []);
 
             if (!isLoading && products.isEmpty) {
@@ -293,53 +305,53 @@ class _AllProductsScreenState extends State<AllProductsScreen> {
                           child: AnimatedSwitcher(
                             duration: const Duration(milliseconds: 220),
                             child: _isGrid
-                              ? GridView.builder(
-                                  key: const ValueKey('grid'),
-                                  padding: const EdgeInsets.fromLTRB(
-                                    16,
-                                    0,
-                                    16,
-                                    20,
+                                ? GridView.builder(
+                                    key: const ValueKey('grid'),
+                                    padding: const EdgeInsets.fromLTRB(
+                                      16,
+                                      0,
+                                      16,
+                                      20,
+                                    ),
+                                    itemCount: filtered.length,
+                                    gridDelegate:
+                                        SliverGridDelegateWithFixedCrossAxisCount(
+                                          crossAxisCount: columns,
+                                          crossAxisSpacing: 12,
+                                          mainAxisSpacing: 12,
+                                          mainAxisExtent: gridItemHeight,
+                                        ),
+                                    itemBuilder: (context, index) {
+                                      final product = filtered[index];
+                                      return AllProductsCard(
+                                        product: product,
+                                        radius: cardRadius,
+                                        isGrid: true,
+                                        onAdd: () => _handleAddToCart(product),
+                                      );
+                                    },
+                                  )
+                                : ListView.separated(
+                                    key: const ValueKey('list'),
+                                    padding: const EdgeInsets.fromLTRB(
+                                      16,
+                                      0,
+                                      16,
+                                      20,
+                                    ),
+                                    itemCount: filtered.length,
+                                    separatorBuilder: (_, _) =>
+                                        const SizedBox(height: 12),
+                                    itemBuilder: (context, index) {
+                                      final product = filtered[index];
+                                      return AllProductsCard(
+                                        product: product,
+                                        radius: cardRadius,
+                                        isGrid: false,
+                                        onAdd: () => _handleAddToCart(product),
+                                      );
+                                    },
                                   ),
-                                  itemCount: filtered.length,
-                                  gridDelegate:
-                                      SliverGridDelegateWithFixedCrossAxisCount(
-                                        crossAxisCount: columns,
-                                        crossAxisSpacing: 12,
-                                        mainAxisSpacing: 12,
-                                        mainAxisExtent: gridItemHeight,
-                                      ),
-                                  itemBuilder: (context, index) {
-                                    final product = filtered[index];
-                                    return AllProductsCard(
-                                      product: product,
-                                      radius: cardRadius,
-                                      isGrid: true,
-                                      onAdd: () => _handleAddToCart(product),
-                                    );
-                                  },
-                                )
-                              : ListView.separated(
-                                  key: const ValueKey('list'),
-                                  padding: const EdgeInsets.fromLTRB(
-                                    16,
-                                    0,
-                                    16,
-                                    20,
-                                  ),
-                                  itemCount: filtered.length,
-                                  separatorBuilder: (_, _) =>
-                                      const SizedBox(height: 12),
-                                  itemBuilder: (context, index) {
-                                    final product = filtered[index];
-                                    return AllProductsCard(
-                                      product: product,
-                                      radius: cardRadius,
-                                      isGrid: false,
-                                      onAdd: () => _handleAddToCart(product),
-                                    );
-                                  },
-                                ),
                           ),
                         ),
                 ),

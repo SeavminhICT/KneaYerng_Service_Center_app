@@ -204,7 +204,7 @@
 
         {{-- KPI Cards --}}
         <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 hover:shadow-md transition-all">
+            <div data-report-order-card role="link" tabindex="0" class="cursor-pointer rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary-200 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-primary-500/40 dark:focus:ring-offset-slate-950">
                 <div class="flex items-center justify-between">
                     <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">{{ __('Total Revenue') }}</p>
                     <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100 dark:bg-emerald-500/10">
@@ -216,7 +216,7 @@
                     <span class="font-medium">Total sales revenue in period</span>
                 </div>
             </div>
-            <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 hover:shadow-md transition-all">
+            <div data-report-order-card role="link" tabindex="0" class="cursor-pointer rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary-200 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-primary-500/40 dark:focus:ring-offset-slate-950">
                 <div class="flex items-center justify-between">
                     <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">{{ __('Total Orders') }}</p>
                     <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-100 dark:bg-indigo-500/10">
@@ -228,7 +228,7 @@
                     <span class="font-medium">Orders placed by customers</span>
                 </div>
             </div>
-            <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 hover:shadow-md transition-all">
+            <div data-report-order-card role="link" tabindex="0" class="cursor-pointer rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary-200 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-primary-500/40 dark:focus:ring-offset-slate-950">
                 <div class="flex items-center justify-between">
                     <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">{{ __('Avg Order Value') }}</p>
                     <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-purple-100 dark:bg-purple-500/10">
@@ -240,7 +240,7 @@
                     <span class="font-medium">Average checkout size</span>
                 </div>
             </div>
-            <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 hover:shadow-md transition-all">
+            <div data-report-order-card data-payment-status="paid" role="link" tabindex="0" class="cursor-pointer rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary-200 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-primary-500/40 dark:focus:ring-offset-slate-950">
                 <div class="flex items-center justify-between">
                     <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">{{ __('Paid Orders') }}</p>
                     <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-100 dark:bg-blue-500/10">
@@ -596,6 +596,8 @@
 document.addEventListener('DOMContentLoaded', function () {
     var $ = function (id) { return document.getElementById(id); };
     var fmt = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
+    var ordersIndexUrl = @json(route('admin.orders.index'));
+    var latestReportRange = null;
 
     var preset      = $('report-preset');
     var startInp    = $('report-start');
@@ -734,6 +736,53 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     // ── Fetch & Generate Analytics ──────────────────────────────────────────
+    function buildReportOrdersUrl(extra) {
+        var params = new URLSearchParams();
+
+        if (latestReportRange && latestReportRange.start && latestReportRange.end) {
+            params.set('from_date', latestReportRange.start);
+            params.set('to_date', latestReportRange.end);
+        } else if (preset.value === 'custom' && startInp.value && endInp.value) {
+            params.set('from_date', startInp.value);
+            params.set('to_date', endInp.value);
+        }
+
+        var filters = reportFilterPayload();
+        if (filters.order_status) params.set('status', filters.order_status);
+        if (filters.payment_method) params.set('payment_method', filters.payment_method);
+        if (filters.product_category) params.set('product_category', filters.product_category);
+        if (filters.product) params.set('product', filters.product);
+        if (filters.customer) params.set('q', filters.customer);
+        if (filters.employee) params.set('employee', filters.employee);
+
+        Object.keys(extra || {}).forEach(function (key) {
+            if (extra[key]) params.set(key, extra[key]);
+        });
+
+        var query = params.toString();
+        return ordersIndexUrl + (query ? '?' + query : '');
+    }
+
+    function openReportOrders(extra) {
+        window.location.href = buildReportOrdersUrl(extra);
+    }
+
+    document.querySelectorAll('[data-report-order-card]').forEach(function (card) {
+        function navigate() {
+            openReportOrders({
+                payment_status: card.dataset.paymentStatus || ''
+            });
+        }
+
+        card.addEventListener('click', navigate);
+        card.addEventListener('keydown', function (event) {
+            if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                navigate();
+            }
+        });
+    });
+
     btnGen.addEventListener('click', generateAll);
 
     async function generate() {
@@ -747,6 +796,7 @@ document.addEventListener('DOMContentLoaded', function () {
             var data = await res.json();
 
             if (data.range) {
+                latestReportRange = data.range;
                 $('range-label-text').textContent = data.range.label + ' (' + data.range.start + ' → ' + data.range.end + ')';
                 $('live-range-badge').classList.remove('hidden');
             }
@@ -782,6 +832,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (res.ok) {
                     var data = await res.json();
                     if (data.range) {
+                        latestReportRange = data.range;
                         $('range-label-text').textContent = data.range.label + ' (' + data.range.start + ' → ' + data.range.end + ')';
                         $('live-range-badge').classList.remove('hidden');
                     }

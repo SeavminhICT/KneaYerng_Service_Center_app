@@ -21,6 +21,8 @@ class CheckoutAddressStep extends StatelessWidget {
     required this.savedAddresses,
     required this.loadingSavedAddresses,
     required this.selectedSavedAddressId,
+    required this.deliveryDistanceKm,
+    required this.deliveryFee,
     required this.primary,
     required this.onPickLocation,
     required this.onAddSavedAddress,
@@ -34,6 +36,8 @@ class CheckoutAddressStep extends StatelessWidget {
   final List<SavedAddress> savedAddresses;
   final bool loadingSavedAddresses;
   final String? selectedSavedAddressId;
+  final double deliveryDistanceKm;
+  final double deliveryFee;
   final Color primary;
   final VoidCallback onPickLocation;
   final VoidCallback onAddSavedAddress;
@@ -71,6 +75,8 @@ class CheckoutAddressStep extends StatelessWidget {
         CheckoutAddressPreviewCard(
           addressLine: deliveryAddressLine,
           coordinates: coordinatesText,
+          distanceKm: selectedDeliveryLatLng == null ? null : deliveryDistanceKm,
+          deliveryFee: selectedDeliveryLatLng == null ? null : deliveryFee,
           onPick: onPickLocation,
         ),
         const SizedBox(height: 14),

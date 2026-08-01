@@ -173,6 +173,31 @@
         </div>
         @endif
 
+        @if ($can('view_repair', 'view_technician'))
+        <div class="mt-6">
+            <p class="px-3 text-xs font-semibold uppercase tracking-widest text-slate-400">{{ __('Service') }}</p>
+            <nav class="mt-3 space-y-2">
+                @if ($can('view_repair'))
+                <a href="{{ route('admin.repairs.index') }}" class="flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium {{ request()->routeIs('admin.repairs.*') ? $activeClass : $inactiveClass }}">
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M14.7 6.3a4 4 0 10-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 005.4-5.4l-2.4 2.4-2.1-.6-.6-2.1 2.4-2.4z" />
+                    </svg>
+                    {{ __('Repair Jobs') }}
+                </a>
+                @endif
+                @if ($can('view_technician'))
+                <a href="{{ route('admin.technicians.index') }}" class="flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium {{ request()->routeIs('admin.technicians.*') ? $activeClass : $inactiveClass }}">
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 8l1.5 1.5M19 3v2m2.5 3H19" />
+                    </svg>
+                    {{ __('Technicians') }}
+                </a>
+                @endif
+            </nav>
+        </div>
+        @endif
+
         @if ($can('view_parts_inventory', 'view_warranty_tracking'))
         <div class="mt-6">
             <p class="px-3 text-xs font-semibold uppercase tracking-widest text-slate-400">{{ __('Inventory') }}</p>
@@ -196,6 +221,19 @@
             </nav>
         </div>
         @endif
+
+        {{-- ── Integration ─────────────────────────────────────────────── --}}
+        <div class="mt-6">
+            <p class="px-3 text-xs font-semibold uppercase tracking-widest text-slate-400">{{ __('Integration') }}</p>
+            <nav class="mt-3 space-y-2">
+                <a href="{{ route('admin.api-sync.index') }}" class="flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium {{ request()->routeIs('admin.api-sync.*') ? $activeClass : $inactiveClass }}">
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                    {{ __('Get API / Sync') }}
+                </a>
+            </nav>
+        </div>
 
         @if ($can('view_user', 'view_role', 'view_permission', 'view_setting'))
         <div class="mt-6">

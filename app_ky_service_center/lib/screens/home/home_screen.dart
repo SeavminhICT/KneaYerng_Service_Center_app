@@ -87,7 +87,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
     if (!ok || !mounted) return;
     final variant = product.defaultVariant;
-    CartService.instance.add(
+    final added = CartService.instance.add(
       product,
       variant: variant?.label,
       variantId: variant?.id,
@@ -95,6 +95,13 @@ class _HomeScreenState extends State<HomeScreen> {
       variantStock: variant?.stock,
       unitPrice: variant?.price,
     );
+    if (!added) {
+      showCartStockLimitSnackBar(
+        context,
+        variant?.stock ?? product.effectiveStock ?? 0,
+      );
+      return;
+    }
     await showCartAddedBottomBar(context);
   }
 
@@ -165,7 +172,9 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  Future<List<Category>> _loadCategoriesSafe({bool forceRefresh = false}) async {
+  Future<List<Category>> _loadCategoriesSafe({
+    bool forceRefresh = false,
+  }) async {
     try {
       return await ApiService.fetchCategories(forceRefresh: forceRefresh);
     } catch (error) {
@@ -312,10 +321,8 @@ class _HomeScreenState extends State<HomeScreen> {
   void _openSearch() {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => const SearchResultsScreen(
-          initialQuery: '',
-          autofocus: true,
-        ),
+        builder: (_) =>
+            const SearchResultsScreen(initialQuery: '', autofocus: true),
       ),
     );
   }
@@ -494,10 +501,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   },
                 ),
                 const SizedBox(height: 14),
-                HomeSearchInput(
-                  hintText: l.searchProducts,
-                  onTap: _openSearch,
-                ),
+                HomeSearchInput(hintText: l.searchProducts, onTap: _openSearch),
                 const SizedBox(height: 14),
                 FutureBuilder<List<Product>>(
                   future: _productsFuture,
@@ -549,8 +553,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           onTap: () {
                             Navigator.of(context).push(
                               MaterialPageRoute(
-                                builder: (_) =>
-                                    const CategoriesScreen(),
+                                builder: (_) => const CategoriesScreen(),
                               ),
                             );
                           },
@@ -641,10 +644,11 @@ class _HomeScreenState extends State<HomeScreen> {
                                     onTap: () {
                                       Navigator.of(context).push(
                                         MaterialPageRoute(
-                                          builder: (_) => CategoryProductsScreen(
-                                            categoryId: category.id,
-                                            categoryName: category.name,
-                                          ),
+                                          builder: (_) =>
+                                              CategoryProductsScreen(
+                                                categoryId: category.id,
+                                                categoryName: category.name,
+                                              ),
                                         ),
                                       );
                                     },
@@ -671,8 +675,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                             MaterialPageRoute(
                                               builder: (_) =>
                                                   ProductDetailScreen(
-                                                product: product,
-                                              ),
+                                                    product: product,
+                                                  ),
                                             ),
                                           );
                                         },

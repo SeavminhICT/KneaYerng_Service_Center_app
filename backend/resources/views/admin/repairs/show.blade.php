@@ -33,15 +33,20 @@
                     <div class="mt-2 flex items-center gap-2">
                         <select id="status-select" class="h-9 flex-1 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-600 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300">
                             <option value="received">{{ __('Received') }}</option>
+                            <option value="waiting_diagnosis">{{ __('Waiting Diagnosis') }}</option>
                             <option value="diagnosing">{{ __('Diagnosing') }}</option>
                             <option value="waiting_approval">{{ __('Waiting Approval') }}</option>
-                            <option value="in_repair">{{ __('In Repair') }}</option>
-                            <option value="qc">{{ __('QC') }}</option>
-                            <option value="ready">{{ __('Ready') }}</option>
+                            <option value="in_repair">{{ __('Repairing') }}</option>
+                            <option value="qc">{{ __('QC Testing') }}</option>
+                            <option value="ready">{{ __('Ready for Pickup') }}</option>
                             <option value="completed">{{ __('Completed') }}</option>
                         </select>
                         <button id="status-update" class="inline-flex h-9 items-center rounded-xl bg-primary-600 px-3 text-xs font-semibold text-white">{{ __('Update') }}</button>
                     </div>
+                    <label class="mt-2 flex items-center gap-1.5 text-xs text-slate-500">
+                        <input id="status-force" type="checkbox" class="rounded border-slate-300" />
+                        {{ __('Force (skip normal sequence)') }}
+                    </label>
                     <p id="status-help" class="mt-2 text-xs text-slate-500">{{ __('Keep customers updated as work progresses.') }}</p>
                 </div>
             </div>
@@ -52,6 +57,7 @@
                 <button class="repair-tab rounded-full bg-primary-50 px-4 py-2 text-primary-700 dark:bg-primary-500/10 dark:text-primary-100" data-tab="intake">{{ __('Intake') }}</button>
                 <button class="repair-tab rounded-full px-4 py-2" data-tab="diagnostic">{{ __('Diagnostic') }}</button>
                 <button class="repair-tab rounded-full px-4 py-2" data-tab="quotation">{{ __('Quotation') }}</button>
+                <button class="repair-tab rounded-full px-4 py-2" data-tab="qc">{{ __('QC') }}</button>
                 <button class="repair-tab rounded-full px-4 py-2" data-tab="status">{{ __('Status') }}</button>
                 <button class="repair-tab rounded-full px-4 py-2" data-tab="chat">{{ __('Chat') }}</button>
             </div>
@@ -140,6 +146,20 @@
                     </div>
                 </div>
 
+                <div class="repair-panel hidden" data-panel="qc">
+                    <form id="qc-form" class="space-y-4">
+                        <div id="qc-items" class="grid gap-3 sm:grid-cols-2"></div>
+                        <div>
+                            <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="qc_notes">{{ __('QC notes') }}</label>
+                            <textarea id="qc_notes" rows="3" class="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200"></textarea>
+                        </div>
+                        <div>
+                            <button class="inline-flex h-10 items-center rounded-xl bg-primary-600 px-4 text-sm font-semibold text-white" type="submit">{{ __('Save QC results') }}</button>
+                            <span id="qc-status" class="ml-2 text-xs text-slate-500"></span>
+                        </div>
+                    </form>
+                </div>
+
                 <div class="repair-panel hidden" data-panel="status">
                     <div class="grid gap-6 lg:grid-cols-[2fr_1fr]">
                         <div class="space-y-3" id="status-timeline"></div>
@@ -148,15 +168,20 @@
                             <div class="mt-3 flex items-center gap-2">
                                 <select id="status-select-secondary" class="h-9 flex-1 rounded-xl border border-slate-200 bg-white px-3 text-xs text-slate-600 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300">
                                     <option value="received">{{ __('Received') }}</option>
+                                    <option value="waiting_diagnosis">{{ __('Waiting Diagnosis') }}</option>
                                     <option value="diagnosing">{{ __('Diagnosing') }}</option>
                                     <option value="waiting_approval">{{ __('Waiting Approval') }}</option>
-                                    <option value="in_repair">{{ __('In Repair') }}</option>
-                                    <option value="qc">{{ __('QC') }}</option>
-                                    <option value="ready">{{ __('Ready') }}</option>
+                                    <option value="in_repair">{{ __('Repairing') }}</option>
+                                    <option value="qc">{{ __('QC Testing') }}</option>
+                                    <option value="ready">{{ __('Ready for Pickup') }}</option>
                                     <option value="completed">{{ __('Completed') }}</option>
                                 </select>
                                 <button id="status-update-secondary" class="inline-flex h-9 items-center rounded-xl bg-primary-600 px-3 text-xs font-semibold text-white">{{ __('Update') }}</button>
                             </div>
+                            <label class="mt-2 flex items-center gap-1.5 text-xs text-slate-500">
+                                <input id="status-force-secondary" type="checkbox" class="rounded border-slate-300" />
+                                {{ __('Force (skip normal sequence)') }}
+                            </label>
                             <p id="status-status" class="mt-2 text-xs text-slate-500"></p>
                         </div>
                     </div>
@@ -192,6 +217,35 @@
                 return (value || '').split(',').map(function (item) { return item.trim(); }).filter(Boolean);
             }
 
+            var qcItems = [
+                ['touch', '{{ __('Touch') }}'],
+                ['face_id', '{{ __('Face ID') }}'],
+                ['camera', '{{ __('Camera') }}'],
+                ['charging', '{{ __('Charging') }}'],
+                ['speaker', '{{ __('Speaker') }}'],
+                ['microphone', '{{ __('Microphone') }}'],
+                ['wifi', '{{ __('Wifi') }}'],
+                ['bluetooth', '{{ __('Bluetooth') }}']
+            ];
+
+            function renderQcItems(results) {
+                results = results || {};
+                var container = document.getElementById('qc-items');
+                container.innerHTML = qcItems.map(function (item) {
+                    var key = item[0];
+                    var label = item[1];
+                    var value = results[key] || 'na';
+                    return '<div class="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 dark:border-slate-800 dark:bg-slate-950">' +
+                        '<label class="text-sm text-slate-600 dark:text-slate-300" for="qc-item-' + key + '">' + label + '</label>' +
+                        '<select id="qc-item-' + key + '" data-item="' + key + '" class="h-9 rounded-xl border border-slate-200 bg-white px-2 text-xs text-slate-600 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300">' +
+                        '<option value="na"' + (value === 'na' ? ' selected' : '') + '>{{ __('N/A') }}</option>' +
+                        '<option value="pass"' + (value === 'pass' ? ' selected' : '') + '>{{ __('Pass') }}</option>' +
+                        '<option value="fail"' + (value === 'fail' ? ' selected' : '') + '>{{ __('Fail') }}</option>' +
+                        '</select>' +
+                        '</div>';
+                }).join('');
+            }
+
             function switchTab(target) {
                 tabs.forEach(function (tab) {
                     if (tab.dataset.tab === target) {
@@ -215,7 +269,7 @@
                 await window.adminApi.ensureCsrfCookie();
                 var response = await window.adminApi.request('/api/repairs/' + repairId);
                 if (!response.ok) {
-                    document.getElementById('repair-subtitle').textContent = toTitle(repair.status) + ' - ' + toTitle(repair.service_type || '-');
+                    document.getElementById('repair-subtitle').textContent = '{{ __('Unable to load repair.') }}';
                     return;
                 }
                 repairData = await response.json();
@@ -254,10 +308,13 @@
                     document.getElementById('invoice-number').textContent = repair.invoice.invoice_number || '--';
                     document.getElementById('invoice-total').textContent = '{{ __('Total:') }} ' + new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(repair.invoice.total || 0);
                 }
+
+                renderQcItems(repair.qc_check ? repair.qc_check.results : null);
+                document.getElementById('qc_notes').value = repair.qc_check ? (repair.qc_check.notes || '') : '';
             }
 
             async function loadTechnicians() {
-                var response = await window.adminApi.request('/api/technicians-per_page=100');
+                var response = await window.adminApi.request('/api/technicians?per_page=100');
                 if (!response.ok) {
                     return;
                 }
@@ -281,7 +338,7 @@
                 var list = data.data || [];
                 var container = document.getElementById('status-timeline');
                 container.innerHTML = list.map(function (log) {
-                    var timestamp = log.logged_at - new Date(log.logged_at).toLocaleString() : '-';
+                    var timestamp = log.logged_at ? new Date(log.logged_at).toLocaleString() : '-';
                     return '<div class="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300">' +
                         '<p class="font-semibold text-slate-900 dark:text-white">' + toTitle(log.status) + '</p>' +
                         '<p class="text-xs text-slate-500">' + timestamp + '</p>' +
@@ -300,9 +357,9 @@
                 container.innerHTML = list.map(function (message) {
                     var isAdmin = message.sender_type === 'admin';
                     return '<div class="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300">' +
-                        '<p class="text-xs font-semibold uppercase tracking-widest text-slate-400">' + (isAdmin - '{{ __('Admin') }}' : '{{ __('Customer') }}') + '</p>' +
+                        '<p class="text-xs font-semibold uppercase tracking-widest text-slate-400">' + (isAdmin ? '{{ __('Admin') }}' : '{{ __('Customer') }}') + '</p>' +
                         '<p class="mt-2 text-slate-700 dark:text-slate-200">' + message.message + '</p>' +
-                        '<p class="mt-2 text-xs text-slate-500">' + (message.created_at - new Date(message.created_at).toLocaleString() : '') + '</p>' +
+                        '<p class="mt-2 text-xs text-slate-500">' + (message.created_at ? new Date(message.created_at).toLocaleString() : '') + '</p>' +
                         '</div>';
                 }).join('') || '<p class="text-sm text-slate-500">{{ __('No messages yet.') }}</p>';
             }
@@ -328,22 +385,27 @@
             });
 
             document.getElementById('status-update').addEventListener('click', function () {
-                updateStatus(document.getElementById('status-select').value);
+                updateStatus(document.getElementById('status-select').value, document.getElementById('status-force').checked);
             });
             document.getElementById('status-update-secondary').addEventListener('click', function () {
-                updateStatus(document.getElementById('status-select-secondary').value);
+                updateStatus(document.getElementById('status-select-secondary').value, document.getElementById('status-force-secondary').checked);
             });
 
-            async function updateStatus(status) {
+            async function updateStatus(status, force) {
                 if (!status) {
                     return;
                 }
                 await window.adminApi.ensureCsrfCookie();
-                await window.adminApi.request('/api/repairs/' + repairId + '/status', {
+                var response = await window.adminApi.request('/api/repairs/' + repairId + '/status', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ status: status })
+                    body: JSON.stringify({ status: status, force: !!force })
                 });
+                if (!response.ok) {
+                    var errorData = await response.json().catch(function () { return {}; });
+                    document.getElementById('status-status').textContent = errorData.message || '{{ __('Unable to update status.') }}';
+                    return;
+                }
                 document.getElementById('status-status').textContent = '{{ __('Status updated.') }}';
                 loadRepair();
                 loadStatusTimeline();
@@ -363,7 +425,7 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
-                document.getElementById('intake-status').textContent = response.ok - '{{ __('Saved.') }}' : '{{ __('Unable to save.') }}';
+                document.getElementById('intake-status').textContent = response.ok ? '{{ __('Saved.') }}' : '{{ __('Unable to save.') }}';
                 loadRepair();
             });
 
@@ -381,7 +443,7 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
-                document.getElementById('diagnostic-status').textContent = response.ok - '{{ __('Saved.') }}' : '{{ __('Unable to save.') }}';
+                document.getElementById('diagnostic-status').textContent = response.ok ? '{{ __('Saved.') }}' : '{{ __('Unable to save.') }}';
                 loadRepair();
                 loadStatusTimeline();
             });
@@ -398,7 +460,7 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
-                document.getElementById('quotation-status').textContent = response.ok - '{{ __('Saved.') }}' : '{{ __('Unable to save.') }}';
+                document.getElementById('quotation-status').textContent = response.ok ? '{{ __('Saved.') }}' : '{{ __('Unable to save.') }}';
                 loadRepair();
                 loadStatusTimeline();
             });
@@ -411,7 +473,7 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ tax: taxValue || 0 })
                 });
-                document.getElementById('invoice-status').textContent = response.ok - '{{ __('Invoice generated.') }}' : '{{ __('Unable to generate.') }}';
+                document.getElementById('invoice-status').textContent = response.ok ? '{{ __('Invoice generated.') }}' : '{{ __('Unable to generate.') }}';
                 loadRepair();
             });
 
@@ -427,12 +489,34 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
-                document.getElementById('chat-status').textContent = response.ok - '{{ __('Sent.') }}' : '{{ __('Unable to send.') }}';
+                document.getElementById('chat-status').textContent = response.ok ? '{{ __('Sent.') }}' : '{{ __('Unable to send.') }}';
                 document.getElementById('chat-message').value = '';
                 loadChat();
             });
 
+            document.getElementById('qc-form').addEventListener('submit', async function (event) {
+                event.preventDefault();
+                var results = {};
+                qcItems.forEach(function (item) {
+                    var select = document.getElementById('qc-item-' + item[0]);
+                    results[item[0]] = select ? select.value : 'na';
+                });
+                var payload = {
+                    results: results,
+                    notes: document.getElementById('qc_notes').value.trim()
+                };
+                await window.adminApi.ensureCsrfCookie();
+                var response = await window.adminApi.request('/api/repairs/' + repairId + '/qc', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                document.getElementById('qc-status').textContent = response.ok ? '{{ __('Saved.') }}' : '{{ __('Unable to save.') }}';
+                loadRepair();
+            });
+
             switchTab('intake');
+            renderQcItems(null);
             loadRepair();
             loadTechnicians();
             loadStatusTimeline();

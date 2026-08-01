@@ -108,6 +108,7 @@ class CheckoutSelectCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Expanded(
+                        flex: 3,
                         child: Wrap(
                           spacing: 8,
                           runSpacing: 8,
@@ -146,15 +147,20 @@ class CheckoutSelectCard extends StatelessWidget {
                         ),
                       ),
                       if (trailing.isNotEmpty)
-                        Padding(
-                          padding: const EdgeInsets.only(left: 10),
-                          child: Text(
-                            trailing,
-                            style: TextStyle(
-                              color: trailing.toLowerCase() == 'free'
-                                  ? kCheckoutSuccess
-                                  : checkoutInk(context),
-                              fontWeight: FontWeight.w700,
+                        Flexible(
+                          flex: 2,
+                          child: Padding(
+                            padding: const EdgeInsets.only(left: 10),
+                            child: Text(
+                              trailing,
+                              textAlign: TextAlign.right,
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: trailing.toLowerCase() == 'free'
+                                    ? kCheckoutSuccess
+                                    : checkoutInk(context),
+                                fontWeight: FontWeight.w700,
+                              ),
                             ),
                           ),
                         ),

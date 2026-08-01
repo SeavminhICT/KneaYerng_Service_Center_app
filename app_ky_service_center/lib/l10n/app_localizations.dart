@@ -178,6 +178,14 @@ class AppLocalizations {
   String get selectAddress     => _t('Select Address',      'ជ្រើសរើសអាសយដ្ឋាន');
   String get addNewAddress     => _t('Add New Address',     'បន្ថែមអាសយដ្ឋានថ្មី');
   String get deliveryTracking  => _t('Delivery Tracking',   'តាមដានការដឹកជញ្ជូន');
+  String get deliveryZonePhnomPenhOnly => _t(
+    'Home delivery is only available within Phnom Penh. Please select a location inside Phnom Penh.',
+    'សេវាដឹកជញ្ជូនមានតែក្នុងរាជធានីភ្នំពេញប៉ុណ្ណោះ។ សូមជ្រើសរើសទីតាំងក្នុងភ្នំពេញ។',
+  );
+  String get deliveryZoneNotAvailableTitle => _t(
+    'Delivery Not Available',
+    'មិនអាចដឹកជញ្ជូនបានទេ',
+  );
 
   // ── Errors / Feedback ─────────────────────────────────────────────────────
   String get noInternetConnection => _t('No internet connection',  'គ្មានការតភ្ជាប់អ៊ីនធឺណិត');

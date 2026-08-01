@@ -43,7 +43,7 @@ class AdminCustomerController extends Controller
             });
         }
 
-        $customers = $query->orderByDesc('id')->limit(20)->get(['id', 'first_name', 'last_name', 'email', 'phone']);
+        $customers = $query->withCount('mobileDeviceTokens')->orderByDesc('id')->limit(20)->get();
 
         return response()->json([
             'data' => $customers->map(fn (User $user) => [
@@ -51,6 +51,7 @@ class AdminCustomerController extends Controller
                 'name' => $user->name,
                 'email' => $user->email,
                 'phone' => $user->phone,
+                'is_app_user' => ($user->mobile_device_tokens_count > 0 || ! empty($user->otp_verified_at)),
             ]),
         ]);
     }
@@ -64,17 +65,34 @@ class AdminCustomerController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'first_name' => ['required', 'string', 'max:255'],
+            'phone' => ['required', 'string', 'max:50'],
+            'first_name' => ['nullable', 'string', 'max:255'],
             'last_name' => ['nullable', 'string', 'max:255'],
             'email' => ['nullable', 'email', 'max:255', 'unique:users,email'],
-            'phone' => ['nullable', 'string', 'max:50'],
         ]);
 
+        $existing = User::where('phone', $validated['phone'])->first();
+        if ($existing) {
+            return response()->json([
+                'data' => [
+                    'id' => $existing->id,
+                    'name' => $existing->name,
+                    'email' => $existing->email,
+                    'phone' => $existing->phone,
+                    'is_app_user' => ($existing->mobileDeviceTokens()->exists() || ! empty($existing->otp_verified_at)),
+                ],
+            ], 200);
+        }
+
+        $firstName = ! empty($validated['first_name'])
+            ? $validated['first_name']
+            : 'Customer '.$validated['phone'];
+
         $user = User::create([
-            'first_name' => $validated['first_name'],
+            'first_name' => $firstName,
             'last_name' => $validated['last_name'] ?? '',
             'email' => $validated['email'] ?? null,
-            'phone' => $validated['phone'] ?? null,
+            'phone' => $validated['phone'],
             'password' => Hash::make(Str::random(32)),
             'role' => 'user',
             'status' => 'active',
@@ -87,6 +105,7 @@ class AdminCustomerController extends Controller
                 'name' => $user->name,
                 'email' => $user->email,
                 'phone' => $user->phone,
+                'is_app_user' => false,
             ],
         ], 201);
     }

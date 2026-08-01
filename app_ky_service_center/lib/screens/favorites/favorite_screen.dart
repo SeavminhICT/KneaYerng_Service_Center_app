@@ -59,7 +59,9 @@ String? _favoriteBadgeText(Product product) {
 Color _badgeColor(String text) {
   final lower = text.toLowerCase();
   if (lower.contains('new')) return _success;
-  if (lower.contains('off') || lower.contains('sale') || lower.contains('hot')) {
+  if (lower.contains('off') ||
+      lower.contains('sale') ||
+      lower.contains('hot')) {
     return _danger;
   }
   return _brandBlue;
@@ -72,7 +74,7 @@ Future<void> _addToCart(BuildContext context, Product product) async {
   );
   if (!ok || !context.mounted) return;
   final variant = product.defaultVariant;
-  CartService.instance.add(
+  final added = CartService.instance.add(
     product,
     variant: variant?.label,
     variantId: variant?.id,
@@ -80,6 +82,13 @@ Future<void> _addToCart(BuildContext context, Product product) async {
     variantStock: variant?.stock,
     unitPrice: variant?.price,
   );
+  if (!added) {
+    showCartStockLimitSnackBar(
+      context,
+      variant?.stock ?? product.effectiveStock ?? 0,
+    );
+    return;
+  }
   await showCartAddedBottomBar(context);
 }
 
@@ -448,7 +457,11 @@ class _PriceTag extends StatelessWidget {
         ? Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
-            children: [priceWidgets[1], const SizedBox(height: 2), priceWidgets[0]],
+            children: [
+              priceWidgets[1],
+              const SizedBox(height: 2),
+              priceWidgets[0],
+            ],
           )
         : Row(
             mainAxisSize: MainAxisSize.min,
@@ -535,7 +548,11 @@ class _GridProductCard extends StatelessWidget {
                   ),
                 ),
                 if (badge != null)
-                  Positioned(top: 8, left: 8, child: _ProductBadge(text: badge)),
+                  Positioned(
+                    top: 8,
+                    left: 8,
+                    child: _ProductBadge(text: badge),
+                  ),
                 Positioned(
                   top: 6,
                   right: 6,
@@ -654,7 +671,11 @@ class _ListProductCard extends StatelessWidget {
                     ),
                   ),
                   if (badge != null)
-                    Positioned(top: 8, left: 8, child: _ProductBadge(text: badge)),
+                    Positioned(
+                      top: 8,
+                      left: 8,
+                      child: _ProductBadge(text: badge),
+                    ),
                 ],
               ),
             ),
@@ -688,7 +709,10 @@ class _ListProductCard extends StatelessWidget {
                     ),
                     if (ratingCount > 0) ...[
                       const SizedBox(height: 6),
-                      _RatingRow(rating: product.rating, ratingCount: ratingCount),
+                      _RatingRow(
+                        rating: product.rating,
+                        ratingCount: ratingCount,
+                      ),
                     ],
                     const SizedBox(height: 8),
                     _PriceTag(product: product, alignStart: false),

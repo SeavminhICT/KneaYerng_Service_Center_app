@@ -170,13 +170,16 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function () {
+            var initialProductParams = new URLSearchParams(window.location.search);
             var currentPage   = 1;
-            var currentQuery   = '';
-            var currentCat     = '';
-            var currentBrand   = '';
-            var currentWarranty= '';
-            var currentStatus  = '';
-            var currentPerPage = '25';
+            var currentQuery   = initialProductParams.get('q') || '';
+            var currentCat     = initialProductParams.get('category_id') || '';
+            var currentBrand   = initialProductParams.get('brand') || '';
+            var currentWarranty= initialProductParams.get('warranty') || '';
+            var currentStatus  = initialProductParams.get('status') || '';
+            var currentPerPage = initialProductParams.get('per_page') || '25';
+            var currentLowStock = initialProductParams.get('low_stock') || '';
+            var currentThreshold = initialProductParams.get('threshold') || '';
 
             var searchInput   = document.getElementById('search-products');
             var filterCat     = document.getElementById('filter-category');
@@ -196,6 +199,12 @@
             var info          = document.getElementById('product-pagination-info');
             var rows          = document.getElementById('product-rows');
 
+            if (searchInput) searchInput.value = currentQuery;
+            if (filterBrand) filterBrand.value = currentBrand;
+            if (filterWarranty) filterWarranty.value = currentWarranty;
+            if (filterStatus) filterStatus.value = currentStatus;
+            if (filterPerPage) filterPerPage.value = currentPerPage;
+
             // Load Categories into filter dropdown
             async function loadCategoryOptions() {
                 try {
@@ -207,6 +216,9 @@
                         filterCat.innerHTML = '<option value="">All Categories</option>' + list.map(function(c) {
                             return '<option value="' + c.id + '">' + esc(c.name) + '</option>';
                         }).join('');
+                        if (currentCat) {
+                            filterCat.value = currentCat;
+                        }
                     }
                 } catch(e) {}
             }
@@ -273,6 +285,8 @@
                 if (currentBrand) params.set('brand', currentBrand);
                 if (currentWarranty) params.set('warranty', currentWarranty);
                 if (currentStatus) params.set('status', currentStatus);
+                if (currentLowStock) params.set('low_stock', currentLowStock);
+                if (currentThreshold) params.set('threshold', currentThreshold);
 
                 var response = await window.adminApi.request('/api/products?' + params.toString());
                 if (!response.ok) {
@@ -498,6 +512,8 @@
                 currentWarranty = '';
                 currentStatus = '';
                 currentPerPage = '25';
+                currentLowStock = '';
+                currentThreshold = '';
                 currentPage = 1;
 
                 loadProducts();

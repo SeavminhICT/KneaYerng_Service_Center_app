@@ -15,6 +15,7 @@ use App\Models\Part;
 use App\Models\Payment;
 use App\Models\Product;
 use App\Models\ProductVariant;
+use App\Services\DeliveryFeeService;
 use App\Services\OrderInventoryService;
 use App\Services\OrderPaymentService;
 use App\Models\VoucherRedemption;
@@ -254,7 +255,14 @@ class CartController extends Controller
         }
 
         $orderType = $validated['order_type'] ?? 'pickup';
-        $deliveryFee = $this->resolveDeliveryFee($orderType, $validated['delivery_fee'] ?? null);
+        $deliveryLat = $orderType === 'delivery' ? ($validated['delivery_lat'] ?? null) : null;
+        $deliveryLng = $orderType === 'delivery' ? ($validated['delivery_lng'] ?? null) : null;
+        $deliveryFee = $this->resolveDeliveryFee(
+            $orderType,
+            $validated['delivery_fee'] ?? null,
+            $deliveryLat,
+            $deliveryLng
+        );
         $subtotal = $cart->items->sum('line_total');
         $paymentMethod = $validated['payment_method'] ?? 'cod';
         [$orderPaymentStatus, $paymentStatus] = $this->normalizePaymentStatusInput(
@@ -267,8 +275,6 @@ class CartController extends Controller
         $deliveryAddress = $orderType === 'delivery' ? ($validated['delivery_address'] ?? null) : null;
         $deliveryPhone = $orderType === 'delivery' ? ($validated['delivery_phone'] ?? null) : null;
         $deliveryNote = $orderType === 'delivery' ? ($validated['delivery_note'] ?? null) : null;
-        $deliveryLat = $orderType === 'delivery' ? ($validated['delivery_lat'] ?? null) : null;
-        $deliveryLng = $orderType === 'delivery' ? ($validated['delivery_lng'] ?? null) : null;
 
         try {
             $order = DB::transaction(function () use (
@@ -471,10 +477,19 @@ class CartController extends Controller
         return null;
     }
 
-    private function resolveDeliveryFee(string $orderType, $deliveryFee): float
+    private function resolveDeliveryFee(string $orderType, $deliveryFee, $deliveryLat = null, $deliveryLng = null): float
     {
         if ($orderType !== 'delivery') {
             return 0;
+        }
+
+        $distanceFee = app(DeliveryFeeService::class)->feeForCoordinates(
+            $deliveryLat !== null ? (float) $deliveryLat : null,
+            $deliveryLng !== null ? (float) $deliveryLng : null
+        );
+
+        if ($distanceFee !== null) {
+            return $distanceFee;
         }
 
         if ($deliveryFee === null || $deliveryFee === '') {

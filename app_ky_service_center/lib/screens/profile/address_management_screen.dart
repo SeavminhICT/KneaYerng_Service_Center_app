@@ -66,7 +66,7 @@ class _AddressManagementScreenState extends State<AddressManagementScreen> {
           padding: const EdgeInsets.all(8),
           child: CircleBackButton(
             onPressed: () => Navigator.of(context).maybePop(),
-            color: textPrimary,
+            iconColor: textPrimary,
           ),
         ),
         title: Text(

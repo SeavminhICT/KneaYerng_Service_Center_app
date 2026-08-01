@@ -99,6 +99,8 @@ class _CheckoutFlowScreenState extends State<CheckoutFlowScreen> {
   final TextEditingController _phoneController   = TextEditingController();
   LatLng? _selectedDeliveryLatLng;
   String _selectedDeliveryAddress = '';
+  double _selectedDeliveryDistanceKm = 0;
+  double _selectedDeliveryFee = 0;
   List<SavedAddress> _savedAddresses = [];
   bool _loadingSavedAddresses = true;
   String? _selectedSavedAddressId;
@@ -223,7 +225,19 @@ class _CheckoutFlowScreenState extends State<CheckoutFlowScreen> {
 
   bool get _hasValidDeliveryAddress =>
       _selectedDeliveryLatLng != null &&
-      _selectedDeliveryAddress.trim().isNotEmpty;
+      _selectedDeliveryAddress.trim().isNotEmpty &&
+      isLatLngWithinPhnomPenh(_selectedDeliveryLatLng!);
+
+  String get _deliveryAddressValidationMessage {
+    final latLng = _selectedDeliveryLatLng;
+    if (latLng != null &&
+        _selectedDeliveryAddress.trim().isNotEmpty &&
+        !isLatLngWithinPhnomPenh(latLng)) {
+      return 'Home delivery is only available within Phnom Penh. Please '
+          'pick a location inside Phnom Penh.';
+    }
+    return 'Please complete your delivery address.';
+  }
 
   String get _deliveryAddressLine => _selectedDeliveryAddress.trim();
 
@@ -252,7 +266,7 @@ class _CheckoutFlowScreenState extends State<CheckoutFlowScreen> {
   double get _subtotal =>
       _items.fold<double>(0, (sum, item) => sum + item.subtotal);
 
-  double get _shipping => _isPickup ? 0 : _options.deliveryFee;
+  double get _shipping => _isPickup ? 0 : _selectedDeliveryFee;
 
   double get _tax => _subtotal * _options.taxRate;
 
@@ -309,6 +323,12 @@ class _CheckoutFlowScreenState extends State<CheckoutFlowScreen> {
     return parts.join(' | ');
   }
 
+  double _distanceKmFromShop(LatLng point) {
+    const distance = Distance();
+    final shop = LatLng(_options.shopLocation.lat, _options.shopLocation.lng);
+    return distance.as(LengthUnit.Kilometer, shop, point);
+  }
+
   Future<void> _pickDeliveryLocation() async {
     final result = await Navigator.of(context).push<DeliveryLocationResult>(
       MaterialPageRoute(
@@ -317,6 +337,8 @@ class _CheckoutFlowScreenState extends State<CheckoutFlowScreen> {
           initialAddress: _selectedDeliveryAddress.trim().isEmpty
               ? null
               : _selectedDeliveryAddress,
+          shopLocation: _options.shopLocation,
+          deliveryFeeTiers: _options.deliveryFeeTiers,
         ),
       ),
     );
@@ -327,16 +349,45 @@ class _CheckoutFlowScreenState extends State<CheckoutFlowScreen> {
       _selectedSavedAddressId = null;
       _selectedDeliveryLatLng = result.latLng;
       _selectedDeliveryAddress = result.address.trim();
+      _selectedDeliveryDistanceKm = result.distanceKm;
+      _selectedDeliveryFee = result.deliveryFee;
     });
   }
 
   void _applySavedAddress(SavedAddress address) {
+    final latLng = LatLng(address.lat, address.lng);
+    if (!isLatLngWithinPhnomPenh(latLng)) {
+      _showOutOfZoneDialog();
+      return;
+    }
+    final distanceKm = _distanceKmFromShop(latLng);
     setState(() {
       _selectedSavedAddressId = address.id;
-      _selectedDeliveryLatLng = LatLng(address.lat, address.lng);
+      _selectedDeliveryLatLng = latLng;
       _selectedDeliveryAddress = address.addressLine;
       _noteController.text = address.note;
+      _selectedDeliveryDistanceKm = distanceKm;
+      _selectedDeliveryFee = _options.feeForDistanceKm(distanceKm);
     });
+  }
+
+  Future<void> _showOutOfZoneDialog() async {
+    final l = AppLocalizations.of(context);
+    await showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(l.deliveryZoneNotAvailableTitle),
+        content: Text(
+          'This saved location is outside Phnom Penh. ${l.deliveryZonePhnomPenhOnly}',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text(l.ok),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _addSavedAddress() async {
@@ -415,6 +466,8 @@ class _CheckoutFlowScreenState extends State<CheckoutFlowScreen> {
         _selectedSavedAddressId = null;
         _selectedDeliveryLatLng = null;
         _selectedDeliveryAddress = '';
+        _selectedDeliveryDistanceKm = 0;
+        _selectedDeliveryFee = 0;
       });
     }
 
@@ -443,6 +496,12 @@ class _CheckoutFlowScreenState extends State<CheckoutFlowScreen> {
       _noteController.text = selectedAddress.note;
     }
 
+    final selectedDistanceKm = selectedAddress != null
+        ? _distanceKmFromShop(
+            LatLng(selectedAddress.lat, selectedAddress.lng),
+          )
+        : null;
+
     setState(() {
       _savedAddresses = loaded;
       _loadingSavedAddresses = false;
@@ -453,6 +512,8 @@ class _CheckoutFlowScreenState extends State<CheckoutFlowScreen> {
           selectedAddress.lng,
         );
         _selectedDeliveryAddress = selectedAddress.addressLine;
+        _selectedDeliveryDistanceKm = selectedDistanceKm!;
+        _selectedDeliveryFee = _options.feeForDistanceKm(selectedDistanceKm);
       } else if (targetId != null &&
           loaded.every((address) => address.id != targetId)) {
         _selectedSavedAddressId = null;
@@ -569,7 +630,7 @@ class _CheckoutFlowScreenState extends State<CheckoutFlowScreen> {
 
     if (_step == 1) {
       if (!_hasValidDeliveryAddress) {
-        _showNotice('Please complete your delivery address.');
+        _showNotice(_deliveryAddressValidationMessage);
         return;
       }
       setState(() => _step = 2);
@@ -1062,7 +1123,6 @@ class _CheckoutFlowScreenState extends State<CheckoutFlowScreen> {
         return CheckoutMethodStep(
           deliveryMethods: _deliveryMethods,
           selectedIndex: _selectedDeliveryMethod,
-          deliveryFee: _options.deliveryFee,
           primary: _primary,
           onSelect: (index) {
             setState(() {
@@ -1078,6 +1138,8 @@ class _CheckoutFlowScreenState extends State<CheckoutFlowScreen> {
           savedAddresses: _savedAddresses,
           loadingSavedAddresses: _loadingSavedAddresses,
           selectedSavedAddressId: _selectedSavedAddressId,
+          deliveryDistanceKm: _selectedDeliveryDistanceKm,
+          deliveryFee: _selectedDeliveryFee,
           primary: _primary,
           onPickLocation: _pickDeliveryLocation,
           onAddSavedAddress: _addSavedAddress,

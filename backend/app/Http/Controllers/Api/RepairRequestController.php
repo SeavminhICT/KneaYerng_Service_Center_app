@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Exceptions\InvalidRepairTransitionException;
 use App\Http\Controllers\Api\Concerns\AuthorizesRepairRequests;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\RepairRequestResource;
@@ -10,21 +11,12 @@ use App\Models\RepairRequest;
 use App\Models\RepairStatusLog;
 use App\Models\Technician;
 use App\Services\RepairNotificationService;
+use App\Services\RepairStatusService;
 use Illuminate\Http\Request;
 
 class RepairRequestController extends Controller
 {
     use AuthorizesRepairRequests;
-
-    private const STATUSES = [
-        'received',
-        'diagnosing',
-        'waiting_approval',
-        'in_repair',
-        'qc',
-        'ready',
-        'completed',
-    ];
 
     private const SERVICE_TYPES = [
         'drop_off',
@@ -136,6 +128,7 @@ class RepairRequestController extends Controller
             'intake',
             'diagnostic',
             'quotation',
+            'qcCheck',
             'warranty',
             'invoice.payments',
             'statusLogs',
@@ -157,7 +150,7 @@ class RepairRequestController extends Controller
         $this->applyTechnicianAssignment($repair, $technician);
 
         if ($repair->status === 'received') {
-            $this->updateStatusValue($repair, $actor, 'diagnosing');
+            RepairStatusService::transition($repair, 'waiting_diagnosis', $actor);
         }
 
         RepairNotificationService::notify(
@@ -165,7 +158,8 @@ class RepairRequestController extends Controller
             $repair->id,
             'Technician assigned',
             'Technician '.$technician->name.' assigned to repair #'.$repair->id.'.',
-            'assignment'
+            'assignment',
+            ['deep_link' => '/repairs/'.$repair->id]
         );
 
         return new RepairRequestResource($repair->load(['technician', 'customer']));
@@ -183,7 +177,7 @@ class RepairRequestController extends Controller
         $this->applyTechnicianAssignment($repair, $technician);
 
         if ($repair->status === 'received') {
-            $this->updateStatusValue($repair, $actor, 'diagnosing');
+            RepairStatusService::transition($repair, 'waiting_diagnosis', $actor);
         }
 
         RepairNotificationService::notify(
@@ -191,7 +185,8 @@ class RepairRequestController extends Controller
             $repair->id,
             'Technician assigned',
             'Technician '.$technician->name.' auto-assigned to repair #'.$repair->id.'.',
-            'assignment'
+            'assignment',
+            ['deep_link' => '/repairs/'.$repair->id]
         );
 
         return new RepairRequestResource($repair->load(['technician', 'customer']));
@@ -201,23 +196,33 @@ class RepairRequestController extends Controller
     {
         $validated = $request->validate([
             'status' => ['required', 'string'],
+            'force' => ['nullable', 'boolean'],
         ]);
 
         $actor = $request->user() ?? $request->user('sanctum');
         $status = $this->normalizeStatus($validated['status']);
+        $fromStatus = $repair->status;
 
-        if (! in_array($status, self::STATUSES, true)) {
+        if (! in_array($status, RepairStatusService::STATUSES, true)) {
             return response()->json(['message' => 'Invalid status.'], 422);
         }
 
-        $this->updateStatusValue($repair, $actor, $status);
+        try {
+            RepairStatusService::transition($repair, $status, $actor, (bool) ($validated['force'] ?? false));
+        } catch (InvalidRepairTransitionException $e) {
+            return response()->json([
+                'message' => $e->getMessage(),
+                'allowed_next' => $e->allowedNext,
+            ], 422);
+        }
 
         RepairNotificationService::notify(
             $repair->customer_id,
             $repair->id,
             'Repair status updated',
             'Repair #'.$repair->id.' status changed to '.$status.'.',
-            'status'
+            'status',
+            ['from_status' => $fromStatus, 'to_status' => $status, 'deep_link' => '/repairs/'.$repair->id]
         );
 
         return new RepairRequestResource($repair->load(['customer', 'technician']));
@@ -252,17 +257,6 @@ class RepairRequestController extends Controller
             'updated_by' => $actor?->id,
             'logged_at' => now(),
         ]);
-    }
-
-    private function updateStatusValue(RepairRequest $repair, $actor, string $status): void
-    {
-        if ($repair->status === $status) {
-            return;
-        }
-
-        $repair->status = $status;
-        $repair->save();
-        $this->logStatus($repair, $actor, $status);
     }
 
     private function applyTechnicianAssignment(RepairRequest $repair, Technician $technician): void

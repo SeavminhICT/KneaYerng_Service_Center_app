@@ -148,6 +148,53 @@ it('schedules a campaign with a preset delay', function () {
     expect((int) round($diffInDays))->toBe(3);
 });
 
+it('schedules a campaign with a custom delay duration', function () {
+    $admin = User::factory()->create([
+        'role' => 'admin',
+        'is_admin' => true,
+    ]);
+
+    $response = $this
+        ->actingAs($admin)
+        ->postJson('/api/admin/notifications/send', [
+            'title' => 'Custom Delayed Notification',
+            'message' => 'This message uses a custom delay.',
+            'type' => 'Announcement',
+            'audience' => 'all',
+            'action' => 'schedule',
+            'schedule_type' => 'delay',
+            'schedule_delay' => '10_days',
+        ]);
+
+    $response->assertOk();
+    $campaign = \App\Models\AdminNotificationCampaign::where('title', 'Custom Delayed Notification')->first();
+    expect($campaign)->not->toBeNull();
+    expect($campaign->status)->toBe('scheduled');
+    $diffInDays = now()->diffInDays($campaign->scheduled_for);
+    expect((int) round($diffInDays))->toBe(10);
+});
+
+it('rejects an invalid custom delay duration', function () {
+    $admin = User::factory()->create([
+        'role' => 'admin',
+        'is_admin' => true,
+    ]);
+
+    $response = $this
+        ->actingAs($admin)
+        ->postJson('/api/admin/notifications/send', [
+            'title' => 'Bad Delay Notification',
+            'message' => 'This should fail validation.',
+            'type' => 'Announcement',
+            'audience' => 'all',
+            'action' => 'schedule',
+            'schedule_type' => 'delay',
+            'schedule_delay' => 'not_a_delay',
+        ]);
+
+    $response->assertStatus(422);
+});
+
 it('cancels a scheduled campaign', function () {
     $admin = User::factory()->create([
         'role' => 'admin',

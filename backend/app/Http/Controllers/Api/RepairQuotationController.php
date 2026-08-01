@@ -7,8 +7,8 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\QuotationResource;
 use App\Models\Quotation;
 use App\Models\RepairRequest;
-use App\Models\RepairStatusLog;
 use App\Services\RepairNotificationService;
+use App\Services\RepairStatusService;
 use Illuminate\Http\Request;
 
 class RepairQuotationController extends Controller
@@ -30,6 +30,7 @@ class RepairQuotationController extends Controller
             return response()->json(['message' => 'Invalid quotation status.'], 422);
         }
 
+        $actor = $request->user() ?? $request->user('sanctum');
         $partsCost = $validated['parts_cost'] ?? 0;
         $laborCost = $validated['labor_cost'] ?? 0;
         $totalCost = $partsCost + $laborCost;
@@ -46,18 +47,19 @@ class RepairQuotationController extends Controller
         );
 
         if ($status === 'pending') {
-            $this->setRepairStatus($repair, $request->user(), 'waiting_approval');
+            RepairStatusService::transition($repair, 'waiting_approval', $actor, force: true);
             RepairNotificationService::notify(
                 $repair->customer_id,
                 $repair->id,
                 'Quotation ready',
                 'Quotation ready for repair #'.$repair->id.'.',
-                'quotation'
+                'quotation',
+                ['deep_link' => '/repairs/'.$repair->id]
             );
         }
 
         if ($status === 'approved') {
-            $this->setRepairStatus($repair, $request->user(), 'in_repair');
+            RepairStatusService::transition($repair, 'in_repair', $actor, force: true);
             RepairNotificationService::notifyAdmin(
                 $repair->id,
                 'Quotation approved',
@@ -67,7 +69,7 @@ class RepairQuotationController extends Controller
         }
 
         if ($status === 'rejected') {
-            $this->setRepairStatus($repair, $request->user(), 'diagnosing');
+            RepairStatusService::transition($repair, 'diagnosing', $actor, force: true);
             RepairNotificationService::notifyAdmin(
                 $repair->id,
                 'Quotation rejected',
@@ -105,7 +107,8 @@ class RepairQuotationController extends Controller
         $quotation->customer_approved_at = now();
         $quotation->save();
 
-        $this->setRepairStatus($repair, $request->user(), 'in_repair');
+        $actor = $request->user() ?? $request->user('sanctum');
+        RepairStatusService::transition($repair, 'in_repair', $actor, force: true);
 
         RepairNotificationService::notifyAdmin(
             $repair->id,
@@ -129,7 +132,8 @@ class RepairQuotationController extends Controller
         $quotation->customer_approved_at = null;
         $quotation->save();
 
-        $this->setRepairStatus($repair, $request->user(), 'diagnosing');
+        $actor = $request->user() ?? $request->user('sanctum');
+        RepairStatusService::transition($repair, 'diagnosing', $actor, force: true);
 
         RepairNotificationService::notifyAdmin(
             $repair->id,
@@ -144,22 +148,5 @@ class RepairQuotationController extends Controller
     private function normalizeQuoteStatus(string $status): string
     {
         return str_replace([' ', '-'], '_', strtolower(trim($status)));
-    }
-
-    private function setRepairStatus(RepairRequest $repair, $actor, string $status): void
-    {
-        if ($repair->status === $status) {
-            return;
-        }
-
-        $repair->status = $status;
-        $repair->save();
-
-        RepairStatusLog::create([
-            'repair_id' => $repair->id,
-            'status' => $status,
-            'updated_by' => $actor?->id,
-            'logged_at' => now(),
-        ]);
     }
 }

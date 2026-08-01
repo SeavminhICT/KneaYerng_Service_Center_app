@@ -3,6 +3,24 @@
 return [
     'delivery_fee' => (float) env('DELIVERY_FEE', 0),
     'tax_rate' => (float) env('ORDER_TAX_RATE', 0),
+
+    // Shop pin shown on the mobile app's delivery map, and the origin point
+    // used to compute distance-based delivery fees below.
+    'shop_location' => [
+        'name' => env('SHOP_NAME', 'KneaYerng VIP'),
+        'lat' => (float) env('SHOP_LAT', 11.5664368),
+        'lng' => (float) env('SHOP_LNG', 104.8923294),
+    ],
+
+    // Distance-based delivery fee tiers (Phnom Penh only). Each tier's
+    // "max_km" is inclusive; a delivery distance beyond the last tier is
+    // charged the last tier's fee. Evaluated in App\Services\DeliveryFeeService.
+    'delivery_fee_tiers' => [
+        ['max_km' => 10, 'fee' => 0],
+        ['max_km' => 15, 'fee' => 2],
+        ['max_km' => 20, 'fee' => 3],
+        ['max_km' => 25, 'fee' => 5],
+    ],
     'payment_methods' => [
         [
             'code' => 'aba',

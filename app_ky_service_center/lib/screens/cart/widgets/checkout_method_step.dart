@@ -11,14 +11,12 @@ class CheckoutMethodStep extends StatelessWidget {
     super.key,
     required this.deliveryMethods,
     required this.selectedIndex,
-    required this.deliveryFee,
     required this.primary,
     required this.onSelect,
   });
 
   final List<CheckoutDeliveryMethod> deliveryMethods;
   final int selectedIndex;
-  final double deliveryFee;
   final Color primary;
   final ValueChanged<int> onSelect;
 
@@ -51,9 +49,7 @@ class CheckoutMethodStep extends StatelessWidget {
               selected: selected,
               title: method.title,
               subtitle: method.description,
-              trailing: method.code == 'delivery'
-                  ? '+\$${deliveryFee.toStringAsFixed(2)}'
-                  : 'Free',
+              trailing: method.code == 'delivery' ? 'Based on distance' : 'Free',
               onTap: () => onSelect(index),
               primary: primary,
               icon: method.icon,

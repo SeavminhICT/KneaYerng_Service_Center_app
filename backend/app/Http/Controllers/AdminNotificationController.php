@@ -58,7 +58,7 @@ class AdminNotificationController extends Controller
             'action' => ['nullable', 'string', Rule::in(['send_now', 'schedule', 'save_draft', 'send', 'draft'])],
             'scheduled_for' => ['required_if:schedule_type,date', 'nullable', 'date'],
             'schedule_type' => ['nullable', 'string', Rule::in(['now', 'date', 'delay'])],
-            'schedule_delay' => ['required_if:schedule_type,delay', 'nullable', 'string', Rule::in(['1_day', '3_days', '5_days', '1_week'])],
+            'schedule_delay' => ['required_if:schedule_type,delay', 'nullable', 'string', 'regex:/^\d{1,4}_(hour|hours|day|days|week|weeks)$/'],
         ]);
 
         $action = $this->normalizeAction($validated['action'] ?? null);
@@ -101,13 +101,7 @@ class AdminNotificationController extends Controller
                 ], 422);
             }
         } elseif ($scheduleType === 'delay' && ! empty($validated['schedule_delay'])) {
-            $scheduledFor = match ($validated['schedule_delay']) {
-                '1_day' => now()->addDay(),
-                '3_days' => now()->addDays(3),
-                '5_days' => now()->addDays(5),
-                '1_week' => now()->addWeek(),
-                default => null,
-            };
+            $scheduledFor = $this->resolveDelayScheduledFor((string) $validated['schedule_delay']);
         }
 
         if ($action === 'schedule') {
@@ -346,6 +340,26 @@ class AdminNotificationController extends Controller
                 ];
             })->values(),
         ]);
+    }
+
+    private function resolveDelayScheduledFor(string $delay): ?Carbon
+    {
+        if (! preg_match('/^(\d{1,4})_(hour|hours|day|days|week|weeks)$/', $delay, $matches)) {
+            return null;
+        }
+
+        $amount = (int) $matches[1];
+        $unit = $matches[2];
+
+        if ($amount < 1) {
+            return null;
+        }
+
+        return match (true) {
+            str_starts_with($unit, 'hour') => now()->addHours($amount),
+            str_starts_with($unit, 'week') => now()->addWeeks($amount),
+            default => now()->addDays($amount),
+        };
     }
 
     private function normalizeAction(?string $raw): string

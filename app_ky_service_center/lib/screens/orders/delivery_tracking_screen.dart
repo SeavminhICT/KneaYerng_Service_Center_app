@@ -302,7 +302,7 @@ class _DeliveryTrackingScreenState extends State<DeliveryTrackingScreen> {
           padding: const EdgeInsets.all(8),
           child: CircleBackButton(
             onPressed: () => Navigator.of(context).maybePop(),
-            color: TrackingUiColors.ink,
+            iconColor: TrackingUiColors.ink,
           ),
         ),
         title: Text(

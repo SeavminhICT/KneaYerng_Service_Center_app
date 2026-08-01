@@ -9,6 +9,7 @@ import 'package:hugeicons/hugeicons.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../../l10n/app_localizations.dart';
+import '../../services/api_service.dart' show ShopLocation, DeliveryFeeTier;
 
 const String _osmUserAgent = 'KYServiceCenterApp/1.0 (support@kneyerng.app)';
 const String _streetTileUrl = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
@@ -22,10 +23,34 @@ const String _satelliteLabelsTileUrl =
 enum _MapStyle { street, satellite }
 
 class DeliveryLocationResult {
-  const DeliveryLocationResult({required this.latLng, required this.address});
+  const DeliveryLocationResult({
+    required this.latLng,
+    required this.address,
+    required this.distanceKm,
+    required this.deliveryFee,
+  });
 
   final LatLng latLng;
   final String address;
+  final double distanceKm;
+  final double deliveryFee;
+}
+
+double _feeForDistanceKm(double distanceKm, List<DeliveryFeeTier> tiers) {
+  for (final tier in tiers) {
+    if (distanceKm <= tier.maxKm) return tier.fee;
+  }
+  return tiers.isNotEmpty ? tiers.last.fee : 0;
+}
+
+/// Bounding box covering the Phnom Penh capital administrative boundary
+/// (OSM relation 2199033), used as a fast local check for saved addresses
+/// that predate the Phnom Penh-only home delivery restriction.
+bool isLatLngWithinPhnomPenh(LatLng position) {
+  return position.latitude >= 11.4200852 &&
+      position.latitude <= 11.7349524 &&
+      position.longitude >= 104.7204046 &&
+      position.longitude <= 105.0373762;
 }
 
 class DeliveryLocationPicker extends StatefulWidget {
@@ -33,10 +58,19 @@ class DeliveryLocationPicker extends StatefulWidget {
     super.key,
     this.initialLocation,
     this.initialAddress,
+    this.shopLocation = ShopLocation.fallback,
+    this.deliveryFeeTiers = const [
+      DeliveryFeeTier(maxKm: 10, fee: 0),
+      DeliveryFeeTier(maxKm: 15, fee: 2),
+      DeliveryFeeTier(maxKm: 20, fee: 3),
+      DeliveryFeeTier(maxKm: 25, fee: 5),
+    ],
   });
 
   final LatLng? initialLocation;
   final String? initialAddress;
+  final ShopLocation shopLocation;
+  final List<DeliveryFeeTier> deliveryFeeTiers;
 
   @override
   State<DeliveryLocationPicker> createState() => _DeliveryLocationPickerState();
@@ -44,6 +78,7 @@ class DeliveryLocationPicker extends StatefulWidget {
 
 class _DeliveryLocationPickerState extends State<DeliveryLocationPicker> {
   static const LatLng _phnomPenh = LatLng(11.5564, 104.9282);
+  static const Distance _distanceCalculator = Distance();
 
   final MapController _mapController = MapController();
   LatLng _selectedPosition = _phnomPenh;
@@ -51,6 +86,7 @@ class _DeliveryLocationPickerState extends State<DeliveryLocationPicker> {
   String _selectedAddress = 'Move the map or tap to select a location';
   bool _isLocating = false;
   bool _isGeocoding = false;
+  bool _isServiceableZone = true;
   String? _errorMessage;
   Timer? _mapMoveDebounce;
   StreamSubscription<Position>? _positionSubscription;
@@ -185,6 +221,18 @@ class _DeliveryLocationPickerState extends State<DeliveryLocationPicker> {
     }
   }
 
+  LatLng get _shopLatLng =>
+      LatLng(widget.shopLocation.lat, widget.shopLocation.lng);
+
+  double get _distanceKmFromShop => _distanceCalculator.as(
+    LengthUnit.Kilometer,
+    _shopLatLng,
+    _selectedPosition,
+  );
+
+  double get _currentDeliveryFee =>
+      _feeForDistanceKm(_distanceKmFromShop, widget.deliveryFeeTiers);
+
   void _moveTo(LatLng target, {double zoom = 16}) {
     _mapController.move(target, zoom);
   }
@@ -217,6 +265,24 @@ class _DeliveryLocationPickerState extends State<DeliveryLocationPicker> {
       _selectedPosition = center;
     });
     _scheduleReverseGeocode(center);
+  }
+
+  /// Cambodia's ISO 3166-2 subdivision code for the Phnom Penh capital.
+  static const String _phnomPenhIsoCode = 'KH-12';
+
+  bool _isPhnomPenhAddress(Map<String, dynamic>? address) {
+    if (address == null) return false;
+    final iso = address['ISO3166-2-lvl4']?.toString();
+    if (iso == _phnomPenhIsoCode) return true;
+
+    const candidateKeys = ['state', 'city', 'county', 'town', 'municipality'];
+    for (final key in candidateKeys) {
+      final value = address[key]?.toString() ?? '';
+      if (value.contains('Phnom Penh') || value.contains('ភ្នំពេញ')) {
+        return true;
+      }
+    }
+    return false;
   }
 
   Future<void> _reverseGeocode(LatLng position) async {
@@ -257,12 +323,20 @@ class _DeliveryLocationPickerState extends State<DeliveryLocationPicker> {
       final displayName = decoded is Map
           ? decoded['display_name']?.toString()
           : null;
+      final address = decoded is Map
+          ? (decoded['address'] as Map?)?.cast<String, dynamic>()
+          : null;
+      final inZone = _isPhnomPenhAddress(address);
 
       setState(() {
         _selectedAddress = displayName?.isNotEmpty == true
             ? displayName!
             : _formatCoordinates(position);
         _isGeocoding = false;
+        _isServiceableZone = inZone;
+        if (!inZone) {
+          _errorMessage = AppLocalizations.of(context).deliveryZonePhnomPenhOnly;
+        }
       });
     } catch (_) {
       if (!mounted) return;
@@ -279,10 +353,36 @@ class _DeliveryLocationPickerState extends State<DeliveryLocationPicker> {
   }
 
   void _confirmSelection() {
+    if (!_isServiceableZone) {
+      setState(() {
+        _errorMessage = AppLocalizations.of(context).deliveryZonePhnomPenhOnly;
+      });
+      _showOutOfZoneDialog();
+      return;
+    }
     Navigator.of(context).pop(
       DeliveryLocationResult(
         latLng: _selectedPosition,
         address: _selectedAddress,
+        distanceKm: _distanceKmFromShop,
+        deliveryFee: _currentDeliveryFee,
+      ),
+    );
+  }
+
+  Future<void> _showOutOfZoneDialog() async {
+    final l = AppLocalizations.of(context);
+    await showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(l.deliveryZoneNotAvailableTitle),
+        content: Text(l.deliveryZonePhnomPenhOnly),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text(l.ok),
+          ),
+        ],
       ),
     );
   }
@@ -310,6 +410,7 @@ class _DeliveryLocationPickerState extends State<DeliveryLocationPicker> {
         'format': 'jsonv2',
         'q': query,
         'limit': '6',
+        'addressdetails': '1',
       });
       final res = await http
           .get(uri, headers: {'User-Agent': _osmUserAgent, 'Accept': 'application/json'})
@@ -342,6 +443,9 @@ class _DeliveryLocationPickerState extends State<DeliveryLocationPicker> {
     final target = LatLng(lat, lon);
     final address =
         result['display_name']?.toString() ?? _formatCoordinates(target);
+    final resultAddressDetails = (result['address'] as Map?)
+        ?.cast<String, dynamic>();
+    final inZone = _isPhnomPenhAddress(resultAddressDetails);
     _searchController.clear();
     _searchFocusNode.unfocus();
     setState(() {
@@ -350,6 +454,10 @@ class _DeliveryLocationPickerState extends State<DeliveryLocationPicker> {
       _selectedPosition = target;
       _selectedAddress = address;
       _isGeocoding = false;
+      _isServiceableZone = inZone;
+      _errorMessage = inZone
+          ? null
+          : AppLocalizations.of(context).deliveryZonePhnomPenhOnly;
     });
     _moveTo(target, zoom: 16);
   }
@@ -431,8 +539,25 @@ class _DeliveryLocationPickerState extends State<DeliveryLocationPicker> {
             ),
             children: [
               ..._buildMapLayers(),
+              PolylineLayer(
+                polylines: [
+                  Polyline(
+                    points: [_shopLatLng, _selectedPosition],
+                    strokeWidth: 3,
+                    color: const Color(0xFF0F6BFF).withValues(alpha: 0.75),
+                    isDotted: true,
+                  ),
+                ],
+              ),
               MarkerLayer(
                 markers: [
+                  Marker(
+                    width: 90,
+                    height: 58,
+                    point: _shopLatLng,
+                    alignment: Alignment.topCenter,
+                    child: _ShopPin(name: widget.shopLocation.name),
+                  ),
                   if (_currentLocation != null)
                     Marker(
                       width: 30,
@@ -625,10 +750,76 @@ class _DeliveryLocationPickerState extends State<DeliveryLocationPicker> {
               errorMessage: _errorMessage,
               onConfirm: _confirmSelection,
               confirmLabel: l.confirm,
+              distanceKm: _distanceKmFromShop,
+              deliveryFee: _currentDeliveryFee,
+              showDistance: _isServiceableZone,
             ),
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Fixed marker showing the shop's verified location, so the user can
+/// visually confirm this is the correct shop before dropping their pin.
+class _ShopPin extends StatelessWidget {
+  const _ShopPin({required this.name});
+
+  final String name;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: BoxDecoration(
+            color: const Color(0xFF16A34A),
+            borderRadius: BorderRadius.circular(8),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x33000000),
+                blurRadius: 4,
+                offset: Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Text(
+            name,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+        const SizedBox(height: 2),
+        Container(
+          width: 32,
+          height: 32,
+          decoration: BoxDecoration(
+            color: const Color(0xFF16A34A),
+            shape: BoxShape.circle,
+            border: Border.all(color: Colors.white, width: 2),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x33000000),
+                blurRadius: 4,
+                offset: Offset(0, 2),
+              ),
+            ],
+          ),
+          child: const Icon(
+            HugeIcons.strokeRoundedStore01,
+            size: 16,
+            color: Colors.white,
+          ),
+        ),
+      ],
     );
   }
 }
@@ -671,6 +862,9 @@ class _BottomSheetCard extends StatelessWidget {
     required this.helper,
     required this.onConfirm,
     required this.confirmLabel,
+    required this.distanceKm,
+    required this.deliveryFee,
+    required this.showDistance,
     this.errorMessage,
   });
 
@@ -680,6 +874,9 @@ class _BottomSheetCard extends StatelessWidget {
   final String? errorMessage;
   final VoidCallback onConfirm;
   final String confirmLabel;
+  final double distanceKm;
+  final double deliveryFee;
+  final bool showDistance;
 
   @override
   Widget build(BuildContext context) {
@@ -708,6 +905,10 @@ class _BottomSheetCard extends StatelessWidget {
             helper,
             style: const TextStyle(fontSize: 12, color: Color(0xFF6B7280)),
           ),
+          if (showDistance) ...[
+            const SizedBox(height: 8),
+            _DistanceFeeBadge(distanceKm: distanceKm, deliveryFee: deliveryFee),
+          ],
           if (errorMessage != null) ...[
             const SizedBox(height: 6),
             Text(
@@ -729,6 +930,45 @@ class _BottomSheetCard extends StatelessWidget {
                 ),
               ),
               child: Text(confirmLabel),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DistanceFeeBadge extends StatelessWidget {
+  const _DistanceFeeBadge({required this.distanceKm, required this.deliveryFee});
+
+  final double distanceKm;
+  final double deliveryFee;
+
+  @override
+  Widget build(BuildContext context) {
+    final isFree = deliveryFee <= 0;
+    final color = isFree ? const Color(0xFF16A34A) : const Color(0xFF0F6BFF);
+    final feeText = isFree
+        ? 'Free delivery'
+        : '\$${deliveryFee.toStringAsFixed(2)} delivery fee';
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(HugeIcons.strokeRoundedRoute01, size: 14, color: color),
+          const SizedBox(width: 6),
+          Text(
+            '${distanceKm.toStringAsFixed(1)} km from shop · $feeText',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: color,
             ),
           ),
         ],

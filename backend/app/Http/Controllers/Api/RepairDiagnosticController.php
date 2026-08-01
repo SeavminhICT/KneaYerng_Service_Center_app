@@ -6,7 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\DiagnosticResource;
 use App\Models\Diagnostic;
 use App\Models\RepairRequest;
-use App\Models\RepairStatusLog;
+use App\Services\RepairStatusService;
 use Illuminate\Http\Request;
 
 class RepairDiagnosticController extends Controller
@@ -31,15 +31,12 @@ class RepairDiagnosticController extends Controller
             ]
         );
 
-        if ($repair->status === 'received') {
-            $repair->status = 'diagnosing';
-            $repair->save();
-            RepairStatusLog::create([
-                'repair_id' => $repair->id,
-                'status' => 'diagnosing',
-                'updated_by' => $request->user()?->id,
-                'logged_at' => now(),
-            ]);
+        if (in_array($repair->status, ['received', 'waiting_diagnosis'], true)) {
+            // Diagnostic entry means diagnosis has effectively started, whether or
+            // not a technician was formally assigned first — force past the normal
+            // received -> waiting_diagnosis -> diagnosing sequence.
+            $actor = $request->user() ?? $request->user('sanctum');
+            RepairStatusService::transition($repair, 'diagnosing', $actor, force: true);
         }
 
         return new DiagnosticResource($diagnostic);

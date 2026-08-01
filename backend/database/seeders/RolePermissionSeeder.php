@@ -25,6 +25,8 @@ class RolePermissionSeeder extends Seeder
         'order' => 'Orders',
         'checking_pickup' => 'Checking Pick Up',
         'tracking_order' => 'Tracking Order',
+        'repair' => 'Repair Jobs',
+        'technician' => 'Technicians',
         'voucher' => 'Vouchers',
         'customer' => 'Customers',
         'payment' => 'Payments',

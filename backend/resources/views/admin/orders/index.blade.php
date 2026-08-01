@@ -211,6 +211,15 @@
             var exportDropdownMenu = document.getElementById('export-dropdown-menu');
             var shiftSummarySubtitle = document.getElementById('shift-summary-subtitle');
             var currencyFormatter = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
+            var initialOrderParams = new URLSearchParams(window.location.search);
+            var hiddenOrderFilters = {
+                status: initialOrderParams.get('status') || initialOrderParams.get('order_status') || '',
+                payment_status: initialOrderParams.get('payment_status') || '',
+                payment_method: initialOrderParams.get('payment_method') || '',
+                product_category: initialOrderParams.get('product_category') || '',
+                product: initialOrderParams.get('product') || '',
+                employee: initialOrderParams.get('employee') || ''
+            };
             var latestOrders = [];
             var hasServerSummary = false;
             var shiftCards = {
@@ -266,6 +275,48 @@
                 }).join(' ');
             }
 
+            function selectFilterOption(select, value) {
+                if (!select || !value) {
+                    return false;
+                }
+
+                var normalized = mapStatus(value);
+                for (var i = 0; i < select.options.length; i++) {
+                    var option = select.options[i];
+                    if (
+                        option.value === value ||
+                        mapStatus(option.value) === normalized ||
+                        mapStatus(option.textContent) === normalized
+                    ) {
+                        select.value = option.value;
+                        return true;
+                    }
+                }
+
+                return false;
+            }
+
+            function applyInitialOrderFilters() {
+                if (searchInput) {
+                    searchInput.value = initialOrderParams.get('q') || initialOrderParams.get('customer') || '';
+                }
+                if (orderFromDate && initialOrderParams.get('from_date')) {
+                    orderFromDate.value = initialOrderParams.get('from_date');
+                }
+                if (orderToDate && initialOrderParams.get('to_date')) {
+                    orderToDate.value = initialOrderParams.get('to_date');
+                }
+                if (orderTypeFilter) {
+                    selectFilterOption(orderTypeFilter, initialOrderParams.get('order_type') || '');
+                }
+                if (selectFilterOption(statusFilter, hiddenOrderFilters.status)) {
+                    hiddenOrderFilters.status = '';
+                }
+                if (selectFilterOption(paymentFilter, hiddenOrderFilters.payment_status)) {
+                    hiddenOrderFilters.payment_status = '';
+                }
+            }
+
             function buildOrderQuery() {
                 var query = new URLSearchParams();
                 if (searchInput.value.trim()) {
@@ -273,11 +324,15 @@
                 }
                 if (mapStatus(statusFilter.value) && mapStatus(statusFilter.value) !== 'all_statuses') {
                     query.set('status', mapStatus(statusFilter.value));
+                } else if (hiddenOrderFilters.status) {
+                    query.set('status', hiddenOrderFilters.status);
                 }
                 if (mapStatus(paymentFilter.value) && mapStatus(paymentFilter.value) !== 'payment') {
                     query.set('payment_status', mapStatus(paymentFilter.value));
+                } else if (hiddenOrderFilters.payment_status) {
+                    query.set('payment_status', hiddenOrderFilters.payment_status);
                 }
-                if (orderTypeFilter && orderTypeFilter.value && orderTypeFilter.value !== 'All types') {
+                if (orderTypeFilter && orderTypeFilter.value && mapStatus(orderTypeFilter.value) !== 'all_types') {
                     query.set('order_type', orderTypeFilter.value);
                 }
                 if (orderFromDate && orderFromDate.value) {
@@ -285,6 +340,18 @@
                 }
                 if (orderToDate && orderToDate.value) {
                     query.set('to_date', orderToDate.value);
+                }
+                if (hiddenOrderFilters.payment_method) {
+                    query.set('payment_method', hiddenOrderFilters.payment_method);
+                }
+                if (hiddenOrderFilters.product_category) {
+                    query.set('product_category', hiddenOrderFilters.product_category);
+                }
+                if (hiddenOrderFilters.product) {
+                    query.set('product', hiddenOrderFilters.product);
+                }
+                if (hiddenOrderFilters.employee) {
+                    query.set('employee', hiddenOrderFilters.employee);
                 }
                 return query;
             }
@@ -661,7 +728,7 @@
 
                 rows.innerHTML = list.map(function (order) {
                     return `
-                        <tr>
+                        <tr class="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/60" onclick="window.location.href='/admin/orders/${order.id}'">
                             <td class="px-4 py-3 font-semibold text-slate-900 dark:text-white">${order.order_number}</td>
                             <td class="px-4 py-3">${order.customer_name}</td>
                             <td class="px-4 py-3">${(order.placed_at || order.created_at) ? new Date(order.placed_at || order.created_at).toLocaleDateString() : '-'}</td>
@@ -669,7 +736,7 @@
                             <td class="px-4 py-3">${order.payment_status}</td>
                             <td class="px-4 py-3">${formatStatusLabel(order.status)}</td>
                             <td class="px-4 py-3">${order.added_by_name ?? '--'}</td>
-                            <td class="px-4 py-3 text-right"><a href="/admin/orders/${order.id}" class="text-xs font-semibold text-primary-600">Details</a></td>
+                            <td class="px-4 py-3 text-right"><a href="/admin/orders/${order.id}" class="text-xs font-semibold text-primary-600" onclick="event.stopPropagation()">Details</a></td>
                         </tr>
                     `;
                 }).join('') || '<tr><td class="px-4 py-6 text-center text-sm text-slate-500" colspan="8">No orders found.</td></tr>';
@@ -738,6 +805,7 @@
                 refreshListAndSummary();
             });
             statusFilter.addEventListener('change', function () {
+                hiddenOrderFilters.status = '';
                 refreshListAndSummary();
             });
             if (orderTypeFilter) {
@@ -746,6 +814,7 @@
                 });
             }
             paymentFilter.addEventListener('change', function () {
+                hiddenOrderFilters.payment_status = '';
                 refreshListAndSummary();
             });
             if (orderFromDate) {
@@ -819,6 +888,7 @@
             });
 
 
+            applyInitialOrderFilters();
             loadOrders();
             loadShiftSummary();
         });

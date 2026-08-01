@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:hugeicons/hugeicons.dart';
@@ -10,8 +9,8 @@ import '../../services/app_notification_service.dart';
 import '../../services/cart_service.dart';
 import '../../theme/app_palette.dart';
 import '../main_navigation_screen.dart';
+import 'otp_screen.dart';
 import 'register_screen.dart';
-import 'forgot_password_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -31,20 +30,14 @@ class _LoginScreenState extends State<LoginScreen> {
   static const Color _textMuted = Color(0xFF6B7280);
   static const Color _iconMuted = Color(0xFF97A2B5);
 
-  bool rememberMe = false;
-  bool obscurePassword = true;
   final _formKey = GlobalKey<FormState>();
   final _emailCtrl = TextEditingController();
-  final _passwordCtrl = TextEditingController();
 
   bool _loading = false;
-  final TextEditingController _otpDestinationCtrl = TextEditingController();
 
   @override
   void dispose() {
     _emailCtrl.dispose();
-    _passwordCtrl.dispose();
-    _otpDestinationCtrl.dispose();
     super.dispose();
   }
 
@@ -56,26 +49,39 @@ class _LoginScreenState extends State<LoginScreen> {
 
     setState(() => _loading = true);
 
-    final error = await ApiService.login(
-      identifier: _emailCtrl.text.trim(),
-      password: _passwordCtrl.text,
-    );
+    final phone = _emailCtrl.text.trim();
+    final request = await ApiService.requestPhoneAuthOtp(phone: phone);
 
     if (!mounted) return;
     setState(() => _loading = false);
 
-    if (error == null) {
-      await AppNotificationService.instance.syncTokenWithBackend(force: true);
-      unawaited(CartService.instance.loadFromApi());
-      if (!mounted) return;
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const MainNavigationScreen()),
-      );
-      return;
-    }
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(request.message)));
 
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error)));
+    if (!request.ok) return;
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => OtpScreen(
+          destination: phone,
+          type: 'phone',
+          purpose: 'phone_auth',
+          initialResendInSec: request.resendInSec,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _completeGoogleLogin() async {
+    await AppNotificationService.instance.syncTokenWithBackend(force: true);
+    unawaited(CartService.instance.loadFromApi());
+    if (!mounted) return;
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (_) => const MainNavigationScreen()),
+    );
   }
 
   Future<void> _loginWithGoogle() async {
@@ -122,13 +128,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (error == null) {
         // Google accounts are already verified by the backend; no OTP needed.
-        await AppNotificationService.instance.syncTokenWithBackend(force: true);
-        unawaited(CartService.instance.loadFromApi());
-        if (!mounted) return;
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const MainNavigationScreen()),
-        );
+        await _completeGoogleLogin();
         return;
       }
 
@@ -210,7 +210,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Sign in to your KY Service Center account',
+                        'Enter your phone number to receive an OTP',
                         style: TextStyle(
                           fontSize: 13.5,
                           color: Colors.white.withValues(alpha: 0.8),
@@ -244,100 +244,21 @@ class _LoginScreenState extends State<LoginScreen> {
                           size: 22,
                           color: _iconMuted,
                         ),
-                        textInputAction: TextInputAction.next,
-                        onFieldSubmitted: (_) =>
-                            FocusScope.of(context).nextFocus(),
+                        textInputAction: TextInputAction.done,
+                        onFieldSubmitted: (_) => _submitLogin(),
                         validator: (v) {
                           if (v == null || v.trim().isEmpty) {
                             return l.requiredField;
                           }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 14),
-                      _buildTextField(
-                        controller: _passwordCtrl,
-                        hint: l.password,
-                        obscure: obscurePassword,
-                        prefixIcon: const Icon(
-                          HugeIcons.strokeRoundedSquareLock01,
-                          size: 22,
-                          color: _iconMuted,
-                        ),
-                        textInputAction: TextInputAction.done,
-                        onFieldSubmitted: (_) => _submitLogin(),
-                        validator: (v) {
-                          if (v == null || v.isEmpty) {
-                            return l.requiredField;
-                          }
-                          if (v.length < 6) {
-                            return 'Password must be at least 6 characters';
+                          final digits = v.replaceAll(RegExp(r'[^\d]'), '');
+                          if (digits.length < 8 || digits.length > 15) {
+                            return 'Enter a valid phone number';
                           }
                           return null;
                         },
-                        suffixIcon: IconButton(
-                          onPressed: () =>
-                              setState(() => obscurePassword = !obscurePassword),
-                          icon: Icon(
-                            obscurePassword
-                                ? HugeIcons.strokeRoundedViewOffSlash
-                                : HugeIcons.strokeRoundedView,
-                            size: 22,
-                            color: _iconMuted,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      // Remember me + Forgot password
-                      Row(
-                        children: [
-                          Transform.scale(
-                            scale: 0.82,
-                            alignment: Alignment.centerLeft,
-                            child: CupertinoSwitch(
-                              value: rememberMe,
-                              activeTrackColor: const Color(0xFF3B63FF),
-                              inactiveTrackColor: const Color(0xFFD5DDEA),
-                              thumbColor: Colors.white,
-                              onChanged: (v) => setState(() => rememberMe = v),
-                            ),
-                          ),
-                          const SizedBox(width: 4),
-                          const Expanded(
-                            child: Text(
-                              'Remember Me',
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w500,
-                                color: _textMuted,
-                              ),
-                            ),
-                          ),
-                          TextButton(
-                            onPressed: () => Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const ForgotPasswordScreen(),
-                              ),
-                            ),
-                            style: TextButton.styleFrom(
-                              foregroundColor: const Color(0xFF3B63FF),
-                              padding: EdgeInsets.zero,
-                              minimumSize: const Size(0, 0),
-                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                            ),
-                            child: Text(
-                              l.forgotPassword,
-                              style: const TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ],
                       ),
                       const SizedBox(height: 24),
-                      _buildSignInButton(l),
+                      _buildSignInButton(),
                       const SizedBox(height: 10),
                       TextButton(
                         onPressed: () => Navigator.pushReplacement(
@@ -358,7 +279,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       const SizedBox(height: 8),
                       _buildOrDivider(),
                       const SizedBox(height: 16),
-                      _buildGoogleButton(l),
+                      _buildGoogleButton(),
                       const SizedBox(height: 20),
                       _buildSignUpPrompt(l),
                       const SizedBox(height: 8),
@@ -373,7 +294,7 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  Widget _buildSignInButton(AppLocalizations l) {
+  Widget _buildSignInButton() {
     return SizedBox(
       height: 54,
       child: DecoratedBox(
@@ -414,9 +335,9 @@ class _LoginScreenState extends State<LoginScreen> {
                     color: Colors.white,
                   ),
                 )
-              : Text(
-                  l.signIn,
-                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+              : const Text(
+                  'Send OTP',
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
                 ),
         ),
       ),
@@ -443,7 +364,7 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  Widget _buildGoogleButton(AppLocalizations l) {
+  Widget _buildGoogleButton() {
     return SizedBox(
       height: 54,
       child: OutlinedButton(

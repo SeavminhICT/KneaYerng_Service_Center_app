@@ -4,6 +4,25 @@
 @section('page-title', __('Create Product'))
 
 @section('content')
+    @php
+        $productTypes = $productTypes ?? collect();
+        $productTypeFieldDefinitions = \App\Models\ProductType::fieldDefinitions();
+        $productTypeFieldLabels = collect($productTypeFieldDefinitions)
+            ->mapWithKeys(fn ($field, $key) => [$key => $field['label']])
+            ->all();
+        $selectedProductType = old('product_type', $productTypes->first()?->slug ?? 'mobile');
+        $productTypePayload = $productTypes
+            ->map(fn ($type) => [
+                'id' => $type->id,
+                'name' => $type->name,
+                'slug' => $type->slug,
+                'fields' => $type->fields,
+                'required_fields' => $type->required_fields,
+                'sort_order' => $type->sort_order,
+            ])
+            ->values();
+    @endphp
+
     <div class="grid gap-6 lg:grid-cols-[2fr_1fr]">
         <form
             id="product-create-form"
@@ -17,29 +36,38 @@
 
             <!-- Product Type Selector -->
             <div class="rounded-2xl border border-slate-200 p-4 dark:border-slate-800">
-                <h3 class="text-sm font-semibold text-slate-900 dark:text-white">{{ __('Product Type') }} *</h3>
-                <div id="product-type-group" class="mt-3 grid gap-3 sm:grid-cols-3">
-                    <label class="product-type-card flex cursor-pointer items-center gap-3 rounded-xl border border-slate-200 bg-white p-3 transition-colors hover:border-primary-400 dark:border-slate-700 dark:bg-slate-900/60">
-                        <input type="radio" name="product_type" value="mobile" checked class="h-4 w-4 text-primary-600 focus:ring-primary-500" />
-                        <span>
-                            <span class="block text-sm font-semibold text-slate-900 dark:text-white">{{ __('Mobile') }}</span>
-                            <span class="block text-xs text-slate-500">{{ __('iPhone & smartphones') }}</span>
-                        </span>
-                    </label>
-                    <label class="product-type-card flex cursor-pointer items-center gap-3 rounded-xl border border-slate-200 bg-white p-3 transition-colors hover:border-primary-400 dark:border-slate-700 dark:bg-slate-900/60">
-                        <input type="radio" name="product_type" value="mac" class="h-4 w-4 text-primary-600 focus:ring-primary-500" />
-                        <span>
-                            <span class="block text-sm font-semibold text-slate-900 dark:text-white">{{ __('Mac') }}</span>
-                            <span class="block text-xs text-slate-500">{{ __('MacBook & laptops') }}</span>
-                        </span>
-                    </label>
-                    <label class="product-type-card flex cursor-pointer items-center gap-3 rounded-xl border border-slate-200 bg-white p-3 transition-colors hover:border-primary-400 dark:border-slate-700 dark:bg-slate-900/60">
-                        <input type="radio" name="product_type" value="accessory" class="h-4 w-4 text-primary-600 focus:ring-primary-500" />
-                        <span>
-                            <span class="block text-sm font-semibold text-slate-900 dark:text-white">{{ __('Accessory') }}</span>
-                            <span class="block text-xs text-slate-500">{{ __('Cases, chargers & more') }}</span>
-                        </span>
-                    </label>
+                <div class="flex items-center justify-between gap-3">
+                    <h3 class="text-sm font-semibold text-slate-900 dark:text-white">{{ __('Product Type') }} *</h3>
+                    @if (auth()->user()?->hasPermission('create_product_master'))
+                        <button id="product-type-add-btn" type="button"
+                                class="inline-flex h-8 items-center gap-1 rounded-lg border border-primary-200 bg-primary-50 px-3 text-xs font-semibold text-primary-700 transition-colors hover:bg-primary-100 dark:border-primary-500/30 dark:bg-primary-500/10 dark:text-primary-300 dark:hover:bg-primary-500/20">
+                            + {{ __('Add Type') }}
+                        </button>
+                    @endif
+                </div>
+                <div id="product-type-group" class="mt-3 grid auto-rows-fr gap-3 sm:grid-cols-3">
+                    @forelse ($productTypes as $productType)
+                        @php
+                            $fieldsText = collect($productType->fields ?? [])
+                                ->map(fn ($field) => __($productTypeFieldLabels[$field] ?? $field))
+                                ->join(', ');
+                        @endphp
+                        <label class="product-type-card flex h-full min-h-[66px] cursor-pointer items-center gap-3 rounded-xl border border-slate-200 bg-white p-3 transition-colors hover:border-primary-400 dark:border-slate-700 dark:bg-slate-900/60">
+                            <input type="radio" name="product_type" value="{{ $productType->slug }}" {{ $selectedProductType === $productType->slug ? 'checked' : '' }} class="h-4 w-4 text-primary-600 focus:ring-primary-500" />
+                            <span>
+                                <span class="block text-sm font-semibold text-slate-900 dark:text-white">{{ $productType->name }}</span>
+                                <span class="block text-xs text-slate-500">{{ $fieldsText !== '' ? $fieldsText : __('No variant fields') }}</span>
+                            </span>
+                        </label>
+                    @empty
+                        <label class="product-type-card flex h-full min-h-[66px] cursor-pointer items-center gap-3 rounded-xl border border-slate-200 bg-white p-3 transition-colors hover:border-primary-400 dark:border-slate-700 dark:bg-slate-900/60">
+                            <input type="radio" name="product_type" value="mobile" checked class="h-4 w-4 text-primary-600 focus:ring-primary-500" />
+                            <span>
+                                <span class="block text-sm font-semibold text-slate-900 dark:text-white">{{ __('Mobile') }}</span>
+                                <span class="block text-xs text-slate-500">{{ __('Storage, Color, Condition') }}</span>
+                            </span>
+                        </label>
+                    @endforelse
                 </div>
             </div>
 
@@ -193,9 +221,15 @@
                             <label class="text-xs font-semibold text-slate-600 dark:text-slate-300" for="variant-ssd" id="variant-label-ssd">{{ __('SSD') }}</label>
                             <select id="variant-ssd" class="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200"></select>
                         </div>
-                        <div data-variant-field="color">
-                            <label class="text-xs font-semibold text-slate-600 dark:text-slate-300" for="variant-color" id="variant-label-color">{{ __('Color') }}</label>
-                            <select id="variant-color" class="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200"></select>
+                        <div data-variant-field="color" class="relative">
+                            <label class="text-xs font-semibold text-slate-600 dark:text-slate-300" id="variant-label-color">{{ __('Color') }}</label>
+                            <button type="button" id="variant-color-trigger" class="mt-1 flex w-full items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-left text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200">
+                                <span id="variant-color-summary" class="truncate text-slate-400">{{ __('Select one or more colors') }}</span>
+                                <svg class="h-4 w-4 flex-shrink-0 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                </svg>
+                            </button>
+                            <div id="variant-color-dropdown" class="absolute inset-x-0 top-full z-20 mt-1 hidden max-h-56 overflow-y-auto rounded-xl border border-slate-200 bg-white p-2 shadow-lg dark:border-slate-700 dark:bg-slate-900"></div>
                         </div>
                         <div data-variant-field="condition">
                             <label class="text-xs font-semibold text-slate-600 dark:text-slate-300" for="variant-condition" id="variant-label-condition">{{ __('Condition') }}</label>
@@ -300,10 +334,75 @@
         </div>
     </div>
 
+    {{-- Add Product Type modal --}}
+    <div id="product-type-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/40 px-4">
+        <div class="w-full max-w-2xl rounded-2xl bg-white p-6 shadow-xl dark:bg-slate-900">
+            <div class="flex items-center justify-between">
+                <h3 class="text-lg font-semibold text-slate-900 dark:text-white">{{ __('Add Product Type') }}</h3>
+                <button id="product-type-modal-close" type="button" class="rounded-lg p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <form id="product-type-form" class="mt-4 space-y-4">
+                <div class="grid gap-4 sm:grid-cols-[1fr_180px]">
+                    <div>
+                        <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="product-type-name">{{ __('Name') }}</label>
+                        <input id="product-type-name" type="text" placeholder="{{ __('e.g. Tablet') }}"
+                               class="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200" />
+                    </div>
+                    <div>
+                        <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="product-type-sort-order">{{ __('Sort') }}</label>
+                        <input id="product-type-sort-order" type="number" min="0" value="0"
+                               class="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200" />
+                    </div>
+                </div>
+                <div>
+                    <label class="text-sm font-semibold text-slate-700 dark:text-slate-200" for="product-type-slug">{{ __('Slug') }}</label>
+                    <input id="product-type-slug" type="text" placeholder="{{ __('tablet') }}"
+                           class="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 font-mono text-sm text-slate-700 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200" />
+                    <p class="mt-1 text-xs text-slate-500">{{ __('Used internally for saved products. It cannot be changed after creation.') }}</p>
+                </div>
+                <div>
+                    <div class="grid gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-950/40">
+                        <div class="grid grid-cols-[1fr_88px_88px] gap-3 px-2 text-xs font-semibold uppercase tracking-wider text-slate-400">
+                            <span>{{ __('Field') }}</span>
+                            <span class="text-center">{{ __('Show') }}</span>
+                            <span class="text-center">{{ __('Required') }}</span>
+                        </div>
+                        @foreach ($productTypeFieldDefinitions as $fieldKey => $field)
+                            @php $isDefault = in_array($fieldKey, ['storage', 'color', 'condition'], true); @endphp
+                            <div class="grid grid-cols-[1fr_88px_88px] items-center gap-3 rounded-lg bg-white px-3 py-2 dark:bg-slate-900">
+                                <div>
+                                    <p class="text-sm font-semibold text-slate-800 dark:text-slate-100">{{ __($field['label']) }}</p>
+                                    <p class="text-xs text-slate-500">{{ $field['payload_key'] }}</p>
+                                </div>
+                                <label class="flex justify-center">
+                                    <input type="checkbox" data-product-type-field value="{{ $fieldKey }}" class="h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500" {{ $isDefault ? 'checked' : '' }} />
+                                </label>
+                                <label class="flex justify-center">
+                                    <input type="checkbox" data-product-type-required value="{{ $fieldKey }}" class="h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500 disabled:opacity-40" {{ $isDefault ? 'checked' : 'disabled' }} />
+                                </label>
+                            </div>
+                        @endforeach
+                    </div>
+                    <p id="product-type-fields-error" class="mt-2 text-xs text-danger-600"></p>
+                </div>
+                <p id="product-type-form-error" class="text-xs text-danger-600"></p>
+                <div class="flex items-center justify-end gap-3 pt-1">
+                    <button id="product-type-cancel" type="button" class="h-10 rounded-xl border border-slate-200 px-4 text-sm font-semibold text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800">{{ __('Cancel') }}</button>
+                    <button id="product-type-submit" type="submit" class="inline-flex h-10 items-center rounded-xl bg-primary-600 px-4 text-sm font-semibold text-white shadow-sm hover:bg-primary-700 transition-colors">{{ __('Save') }}</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script>
         (function () {
             const variants = [];
             let editIndex = null;
+            const INITIAL_PRODUCT_TYPES = {!! \Illuminate\Support\Js::from($productTypePayload) !!};
 
             // Suggested model names per product type, shown as datalist options for the name input.
             const NAME_PRESETS = {
@@ -348,7 +447,31 @@
                 country: { payloadKey: 'country',          masterType: 'country',          label: @json(__('Country')),   placeholder: @json(__('Select country')) },
             };
 
-            const TYPE_CONFIG = {
+            const FALLBACK_PRODUCT_TYPES = [
+                {
+                    name: @json(__('Mobile')),
+                    slug: 'mobile',
+                    fields: ['storage', 'color', 'condition', 'country'],
+                    required_fields: ['storage', 'color', 'condition'],
+                    sort_order: 10,
+                },
+                {
+                    name: @json(__('Mac')),
+                    slug: 'mac',
+                    fields: ['display', 'cpu', 'storage', 'ram', 'ssd', 'color', 'condition', 'country'],
+                    required_fields: ['storage', 'color', 'condition'],
+                    sort_order: 20,
+                },
+                {
+                    name: @json(__('Accessory')),
+                    slug: 'accessory',
+                    fields: ['color'],
+                    required_fields: [],
+                    sort_order: 30,
+                },
+            ];
+
+            const FALLBACK_TYPE_CONFIG = {
                 mobile: {
                     fields: ['storage', 'color', 'condition', 'country'],
                     required: ['storage', 'color', 'condition'],
@@ -371,6 +494,8 @@
                     hint: {!! json_encode(__('Accessory variants: color (optional), price, SKU and stock.')) !!},
                 },
             };
+            let productTypeList = [];
+            let TYPE_CONFIG = Object.assign({}, FALLBACK_TYPE_CONFIG);
 
             const nameSuggestions = document.getElementById('name-suggestions');
             const nameInput = document.getElementById('name');
@@ -396,8 +521,13 @@
             const aiGenerateError = document.getElementById('ai-generate-error');
             const categorySelect = document.getElementById('category');
             const tagSelect = document.getElementById('tag');
+            const productTypeGroup = document.getElementById('product-type-group');
+            const variantColorTrigger = document.getElementById('variant-color-trigger');
+            const variantColorDropdown = document.getElementById('variant-color-dropdown');
+            const variantColorSummary = document.getElementById('variant-color-summary');
 
             let masterOptions = {};
+            let selectedColors = [];
             let skuPreviewTimer = null;
             let skuPreviewRequestId = 0;
 
@@ -407,7 +537,7 @@
             }
 
             function currentConfig() {
-                return TYPE_CONFIG[currentType()] || TYPE_CONFIG.mobile;
+                return TYPE_CONFIG[currentType()] || TYPE_CONFIG.mobile || Object.values(TYPE_CONFIG)[0];
             }
 
             function fieldSelect(key) {
@@ -433,6 +563,84 @@
                     .replace(/</g, '&lt;')
                     .replace(/>/g, '&gt;')
                     .replace(/"/g, '&quot;');
+            }
+
+            function normalizeTypeFields(fields) {
+                const allowed = Object.keys(VARIANT_FIELDS);
+                const list = Array.isArray(fields) ? fields : [];
+                return list.filter(function (field, index) {
+                    return allowed.indexOf(field) !== -1 && list.indexOf(field) === index;
+                });
+            }
+
+            function variantFieldLabel(key, config) {
+                return (config && config.labels && config.labels[key]) || VARIANT_FIELDS[key]?.label || key;
+            }
+
+            function configFromProductType(type) {
+                const fields = normalizeTypeFields(type.fields);
+                const required = normalizeTypeFields(type.required_fields).filter(function (field) {
+                    return fields.indexOf(field) !== -1;
+                });
+                const fallback = FALLBACK_TYPE_CONFIG[type.slug] || {};
+                const labels = Object.assign({}, fallback.labels || {});
+                const labelText = fields.map(function (field) {
+                    return labels[field] || VARIANT_FIELDS[field].label;
+                }).join(', ');
+
+                return {
+                    fields: fields.length ? fields : ['color'],
+                    required: required,
+                    labels: labels,
+                    brandPreset: type.slug === 'mobile' || type.slug === 'mac',
+                    hint: fallback.hint || (type.name + ' variants: ' + (labelText || 'selected fields') + ', price, SKU and stock.'),
+                };
+            }
+
+            function renderProductTypeOptions(selectedSlug) {
+                const selected = productTypeList.some((type) => type.slug === selectedSlug)
+                    ? selectedSlug
+                    : (productTypeList[0]?.slug || 'mobile');
+
+                productTypeGroup.innerHTML = productTypeList.map(function (type) {
+                    const checked = type.slug === selected ? 'checked' : '';
+                    const fields = normalizeTypeFields(type.fields)
+                        .map(function (field) { return VARIANT_FIELDS[field].label; })
+                        .join(', ') || @json(__('No variant fields'));
+
+                    return `
+                        <label class="product-type-card flex h-full min-h-[66px] cursor-pointer items-center gap-3 rounded-xl border border-slate-200 bg-white p-3 transition-colors hover:border-primary-400 dark:border-slate-700 dark:bg-slate-900/60">
+                            <input type="radio" name="product_type" value="${escapeHtml(type.slug)}" ${checked} class="h-4 w-4 text-primary-600 focus:ring-primary-500" />
+                            <span>
+                                <span class="block text-sm font-semibold text-slate-900 dark:text-white">${escapeHtml(type.name)}</span>
+                                <span class="block text-xs text-slate-500">${escapeHtml(fields)}</span>
+                            </span>
+                        </label>
+                    `;
+                }).join('');
+            }
+
+            function applyProductTypes(list, selectedSlug) {
+                const source = Array.isArray(list) && list.length ? list : FALLBACK_PRODUCT_TYPES;
+                productTypeList = source.map(function (type) {
+                    return {
+                        name: cleanText(type.name) || cleanText(type.slug) || 'Product Type',
+                        slug: cleanText(type.slug) || 'mobile',
+                        fields: normalizeTypeFields(type.fields),
+                        required_fields: normalizeTypeFields(type.required_fields),
+                    };
+                });
+
+                TYPE_CONFIG = {};
+                productTypeList.forEach(function (type) {
+                    TYPE_CONFIG[type.slug] = configFromProductType(type);
+                });
+
+                renderProductTypeOptions(selectedSlug || currentType());
+                applyNameControl();
+                applyBrandControl();
+                applyVariantFields();
+                renderVariantRows();
             }
 
             function skuSegment(value, maxLength = 8) {
@@ -490,6 +698,7 @@
                         draft[VARIANT_FIELDS[key].payloadKey] = cleanText(select.value);
                     }
                 });
+                draft.color = selectedColors[0] || '';
 
                 return draft;
             }
@@ -543,6 +752,66 @@
                 clearTimeout(skuPreviewTimer);
                 skuPreviewTimer = setTimeout(refreshSkuPreview, 250);
             }
+
+            // ── Color multi-select (checkbox dropdown) ──────────────────
+            function updateColorSummary() {
+                if (!variantColorSummary) return;
+                if (!selectedColors.length) {
+                    variantColorSummary.textContent = @json(__('Select one or more colors'));
+                    variantColorSummary.classList.add('text-slate-400');
+                } else {
+                    variantColorSummary.textContent = selectedColors.join(', ');
+                    variantColorSummary.classList.remove('text-slate-400');
+                }
+            }
+
+            function renderColorOptions() {
+                if (!variantColorDropdown) return;
+                const options = masterOptions.color || [];
+                if (!options.length) {
+                    variantColorDropdown.innerHTML = '<p class="px-2 py-1.5 text-xs text-slate-400">' + @json(__('No colors available yet.')) + '</p>';
+                    return;
+                }
+                variantColorDropdown.innerHTML = options.map(function (value) {
+                    const checked = selectedColors.indexOf(value) !== -1 ? 'checked' : '';
+                    const escaped = escapeHtml(value);
+                    return '<label class="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800">'
+                        + '<input type="checkbox" data-color-option value="' + escaped + '" ' + checked + ' class="h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500" />'
+                        + '<span>' + escaped + '</span>'
+                        + '</label>';
+                }).join('');
+            }
+
+            function closeColorDropdown() {
+                if (variantColorDropdown) variantColorDropdown.classList.add('hidden');
+            }
+
+            if (variantColorTrigger) {
+                variantColorTrigger.addEventListener('click', function (event) {
+                    event.stopPropagation();
+                    variantColorDropdown.classList.toggle('hidden');
+                });
+            }
+
+            if (variantColorDropdown) {
+                variantColorDropdown.addEventListener('change', function (event) {
+                    const checkbox = event.target.closest('[data-color-option]');
+                    if (!checkbox) return;
+                    if (checkbox.checked) {
+                        if (selectedColors.indexOf(checkbox.value) === -1) selectedColors.push(checkbox.value);
+                    } else {
+                        selectedColors = selectedColors.filter((value) => value !== checkbox.value);
+                    }
+                    updateColorSummary();
+                    updateVariantSkuPlaceholder();
+                });
+            }
+
+            document.addEventListener('click', function (event) {
+                if (!variantColorDropdown || variantColorDropdown.classList.contains('hidden')) return;
+                if (event.target.closest('#variant-color-trigger') || event.target.closest('#variant-color-dropdown')) return;
+                closeColorDropdown();
+            });
 
             function variantKey(item) {
                 return currentConfig().fields
@@ -724,6 +993,10 @@
                     const select = fieldSelect(key);
                     if (select) select.value = '';
                 });
+                selectedColors = [];
+                renderColorOptions();
+                updateColorSummary();
+                closeColorDropdown();
                 variantSku.value = '';
                 variantPrice.value = '';
                 variantStock.value = '';
@@ -779,7 +1052,7 @@
                 updateVariantSummary();
             }
 
-            function readVariantInput() {
+            function readVariantInput(colorValue) {
                 const config = currentConfig();
                 const payload = {
                     storage_capacity: '',
@@ -798,6 +1071,10 @@
                 };
 
                 config.fields.forEach(function (key) {
+                    if (key === 'color') {
+                        payload.color = cleanText(colorValue);
+                        return;
+                    }
                     payload[VARIANT_FIELDS[key].payloadKey] = cleanText(fieldSelect(key).value);
                 });
 
@@ -836,6 +1113,9 @@
                     const select = fieldSelect(key);
                     if (select) select.value = cleanText(item[VARIANT_FIELDS[key].payloadKey]);
                 });
+                selectedColors = cleanText(item.color) ? [cleanText(item.color)] : [];
+                renderColorOptions();
+                updateColorSummary();
                 variantSku.value = cleanText(item.sku);
                 variantPrice.value = String(item.price ?? '');
                 variantStock.value = String(item.stock ?? '');
@@ -845,26 +1125,39 @@
             }
 
             function addOrUpdateVariant() {
-                const result = readVariantInput();
-                if (result.error) {
-                    variantFormError.textContent = result.error;
-                    return;
-                }
-
-                const payload = result.value;
-                const duplicate = variants.some(function (item, index) {
-                    if (editIndex !== null && editIndex === index) {
-                        return false;
-                    }
-                    return variantKey(item) === variantKey(payload);
-                });
-
-                if (duplicate) {
-                    variantFormError.textContent = @json(__('This variant combination already exists.'));
-                    return;
-                }
+                const config = currentConfig();
+                const hasColorField = config.fields.indexOf('color') !== -1;
+                const colorRequired = hasColorField && config.required.indexOf('color') !== -1;
 
                 if (editIndex !== null) {
+                    if (hasColorField && selectedColors.length > 1) {
+                        variantFormError.textContent = @json(__('Select only one color when updating a variant.'));
+                        return;
+                    }
+                    if (colorRequired && selectedColors.length === 0) {
+                        variantFormError.textContent = @json(__('Color is required.'));
+                        return;
+                    }
+
+                    const result = readVariantInput(selectedColors[0] || '');
+                    if (result.error) {
+                        variantFormError.textContent = result.error;
+                        return;
+                    }
+
+                    const payload = result.value;
+                    const duplicate = variants.some(function (item, index) {
+                        if (index === editIndex) {
+                            return false;
+                        }
+                        return variantKey(item) === variantKey(payload);
+                    });
+
+                    if (duplicate) {
+                        variantFormError.textContent = @json(__('This variant combination already exists.'));
+                        return;
+                    }
+
                     const previous = variants[editIndex];
                     const merged = Object.assign({}, previous, payload);
                     if (!(payload.file instanceof File)) {
@@ -874,8 +1167,72 @@
                         merged.image = previous.image || null;
                     }
                     variants[editIndex] = merged;
+
+                    resetVariantForm();
+                    renderVariantRows();
+                    return;
+                }
+
+                // Add mode — one variant is created per selected color, so picking
+                // several colors at once lists them all below for later per-row editing.
+                if (colorRequired && selectedColors.length === 0) {
+                    variantFormError.textContent = @json(__('Select at least one color.'));
+                    return;
+                }
+
+                const colorsToAdd = hasColorField && selectedColors.length ? selectedColors.slice() : [''];
+                const bulkAdd = colorsToAdd.length > 1;
+                const newPayloads = [];
+                const skipped = [];
+                let firstError = '';
+
+                colorsToAdd.forEach(function (color) {
+                    if (firstError) return;
+
+                    const result = readVariantInput(color);
+                    if (result.error) {
+                        firstError = result.error;
+                        return;
+                    }
+
+                    const payload = result.value;
+                    if (bulkAdd) {
+                        // A manually typed SKU can't be reused across multiple new
+                        // variants, so let the backend auto-generate one per color.
+                        payload.sku = '';
+                    }
+
+                    const isDuplicate = variants.some((item) => variantKey(item) === variantKey(payload))
+                        || newPayloads.some((item) => variantKey(item) === variantKey(payload));
+
+                    if (isDuplicate) {
+                        skipped.push(color || @json(__('default')));
+                        return;
+                    }
+
+                    newPayloads.push(payload);
+                });
+
+                if (firstError) {
+                    variantFormError.textContent = firstError;
+                    return;
+                }
+
+                if (!newPayloads.length) {
+                    variantFormError.textContent = skipped.length
+                        ? @json(__('These variant combinations already exist.'))
+                        : @json(__('Unable to add variant.'));
+                    return;
+                }
+
+                variants.push.apply(variants, newPayloads);
+
+                if (skipped.length) {
+                    variantFormError.textContent = @json(__('Added')) + ' ' + newPayloads.length + ' '
+                        + (newPayloads.length === 1 ? @json(__('variant')) : @json(__('variants'))) + '. '
+                        + @json(__('Skipped existing:')) + ' ' + skipped.join(', ');
                 } else {
-                    variants.push(payload);
+                    variantFormError.textContent = '';
                 }
 
                 resetVariantForm();
@@ -928,6 +1285,142 @@
                 renderVariantRows();
                 scheduleSkuPreviewRefresh();
             });
+
+            // ── Add Product Type modal ───────────────────────────────────
+            (function () {
+                const addBtn = document.getElementById('product-type-add-btn');
+                if (!addBtn) return;
+
+                const modal = document.getElementById('product-type-modal');
+                const modalClose = document.getElementById('product-type-modal-close');
+                const cancelBtn = document.getElementById('product-type-cancel');
+                const typeForm = document.getElementById('product-type-form');
+                const typeNameInput = document.getElementById('product-type-name');
+                const typeSlugInput = document.getElementById('product-type-slug');
+                const typeSortInput = document.getElementById('product-type-sort-order');
+                const typeFieldsError = document.getElementById('product-type-fields-error');
+                const typeFormError = document.getElementById('product-type-form-error');
+                const typeSubmitBtn = document.getElementById('product-type-submit');
+                let slugTouched = false;
+
+                function slugify(value) {
+                    return String(value || '')
+                        .toLowerCase()
+                        .replace(/[^a-z0-9]+/g, '-')
+                        .replace(/^-+|-+$/g, '')
+                        .slice(0, 20);
+                }
+
+                function selectedValues(selector) {
+                    return Array.from(document.querySelectorAll(selector))
+                        .filter(function (input) { return input.checked && !input.disabled; })
+                        .map(function (input) { return input.value; });
+                }
+
+                function syncRequiredControls() {
+                    document.querySelectorAll('[data-product-type-required]').forEach(function (input) {
+                        const fieldInput = document.querySelector('[data-product-type-field][value="' + input.value + '"]');
+                        const enabled = Boolean(fieldInput && fieldInput.checked);
+                        input.disabled = !enabled;
+                        if (!enabled) input.checked = false;
+                    });
+                }
+
+                document.querySelectorAll('[data-product-type-field]').forEach(function (input) {
+                    input.addEventListener('change', syncRequiredControls);
+                });
+
+                function openModal() {
+                    typeForm.reset();
+                    typeFieldsError.textContent = '';
+                    typeFormError.textContent = '';
+                    slugTouched = false;
+                    syncRequiredControls();
+                    modal.classList.remove('hidden');
+                    modal.classList.add('flex');
+                    setTimeout(function () { typeNameInput.focus(); }, 0);
+                }
+
+                function closeModal() {
+                    modal.classList.add('hidden');
+                    modal.classList.remove('flex');
+                }
+
+                addBtn.addEventListener('click', openModal);
+                modalClose.addEventListener('click', closeModal);
+                cancelBtn.addEventListener('click', closeModal);
+                modal.addEventListener('click', function (event) {
+                    if (event.target === modal) closeModal();
+                });
+                document.addEventListener('keydown', function (event) {
+                    if (event.key === 'Escape' && !modal.classList.contains('hidden')) closeModal();
+                });
+
+                typeNameInput.addEventListener('input', function () {
+                    if (!slugTouched) typeSlugInput.value = slugify(typeNameInput.value);
+                });
+                typeSlugInput.addEventListener('input', function () {
+                    slugTouched = true;
+                    typeSlugInput.value = slugify(typeSlugInput.value);
+                });
+
+                typeForm.addEventListener('submit', async function (event) {
+                    event.preventDefault();
+                    typeFieldsError.textContent = '';
+                    typeFormError.textContent = '';
+
+                    const fields = selectedValues('[data-product-type-field]');
+                    const requiredFields = selectedValues('[data-product-type-required]');
+                    const name = (typeNameInput.value || '').trim();
+                    const slug = slugify(typeSlugInput.value || name);
+
+                    if (!name) {
+                        typeFormError.textContent = @json(__('Name is required.'));
+                        return;
+                    }
+                    if (!fields.length) {
+                        typeFieldsError.textContent = @json(__('Select at least one field to show.'));
+                        return;
+                    }
+
+                    typeSubmitBtn.disabled = true;
+                    try {
+                        await window.adminApi.ensureCsrfCookie();
+                        const response = await window.adminApi.request('/api/product-types', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                name: name,
+                                slug: slug,
+                                fields: fields,
+                                required_fields: requiredFields,
+                                sort_order: Number(typeSortInput.value || 0),
+                            }),
+                        });
+
+                        if (!response.ok) {
+                            const errorData = await response.json().catch(function () { return {}; });
+                            typeFormError.textContent = errorData.message || @json(__('Unable to save product type.'));
+                            window.adminToast?.(errorData.message || @json(__('Unable to save product type.')), { type: 'error' });
+                            return;
+                        }
+
+                        const payload = await response.json();
+                        const created = payload.data || payload;
+                        const updatedList = productTypeList.concat([{
+                            name: created.name,
+                            slug: created.slug,
+                            fields: created.fields,
+                            required_fields: created.required_fields,
+                        }]);
+                        applyProductTypes(updatedList, created.slug);
+                        closeModal();
+                        window.adminToast?.(@json(__('Product type added.')));
+                    } finally {
+                        typeSubmitBtn.disabled = false;
+                    }
+                });
+            })();
 
             function renderGalleryPreview(files, containerId) {
                 const container = document.getElementById(containerId);
@@ -1108,6 +1601,10 @@
                         select.value = current;
                     }
                 });
+
+                selectedColors = selectedColors.filter((value) => (masterOptions.color || []).indexOf(value) !== -1);
+                renderColorOptions();
+                updateColorSummary();
             }
 
             // Options come from the Product Master (product attribute options).
@@ -1133,18 +1630,31 @@
                 }
             }
 
+            async function loadProductTypes() {
+                applyProductTypes(INITIAL_PRODUCT_TYPES, currentType());
+
+                try {
+                    await window.adminApi.ensureCsrfCookie();
+                    const response = await window.adminApi.request('/api/product-types');
+                    if (!response.ok) return;
+                    const payload = await response.json();
+                    applyProductTypes(Array.isArray(payload.data) ? payload.data : [], currentType());
+                    scheduleSkuPreviewRefresh();
+                } catch (e) {
+                    // server-rendered product types are already active
+                }
+            }
+
             // window.adminApi is defined by the layout after @yield('content'),
             // so wait for DOMContentLoaded before making API calls.
             document.addEventListener('DOMContentLoaded', function () {
                 loadCategories();
                 loadAttributeOptions();
+                loadProductTypes();
                 scheduleSkuPreviewRefresh();
             });
 
-            applyNameControl();
-            applyBrandControl();
-            applyVariantFields();
-            renderVariantRows();
+            applyProductTypes(INITIAL_PRODUCT_TYPES, currentType());
         })();
     </script>
 @endsection

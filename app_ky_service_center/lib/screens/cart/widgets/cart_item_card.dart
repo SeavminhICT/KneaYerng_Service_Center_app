@@ -25,14 +25,18 @@ class CartItemCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final product  = item.product;
+    final product = item.product;
     final imageUrl = item.variantImageUrl ?? product.imageUrl;
-    final variant  = item.variant?.trim().isNotEmpty == true ? item.variant!.trim() : '';
+    final variant = item.variant?.trim().isNotEmpty == true
+        ? item.variant!.trim()
+        : '';
     final unitPrice = item.effectiveUnitPrice;
+    final availableStock = item.variantStock ?? product.effectiveStock;
     // Variant items don't carry a per-variant "original" price, so — same
     // as ProductDetailScreen — only compare against the aggregate discount
     // price when this line item isn't tied to a specific variant.
-    final oldPrice  = item.variantId == null &&
+    final oldPrice =
+        item.variantId == null &&
             product.hasDiscount &&
             product.price > unitPrice
         ? product.price
@@ -68,7 +72,8 @@ class CartItemCard extends StatelessWidget {
                         imageUrl,
                         fit: BoxFit.contain,
                         alignment: Alignment.center,
-                        errorWidget: (_, _, _) => const CartImageFallback(size: 26),
+                        errorWidget: (_, _, _) =>
+                            const CartImageFallback(size: 26),
                       ),
                     ),
             ),
@@ -88,12 +93,15 @@ class CartItemCard extends StatelessWidget {
                         product.name,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: kmFont(context, GoogleFonts.poppins(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: cartInk,
-                          height: 1.25,
-                        )),
+                        style: kmFont(
+                          context,
+                          GoogleFonts.poppins(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: cartInk,
+                            height: 1.25,
+                          ),
+                        ),
                       ),
                     ),
                     const SizedBox(width: 6),
@@ -106,7 +114,11 @@ class CartItemCard extends StatelessWidget {
                           color: cartBg,
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(HugeIcons.strokeRoundedCancel01, size: 15, color: cartMuted),
+                        child: const Icon(
+                          HugeIcons.strokeRoundedCancel01,
+                          size: 15,
+                          color: cartMuted,
+                        ),
                       ),
                     ),
                   ],
@@ -118,7 +130,11 @@ class CartItemCard extends StatelessWidget {
                     variant,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: cartMuted),
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                      color: cartMuted,
+                    ),
                   ),
                 ],
                 const SizedBox(height: 8),
@@ -130,7 +146,9 @@ class CartItemCard extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w700,
-                        color: product.hasDiscount ? cartDanger : cartPrimaryDeep,
+                        color: product.hasDiscount
+                            ? cartDanger
+                            : cartPrimaryDeep,
                         height: 1,
                       ),
                     ),
@@ -152,7 +170,13 @@ class CartItemCard extends StatelessWidget {
                 // Qty + subtotal
                 Row(
                   children: [
-                    CartQtyStepper(value: item.quantity, onChanged: onQuantityChanged),
+                    CartQtyStepper(
+                      value: item.quantity,
+                      maxValue: availableStock,
+                      onChanged: onQuantityChanged,
+                      onLimitExceeded: (stock) =>
+                          _showStockLimitNotice(context, stock),
+                    ),
                     const Spacer(),
                     // Item subtotal
                     Column(
@@ -160,16 +184,23 @@ class CartItemCard extends StatelessWidget {
                       children: [
                         Text(
                           AppLocalizations.of(context).total,
-                          style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: cartMuted),
+                          style: const TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                            color: cartMuted,
+                          ),
                         ),
                         Text(
                           cartCurrency(item.subtotal),
-                          style: kmFont(context, GoogleFonts.poppins(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                            color: cartInk,
-                            height: 1.1,
-                          )),
+                          style: kmFont(
+                            context,
+                            GoogleFonts.poppins(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              color: cartInk,
+                              height: 1.1,
+                            ),
+                          ),
                         ),
                       ],
                     ),
@@ -181,5 +212,15 @@ class CartItemCard extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  void _showStockLimitNotice(BuildContext context, int stock) {
+    final l = AppLocalizations.of(context);
+    final message = stock <= 0
+        ? (l.isKhmer ? 'អស់ស្តុកហើយ។' : 'This item is out of stock.')
+        : (l.isKhmer ? 'មានស្តុកតែ $stock ប៉ុណ្ណោះ។' : 'Only $stock in stock.');
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
   }
 }

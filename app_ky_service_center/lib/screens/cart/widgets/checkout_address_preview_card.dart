@@ -14,11 +14,15 @@ class CheckoutAddressPreviewCard extends StatelessWidget {
     super.key,
     required this.addressLine,
     this.coordinates,
+    this.distanceKm,
+    this.deliveryFee,
     required this.onPick,
   });
 
   final String addressLine;
   final String? coordinates;
+  final double? distanceKm;
+  final double? deliveryFee;
   final VoidCallback onPick;
 
   @override
@@ -146,6 +150,52 @@ class CheckoutAddressPreviewCard extends StatelessWidget {
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
+                          ),
+                        ],
+                        if (distanceKm != null && deliveryFee != null) ...[
+                          const SizedBox(height: 8),
+                          Builder(
+                            builder: (context) {
+                              final isFree = deliveryFee! <= 0;
+                              final badgeColor = isFree
+                                  ? const Color(0xFF16A34A)
+                                  : _cPrimary;
+                              final feeText = isFree
+                                  ? 'Free delivery'
+                                  : '\$${deliveryFee!.toStringAsFixed(2)} delivery fee';
+                              return Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 6,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: badgeColor.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(999),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Icon(
+                                      HugeIcons.strokeRoundedRoute01,
+                                      size: 13,
+                                      color: badgeColor,
+                                    ),
+                                    const SizedBox(width: 5),
+                                    Flexible(
+                                      child: Text(
+                                        '${distanceKm!.toStringAsFixed(1)} km from shop · $feeText',
+                                        style: TextStyle(
+                                          color: badgeColor,
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
                           ),
                         ],
                       ],

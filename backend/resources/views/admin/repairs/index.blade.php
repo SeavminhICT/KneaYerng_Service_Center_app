@@ -43,13 +43,20 @@
                 <div class="flex flex-wrap items-center gap-3">
                     <select id="repair-status-filter" class="h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-600 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300">
                         <option>{{ __('All statuses') }}</option>
-                        <option>{{ __('Received') }}</option>
+                        <option>{{ __('New') }}</option>
+                        <option>{{ __('Assigned') }}</option>
+                        <option>{{ __('Accepted') }}</option>
                         <option>{{ __('Diagnosing') }}</option>
-                        <option>{{ __('Waiting Approval') }}</option>
-                        <option>{{ __('In Repair') }}</option>
-                        <option>{{ __('QC') }}</option>
-                        <option>{{ __('Ready') }}</option>
-                        <option>{{ __('Completed') }}</option>
+                        <option>{{ __('Waiting Customer Approval') }}</option>
+                        <option>{{ __('Approved') }}</option>
+                        <option>{{ __('In Progress') }}</option>
+                        <option>{{ __('Waiting Parts') }}</option>
+                        <option>{{ __('Testing') }}</option>
+                        <option>{{ __('Repair Completed') }}</option>
+                        <option>{{ __('Ready For Pickup') }}</option>
+                        <option>{{ __('Delivered') }}</option>
+                        <option>{{ __('Cannot Repair') }}</option>
+                        <option>{{ __('Cancelled') }}</option>
                     </select>
                     <select id="repair-service-filter" class="h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-600 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300">
                         <option>{{ __('All services') }}</option>
@@ -158,7 +165,7 @@
                     return repair.created_at && new Date(repair.created_at).toDateString() === todayLabel;
                 }).length;
                 var pendingCount = list.filter(function (repair) {
-                    return repair.status === 'waiting_approval';
+                    return repair.status === 'waiting_customer_approval';
                 }).length;
                 document.getElementById('today-repairs').textContent = todayCount;
                 document.getElementById('pending-approvals').textContent = pendingCount;

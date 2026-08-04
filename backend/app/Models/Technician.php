@@ -10,6 +10,7 @@ class Technician extends Model
     use HasFactory;
 
     protected $fillable = [
+        'user_id',
         'name',
         'skill_set',
         'active_jobs_count',
@@ -23,5 +24,10 @@ class Technician extends Model
     public function repairs()
     {
         return $this->hasMany(RepairRequest::class);
+    }
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
     }
 }

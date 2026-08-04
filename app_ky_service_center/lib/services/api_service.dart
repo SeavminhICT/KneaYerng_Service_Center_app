@@ -25,6 +25,7 @@ import '../models/admin_notification_campaign.dart';
 import '../models/support_chat.dart';
 import '../models/user_profile.dart';
 import '../models/pickup_ticket.dart';
+import '../models/repair_job.dart';
 
 class ApiService {
   static final ValueNotifier<int> _profileVersion = ValueNotifier<int>(0);
@@ -979,6 +980,74 @@ class ApiService {
       return data['message'] as String;
     }
     return 'Google login failed';
+  }
+
+  // ================= FACEBOOK LOGIN =================
+  static Future<String?> loginWithFacebook({
+    required String facebookId,
+    String? email,
+    required String firstName,
+    required String lastName,
+    String? avatar,
+  }) async {
+    http.Response res;
+    try {
+      res = await http
+          .post(
+            Uri.parse('$baseUrl/auth/facebook'),
+            headers: const {
+              'Accept': 'application/json',
+              'Content-Type': 'application/json',
+            },
+            body: jsonEncode({
+              'facebook_id': facebookId,
+              'email': email,
+              'first_name': firstName,
+              'last_name': lastName,
+              'avatar': avatar,
+            }),
+          )
+          .timeout(const Duration(seconds: 15));
+    } on TimeoutException {
+      return _buildNetworkErrorMessage();
+    } catch (error) {
+      debugPrint('Facebook login failed: $error');
+      return _buildNetworkErrorMessage();
+    }
+
+    dynamic data;
+    try {
+      data = jsonDecode(res.body);
+    } catch (_) {}
+
+    if (res.statusCode == 200 || res.statusCode == 201) {
+      final token = data is Map
+          ? (data['token'] ?? data['access_token'])
+          : null;
+      if (token != null) {
+        await _saveToken(token);
+      }
+
+      final profile = _extractUserProfile(
+        data is Map
+            ? Map<String, dynamic>.from(data)
+            : const <String, dynamic>{},
+        fallbackEmail: email,
+        fallbackFirstName: firstName,
+        fallbackLastName: lastName,
+        fallbackAvatarUrl: avatar,
+      );
+
+      if (profile != null) {
+        await _saveUserProfile(profile);
+      }
+      return null;
+    }
+
+    if (data is Map && data['message'] is String) {
+      return data['message'] as String;
+    }
+    return 'Facebook login failed';
   }
 
   // ================= TOKEN =================
@@ -3666,6 +3735,254 @@ class ApiService {
       return response.statusCode >= 200 && response.statusCode < 300;
     } catch (error) {
       debugPrint('Unregister mobile device token failed: $error');
+      return false;
+    }
+  }
+
+  // ================= REPAIR JOBS: CUSTOMER =================
+
+  static Future<List<RepairJob>> fetchMyRepairs() async {
+    final token = await getToken();
+    if (token == null || token.isEmpty) return [];
+
+    try {
+      final res = await http
+          .get(
+            Uri.parse('$baseUrl/repairs/my'),
+            headers: {
+              'Accept': 'application/json',
+              'Authorization': 'Bearer $token',
+            },
+          )
+          .timeout(const Duration(seconds: 15));
+      if (res.statusCode != 200) return [];
+      final decoded = jsonDecode(res.body);
+      final rawList = decoded is Map ? decoded['data'] : decoded;
+      if (rawList is! List) return [];
+      return rawList
+          .whereType<Map>()
+          .map((e) => RepairJob.fromJson(Map<String, dynamic>.from(e)))
+          .toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  static Future<RepairJob?> fetchRepairDetail(int repairId) async {
+    final token = await getToken();
+    if (token == null || token.isEmpty) return null;
+
+    try {
+      final res = await http
+          .get(
+            Uri.parse('$baseUrl/repairs/$repairId'),
+            headers: {
+              'Accept': 'application/json',
+              'Authorization': 'Bearer $token',
+            },
+          )
+          .timeout(const Duration(seconds: 15));
+      if (res.statusCode != 200) return null;
+      final decoded = jsonDecode(res.body);
+      final data = decoded is Map ? decoded['data'] : decoded;
+      if (data is! Map) return null;
+      return RepairJob.fromJson(Map<String, dynamic>.from(data));
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static Future<bool> approveRepairQuotation(int quotationId) async {
+    return _postRepairAction('quotations/$quotationId/approve');
+  }
+
+  static Future<bool> rejectRepairQuotation(int quotationId) async {
+    return _postRepairAction('quotations/$quotationId/reject');
+  }
+
+  /// No-login repair tracking by Invoice ID + the last digits of the phone
+  /// number on file — mirrors the in-store "Track Repair" flow for customers
+  /// who don't want to create an account.
+  static Future<Map<String, dynamic>?> trackRepairAsGuest({
+    required String invoiceNumber,
+    required String phoneLastDigits,
+  }) async {
+    try {
+      final res = await http
+          .post(
+            Uri.parse('$baseUrl/public/repairs/track'),
+            headers: const {
+              'Accept': 'application/json',
+              'Content-Type': 'application/json',
+            },
+            body: jsonEncode({
+              'invoice_number': invoiceNumber.trim(),
+              'phone_last_digits': phoneLastDigits.trim(),
+            }),
+          )
+          .timeout(const Duration(seconds: 15));
+      if (res.statusCode != 200) return null;
+      final decoded = jsonDecode(res.body);
+      final data = decoded is Map ? decoded['data'] : null;
+      return data is Map ? Map<String, dynamic>.from(data) : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  // ================= REPAIR JOBS: TECHNICIAN =================
+
+  static Future<List<RepairJob>> fetchAssignedRepairs() async {
+    final token = await getToken();
+    if (token == null || token.isEmpty) return [];
+
+    try {
+      final res = await http
+          .get(
+            Uri.parse('$baseUrl/technician/repairs/assigned?per_page=100'),
+            headers: {
+              'Accept': 'application/json',
+              'Authorization': 'Bearer $token',
+            },
+          )
+          .timeout(const Duration(seconds: 15));
+      if (res.statusCode != 200) return [];
+      final decoded = jsonDecode(res.body);
+      final rawList = decoded is Map ? decoded['data'] : decoded;
+      if (rawList is! List) return [];
+      return rawList
+          .whereType<Map>()
+          .map((e) => RepairJob.fromJson(Map<String, dynamic>.from(e)))
+          .toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  static Future<bool> acceptRepairJob(int repairId) {
+    return _postRepairAction('technician/repairs/$repairId/accept');
+  }
+
+  static Future<bool> rejectRepairJob(int repairId, String reason) {
+    return _postRepairAction(
+      'technician/repairs/$repairId/reject',
+      body: {'reason': reason},
+    );
+  }
+
+  static Future<bool> requestRepairReassignment(int repairId, String reason) {
+    return _postRepairAction(
+      'technician/repairs/$repairId/request-reassignment',
+      body: {'reason': reason},
+    );
+  }
+
+  static Future<bool> updateRepairStatus(
+    int repairId,
+    String status, {
+    String? note,
+  }) {
+    return _postRepairAction(
+      'technician/repairs/$repairId/status',
+      body: {'status': status, if (note != null && note.isNotEmpty) 'note': note},
+    );
+  }
+
+  static Future<bool> submitRepairDiagnostic(
+    int repairId, {
+    String? problemDescription,
+    double? laborCost,
+    String? diagnosticNotes,
+  }) {
+    return _postRepairAction(
+      'technician/repairs/$repairId/diagnostic',
+      body: {
+        if (problemDescription != null) 'problem_description': problemDescription,
+        if (laborCost != null) 'labor_cost': laborCost,
+        if (diagnosticNotes != null) 'diagnostic_notes': diagnosticNotes,
+      },
+    );
+  }
+
+  static Future<bool> submitRepairQuotation(
+    int repairId, {
+    required double partsCost,
+    required double laborCost,
+    String status = 'pending',
+  }) {
+    return _postRepairAction(
+      'technician/repairs/$repairId/quotation',
+      body: {'parts_cost': partsCost, 'labor_cost': laborCost, 'status': status},
+    );
+  }
+
+  static Future<bool> submitRepairQc(
+    int repairId, {
+    required Map<String, String> results,
+    String? notes,
+  }) {
+    return _postRepairAction(
+      'technician/repairs/$repairId/qc',
+      body: {'results': results, if (notes != null) 'notes': notes},
+    );
+  }
+
+  static Future<List<Map<String, dynamic>>> fetchTechnicianParts() async {
+    final token = await getToken();
+    if (token == null || token.isEmpty) return [];
+
+    try {
+      final res = await http
+          .get(
+            Uri.parse('$baseUrl/technician/parts'),
+            headers: {
+              'Accept': 'application/json',
+              'Authorization': 'Bearer $token',
+            },
+          )
+          .timeout(const Duration(seconds: 15));
+      if (res.statusCode != 200) return [];
+      final decoded = jsonDecode(res.body);
+      final rawList = decoded is Map ? decoded['data'] : decoded;
+      if (rawList is! List) return [];
+      return rawList.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  static Future<bool> submitPartsUsage(
+    int repairId, {
+    required int partId,
+    required int quantity,
+  }) {
+    return _postRepairAction(
+      'technician/repairs/$repairId/parts',
+      body: {'part_id': partId, 'quantity': quantity},
+    );
+  }
+
+  static Future<bool> _postRepairAction(
+    String path, {
+    Map<String, dynamic>? body,
+  }) async {
+    final token = await getToken();
+    if (token == null || token.isEmpty) return false;
+
+    try {
+      final res = await http
+          .post(
+            Uri.parse('$baseUrl/$path'),
+            headers: {
+              'Accept': 'application/json',
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $token',
+            },
+            body: jsonEncode(body ?? {}),
+          )
+          .timeout(const Duration(seconds: 15));
+      return res.statusCode >= 200 && res.statusCode < 300;
+    } catch (_) {
       return false;
     }
   }

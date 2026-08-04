@@ -7,6 +7,7 @@ import 'l10n/app_localizations.dart';
 import 'screens/Auth/onboarding_screen.dart';
 import 'screens/main_navigation_screen.dart';
 import 'screens/splash/splash_screen.dart';
+import 'screens/technician/technician_shell_screen.dart';
 import 'services/api_service.dart';
 import 'services/app_notification_service.dart';
 import 'services/cart_service.dart';
@@ -107,14 +108,19 @@ class _StartupGateState extends State<_StartupGate> {
       final isAuthenticated = await ApiService.validateToken()
           .timeout(const Duration(seconds: 8), onTimeout: () => false);
       if (isAuthenticated) {
-        unawaited(CartService.instance.loadFromApi());
-        final launchTarget = AppNotificationService.instance
-            .consumePendingLaunchTarget();
-        destination = MainNavigationScreen(
-          initialIndex: launchTarget == null ? 0 : 2,
-          initialDeliveryOrderId: launchTarget?.orderId,
-          initialDeliveryOrderNumber: launchTarget?.orderNumber,
-        );
+        final profile = await ApiService.getUserProfile() ?? await ApiService.refreshUserProfile();
+        if (profile?.role == 'technician') {
+          destination = const TechnicianShellScreen();
+        } else {
+          unawaited(CartService.instance.loadFromApi());
+          final launchTarget = AppNotificationService.instance
+              .consumePendingLaunchTarget();
+          destination = MainNavigationScreen(
+            initialIndex: launchTarget == null ? 0 : 2,
+            initialDeliveryOrderId: launchTarget?.orderId,
+            initialDeliveryOrderNumber: launchTarget?.orderNumber,
+          );
+        }
       }
     } catch (_) {
       // Fall back to onboarding if startup restoration fails.

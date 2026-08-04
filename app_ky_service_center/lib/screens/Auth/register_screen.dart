@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
 import 'package:hugeicons/hugeicons.dart';
 
 import '../../l10n/app_localizations.dart';
@@ -288,6 +289,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       _buildOrDivider(),
                       const SizedBox(height: 18),
                       _buildGoogleButton(),
+                      const SizedBox(height: 12),
+                      _buildFacebookButton(),
                       const SizedBox(height: 24),
                       _buildLoginPrompt(l),
                       const SizedBox(height: 8),
@@ -444,6 +447,44 @@ class _RegisterScreenState extends State<RegisterScreen> {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFacebookButton() {
+    return SizedBox(
+      height: 62,
+      child: OutlinedButton(
+        onPressed: _loading ? null : _loginWithFacebook,
+        style: OutlinedButton.styleFrom(
+          backgroundColor: const Color(0xFF1877F2),
+          side: const BorderSide(color: Colors.transparent),
+          elevation: 0,
+          shadowColor: Colors.transparent,
+          padding: const EdgeInsets.symmetric(horizontal: 18),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: const [
+            Icon(
+              HugeIcons.strokeRoundedFacebook02,
+              color: Colors.white,
+              size: 24,
+            ),
+            SizedBox(width: 14),
+            Text(
+              'Continue with Facebook',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 15,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -711,6 +752,88 @@ class _RegisterScreenState extends State<RegisterScreen> {
         setState(() => _loading = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Google Sign-In failed: $error')),
+        );
+      }
+    }
+  }
+
+  Future<void> _loginWithFacebook() async {
+    if (_loading) return;
+    setState(() => _loading = true);
+
+    try {
+      final LoginResult result = await FacebookAuth.instance.login(
+        permissions: ['public_profile', 'email'],
+      );
+
+      if (result.status == LoginStatus.success) {
+        final userData = await FacebookAuth.instance.getUserData();
+        final facebookId = userData['id'] as String? ?? '';
+        if (facebookId.isEmpty) {
+          setState(() => _loading = false);
+          return;
+        }
+
+        final email = userData['email'] as String?;
+        final name = userData['name'] as String? ?? '';
+        final picture = userData['picture'] as Map?;
+        final pictureData = picture?['data'] as Map?;
+        final photoUrl = pictureData?['url'] as String?;
+
+        String firstName = userData['first_name'] as String? ?? '';
+        String lastName = userData['last_name'] as String? ?? '';
+
+        if (firstName.isEmpty && lastName.isEmpty && name.isNotEmpty) {
+          final parts = name.trim().split(' ');
+          if (parts.length > 1) {
+            firstName = parts.first;
+            lastName = parts.sublist(1).join(' ');
+          } else {
+            firstName = name;
+          }
+        }
+
+        if (firstName.isEmpty) firstName = 'Facebook';
+        if (lastName.isEmpty) lastName = 'User';
+
+        final error = await ApiService.loginWithFacebook(
+          facebookId: facebookId,
+          email: email,
+          firstName: firstName,
+          lastName: lastName,
+          avatar: photoUrl,
+        );
+
+        if (!mounted) return;
+        setState(() => _loading = false);
+
+        if (error == null) {
+          // Facebook accounts are already verified; no OTP needed.
+          await AppNotificationService.instance.syncTokenWithBackend(force: true);
+          unawaited(CartService.instance.loadFromApi());
+          if (!mounted) return;
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const MainNavigationScreen()),
+          );
+          return;
+        }
+
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error)));
+      } else {
+        setState(() => _loading = false);
+        if (result.status == LoginStatus.failed) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(result.message ?? 'Facebook registration failed.')),
+          );
+        }
+      }
+    } catch (error) {
+      debugPrint('Facebook Sign-In Error: $error');
+      if (mounted) {
+        setState(() => _loading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Facebook Sign-In failed: $error')),
         );
       }
     }

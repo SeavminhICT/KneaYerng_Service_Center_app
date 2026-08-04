@@ -13,7 +13,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/order_tracking_notification.dart';
 import '../screens/notifications/notification_screen.dart';
 import '../screens/orders/delivery_tracking_screen.dart';
+import '../screens/repair_tracking/repair_detail_screen.dart';
 import '../screens/support/support_chat_screen.dart';
+import '../screens/technician/technician_job_detail_screen.dart';
 import 'api_service.dart';
 
 const AndroidNotificationChannel _orderTrackingChannel =
@@ -706,8 +708,16 @@ class AppNotificationService {
       orderId = int.tryParse(deepLink.split('/').last);
     }
 
+    int? repairId = int.tryParse(data['repair_id']?.toString() ?? '');
+    if (repairId == null &&
+        deepLink != null &&
+        deepLink.startsWith('/repairs/')) {
+      repairId = int.tryParse(deepLink.split('/').last);
+    }
+
     final orderNumber = data['order_number']?.toString().trim();
     if (orderId == null &&
+        repairId == null &&
         (orderNumber == null || orderNumber.isEmpty) &&
         (deepLink == null || deepLink.isEmpty)) {
       return _isAdminNotificationType(data['type'], data['display_type'])
@@ -717,6 +727,7 @@ class AppNotificationService {
 
     return NotificationLaunchTarget(
       orderId: orderId,
+      repairId: repairId,
       deepLink: deepLink == null || deepLink.isEmpty ? null : deepLink,
       orderNumber: orderNumber == null || orderNumber.isEmpty
           ? null
@@ -740,7 +751,7 @@ class AppNotificationService {
     _pendingLaunchTarget = target;
   }
 
-  void _openLaunchTarget(NotificationLaunchTarget target) {
+  Future<void> _openLaunchTarget(NotificationLaunchTarget target) async {
     final navigatorState = navigatorKey.currentState;
     final context = navigatorKey.currentContext;
     if (navigatorState == null || context == null) {
@@ -749,6 +760,23 @@ class AppNotificationService {
     }
 
     final deepLink = target.deepLink?.trim() ?? '';
+
+    int? repairId = target.repairId;
+    if (repairId == null && deepLink.startsWith('/repairs/')) {
+      repairId = int.tryParse(deepLink.split('/').last);
+    }
+    if (repairId != null) {
+      final profile = await ApiService.getUserProfile();
+      navigatorState.push(
+        MaterialPageRoute(
+          builder: (_) => profile?.role == 'technician'
+              ? TechnicianJobDetailScreen(repairId: repairId!)
+              : RepairDetailScreen(repairId: repairId!),
+        ),
+      );
+      return;
+    }
+
     if (target.orderId != null ||
         target.orderNumber != null ||
         deepLink.startsWith('/orders/')) {
@@ -1019,17 +1047,20 @@ class NotificationLaunchTarget {
   const NotificationLaunchTarget({
     this.orderId,
     this.orderNumber,
+    this.repairId,
     this.deepLink,
   });
 
   final int? orderId;
   final String? orderNumber;
+  final int? repairId;
   final String? deepLink;
 
   Map<String, dynamic> toJson() {
     return {
       'order_id': orderId,
       'order_number': orderNumber,
+      'repair_id': repairId,
       'deep_link': deepLink,
     };
   }
@@ -1038,6 +1069,7 @@ class NotificationLaunchTarget {
     return NotificationLaunchTarget(
       orderId: _tryParseInt(json['order_id']),
       orderNumber: json['order_number']?.toString(),
+      repairId: _tryParseInt(json['repair_id']),
       deepLink: json['deep_link']?.toString(),
     );
   }

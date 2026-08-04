@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\QcCheckResource;
 use App\Models\QcCheck;
 use App\Models\RepairRequest;
+use App\Services\RepairStatusService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -50,6 +51,20 @@ class RepairQcController extends Controller
                 'checked_at' => now(),
             ]
         );
+
+        if ($repair->status === RepairStatusService::STATUS_TESTING) {
+            if ($overallResult === 'pass') {
+                RepairStatusService::transition($repair, RepairStatusService::STATUS_REPAIR_COMPLETED, $actor, force: true);
+            } else {
+                RepairStatusService::transition(
+                    $repair,
+                    RepairStatusService::STATUS_IN_PROGRESS,
+                    $actor,
+                    force: true,
+                    note: 'Failed testing checklist, sent back for repair.'
+                );
+            }
+        }
 
         return new QcCheckResource($qcCheck);
     }

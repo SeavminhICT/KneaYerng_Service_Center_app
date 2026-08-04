@@ -7,6 +7,8 @@ use App\Http\Controllers\Api\Concerns\AuthorizesRepairRequests;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\RepairRequestResource;
 use App\Http\Resources\RepairStatusLogResource;
+use App\Models\DeviceModel;
+use App\Models\RepairProblem;
 use App\Models\RepairRequest;
 use App\Models\RepairStatusLog;
 use App\Models\Technician;
@@ -27,7 +29,7 @@ class RepairRequestController extends Controller
     public function index(Request $request)
     {
         $query = RepairRequest::query()
-            ->with(['customer', 'technician'])
+            ->with(['customer', 'technician', 'deviceModel', 'problems'])
             ->orderByDesc('created_at')
             ->orderByDesc('id');
 
@@ -64,8 +66,11 @@ class RepairRequestController extends Controller
     {
         $validated = $request->validate([
             'customer_id' => ['nullable', 'exists:users,id'],
-            'device_model' => ['required', 'string', 'max:255'],
-            'issue_type' => ['required', 'string', 'max:255'],
+            'device_model_id' => ['nullable', 'exists:device_models,id'],
+            'device_model' => ['required_without:device_model_id', 'nullable', 'string', 'max:255'],
+            'problem_ids' => ['nullable', 'array'],
+            'problem_ids.*' => ['exists:repair_problems,id'],
+            'issue_type' => ['required_without:problem_ids', 'nullable', 'string', 'max:255'],
             'service_type' => ['required', 'string'],
             'appointment_datetime' => ['nullable', 'date'],
             'technician_id' => ['nullable', 'exists:technicians,id'],
@@ -87,14 +92,31 @@ class RepairRequestController extends Controller
             return response()->json(['message' => 'Customer is required.'], 422);
         }
 
+        $deviceModelCatalogEntry = ! empty($validated['device_model_id'])
+            ? DeviceModel::find($validated['device_model_id'])
+            : null;
+
+        $problemIds = $validated['problem_ids'] ?? [];
+        $issueType = $validated['issue_type'] ?? null;
+        if (! $issueType && $problemIds) {
+            $issueType = RepairProblem::whereIn('id', $problemIds)->pluck('name')->implode(', ');
+        }
+
         $repair = RepairRequest::create([
             'customer_id' => $customerId,
-            'device_model' => $validated['device_model'],
-            'issue_type' => $validated['issue_type'],
+            'device_model_id' => $deviceModelCatalogEntry?->id,
+            'device_model' => $deviceModelCatalogEntry
+                ? trim($deviceModelCatalogEntry->brand.' '.$deviceModelCatalogEntry->model_name)
+                : $validated['device_model'],
+            'issue_type' => $issueType,
             'service_type' => $serviceType,
             'appointment_datetime' => $validated['appointment_datetime'] ?? null,
-            'status' => 'received',
+            'status' => RepairStatusService::STATUS_NEW,
         ]);
+
+        if ($problemIds) {
+            $repair->problems()->sync($problemIds);
+        }
 
         $this->logStatus($repair, $actor, $repair->status);
 
@@ -107,8 +129,8 @@ class RepairRequestController extends Controller
 
         if ($technician) {
             $this->applyTechnicianAssignment($repair, $technician);
-            if ($repair->status === 'received') {
-                RepairStatusService::transition($repair, 'waiting_diagnosis', $actor);
+            if ($repair->status === RepairStatusService::STATUS_NEW) {
+                RepairStatusService::transition($repair, RepairStatusService::STATUS_ASSIGNED, $actor);
             }
             RepairNotificationService::notify(
                 $repair->customer_id,
@@ -150,6 +172,9 @@ class RepairRequestController extends Controller
         $repair->load([
             'customer',
             'technician',
+            'deviceModel',
+            'problems',
+            'partsUsages.part',
             'intake',
             'diagnostic',
             'quotation',
@@ -174,8 +199,8 @@ class RepairRequestController extends Controller
 
         $this->applyTechnicianAssignment($repair, $technician);
 
-        if ($repair->status === 'received') {
-            RepairStatusService::transition($repair, 'waiting_diagnosis', $actor);
+        if ($repair->status === RepairStatusService::STATUS_NEW) {
+            RepairStatusService::transition($repair, RepairStatusService::STATUS_ASSIGNED, $actor);
         }
 
         RepairNotificationService::notify(
@@ -201,8 +226,8 @@ class RepairRequestController extends Controller
         $actor = $request->user() ?? $request->user('sanctum');
         $this->applyTechnicianAssignment($repair, $technician);
 
-        if ($repair->status === 'received') {
-            RepairStatusService::transition($repair, 'waiting_diagnosis', $actor);
+        if ($repair->status === RepairStatusService::STATUS_NEW) {
+            RepairStatusService::transition($repair, RepairStatusService::STATUS_ASSIGNED, $actor);
         }
 
         RepairNotificationService::notify(
@@ -222,6 +247,7 @@ class RepairRequestController extends Controller
         $validated = $request->validate([
             'status' => ['required', 'string'],
             'force' => ['nullable', 'boolean'],
+            'note' => ['nullable', 'string', 'max:1000'],
         ]);
 
         $actor = $request->user() ?? $request->user('sanctum');
@@ -233,7 +259,13 @@ class RepairRequestController extends Controller
         }
 
         try {
-            RepairStatusService::transition($repair, $status, $actor, (bool) ($validated['force'] ?? false));
+            RepairStatusService::transition(
+                $repair,
+                $status,
+                $actor,
+                (bool) ($validated['force'] ?? false),
+                $validated['note'] ?? null
+            );
         } catch (InvalidRepairTransitionException $e) {
             return response()->json([
                 'message' => $e->getMessage(),
@@ -278,7 +310,9 @@ class RepairRequestController extends Controller
     {
         RepairStatusLog::create([
             'repair_id' => $repair->id,
+            'from_status' => null,
             'status' => $status,
+            'note' => 'Repair job created.',
             'updated_by' => $actor?->id,
             'logged_at' => now(),
         ]);

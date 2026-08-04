@@ -13,11 +13,16 @@ class RepairRequestResource extends JsonResource
             'id' => $this->id,
             'customer_id' => $this->customer_id,
             'technician_id' => $this->technician_id,
+            'device_model_id' => $this->device_model_id,
             'device_model' => $this->device_model,
             'issue_type' => $this->issue_type,
             'service_type' => $this->service_type,
             'appointment_datetime' => $this->appointment_datetime?->toISOString(),
             'status' => $this->status,
+            'allowed_next_statuses' => \App\Services\RepairStatusService::allowedNext($this->status),
+            'device_model_catalog' => new DeviceModelResource($this->whenLoaded('deviceModel')),
+            'problems' => RepairProblemResource::collection($this->whenLoaded('problems')),
+            'parts_usages' => PartsUsageResource::collection($this->whenLoaded('partsUsages')),
             'customer' => $this->whenLoaded('customer', function () {
                 return [
                     'id' => $this->customer?->id,

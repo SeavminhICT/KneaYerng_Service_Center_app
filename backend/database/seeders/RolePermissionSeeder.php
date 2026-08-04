@@ -27,6 +27,8 @@ class RolePermissionSeeder extends Seeder
         'tracking_order' => 'Tracking Order',
         'repair' => 'Repair Jobs',
         'technician' => 'Technicians',
+        'device_model' => 'Device Models',
+        'repair_problem' => 'Repair Problems',
         'voucher' => 'Vouchers',
         'customer' => 'Customers',
         'payment' => 'Payments',
@@ -81,7 +83,14 @@ class RolePermissionSeeder extends Seeder
 
         $staff = Role::where('name', 'Staff')->first();
         $staff->permissions()->syncWithoutDetaching(
-            Permission::whereIn('name', ['view_dashboard', 'view_order', 'view_checking_pickup', 'view_tracking_order'])->pluck('id')
+            Permission::whereIn('name', [
+                'view_dashboard', 'view_order', 'view_checking_pickup', 'view_tracking_order',
+                'view_repair', 'create_repair', 'update_repair',
+                'view_technician',
+                'view_device_model', 'create_device_model', 'update_device_model',
+                'view_repair_problem', 'create_repair_problem', 'update_repair_problem',
+                'view_customer', 'create_customer',
+            ])->pluck('id')
         );
     }
 }

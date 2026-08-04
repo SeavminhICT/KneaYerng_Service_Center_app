@@ -15,6 +15,8 @@
                     <select id="technician-select" class="h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-600 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300"></select>
                     <button id="assign-technician" class="inline-flex h-10 items-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-600 shadow-sm hover:text-slate-900 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300">{{ __('Assign') }}</button>
                     <button id="auto-assign" class="inline-flex h-10 items-center rounded-xl bg-primary-600 px-4 text-sm font-semibold text-white shadow-sm">{{ __('Auto assign') }}</button>
+                    <button id="mark-delivered" class="inline-flex h-10 items-center rounded-xl bg-emerald-600 px-4 text-sm font-semibold text-white shadow-sm disabled:opacity-40" disabled>{{ __('Mark Delivered') }}</button>
+                    <button id="cancel-job" class="inline-flex h-10 items-center rounded-xl bg-rose-600 px-4 text-sm font-semibold text-white shadow-sm disabled:opacity-40" disabled>{{ __('Cancel Job') }}</button>
                 </div>
             </div>
             <div class="mt-5 grid gap-4 lg:grid-cols-3">
@@ -34,14 +36,7 @@
                     <p class="text-xs font-semibold uppercase tracking-widest text-slate-400">{{ __('Status') }}</p>
                     <div class="mt-2 flex items-center gap-2">
                         <select id="status-select" class="h-9 flex-1 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-600 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300">
-                            <option value="received">{{ __('Received') }}</option>
-                            <option value="waiting_diagnosis">{{ __('Waiting Diagnosis') }}</option>
-                            <option value="diagnosing">{{ __('Diagnosing') }}</option>
-                            <option value="waiting_approval">{{ __('Waiting Approval') }}</option>
-                            <option value="in_repair">{{ __('Repairing') }}</option>
-                            <option value="qc">{{ __('QC Testing') }}</option>
-                            <option value="ready">{{ __('Ready for Pickup') }}</option>
-                            <option value="completed">{{ __('Completed') }}</option>
+                            @include('admin.repairs._status-options')
                         </select>
                         <button id="status-update" class="inline-flex h-9 items-center rounded-xl bg-primary-600 px-3 text-xs font-semibold text-white">{{ __('Update') }}</button>
                     </div>
@@ -169,14 +164,7 @@
                             <p class="text-xs font-semibold uppercase tracking-widest text-slate-400">{{ __('Status update') }}</p>
                             <div class="mt-3 flex items-center gap-2">
                                 <select id="status-select-secondary" class="h-9 flex-1 rounded-xl border border-slate-200 bg-white px-3 text-xs text-slate-600 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300">
-                                    <option value="received">{{ __('Received') }}</option>
-                                    <option value="waiting_diagnosis">{{ __('Waiting Diagnosis') }}</option>
-                                    <option value="diagnosing">{{ __('Diagnosing') }}</option>
-                                    <option value="waiting_approval">{{ __('Waiting Approval') }}</option>
-                                    <option value="in_repair">{{ __('Repairing') }}</option>
-                                    <option value="qc">{{ __('QC Testing') }}</option>
-                                    <option value="ready">{{ __('Ready for Pickup') }}</option>
-                                    <option value="completed">{{ __('Completed') }}</option>
+                                    @include('admin.repairs._status-options')
                                 </select>
                                 <button id="status-update-secondary" class="inline-flex h-9 items-center rounded-xl bg-primary-600 px-3 text-xs font-semibold text-white">{{ __('Update') }}</button>
                             </div>
@@ -318,8 +306,10 @@
 
                 document.getElementById('repair-device').textContent = repair.device_model || '-';
                 document.getElementById('repair-issue').textContent = repair.issue_type || '-';
-                document.getElementById('status-select').value = repair.status || 'received';
-                document.getElementById('status-select-secondary').value = repair.status || 'received';
+                document.getElementById('status-select').value = repair.status || 'new';
+                document.getElementById('status-select-secondary').value = repair.status || 'new';
+                document.getElementById('mark-delivered').disabled = repair.status !== 'ready_for_pickup';
+                document.getElementById('cancel-job').disabled = ['delivered', 'cancelled'].indexOf(repair.status) !== -1;
 
                 if (repair.intake) {
                     document.getElementById('imei_serial').value = repair.intake.imei_serial || '';
@@ -419,6 +409,20 @@
                 await safeEnsureCsrfCookie();
                 await safeApiRequest('/api/repairs/' + repairId + '/auto-assign', { method: 'POST' });
                 loadRepair();
+            });
+
+            document.getElementById('mark-delivered').addEventListener('click', function () {
+                if (!confirm('{{ __('Confirm the device was handed back and payment was collected?') }}')) {
+                    return;
+                }
+                updateStatus('delivered', false);
+            });
+
+            document.getElementById('cancel-job').addEventListener('click', function () {
+                if (!confirm('{{ __('Cancel this repair job?') }}')) {
+                    return;
+                }
+                updateStatus('cancelled', true);
             });
 
             document.getElementById('status-update').addEventListener('click', function () {

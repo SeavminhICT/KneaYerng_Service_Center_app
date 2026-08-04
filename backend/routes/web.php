@@ -112,6 +112,8 @@ Route::prefix('admin')->name('admin.')->middleware(['admin'])->group(function ()
     Route::view('/support', 'admin.support.index')->name('support.index')->middleware('permission:view_support_inbox');
 
     Route::view('/technicians', 'admin.technicians.index')->name('technicians.index')->middleware('permission:view_technician');
+    Route::view('/device-models', 'admin.device-models.index')->name('device-models.index')->middleware('permission:view_device_model');
+    Route::view('/repair-problems', 'admin.repair-problems.index')->name('repair-problems.index')->middleware('permission:view_repair_problem');
 
     Route::view('/vouchers', 'admin.vouchers.index')->name('vouchers.index')->middleware('permission:view_voucher');
     Route::view('/vouchers/create', 'admin.vouchers.create')->name('vouchers.create')->middleware('permission:create_voucher');

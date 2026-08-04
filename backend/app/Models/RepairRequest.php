@@ -12,6 +12,7 @@ class RepairRequest extends Model
     protected $fillable = [
         'customer_id',
         'technician_id',
+        'device_model_id',
         'device_model',
         'issue_type',
         'service_type',
@@ -31,6 +32,21 @@ class RepairRequest extends Model
     public function technician()
     {
         return $this->belongsTo(Technician::class);
+    }
+
+    public function deviceModel()
+    {
+        return $this->belongsTo(DeviceModel::class, 'device_model_id');
+    }
+
+    public function problems()
+    {
+        return $this->belongsToMany(RepairProblem::class, 'repair_request_problems', 'repair_id', 'problem_id');
+    }
+
+    public function partsUsages()
+    {
+        return $this->hasMany(PartsUsage::class, 'repair_id');
     }
 
     public function intake()

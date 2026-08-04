@@ -10,6 +10,11 @@ use App\Http\Controllers\Api\BannerController;
 use App\Http\Controllers\Api\CartController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\CheckoutOptionsController;
+use App\Http\Controllers\Api\DeviceModelController;
+use App\Http\Controllers\Api\RepairProblemController;
+use App\Http\Controllers\Api\RepairTrackingController;
+use App\Http\Controllers\Api\PartsUsageController;
+use App\Http\Controllers\Api\TechnicianRepairController;
 use App\Http\Controllers\Api\AdminReportsController;
 use App\Http\Controllers\Api\ForgotPasswordController;
 use App\Http\Controllers\Api\OrderController;
@@ -67,6 +72,7 @@ Route::prefix('auth')->group(function () {
     Route::post('register', [AuthController::class, 'register']);
     Route::post('login', [AuthController::class, 'login']);
     Route::post('google', [AuthController::class, 'googleLogin']);
+    Route::post('facebook', [AuthController::class, 'facebookLogin']);
     Route::post('logout', [AuthController::class, 'logout'])->middleware('auth:sanctum');
     Route::put('user/update', [AuthController::class, 'update'])->middleware('auth:sanctum');
     Route::post('user/phone/request-otp', [AuthController::class, 'requestPhoneChangeOtp'])->middleware('auth:sanctum');
@@ -114,6 +120,12 @@ Route::middleware('throttle:60,1')->group(function () {
     Route::post('guest/notifications/{notification}/read', [GuestNotificationController::class, 'markRead']);
 });
 
+// No-login repair tracking: Invoice ID + last phone digits only, throttled to
+// slow down brute-forcing of invoice numbers.
+Route::middleware('throttle:20,1')->group(function () {
+    Route::post('public/repairs/track', [RepairTrackingController::class, 'track']);
+});
+
 Route::middleware('auth:sanctum')->group(function () {
     // ── Product Warranties (customer) ─────────────────────────────────────
     Route::get('product-warranties', [ProductWarrantyController::class, 'index']);
@@ -154,6 +166,22 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('invoices/{invoice}', [RepairInvoiceController::class, 'show']);
     Route::get('invoices/{invoice}/payments', [RepairPaymentController::class, 'paymentsForInvoice']);
     Route::get('notifications', [RepairNotificationController::class, 'index']);
+
+    // ── Technician self-service (own assigned repairs only) ─────────────
+    Route::get('technician/repairs/assigned', [TechnicianRepairController::class, 'assigned']);
+    Route::get('technician/parts', [TechnicianRepairController::class, 'parts']);
+    Route::middleware('technician.owns.repair')->group(function () {
+        Route::post('technician/repairs/{repair}/accept', [TechnicianRepairController::class, 'accept']);
+        Route::post('technician/repairs/{repair}/reject', [TechnicianRepairController::class, 'reject']);
+        Route::post('technician/repairs/{repair}/request-reassignment', [TechnicianRepairController::class, 'requestReassignment']);
+        Route::post('technician/repairs/{repair}/status', [TechnicianRepairController::class, 'status']);
+        Route::post('technician/repairs/{repair}/intake', [RepairIntakeController::class, 'store']);
+        Route::post('technician/repairs/{repair}/diagnostic', [RepairDiagnosticController::class, 'store']);
+        Route::post('technician/repairs/{repair}/quotation', [RepairQuotationController::class, 'store']);
+        Route::post('technician/repairs/{repair}/qc', [RepairQcController::class, 'store']);
+        Route::post('technician/repairs/{repair}/parts', [PartsUsageController::class, 'store']);
+    });
+
     Route::get('support/conversation', [SupportChatController::class, 'showOrCreateConversation']);
     Route::post('support/messages', [SupportChatController::class, 'storeCustomerMessage']);
     Route::post('support/upload', [SupportChatController::class, 'uploadMedia']);
@@ -285,6 +313,16 @@ Route::middleware('admin')->group(function () {
     Route::get('invoices', [RepairInvoiceController::class, 'index'])->middleware('permission:view_repair');
     Route::get('repair-payments', [RepairPaymentController::class, 'index'])->middleware('permission:view_repair');
     Route::get('warranties', [RepairWarrantyController::class, 'index'])->middleware('permission:view_repair');
+    Route::get('device-models', [DeviceModelController::class, 'index'])->middleware('permission:view_device_model');
+    Route::post('device-models', [DeviceModelController::class, 'store'])->middleware('permission:create_device_model');
+    Route::match(['put', 'patch'], 'device-models/{deviceModel}', [DeviceModelController::class, 'update'])->middleware('permission:update_device_model');
+    Route::delete('device-models/{deviceModel}', [DeviceModelController::class, 'destroy'])->middleware('permission:delete_device_model');
+
+    Route::get('repair-problems', [RepairProblemController::class, 'index'])->middleware('permission:view_repair_problem');
+    Route::post('repair-problems', [RepairProblemController::class, 'store'])->middleware('permission:create_repair_problem');
+    Route::match(['put', 'patch'], 'repair-problems/{repairProblem}', [RepairProblemController::class, 'update'])->middleware('permission:update_repair_problem');
+    Route::delete('repair-problems/{repairProblem}', [RepairProblemController::class, 'destroy'])->middleware('permission:delete_repair_problem');
+
     Route::get('technicians', [TechnicianController::class, 'index'])->middleware('permission:view_technician');
     Route::post('technicians', [TechnicianController::class, 'store'])->middleware('permission:create_technician');
     Route::get('technicians/{technician}', [TechnicianController::class, 'show'])->middleware('permission:view_technician');

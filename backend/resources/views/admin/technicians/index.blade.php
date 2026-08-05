@@ -51,6 +51,11 @@
                         <input id="technician-skills" type="text" class="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200" />
                     </div>
                     <div>
+                        <label class="text-xs font-semibold uppercase tracking-widest text-slate-400" for="technician-phone">{{ __('Phone (for mobile app login, optional)') }}</label>
+                        <input id="technician-phone" type="text" placeholder="{{ __('e.g. 012345678') }}" class="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200" />
+                        <p class="mt-1 text-[11px] text-slate-400">{{ __('Lets the technician log into the mobile app with this phone number to accept jobs and update repair status.') }}</p>
+                    </div>
+                    <div>
                         <label class="text-xs font-semibold uppercase tracking-widest text-slate-400" for="technician-status">{{ __('Availability') }}</label>
                         <select id="technician-status" class="mt-2 h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-600 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300">
                             <option value="available">{{ __('Available') }}</option>
@@ -115,7 +120,8 @@
                 var payload = {
                     name: name,
                     skill_set: document.getElementById('technician-skills').value.split(',').map(function (item) { return item.trim(); }).filter(Boolean),
-                    availability_status: document.getElementById('technician-status').value
+                    availability_status: document.getElementById('technician-status').value,
+                    phone: document.getElementById('technician-phone').value.trim() || null
                 };
                 await window.adminApi.ensureCsrfCookie();
                 var response = await window.adminApi.request('/api/technicians', {
@@ -127,6 +133,7 @@
                 if (response.ok) {
                     document.getElementById('technician-name').value = '';
                     document.getElementById('technician-skills').value = '';
+                    document.getElementById('technician-phone').value = '';
                 }
                 loadTechnicians();
             });

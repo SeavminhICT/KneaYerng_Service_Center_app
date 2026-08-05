@@ -143,61 +143,26 @@
                     </div>
 
                     <div class="grid gap-5 sm:grid-cols-2">
-                        <!-- Device Model Input with Quick Suggestions Chips -->
+                        <!-- Device Model: catalog select with a "custom" fallback -->
                         <div class="sm:col-span-2">
-                            <label class="block text-xs font-semibold text-slate-700 dark:text-slate-200" for="device_model">
+                            <label class="block text-xs font-semibold text-slate-700 dark:text-slate-200" for="device_model_select">
                                 {{ __('Device Model') }} <span class="text-rose-500">*</span>
                             </label>
-                            <input id="device_model" list="device_models_list" type="text" autocomplete="off" placeholder="{{ __('Type or select e.g. iPhone 16 Pro Max, MacBook Pro 14"') }}" class="mt-1.5 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3.5 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 focus:border-primary-500 focus:bg-white focus:ring-2 focus:ring-primary-500/20 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100" />
-                            <datalist id="device_models_list">
-                                <option value="iPhone 16 Pro Max">
-                                <option value="iPhone 16 Pro">
-                                <option value="iPhone 16">
-                                <option value="iPhone 15 Pro Max">
-                                <option value="iPhone 15 Pro">
-                                <option value="iPhone 14 Pro Max">
-                                <option value="iPad Pro 12.9">
-                                <option value="MacBook Pro 14">
-                                <option value="MacBook Air M3">
-                                <option value="Samsung Galaxy S24 Ultra">
-                            </datalist>
-
-                            <!-- Quick Suggestion Chips -->
-                            <div class="mt-2 flex flex-wrap items-center gap-1.5">
-                                <span class="text-[11px] text-slate-400">{{ __('Quick select:') }}</span>
-                                <button type="button" class="device-chip rounded-lg border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-medium text-slate-600 hover:bg-primary-50 hover:text-primary-600 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300">iPhone 16 Pro Max</button>
-                                <button type="button" class="device-chip rounded-lg border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-medium text-slate-600 hover:bg-primary-50 hover:text-primary-600 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300">iPhone 15 Pro</button>
-                                <button type="button" class="device-chip rounded-lg border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-medium text-slate-600 hover:bg-primary-50 hover:text-primary-600 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300">MacBook Air</button>
-                                <button type="button" class="device-chip rounded-lg border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-medium text-slate-600 hover:bg-primary-50 hover:text-primary-600 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300">iPad Pro</button>
-                            </div>
+                            <select id="device_model_select" class="mt-1.5 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3.5 py-2.5 text-sm text-slate-800 focus:border-primary-500 focus:bg-white focus:ring-2 focus:ring-primary-500/20 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100">
+                                <option value="">{{ __('Loading models...') }}</option>
+                                <option value="__custom__">{{ __('Other / Type custom model...') }}</option>
+                            </select>
+                            <input id="device_model_custom" type="text" placeholder="{{ __('e.g. iPhone 16 Pro Max, MacBook Pro 14"') }}" class="mt-2 hidden w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3.5 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 focus:border-primary-500 focus:bg-white focus:ring-2 focus:ring-primary-500/20 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100" />
                         </div>
 
-                        <!-- Repair Issue Selection & Custom Description -->
+                        <!-- Problem checklist: tick every reported issue -->
                         <div class="sm:col-span-2 space-y-3">
                             <div>
-                                <label class="block text-xs font-semibold text-slate-700 dark:text-slate-200" for="issue_type">
-                                    {{ __('Repair Category / Issue') }} <span class="text-rose-500">*</span>
+                                <label class="block text-xs font-semibold text-slate-700 dark:text-slate-200">
+                                    {{ __('What is wrong with the device? (tick all that apply)') }} <span class="text-rose-500">*</span>
                                 </label>
-                                <input id="issue_type" list="issue_types_list" type="text" autocomplete="off" placeholder="{{ __('Select common issue or type e.g. Screen Replacement, Battery Issue') }}" class="mt-1.5 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3.5 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 focus:border-primary-500 focus:bg-white focus:ring-2 focus:ring-primary-500/20 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100" />
-                                <datalist id="issue_types_list">
-                                    <option value="Screen Replacement">
-                                    <option value="Battery Replacement">
-                                    <option value="Water Damage Repair">
-                                    <option value="Charging Port Repair">
-                                    <option value="Camera Repair / Replacement">
-                                    <option value="Speaker / Microphone Fix">
-                                    <option value="Logic Board / IC Repair">
-                                    <option value="Software / OS Restore">
-                                </datalist>
-
-                                <!-- Quick Issue Chips -->
-                                <div class="mt-2 flex flex-wrap items-center gap-1.5">
-                                    <span class="text-[11px] text-slate-400">{{ __('Common issues:') }}</span>
-                                    <button type="button" class="issue-chip rounded-lg border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-medium text-slate-600 hover:bg-primary-50 hover:text-primary-600 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300">Screen Replacement</button>
-                                    <button type="button" class="issue-chip rounded-lg border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-medium text-slate-600 hover:bg-primary-50 hover:text-primary-600 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300">Battery Replacement</button>
-                                    <button type="button" class="issue-chip rounded-lg border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-medium text-slate-600 hover:bg-primary-50 hover:text-primary-600 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300">Water Damage</button>
-                                    <button type="button" class="issue-chip rounded-lg border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-medium text-slate-600 hover:bg-primary-50 hover:text-primary-600 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300">Charging Port</button>
-                                    <button type="button" class="issue-chip rounded-lg border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-medium text-slate-600 hover:bg-primary-50 hover:text-primary-600 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300">Motherboard IC</button>
+                                <div id="problems-checklist" class="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                                    <p class="text-xs text-slate-400">{{ __('Loading problem list...') }}</p>
                                 </div>
                             </div>
 
@@ -361,11 +326,13 @@
             var appointmentSelect = document.getElementById('appointment-select');
             var technicianSelect = document.getElementById('technician_id');
             var appointmentDatetimeInput = document.getElementById('appointment_datetime');
-            var deviceModelInput = document.getElementById('device_model');
-            var issueTypeInput = document.getElementById('issue_type');
+            var deviceModelSelect = document.getElementById('device_model_select');
+            var deviceModelCustomInput = document.getElementById('device_model_custom');
             var issueNotesInput = document.getElementById('issue_notes');
             var btnAddPhone = document.getElementById('btn-add-phone');
             var appointmentsList = [];
+            var deviceModelsList = [];
+            var problemsList = [];
 
             // Preview elements
             var previewCustomer = document.getElementById('preview-customer');
@@ -390,16 +357,30 @@
                 appointmentDatetimeInput.value = getFormattedNow();
             });
 
+            function selectedProblemNames() {
+                return Array.from(document.querySelectorAll('#problems-checklist input[type=checkbox]:checked'))
+                    .map(function (checkbox) { return checkbox.dataset.name; });
+            }
+
+            function currentDeviceModelLabel() {
+                if (deviceModelSelect.value === '__custom__') {
+                    return deviceModelCustomInput.value.trim();
+                }
+                var opt = deviceModelSelect.options[deviceModelSelect.selectedIndex];
+                return opt ? opt.textContent.trim() : '';
+            }
+
             function updatePreview() {
                 previewCustomer.textContent = selectedCustomer ? selectedCustomer.name : '{{ __('Not Selected') }}';
-                previewDevice.textContent = deviceModelInput.value.trim() || '-';
-                
-                var issueCategory = issueTypeInput.value.trim();
+                previewDevice.textContent = currentDeviceModelLabel() || '-';
+
+                var problemNames = selectedProblemNames();
                 var issueNotes = issueNotesInput.value.trim();
-                if (issueCategory && issueNotes) {
-                    previewIssue.textContent = issueCategory + ' (' + issueNotes + ')';
+                var issueLabel = problemNames.join(', ');
+                if (issueLabel && issueNotes) {
+                    previewIssue.textContent = issueLabel + ' (' + issueNotes + ')';
                 } else {
-                    previewIssue.textContent = issueCategory || issueNotes || '-';
+                    previewIssue.textContent = issueLabel || issueNotes || '-';
                 }
 
                 var techVal = technicianSelect.value;
@@ -413,10 +394,10 @@
                 }
 
                 if (techVal) {
-                    previewStatus.textContent = 'Waiting Diagnosis';
+                    previewStatus.textContent = 'Assigned';
                     previewStatus.className = 'rounded-md bg-amber-100 px-2 py-0.5 text-[11px] font-bold text-amber-800 dark:bg-amber-950/60 dark:text-amber-300';
                 } else {
-                    previewStatus.textContent = 'Received';
+                    previewStatus.textContent = 'New';
                     previewStatus.className = 'rounded-md bg-slate-100 px-2 py-0.5 text-[11px] font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-300';
                 }
             }
@@ -456,26 +437,59 @@
                 updatePreview();
             });
 
-            // Quick device suggestion chips click handler
-            document.querySelectorAll('.device-chip').forEach(function (chip) {
-                chip.addEventListener('click', function () {
-                    deviceModelInput.value = chip.textContent.trim();
-                    updatePreview();
-                });
+            deviceModelSelect.addEventListener('change', function () {
+                deviceModelCustomInput.classList.toggle('hidden', deviceModelSelect.value !== '__custom__');
+                updatePreview();
             });
-
-            // Quick issue suggestion chips click handler
-            document.querySelectorAll('.issue-chip').forEach(function (chip) {
-                chip.addEventListener('click', function () {
-                    issueTypeInput.value = chip.textContent.trim();
-                    updatePreview();
-                });
-            });
-
-            deviceModelInput.addEventListener('input', updatePreview);
-            issueTypeInput.addEventListener('input', updatePreview);
+            deviceModelCustomInput.addEventListener('input', updatePreview);
             issueNotesInput.addEventListener('input', updatePreview);
             technicianSelect.addEventListener('change', updatePreview);
+
+            async function loadDeviceModels() {
+                try {
+                    var res = await safeApiRequest('/api/device-models?per_page=200&status=active');
+                    if (!res.ok) return;
+                    var body = await res.json();
+                    deviceModelsList = body.data || [];
+                    var customOption = deviceModelSelect.querySelector('option[value="__custom__"]');
+                    deviceModelSelect.innerHTML = '<option value="">{{ __('Select a model...') }}</option>';
+                    deviceModelsList.forEach(function (model) {
+                        var opt = document.createElement('option');
+                        opt.value = model.id;
+                        opt.textContent = model.label;
+                        deviceModelSelect.appendChild(opt);
+                    });
+                    deviceModelSelect.appendChild(customOption || (function () {
+                        var opt = document.createElement('option');
+                        opt.value = '__custom__';
+                        opt.textContent = '{{ __('Other / Type custom model...') }}';
+                        return opt;
+                    })());
+                } catch (e) {
+                    console.error('Failed to load device models', e);
+                }
+            }
+
+            async function loadProblems() {
+                try {
+                    var res = await safeApiRequest('/api/repair-problems?per_page=200&status=active');
+                    if (!res.ok) return;
+                    var body = await res.json();
+                    problemsList = body.data || [];
+                    var container = document.getElementById('problems-checklist');
+                    container.innerHTML = problemsList.map(function (problem) {
+                        return '<label class="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50/70 px-2.5 py-1.5 text-xs font-medium text-slate-700 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200">' +
+                            '<input type="checkbox" value="' + problem.id + '" data-name="' + problem.name + '" class="rounded border-slate-300 text-primary-600 focus:ring-primary-500" />' +
+                            problem.name +
+                            '</label>';
+                    }).join('');
+                    container.querySelectorAll('input[type=checkbox]').forEach(function (checkbox) {
+                        checkbox.addEventListener('change', updatePreview);
+                    });
+                } catch (e) {
+                    console.error('Failed to load repair problems', e);
+                }
+            }
 
             // Handler for Add Phone button & Enter key on search bar
             async function submitPhoneLookup() {
@@ -683,12 +697,18 @@
                 if (found.customer) {
                     selectCustomer(found.customer);
                 }
-                if (found.device_model) {
-                    deviceModelInput.value = found.device_model;
+                if (found.device_model_id) {
+                    deviceModelSelect.value = String(found.device_model_id);
+                    deviceModelCustomInput.classList.add('hidden');
+                } else if (found.device_model) {
+                    deviceModelSelect.value = '__custom__';
+                    deviceModelCustomInput.classList.remove('hidden');
+                    deviceModelCustomInput.value = found.device_model;
                 }
-                if (found.issue_type) {
-                    issueTypeInput.value = found.issue_type;
-                }
+                var foundProblemIds = (found.problems || []).map(function (problem) { return problem.id; });
+                document.querySelectorAll('#problems-checklist input[type=checkbox]').forEach(function (checkbox) {
+                    checkbox.checked = foundProblemIds.indexOf(Number(checkbox.value)) !== -1;
+                });
                 if (found.service_type) {
                     document.getElementById('service_type').value = found.service_type;
                 }
@@ -710,6 +730,8 @@
 
             loadTechnicians();
             loadAppointments();
+            loadDeviceModels();
+            loadProblems();
 
             // Submit Handler
             document.getElementById('repair-create-submit').addEventListener('click', async function (event) {
@@ -721,25 +743,26 @@
                     errorEl.textContent = '{{ __('Select or create a customer first.') }}';
                     return;
                 }
-                var deviceModel = deviceModelInput.value.trim();
-                var issueCategory = issueTypeInput.value.trim();
+
+                var problemIds = Array.from(document.querySelectorAll('#problems-checklist input[type=checkbox]:checked'))
+                    .map(function (checkbox) { return Number(checkbox.value); });
                 var issueNotes = issueNotesInput.value.trim();
+                var isCustomDevice = deviceModelSelect.value === '__custom__';
+                var deviceModelId = (!isCustomDevice && deviceModelSelect.value) ? Number(deviceModelSelect.value) : null;
+                var deviceModelText = isCustomDevice ? deviceModelCustomInput.value.trim() : '';
 
-                if (!deviceModel || (!issueCategory && !issueNotes)) {
-                    errorEl.textContent = '{{ __('Device model and repair issue/notes are required.') }}';
+                if ((!deviceModelId && !deviceModelText) || (!problemIds.length && !issueNotes)) {
+                    errorEl.textContent = '{{ __('Device model and at least one problem (or a note) are required.') }}';
                     return;
-                }
-
-                var combinedIssue = issueCategory;
-                if (issueNotes) {
-                    combinedIssue = issueCategory ? (issueCategory + ' | Note: ' + issueNotes) : issueNotes;
                 }
 
                 var techVal = technicianSelect.value;
                 var payload = {
                     customer_id: selectedCustomer.id,
-                    device_model: deviceModel,
-                    issue_type: combinedIssue,
+                    device_model_id: deviceModelId,
+                    device_model: deviceModelText || undefined,
+                    problem_ids: problemIds,
+                    issue_type: issueNotes || undefined,
                     service_type: document.getElementById('service_type').value,
                     appointment_datetime: appointmentDatetimeInput.value || null,
                 };

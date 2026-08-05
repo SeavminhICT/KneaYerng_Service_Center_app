@@ -173,7 +173,7 @@
         </div>
         @endif
 
-        @if ($can('view_repair', 'view_technician'))
+        @if ($can('view_repair', 'view_technician', 'view_device_model', 'view_repair_problem'))
         <div class="mt-6">
             <p class="px-3 text-xs font-semibold uppercase tracking-widest text-slate-400">{{ __('Service') }}</p>
             <nav class="mt-3 space-y-2">
@@ -192,6 +192,22 @@
                         <path stroke-linecap="round" stroke-linejoin="round" d="M19 8l1.5 1.5M19 3v2m2.5 3H19" />
                     </svg>
                     {{ __('Technicians') }}
+                </a>
+                @endif
+                @if ($can('view_device_model'))
+                <a href="{{ route('admin.device-models.index') }}" class="flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium {{ request()->routeIs('admin.device-models.*') ? $activeClass : $inactiveClass }}">
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                    </svg>
+                    {{ __('Device Models') }}
+                </a>
+                @endif
+                @if ($can('view_repair_problem'))
+                <a href="{{ route('admin.repair-problems.index') }}" class="flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium {{ request()->routeIs('admin.repair-problems.*') ? $activeClass : $inactiveClass }}">
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    {{ __('Repair Problems') }}
                 </a>
                 @endif
             </nav>

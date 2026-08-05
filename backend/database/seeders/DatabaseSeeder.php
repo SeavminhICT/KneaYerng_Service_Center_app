@@ -21,6 +21,8 @@ class DatabaseSeeder extends Seeder
         // User::factory(10)->create();
 
         $this->call(RolePermissionSeeder::class);
+        $this->call(RepairProblemSeeder::class);
+        $this->call(DeviceModelSeeder::class);
 
         User::updateOrCreate(
             ['email' => 'admin168@gmail.com'],

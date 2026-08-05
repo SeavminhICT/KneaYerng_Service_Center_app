@@ -31,12 +31,16 @@ class RepairDiagnosticController extends Controller
             ]
         );
 
-        if (in_array($repair->status, ['received', 'waiting_diagnosis'], true)) {
+        if (in_array($repair->status, [
+            RepairStatusService::STATUS_NEW,
+            RepairStatusService::STATUS_ASSIGNED,
+            RepairStatusService::STATUS_ACCEPTED,
+        ], true)) {
             // Diagnostic entry means diagnosis has effectively started, whether or
-            // not a technician was formally assigned first — force past the normal
-            // received -> waiting_diagnosis -> diagnosing sequence.
+            // not the technician formally accepted first — force past the normal
+            // new -> assigned -> accepted -> diagnosing sequence.
             $actor = $request->user() ?? $request->user('sanctum');
-            RepairStatusService::transition($repair, 'diagnosing', $actor, force: true);
+            RepairStatusService::transition($repair, RepairStatusService::STATUS_DIAGNOSING, $actor, force: true);
         }
 
         return new DiagnosticResource($diagnostic);

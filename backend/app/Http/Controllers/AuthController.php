@@ -373,6 +373,46 @@ class AuthController extends Controller
         ]);
     }
 
+    public function facebookLogin(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'facebook_id' => ['required', 'string'],
+            'email' => ['nullable', 'string', 'email', 'max:255'],
+            'first_name' => ['required', 'string', 'max:255'],
+            'last_name' => ['required', 'string', 'max:255'],
+            'avatar' => ['nullable', 'string'],
+        ]);
+
+        $email = $validated['email'] ? strtolower($validated['email']) : 'fb_' . $validated['facebook_id'] . '@facebook.com';
+
+        $user = User::where('email', $email)->first();
+
+        if (! $user) {
+            $user = User::create([
+                'first_name' => $validated['first_name'],
+                'last_name' => $validated['last_name'],
+                'email' => $email,
+                'password' => Hash::make(bin2hex(random_bytes(16))),
+                'avatar' => $validated['avatar'] ?? null,
+                'otp_verified_at' => now(),
+                'email_verified_at' => now(),
+            ]);
+        } else {
+            if (empty($user->avatar) && !empty($validated['avatar'])) {
+                $user->avatar = $validated['avatar'];
+                $user->save();
+            }
+        }
+
+        $token = $user->createToken('api')->plainTextToken;
+
+        return response()->json([
+            'message' => 'Login successfully via Facebook',
+            'token' => $token,
+            'user' => $user,
+        ]);
+    }
+
     private function findUserForOtp(?string $email, ?string $phone): ?User
     {
         $emailValue = $email ? strtolower(trim($email)) : null;

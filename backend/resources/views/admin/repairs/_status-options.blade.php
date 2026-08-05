@@ -1,0 +1,14 @@
+<option value="new">{{ __('New') }}</option>
+<option value="assigned">{{ __('Assigned') }}</option>
+<option value="accepted">{{ __('Accepted') }}</option>
+<option value="diagnosing">{{ __('Diagnosing') }}</option>
+<option value="waiting_customer_approval">{{ __('Waiting Customer Approval') }}</option>
+<option value="approved">{{ __('Approved') }}</option>
+<option value="in_progress">{{ __('In Progress') }}</option>
+<option value="waiting_parts">{{ __('Waiting for Parts') }}</option>
+<option value="testing">{{ __('Testing') }}</option>
+<option value="repair_completed">{{ __('Repair Completed') }}</option>
+<option value="ready_for_pickup">{{ __('Ready for Pickup') }}</option>
+<option value="delivered">{{ __('Delivered') }}</option>
+<option value="cannot_repair">{{ __('Cannot Repair') }}</option>
+<option value="cancelled">{{ __('Cancelled') }}</option>

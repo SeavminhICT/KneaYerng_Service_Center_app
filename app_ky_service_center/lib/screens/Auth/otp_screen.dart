@@ -9,6 +9,7 @@ import '../../services/api_service.dart';
 import '../../services/app_notification_service.dart';
 import '../../services/cart_service.dart';
 import '../main_navigation_screen.dart';
+import '../technician/technician_shell_screen.dart';
 import 'registration_success_screen.dart';
 
 class OtpScreen extends StatefulWidget {
@@ -205,9 +206,15 @@ class _OtpScreenState extends State<OtpScreen> {
     if (widget.purpose == 'login') {
       await AppNotificationService.instance.syncTokenWithBackend(force: true);
       if (!mounted) return;
+      final profile = await ApiService.refreshUserProfile();
+      if (!mounted) return;
       Navigator.pushAndRemoveUntil(
         context,
-        MaterialPageRoute(builder: (_) => const MainNavigationScreen()),
+        MaterialPageRoute(
+          builder: (_) => profile?.role == 'technician'
+              ? const TechnicianShellScreen()
+              : const MainNavigationScreen(),
+        ),
         (_) => false,
       );
       return;
@@ -215,11 +222,18 @@ class _OtpScreenState extends State<OtpScreen> {
 
     if (widget.purpose == 'phone_auth') {
       await AppNotificationService.instance.syncTokenWithBackend(force: true);
-      unawaited(CartService.instance.loadFromApi());
+      final profile = await ApiService.refreshUserProfile();
+      if (profile?.role != 'technician') {
+        unawaited(CartService.instance.loadFromApi());
+      }
       if (!mounted) return;
       Navigator.pushAndRemoveUntil(
         context,
-        MaterialPageRoute(builder: (_) => const MainNavigationScreen()),
+        MaterialPageRoute(
+          builder: (_) => profile?.role == 'technician'
+              ? const TechnicianShellScreen()
+              : const MainNavigationScreen(),
+        ),
         (_) => false,
       );
       return;

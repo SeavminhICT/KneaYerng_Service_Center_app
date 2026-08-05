@@ -11,13 +11,17 @@ class RepairStatusLog extends Model
 
     protected $fillable = [
         'repair_id',
+        'from_status',
         'status',
+        'note',
+        'meta',
         'updated_by',
         'logged_at',
     ];
 
     protected $casts = [
         'logged_at' => 'datetime',
+        'meta' => 'array',
     ];
 
     public function repair()

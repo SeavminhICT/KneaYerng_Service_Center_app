@@ -19,6 +19,7 @@ import '../support/support_chat_screen.dart';
 import 'help_center_screen.dart';
 import 'privacy_screen.dart';
 import '../warranty/warranty_screen.dart';
+import '../repair_tracking/my_repairs_screen.dart';
 import 'widgets/profile_colors.dart';
 import 'widgets/profile_empty_state.dart';
 import 'widgets/profile_hero_card.dart';
@@ -269,6 +270,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
             : const [Color(0xFFE8F5E9), Color(0xFFDCEEDD)],
         onTap: () => Navigator.of(context).push(
           MaterialPageRoute(builder: (_) => const WarrantyScreen()),
+        ),
+      ),
+      ProfileQuickAction(
+        icon: HugeIcons.strokeRoundedWrench01,
+        label: 'My Repairs',
+        colors: isDark
+            ? const [Color(0xFF3A2A1A), Color(0xFF2E2214)]
+            : const [Color(0xFFFFF1E7), Color(0xFFFFE6D2)],
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const MyRepairsScreen()),
         ),
       ),
     ];

@@ -47,7 +47,7 @@ class RepairQuotationController extends Controller
         );
 
         if ($status === 'pending') {
-            RepairStatusService::transition($repair, 'waiting_approval', $actor, force: true);
+            RepairStatusService::transition($repair, RepairStatusService::STATUS_WAITING_CUSTOMER_APPROVAL, $actor, force: true);
             RepairNotificationService::notify(
                 $repair->customer_id,
                 $repair->id,
@@ -59,7 +59,7 @@ class RepairQuotationController extends Controller
         }
 
         if ($status === 'approved') {
-            RepairStatusService::transition($repair, 'in_repair', $actor, force: true);
+            RepairStatusService::transition($repair, RepairStatusService::STATUS_APPROVED, $actor, force: true);
             RepairNotificationService::notifyAdmin(
                 $repair->id,
                 'Quotation approved',
@@ -69,7 +69,7 @@ class RepairQuotationController extends Controller
         }
 
         if ($status === 'rejected') {
-            RepairStatusService::transition($repair, 'diagnosing', $actor, force: true);
+            RepairStatusService::transition($repair, RepairStatusService::STATUS_DIAGNOSING, $actor, force: true);
             RepairNotificationService::notifyAdmin(
                 $repair->id,
                 'Quotation rejected',
@@ -108,7 +108,7 @@ class RepairQuotationController extends Controller
         $quotation->save();
 
         $actor = $request->user() ?? $request->user('sanctum');
-        RepairStatusService::transition($repair, 'in_repair', $actor, force: true);
+        RepairStatusService::transition($repair, RepairStatusService::STATUS_APPROVED, $actor, force: true);
 
         RepairNotificationService::notifyAdmin(
             $repair->id,
@@ -133,7 +133,7 @@ class RepairQuotationController extends Controller
         $quotation->save();
 
         $actor = $request->user() ?? $request->user('sanctum');
-        RepairStatusService::transition($repair, 'diagnosing', $actor, force: true);
+        RepairStatusService::transition($repair, RepairStatusService::STATUS_CANCELLED, $actor, force: true, note: 'Customer rejected quotation.');
 
         RepairNotificationService::notifyAdmin(
             $repair->id,

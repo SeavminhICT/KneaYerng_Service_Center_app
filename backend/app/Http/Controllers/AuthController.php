@@ -3,18 +3,21 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Services\GoogleIdTokenVerifier;
 use App\Services\OtpService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
-    public function __construct(private OtpService $otpService)
-    {
-    }
+    public function __construct(
+        private OtpService $otpService,
+        private GoogleIdTokenVerifier $googleIdTokenVerifier
+    ) {}
 
     public function register(Request $request): JsonResponse
     {
@@ -198,7 +201,6 @@ class AuthController extends Controller
         ]);
     }
 
-
     public function update(Request $request): JsonResponse
     {
         $user = $request->user();
@@ -339,27 +341,98 @@ class AuthController extends Controller
     public function googleLogin(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'email' => ['required', 'string', 'email', 'max:255'],
-            'first_name' => ['required', 'string', 'max:255'],
-            'last_name' => ['required', 'string', 'max:255'],
+            'id_token' => ['nullable', 'string'],
+            'email' => ['required_without:id_token', 'nullable', 'string', 'email', 'max:255'],
+            'first_name' => ['nullable', 'string', 'max:255'],
+            'last_name' => ['nullable', 'string', 'max:255'],
             'avatar' => ['nullable', 'string'],
         ]);
 
-        $user = User::where('email', strtolower($validated['email']))->first();
+        $claims = null;
+        if (! empty($validated['id_token'])) {
+            try {
+                $claims = $this->googleIdTokenVerifier->verify($validated['id_token']);
+            } catch (\Throwable $e) {
+                Log::error('Google ID token verification error: '.$e->getMessage(), [
+                    'exception' => $e,
+                ]);
+                return response()->json([
+                    'message' => 'Google login could not be verified. Please try again.',
+                ], 401);
+            }
+        }
+
+        $email = strtolower(trim((string) ($claims['email'] ?? $validated['email'] ?? '')));
+        if ($email === '') {
+            return response()->json([
+                'message' => 'Google account email is missing.',
+            ], 422);
+        }
+
+        $emailVerified = $claims === null
+            ? true
+            : filter_var($claims['email_verified'] ?? false, FILTER_VALIDATE_BOOLEAN);
+        if (! $emailVerified) {
+            return response()->json([
+                'message' => 'Google account email is not verified.',
+            ], 403);
+        }
+
+        $fullName = trim((string) ($claims['name'] ?? ''));
+        $firstName = trim((string) ($claims['given_name'] ?? ''));
+        $lastName = trim((string) ($claims['family_name'] ?? ''));
+
+        if ($claims === null) {
+            $firstName = trim((string) ($validated['first_name'] ?? ''));
+            $lastName = trim((string) ($validated['last_name'] ?? ''));
+        }
+
+        if ($firstName === '' && $fullName !== '') {
+            $nameParts = preg_split('/\s+/', $fullName, 2);
+            $firstName = $nameParts[0] ?? '';
+            $lastName = $lastName !== '' ? $lastName : ($nameParts[1] ?? '');
+        }
+
+        if ($firstName === '') {
+            $emailName = trim((string) explode('@', $email, 2)[0]);
+            $firstName = $emailName !== '' ? $emailName : 'Google';
+        }
+
+        if ($lastName === '') {
+            $lastName = 'User';
+        }
+
+        $avatar = $claims['picture'] ?? ($validated['avatar'] ?? null);
+        if (! is_string($avatar) || trim($avatar) === '') {
+            $avatar = null;
+        }
+
+        $user = User::where('email', $email)->first();
 
         if (! $user) {
             $user = User::create([
-                'first_name' => $validated['first_name'],
-                'last_name' => $validated['last_name'],
-                'email' => strtolower($validated['email']),
+                'first_name' => $firstName,
+                'last_name' => $lastName,
+                'email' => $email,
                 'password' => Hash::make(bin2hex(random_bytes(16))),
-                'avatar' => $validated['avatar'] ?? null,
+                'avatar' => $avatar,
                 'otp_verified_at' => now(),
                 'email_verified_at' => now(),
             ]);
         } else {
-            if (empty($user->avatar) && !empty($validated['avatar'])) {
-                $user->avatar = $validated['avatar'];
+            if (empty($user->avatar) && $avatar !== null) {
+                $user->avatar = $avatar;
+            }
+
+            if (! $user->email_verified_at) {
+                $user->email_verified_at = now();
+            }
+
+            if (! $user->otp_verified_at) {
+                $user->otp_verified_at = now();
+            }
+
+            if ($user->isDirty()) {
                 $user->save();
             }
         }
@@ -383,7 +456,7 @@ class AuthController extends Controller
             'avatar' => ['nullable', 'string'],
         ]);
 
-        $email = $validated['email'] ? strtolower($validated['email']) : 'fb_' . $validated['facebook_id'] . '@facebook.com';
+        $email = $validated['email'] ? strtolower($validated['email']) : 'fb_'.$validated['facebook_id'].'@facebook.com';
 
         $user = User::where('email', $email)->first();
 
@@ -398,7 +471,7 @@ class AuthController extends Controller
                 'email_verified_at' => now(),
             ]);
         } else {
-            if (empty($user->avatar) && !empty($validated['avatar'])) {
+            if (empty($user->avatar) && ! empty($validated['avatar'])) {
                 $user->avatar = $validated['avatar'];
                 $user->save();
             }
@@ -426,6 +499,7 @@ class AuthController extends Controller
             if ($phoneNormalized && $phoneNormalized !== $phoneRaw) {
                 $query->orWhere('phone', $phoneNormalized);
             }
+
             return $query->first();
         }
 
@@ -438,6 +512,7 @@ class AuthController extends Controller
             if ($phoneNormalized && $phoneNormalized !== $phoneRaw) {
                 $query->orWhere('phone', $phoneNormalized);
             }
+
             return $query->first();
         }
 

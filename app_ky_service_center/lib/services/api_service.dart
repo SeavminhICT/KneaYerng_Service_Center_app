@@ -228,9 +228,7 @@ class ApiService {
   static const int _maxBaseUrlHistoryEntries = 8;
   static const String _loopbackApi = 'http://127.0.0.1:8000/api';
   static const String _androidEmulatorApi = 'http://10.0.2.2:8000/api';
-  // Hosted backend used by default. A runtime override can still switch the
-  // app to a LAN/dev server when needed.
-  static const String _defaultServerUrl = 'https://kneayerng.seavminh.com/api';
+  static const String _defaultServerUrl = _loopbackApi;
   static String? _runtimeBaseUrl;
   static String? _autoDetectedBaseUrl;
   static String? _resolvedBaseUrl;
@@ -245,14 +243,12 @@ class ApiService {
       _runtimeBaseUrl = _normalizeBaseUrl(stored);
     }
 
-    final configuredBaseUrl = _firstConfiguredBaseUrl([
+    final explicitBaseUrl = _firstConfiguredBaseUrl([
       _baseUrlOverride,
-      _runtimeBaseUrl,
       _hostedBaseUrlOverride,
-      _defaultServerUrl,
     ]);
-    if (configuredBaseUrl != null) {
-      _resolvedBaseUrl = configuredBaseUrl;
+    if (explicitBaseUrl != null) {
+      _resolvedBaseUrl = explicitBaseUrl;
       await _rememberBaseUrlInHistory(_resolvedBaseUrl!, prefs: prefs);
       debugPrint('[ApiService] Using server URL -> $_resolvedBaseUrl');
       return;
@@ -267,6 +263,7 @@ class ApiService {
     }
     if (_resolvedBaseUrl != null && _resolvedBaseUrl!.isNotEmpty) {
       await _rememberBaseUrlInHistory(_resolvedBaseUrl!, prefs: prefs);
+      debugPrint('[ApiService] Auto-detected server URL -> $_resolvedBaseUrl');
     }
   }
 
@@ -283,10 +280,7 @@ class ApiService {
       return _normalizeBaseUrl(_baseUrlOverride);
     }
 
-    final configuredBaseUrl = _firstConfiguredBaseUrl([
-      _hostedBaseUrlOverride,
-      _defaultServerUrl,
-    ]);
+    final configuredBaseUrl = _firstConfiguredBaseUrl([_hostedBaseUrlOverride]);
     if (configuredBaseUrl != null) {
       return configuredBaseUrl;
     }
@@ -307,10 +301,10 @@ class ApiService {
         );
         return inferred.toString();
       }
-      return _loopbackApi;
+      return _platformFallbackBaseUrl();
     }
 
-    return _loopbackApi;
+    return _platformFallbackBaseUrl();
   }
 
   static bool get hasConfiguredBaseUrl =>
@@ -386,6 +380,18 @@ class ApiService {
       }
     }
     return null;
+  }
+
+  static String _platformFallbackBaseUrl() {
+    if (kIsWeb) {
+      return _loopbackApi;
+    }
+
+    if (defaultTargetPlatform == TargetPlatform.android) {
+      return _androidEmulatorApi;
+    }
+
+    return _loopbackApi;
   }
 
   static Future<String?> testBaseUrl(String raw) async {
@@ -475,11 +481,9 @@ class ApiService {
         if (deviceId != null && deviceId.trim().isNotEmpty)
           'device_id': deviceId.trim(),
       });
-    } catch (_) {
-      return const OtpRequestResult(
-        ok: false,
-        message: 'Unable to request OTP. Please try again.',
-      );
+    } catch (error) {
+      debugPrint('[ApiService] OTP request failed: $error');
+      return OtpRequestResult(ok: false, message: _buildNetworkErrorMessage());
     }
 
     dynamic decoded;
@@ -578,11 +582,9 @@ class ApiService {
             'device_id': deviceId.trim(),
         },
       );
-    } catch (_) {
-      return const OtpRequestResult(
-        ok: false,
-        message: 'Unable to request OTP. Please try again.',
-      );
+    } catch (error) {
+      debugPrint('[ApiService] Phone auth OTP request failed: $error');
+      return OtpRequestResult(ok: false, message: _buildNetworkErrorMessage());
     }
 
     dynamic decoded;
@@ -599,6 +601,7 @@ class ApiService {
       message: _extractApiMessage(map) ?? 'OTP request completed.',
       expiresInSec: _parseInt(map['expiresInSec'] ?? map['expires_in_sec']),
       resendInSec: _parseInt(map['resendInSec'] ?? map['resend_in_sec']),
+      devOtp: map['dev_otp']?.toString(),
     );
   }
 
@@ -746,11 +749,9 @@ class ApiService {
             body: jsonEncode({'identifier': identifier.trim()}),
           )
           .timeout(const Duration(seconds: 15));
-    } catch (_) {
-      return const OtpRequestResult(
-        ok: false,
-        message: 'Unable to send OTP. Please try again.',
-      );
+    } catch (error) {
+      debugPrint('[ApiService] Forgot password OTP request failed: $error');
+      return OtpRequestResult(ok: false, message: _buildNetworkErrorMessage());
     }
 
     dynamic decoded;
@@ -918,24 +919,34 @@ class ApiService {
 
   // ================= GOOGLE LOGIN =================
   static Future<String?> loginWithGoogle({
+    required String idToken,
     required String email,
     required String firstName,
     required String lastName,
     String? avatar,
   }) async {
+    final normalizedEmail = email.trim();
+    final emailName = normalizedEmail.split('@').first.trim();
+    final normalizedFirstName = firstName.trim().isNotEmpty
+        ? firstName.trim()
+        : emailName.isNotEmpty
+        ? emailName
+        : 'Google';
+    final normalizedLastName = lastName.trim().isNotEmpty
+        ? lastName.trim()
+        : 'User';
+
     http.Response res;
     try {
       res = await http
           .post(
             Uri.parse('$baseUrl/auth/google'),
-            headers: const {
-              'Accept': 'application/json',
-              'Content-Type': 'application/json',
-            },
+            headers: _buildHeaders(const {'Content-Type': 'application/json'}),
             body: jsonEncode({
-              'email': email,
-              'first_name': firstName,
-              'last_name': lastName,
+              'id_token': idToken,
+              'email': normalizedEmail,
+              'first_name': normalizedFirstName,
+              'last_name': normalizedLastName,
               'avatar': avatar,
             }),
           )
@@ -964,9 +975,9 @@ class ApiService {
         data is Map
             ? Map<String, dynamic>.from(data)
             : const <String, dynamic>{},
-        fallbackEmail: email,
-        fallbackFirstName: firstName,
-        fallbackLastName: lastName,
+        fallbackEmail: normalizedEmail,
+        fallbackFirstName: normalizedFirstName,
+        fallbackLastName: normalizedLastName,
         fallbackAvatarUrl: avatar,
       );
 
@@ -995,10 +1006,7 @@ class ApiService {
       res = await http
           .post(
             Uri.parse('$baseUrl/auth/facebook'),
-            headers: const {
-              'Accept': 'application/json',
-              'Content-Type': 'application/json',
-            },
+            headers: _buildHeaders(const {'Content-Type': 'application/json'}),
             body: jsonEncode({
               'facebook_id': facebookId,
               'email': email,
@@ -1426,16 +1434,6 @@ class ApiService {
       addCandidate(raw);
     }
 
-    // Try hosted/default server first when auto-detection is enabled.
-    if (_defaultServerUrl.isNotEmpty) {
-      addCandidate(_defaultServerUrl);
-    }
-
-    if (defaultTargetPlatform != TargetPlatform.android &&
-        defaultTargetPlatform != TargetPlatform.iOS) {
-      addCandidate(await local_host_resolver.detectLocalServerBaseUrl());
-    }
-
     final isMobileDevice =
         defaultTargetPlatform == TargetPlatform.android ||
         defaultTargetPlatform == TargetPlatform.iOS;
@@ -1444,6 +1442,8 @@ class ApiService {
       for (final raw in guessed.take(24)) {
         addCandidate(raw);
       }
+    } else {
+      addCandidate(await local_host_resolver.detectLocalServerBaseUrl());
     }
 
     if (defaultTargetPlatform == TargetPlatform.android) {
@@ -1533,7 +1533,10 @@ class ApiService {
         message.contains('errno = 101') ||
         message.contains('no route to host') ||
         message.contains('failed host lookup') ||
-        message.contains('connection refused');
+        message.contains('connection refused') ||
+        message.contains('connection timed out') ||
+        message.contains('timed out') ||
+        message.contains('timeoutexception');
   }
 
   /// Returns headers that include the ngrok bypass header when the current
@@ -1944,11 +1947,9 @@ class ApiService {
             body: jsonEncode({'phone': phone.trim()}),
           )
           .timeout(const Duration(seconds: 15));
-    } catch (_) {
-      return const OtpRequestResult(
-        ok: false,
-        message: 'Unable to request OTP. Please try again.',
-      );
+    } catch (error) {
+      debugPrint('[ApiService] Phone change OTP request failed: $error');
+      return OtpRequestResult(ok: false, message: _buildNetworkErrorMessage());
     }
 
     dynamic decoded;
@@ -3884,7 +3885,10 @@ class ApiService {
   }) {
     return _postRepairAction(
       'technician/repairs/$repairId/status',
-      body: {'status': status, if (note != null && note.isNotEmpty) 'note': note},
+      body: {
+        'status': status,
+        if (note != null && note.isNotEmpty) 'note': note,
+      },
     );
   }
 
@@ -3897,7 +3901,8 @@ class ApiService {
     return _postRepairAction(
       'technician/repairs/$repairId/diagnostic',
       body: {
-        if (problemDescription != null) 'problem_description': problemDescription,
+        if (problemDescription != null)
+          'problem_description': problemDescription,
         if (laborCost != null) 'labor_cost': laborCost,
         if (diagnosticNotes != null) 'diagnostic_notes': diagnosticNotes,
       },
@@ -3912,7 +3917,11 @@ class ApiService {
   }) {
     return _postRepairAction(
       'technician/repairs/$repairId/quotation',
-      body: {'parts_cost': partsCost, 'labor_cost': laborCost, 'status': status},
+      body: {
+        'parts_cost': partsCost,
+        'labor_cost': laborCost,
+        'status': status,
+      },
     );
   }
 
@@ -3945,7 +3954,10 @@ class ApiService {
       final decoded = jsonDecode(res.body);
       final rawList = decoded is Map ? decoded['data'] : decoded;
       if (rawList is! List) return [];
-      return rawList.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList();
+      return rawList
+          .whereType<Map>()
+          .map((e) => Map<String, dynamic>.from(e))
+          .toList();
     } catch (_) {
       return [];
     }
@@ -4449,12 +4461,16 @@ class OtpRequestResult {
     required this.message,
     this.expiresInSec,
     this.resendInSec,
+    this.devOtp,
   });
 
   final bool ok;
   final String message;
   final int? expiresInSec;
   final int? resendInSec;
+  /// Only present in local/debug mode when SMS delivery failed.
+  /// Never set in production. Use to show the OTP code in a dev dialog.
+  final String? devOtp;
 }
 
 class OtpVerifyResult {

@@ -30,6 +30,7 @@ class RepairProblemController extends Controller
     {
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
+            'service_fee' => ['required', 'numeric', 'min:0'],
             'sort_order' => ['nullable', 'integer', 'min:0'],
             'status' => ['nullable', 'string', 'in:active,inactive'],
         ]);
@@ -39,6 +40,7 @@ class RepairProblemController extends Controller
         $problem = RepairProblem::create([
             'added_by' => $actor?->id,
             'name' => $validated['name'],
+            'service_fee' => $validated['service_fee'],
             'sort_order' => $validated['sort_order'] ?? 0,
             'status' => $validated['status'] ?? 'active',
         ]);
@@ -50,6 +52,7 @@ class RepairProblemController extends Controller
     {
         $validated = $request->validate([
             'name' => ['sometimes', 'string', 'max:255'],
+            'service_fee' => ['sometimes', 'required', 'numeric', 'min:0'],
             'sort_order' => ['nullable', 'integer', 'min:0'],
             'status' => ['nullable', 'string', 'in:active,inactive'],
         ]);

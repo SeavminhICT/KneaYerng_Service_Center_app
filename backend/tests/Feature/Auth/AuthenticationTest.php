@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Role;
 use App\Models\User;
 use App\Support\AuthRedirect;
 
@@ -19,6 +20,38 @@ test('users can authenticate using the login screen', function () {
 
     $this->assertAuthenticated();
     $response->assertRedirect(AuthRedirect::destination($user));
+});
+
+test('admin panel users see the login notification prompt flag', function () {
+    $role = Role::create(['name' => 'Staff']);
+    $user = User::factory()->create(['role' => 'staff']);
+    $user->roles()->attach($role->id);
+
+    $response = $this->post('/login', [
+        'email' => $user->email,
+        'password' => 'password',
+    ]);
+
+    $this->assertAuthenticatedAs($user);
+    $response
+        ->assertRedirect(AuthRedirect::destination($user))
+        ->assertSessionHas('just_logged_in', true);
+});
+
+test('technician login skips the notification prompt flag', function () {
+    $role = Role::create(['name' => 'Technician']);
+    $user = User::factory()->create(['role' => 'technician']);
+    $user->roles()->attach($role->id);
+
+    $response = $this->post('/login', [
+        'email' => $user->email,
+        'password' => 'password',
+    ]);
+
+    $this->assertAuthenticatedAs($user);
+    $response
+        ->assertRedirect(AuthRedirect::destination($user))
+        ->assertSessionMissing('just_logged_in');
 });
 
 test('users can not authenticate with invalid password', function () {

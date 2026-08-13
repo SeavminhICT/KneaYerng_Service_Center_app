@@ -8,7 +8,9 @@ Broadcast::channel('App.Models.User.{id}', function ($user, $id) {
 
 Broadcast::channel('admin.notifications', function ($user) {
     $isAdmin = method_exists($user, 'isAdmin') && $user->isAdmin();
-    $isStaff = method_exists($user, 'isStaff') && $user->isStaff();
+    $isTechnician = method_exists($user, 'isTechnician') && $user->isTechnician();
+    $canViewAlerts = method_exists($user, 'hasAnyPermission')
+        && $user->hasAnyPermission('view_order', 'view_support_inbox', 'view_notification');
 
-    return $isAdmin || $isStaff;
+    return $isAdmin || (! $isTechnician && $canViewAlerts);
 });

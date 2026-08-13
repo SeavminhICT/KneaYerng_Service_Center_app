@@ -24,6 +24,7 @@ class User extends Authenticatable
         'first_name',
         'last_name',
         'email',
+        'email_verified_at',
         'phone',
         'password',
         'avatar',
@@ -189,6 +190,11 @@ class User extends Authenticatable
     public function isStaff(): bool
     {
         return in_array($this->role, ['staff', 'technician'], true);
+    }
+
+    public function isTechnician(): bool
+    {
+        return $this->role === 'technician';
     }
 
     public function roles()

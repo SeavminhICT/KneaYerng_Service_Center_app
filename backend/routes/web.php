@@ -5,6 +5,7 @@ use App\Http\Controllers\AdminApiSyncController;
 use App\Http\Controllers\ProfileController;
 use App\Models\KhqrTransaction;
 use App\Models\Payment;
+use App\Models\Technician;
 use App\Models\User;
 use App\Models\Voucher;
 use App\Models\Part;
@@ -18,6 +19,10 @@ Route::get('/dashboard', function () {
 
     if ($user instanceof User && $user->canAccessAdminPanel()) {
         return redirect()->route('admin.dashboard');
+    }
+
+    if ($user instanceof User && $user->isTechnician() && Technician::where('user_id', $user->id)->exists()) {
+        return redirect()->route('technician.jobs');
     }
 
     return redirect()->route('profile.edit');
@@ -106,6 +111,11 @@ Route::prefix('admin')->name('admin.')->middleware(['admin'])->group(function ()
 
     Route::view('/repairs', 'admin.repairs.index')->name('repairs.index')->middleware('permission:view_repair');
     Route::view('/repairs/create', 'admin.repairs.create')->name('repairs.create')->middleware('permission:create_repair');
+    Route::get('/repairs/{repair}/invoice', function (\App\Models\RepairRequest $repair) {
+        $repair->load(['customer', 'problems', 'invoice', 'quotation', 'diagnostic']);
+
+        return view('admin.repairs.invoice', ['repair' => $repair]);
+    })->name('repairs.invoice')->middleware('permission:view_repair');
     Route::get('/repairs/{repair}', function (\App\Models\RepairRequest $repair) {
         return view('admin.repairs.show', ['repairId' => $repair->id]);
     })->name('repairs.show')->middleware('permission:view_repair');
@@ -290,6 +300,18 @@ Route::prefix('admin')->name('admin.')->middleware(['admin'])->group(function ()
 });
 
 Route::middleware('auth')->group(function () {
+    Route::get('/technician/jobs', function () {
+        $technician = Technician::query()
+            ->where('user_id', request()->user()->id)
+            ->first();
+
+        abort_unless($technician, 403);
+
+        return view('technician.jobs', [
+            'technician' => $technician,
+        ]);
+    })->name('technician.jobs');
+
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');

@@ -11,7 +11,8 @@ class TechnicianJobDetailScreen extends StatefulWidget {
   final int repairId;
 
   @override
-  State<TechnicianJobDetailScreen> createState() => _TechnicianJobDetailScreenState();
+  State<TechnicianJobDetailScreen> createState() =>
+      _TechnicianJobDetailScreenState();
 }
 
 class _TechnicianJobDetailScreenState extends State<TechnicianJobDetailScreen> {
@@ -35,19 +36,26 @@ class _TechnicianJobDetailScreenState extends State<TechnicianJobDetailScreen> {
     });
   }
 
-  Future<void> _runAction(Future<bool> Function() action, {String? successMessage}) async {
+  Future<void> _runAction(
+    Future<bool> Function() action, {
+    String? successMessage,
+  }) async {
     setState(() => _busy = true);
     final ok = await action();
     if (!mounted) return;
     setState(() => _busy = false);
     if (ok) {
       if (successMessage != null) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(successMessage)));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(successMessage)));
       }
       await _load();
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Something went wrong. Please try again.')),
+        const SnackBar(
+          content: Text('Something went wrong. Please try again.'),
+        ),
       );
     }
   }
@@ -59,20 +67,20 @@ class _TechnicianJobDetailScreenState extends State<TechnicianJobDetailScreen> {
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _job == null
-              ? const Center(child: Text('Unable to load this repair job.'))
-              : RefreshIndicator(
-                  onRefresh: _load,
-                  child: ListView(
-                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
-                    children: [
-                      _headerCard(_job!),
-                      const SizedBox(height: 16),
-                      _actionSection(_job!),
-                      const SizedBox(height: 16),
-                      _timelineCard(_job!),
-                    ],
-                  ),
-                ),
+          ? const Center(child: Text('Unable to load this repair job.'))
+          : RefreshIndicator(
+              onRefresh: _load,
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+                children: [
+                  _headerCard(_job!),
+                  const SizedBox(height: 16),
+                  _actionSection(_job!),
+                  const SizedBox(height: 16),
+                  _timelineCard(_job!),
+                ],
+              ),
+            ),
     );
   }
 
@@ -99,11 +107,17 @@ class _TechnicianJobDetailScreenState extends State<TechnicianJobDetailScreen> {
               Expanded(
                 child: Text(
                   job.deviceModel ?? 'Unknown device',
-                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 17),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 17,
+                  ),
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: AppPalette.primarySoft,
                   borderRadius: BorderRadius.circular(20),
@@ -121,23 +135,39 @@ class _TechnicianJobDetailScreenState extends State<TechnicianJobDetailScreen> {
           ),
           const SizedBox(height: 12),
           if (job.problems.isNotEmpty) ...[
-            const Text('Reported problems', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppPalette.textMuted)),
+            const Text(
+              'Reported problems',
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: 12,
+                color: AppPalette.textMuted,
+              ),
+            ),
             const SizedBox(height: 6),
             Wrap(
               spacing: 6,
               runSpacing: 6,
               children: job.problems
-                  .map((p) => Chip(
-                        label: Text(p, style: const TextStyle(fontSize: 12)),
-                        backgroundColor: AppPalette.background,
-                        side: const BorderSide(color: AppPalette.border),
-                      ))
+                  .map(
+                    (p) => Chip(
+                      label: Text(p, style: const TextStyle(fontSize: 12)),
+                      backgroundColor: AppPalette.background,
+                      side: const BorderSide(color: AppPalette.border),
+                    ),
+                  )
                   .toList(),
             ),
             const SizedBox(height: 10),
           ],
           if ((job.issueType ?? '').isNotEmpty) ...[
-            const Text('Notes', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppPalette.textMuted)),
+            const Text(
+              'Notes',
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: 12,
+                color: AppPalette.textMuted,
+              ),
+            ),
             const SizedBox(height: 4),
             Text(job.issueType!),
             const SizedBox(height: 10),
@@ -145,7 +175,11 @@ class _TechnicianJobDetailScreenState extends State<TechnicianJobDetailScreen> {
           const Divider(height: 20),
           Row(
             children: [
-              const Icon(Icons.person_outline, size: 16, color: AppPalette.textMuted),
+              const Icon(
+                Icons.person_outline,
+                size: 16,
+                color: AppPalette.textMuted,
+              ),
               const SizedBox(width: 6),
               Text(job.customerName ?? '-'),
             ],
@@ -154,7 +188,11 @@ class _TechnicianJobDetailScreenState extends State<TechnicianJobDetailScreen> {
             const SizedBox(height: 4),
             Row(
               children: [
-                const Icon(Icons.phone_outlined, size: 16, color: AppPalette.textMuted),
+                const Icon(
+                  Icons.phone_outlined,
+                  size: 16,
+                  color: AppPalette.textMuted,
+                ),
                 const SizedBox(width: 6),
                 Text(job.customerPhone!),
               ],
@@ -177,35 +215,21 @@ class _TechnicianJobDetailScreenState extends State<TechnicianJobDetailScreen> {
       case 'assigned':
         return _assignedActions(job);
       case 'accepted':
-        return _diagnosticForm(job);
+        return _simpleTransitionButton(job, 'diagnosing', 'Process');
       case 'diagnosing':
-        return _quotationForm(job);
+        return _simpleTransitionButton(job, 'in_progress', 'Repair');
       case 'waiting_customer_approval':
         return _infoCard('Waiting for the customer to approve the quotation.');
       case 'approved':
-        return _simpleTransitionButton(job, 'in_progress', 'Start Repair');
+        return _simpleTransitionButton(job, 'in_progress', 'Repair');
       case 'in_progress':
-        return Column(
-          children: [
-            _partsUsageCard(job),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(child: _simpleTransitionButton(job, 'waiting_parts', 'Waiting for Parts', outlined: true)),
-                const SizedBox(width: 10),
-                Expanded(child: _simpleTransitionButton(job, 'testing', 'Start Testing')),
-              ],
-            ),
-            const SizedBox(height: 10),
-            _simpleTransitionButton(job, 'cannot_repair', 'Cannot Repair', danger: true),
-          ],
-        );
+        return _simpleTransitionButton(job, 'repair_completed', 'DONE');
       case 'waiting_parts':
-        return _simpleTransitionButton(job, 'in_progress', 'Resume Repair');
+        return _simpleTransitionButton(job, 'in_progress', 'Repair');
       case 'testing':
-        return _qcForm(job);
+        return _simpleTransitionButton(job, 'repair_completed', 'DONE');
       case 'repair_completed':
-        return _infoCard('Repair completed. Waiting for the shop to hand the device back.');
+        return _infoCard('Done. Waiting for the shop to hand the device back.');
       case 'ready_for_pickup':
         return _infoCard('Device is ready for pickup.');
       case 'delivered':
@@ -224,7 +248,12 @@ class _TechnicianJobDetailScreenState extends State<TechnicianJobDetailScreen> {
         children: [
           const Icon(Icons.info_outline, color: AppPalette.textMuted),
           const SizedBox(width: 10),
-          Expanded(child: Text(text, style: const TextStyle(color: AppPalette.textMuted))),
+          Expanded(
+            child: Text(
+              text,
+              style: const TextStyle(color: AppPalette.textMuted),
+            ),
+          ),
         ],
       ),
     );
@@ -239,15 +268,15 @@ class _TechnicianJobDetailScreenState extends State<TechnicianJobDetailScreen> {
             onPressed: _busy
                 ? null
                 : () => _runAction(
-                      () => ApiService.acceptRepairJob(job.id),
-                      successMessage: 'Job accepted.',
-                    ),
+                    () => ApiService.acceptRepairJob(job.id),
+                    successMessage: 'Job approved.',
+                  ),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppPalette.primary,
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(vertical: 14),
             ),
-            child: const Text('Accept Job'),
+            child: const Text('Approve Job'),
           ),
         ),
         const SizedBox(height: 10),
@@ -255,28 +284,35 @@ class _TechnicianJobDetailScreenState extends State<TechnicianJobDetailScreen> {
           children: [
             Expanded(
               child: OutlinedButton(
-                onPressed: _busy ? null : () => _showReasonDialog(
-                  title: 'Reject Job',
-                  hint: 'Reason for rejecting (e.g. busy, missing parts)',
-                  onSubmit: (reason) => _runAction(
-                    () => ApiService.rejectRepairJob(job.id, reason),
-                    successMessage: 'Job rejected.',
-                  ),
-                ),
+                onPressed: _busy
+                    ? null
+                    : () => _showReasonDialog(
+                        title: 'Reject Job',
+                        hint: 'Reason for rejecting (e.g. busy, missing parts)',
+                        onSubmit: (reason) => _runAction(
+                          () => ApiService.rejectRepairJob(job.id, reason),
+                          successMessage: 'Job rejected.',
+                        ),
+                      ),
                 child: const Text('Reject'),
               ),
             ),
             const SizedBox(width: 10),
             Expanded(
               child: OutlinedButton(
-                onPressed: _busy ? null : () => _showReasonDialog(
-                  title: 'Request Reassignment',
-                  hint: 'Why should this job go to another technician?',
-                  onSubmit: (reason) => _runAction(
-                    () => ApiService.requestRepairReassignment(job.id, reason),
-                    successMessage: 'Reassignment requested.',
-                  ),
-                ),
+                onPressed: _busy
+                    ? null
+                    : () => _showReasonDialog(
+                        title: 'Request Reassignment',
+                        hint: 'Why should this job go to another technician?',
+                        onSubmit: (reason) => _runAction(
+                          () => ApiService.requestRepairReassignment(
+                            job.id,
+                            reason,
+                          ),
+                          successMessage: 'Reassignment requested.',
+                        ),
+                      ),
                 child: const Text('Reassign'),
               ),
             ),
@@ -299,10 +335,16 @@ class _TechnicianJobDetailScreenState extends State<TechnicianJobDetailScreen> {
         content: TextField(
           controller: controller,
           maxLines: 3,
-          decoration: InputDecoration(hintText: hint, border: const OutlineInputBorder()),
+          decoration: InputDecoration(
+            hintText: hint,
+            border: const OutlineInputBorder(),
+          ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
           FilledButton(
             onPressed: () => Navigator.pop(context, controller.text.trim()),
             child: const Text('Submit'),
@@ -326,9 +368,9 @@ class _TechnicianJobDetailScreenState extends State<TechnicianJobDetailScreen> {
       onPressed: _busy
           ? null
           : () => _runAction(
-                () => ApiService.updateRepairStatus(job.id, target),
-                successMessage: 'Status updated.',
-              ),
+              () => ApiService.updateRepairStatus(job.id, target),
+              successMessage: 'Status updated.',
+            ),
       style: ElevatedButton.styleFrom(
         backgroundColor: danger ? AppPalette.error : AppPalette.primary,
         foregroundColor: Colors.white,
@@ -343,308 +385,14 @@ class _TechnicianJobDetailScreenState extends State<TechnicianJobDetailScreen> {
         onPressed: _busy
             ? null
             : () => _runAction(
-                  () => ApiService.updateRepairStatus(job.id, target),
-                  successMessage: 'Status updated.',
-                ),
-        style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14)),
+                () => ApiService.updateRepairStatus(job.id, target),
+                successMessage: 'Status updated.',
+              ),
+        style: OutlinedButton.styleFrom(
+          padding: const EdgeInsets.symmetric(vertical: 14),
+        ),
         child: Text(label),
       ),
-    );
-  }
-
-  Widget _diagnosticForm(RepairJob job) {
-    final descController = TextEditingController();
-    final laborController = TextEditingController();
-    return _card(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('Start Diagnosis', style: TextStyle(fontWeight: FontWeight.w700)),
-          const SizedBox(height: 10),
-          TextField(
-            controller: descController,
-            maxLines: 3,
-            decoration: const InputDecoration(
-              labelText: 'What did you find?',
-              border: OutlineInputBorder(),
-            ),
-          ),
-          const SizedBox(height: 10),
-          TextField(
-            controller: laborController,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            decoration: const InputDecoration(
-              labelText: 'Service fee (\$)',
-              border: OutlineInputBorder(),
-            ),
-          ),
-          const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: _busy
-                  ? null
-                  : () => _runAction(
-                        () => ApiService.submitRepairDiagnostic(
-                          job.id,
-                          problemDescription: descController.text.trim(),
-                          laborCost: double.tryParse(laborController.text.trim()),
-                        ),
-                        successMessage: 'Diagnosis saved.',
-                      ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppPalette.primary,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-              ),
-              child: const Text('Save Diagnosis'),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _quotationForm(RepairJob job) {
-    final partsController = TextEditingController(
-      text: job.quotation != null ? job.quotation!.partsCost.toStringAsFixed(2) : '',
-    );
-    final laborController = TextEditingController(
-      text: job.quotation != null ? job.quotation!.laborCost.toStringAsFixed(2) : '',
-    );
-    return _card(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('Send Quotation to Customer', style: TextStyle(fontWeight: FontWeight.w700)),
-          const SizedBox(height: 10),
-          TextField(
-            controller: partsController,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            decoration: const InputDecoration(labelText: 'Parts cost (\$)', border: OutlineInputBorder()),
-          ),
-          const SizedBox(height: 10),
-          TextField(
-            controller: laborController,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            decoration: const InputDecoration(labelText: 'Service fee (\$)', border: OutlineInputBorder()),
-          ),
-          const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: _busy
-                  ? null
-                  : () => _runAction(
-                        () => ApiService.submitRepairQuotation(
-                          job.id,
-                          partsCost: double.tryParse(partsController.text.trim()) ?? 0,
-                          laborCost: double.tryParse(laborController.text.trim()) ?? 0,
-                        ),
-                        successMessage: 'Quotation sent to customer.',
-                      ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppPalette.primary,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-              ),
-              child: const Text('Send Quotation'),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _partsUsageCard(RepairJob job) {
-    return _card(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('Use a part', style: TextStyle(fontWeight: FontWeight.w700)),
-          const SizedBox(height: 10),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: _busy ? null : () => _openPartsPicker(job),
-              icon: const Icon(Icons.add_box_outlined),
-              label: const Text('Pick part from inventory'),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _openPartsPicker(RepairJob job) async {
-    final parts = await ApiService.fetchTechnicianParts();
-    if (!mounted) return;
-    if (parts.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No parts in stock.')),
-      );
-      return;
-    }
-
-    Map<String, dynamic>? selectedPart;
-    final qtyController = TextEditingController(text: '1');
-
-    await showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setModalState) {
-            return Padding(
-              padding: EdgeInsets.only(
-                left: 16,
-                right: 16,
-                top: 16,
-                bottom: MediaQuery.of(context).viewInsets.bottom + 16,
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Select a part', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
-                  const SizedBox(height: 10),
-                  SizedBox(
-                    height: 220,
-                    child: ListView.builder(
-                      itemCount: parts.length,
-                      itemBuilder: (context, index) {
-                        final part = parts[index];
-                        final selected = selectedPart != null && selectedPart!['id'] == part['id'];
-                        return ListTile(
-                          title: Text(part['name']?.toString() ?? ''),
-                          subtitle: Text('Stock: ${part['stock']} · \$${part['unit_cost']}'),
-                          selected: selected,
-                          selectedTileColor: AppPalette.primarySoft,
-                          onTap: () => setModalState(() => selectedPart = Map<String, dynamic>.from(part)),
-                        );
-                      },
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  TextField(
-                    controller: qtyController,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(labelText: 'Quantity', border: OutlineInputBorder()),
-                  ),
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: selectedPart == null
-                          ? null
-                          : () async {
-                              Navigator.pop(context);
-                              final qty = int.tryParse(qtyController.text.trim()) ?? 1;
-                              await _runAction(
-                                () => ApiService.submitPartsUsage(
-                                  job.id,
-                                  partId: selectedPart!['id'] as int,
-                                  quantity: qty,
-                                ),
-                                successMessage: 'Part added to repair.',
-                              );
-                            },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppPalette.primary,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                      ),
-                      child: const Text('Add Part'),
-                    ),
-                  ),
-                ],
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-
-  static const _qcItems = <String, String>{
-    'touch': 'Touch Screen',
-    'face_id': 'Face ID / Fingerprint',
-    'camera': 'Camera',
-    'charging': 'Charging',
-    'speaker': 'Speaker',
-    'microphone': 'Microphone',
-    'wifi': 'Wi-Fi',
-    'bluetooth': 'Bluetooth',
-  };
-
-  Widget _qcForm(RepairJob job) {
-    final results = <String, String>{for (final key in _qcItems.keys) key: 'na'};
-    final notesController = TextEditingController();
-
-    return StatefulBuilder(
-      builder: (context, setLocalState) {
-        return _card(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('Final Testing Checklist', style: TextStyle(fontWeight: FontWeight.w700)),
-              const SizedBox(height: 6),
-              const Text(
-                'Any "Fail" sends the job back to In Progress; all pass/N/A completes the repair.',
-                style: TextStyle(fontSize: 12, color: AppPalette.textMuted),
-              ),
-              const SizedBox(height: 10),
-              ..._qcItems.entries.map((entry) {
-                return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 4),
-                  child: Row(
-                    children: [
-                      Expanded(child: Text(entry.value)),
-                      DropdownButton<String>(
-                        value: results[entry.key],
-                        items: const [
-                          DropdownMenuItem(value: 'na', child: Text('N/A')),
-                          DropdownMenuItem(value: 'pass', child: Text('Pass')),
-                          DropdownMenuItem(value: 'fail', child: Text('Fail')),
-                        ],
-                        onChanged: (value) => setLocalState(() => results[entry.key] = value ?? 'na'),
-                      ),
-                    ],
-                  ),
-                );
-              }),
-              const SizedBox(height: 8),
-              TextField(
-                controller: notesController,
-                maxLines: 2,
-                decoration: const InputDecoration(labelText: 'Notes (optional)', border: OutlineInputBorder()),
-              ),
-              const SizedBox(height: 12),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _busy
-                      ? null
-                      : () => _runAction(
-                            () => ApiService.submitRepairQc(
-                              job.id,
-                              results: results,
-                              notes: notesController.text.trim(),
-                            ),
-                            successMessage: 'Test results saved.',
-                          ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppPalette.primary,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                  ),
-                  child: const Text('Submit Test Results'),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
     );
   }
 
@@ -666,7 +414,10 @@ class _TechnicianJobDetailScreenState extends State<TechnicianJobDetailScreen> {
                     margin: const EdgeInsets.only(top: 5),
                     width: 6,
                     height: 6,
-                    decoration: const BoxDecoration(color: AppPalette.primary, shape: BoxShape.circle),
+                    decoration: const BoxDecoration(
+                      color: AppPalette.primary,
+                      shape: BoxShape.circle,
+                    ),
                   ),
                   const SizedBox(width: 10),
                   Expanded(
@@ -674,15 +425,34 @@ class _TechnicianJobDetailScreenState extends State<TechnicianJobDetailScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          log.status.split('_').map((w) => w.isEmpty ? w : w[0].toUpperCase() + w.substring(1)).join(' '),
-                          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                          log.status
+                              .split('_')
+                              .map(
+                                (w) => w.isEmpty
+                                    ? w
+                                    : w[0].toUpperCase() + w.substring(1),
+                              )
+                              .join(' '),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
+                          ),
                         ),
                         if (log.note != null && log.note!.isNotEmpty)
-                          Text(log.note!, style: const TextStyle(fontSize: 12, color: AppPalette.textMuted)),
+                          Text(
+                            log.note!,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: AppPalette.textMuted,
+                            ),
+                          ),
                         if (log.loggedAt != null)
                           Text(
                             DateFormat('MMM d, HH:mm').format(log.loggedAt!),
-                            style: const TextStyle(fontSize: 11, color: AppPalette.textMuted),
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: AppPalette.textMuted,
+                            ),
                           ),
                       ],
                     ),

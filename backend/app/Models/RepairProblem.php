@@ -12,8 +12,13 @@ class RepairProblem extends Model
     protected $fillable = [
         'added_by',
         'name',
+        'service_fee',
         'sort_order',
         'status',
+    ];
+
+    protected $casts = [
+        'service_fee' => 'decimal:2',
     ];
 
     public function repairRequests()

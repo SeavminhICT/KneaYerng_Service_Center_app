@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Services\OtpService;
-use App\Services\TwilioOtpService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -15,9 +14,10 @@ use Illuminate\Validation\ValidationException;
 
 class PhoneAuthController extends Controller
 {
+    private const OTP_PURPOSE = 'phone_auth';
+
     public function __construct(
-        private OtpService $otpService,
-        private TwilioOtpService $twilio
+        private OtpService $otpService
     ) {
     }
 
@@ -34,15 +34,19 @@ class PhoneAuthController extends Controller
             return $limited;
         }
 
-        $result = $this->twilio->sendVerification(
-            $this->toE164($phone),
-            (string) config('services.twilio.verify_channel', 'sms')
+        $result = $this->otpService->requestOtp(
+            'phone',
+            $phone,
+            self::OTP_PURPOSE,
+            $this->findUserByPhone($phone)?->id,
+            $request->ip(),
+            $validated['device_id'] ?? null
         );
 
         return response()->json([
             'message' => $result['message'] ?? 'OTP request processed.',
-            'expires_in_sec' => (int) config('otp.ttl_seconds', 300),
-            'resend_in_sec' => (int) config('otp.resend_cooldown_seconds', 60),
+            'expires_in_sec' => $result['expires_in_sec'] ?? (int) config('otp.ttl_seconds', 300),
+            'resend_in_sec' => $result['resend_in_sec'] ?? (int) config('otp.resend_cooldown_seconds', 60),
         ], $result['status'] ?? 200);
     }
 
@@ -65,7 +69,7 @@ class PhoneAuthController extends Controller
         ]);
 
         $phone = $this->normalizePhoneOrFail($validated['phone']);
-        $verify = $this->twilio->checkVerification($this->toE164($phone), $validated['otp']);
+        $verify = $this->otpService->verifyOtp('phone', $phone, self::OTP_PURPOSE, $validated['otp']);
 
         if (! ($verify['ok'] ?? false)) {
             return response()->json([
@@ -160,11 +164,6 @@ class PhoneAuthController extends Controller
         return User::query()
             ->whereIn('phone', $candidates)
             ->first();
-    }
-
-    private function toE164(string $phone): string
-    {
-        return str_starts_with($phone, '+') ? $phone : '+'.$phone;
     }
 
     private function rateLimitRequest(Request $request, string $phone): ?JsonResponse

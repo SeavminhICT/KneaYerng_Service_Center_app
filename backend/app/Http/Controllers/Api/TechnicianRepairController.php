@@ -16,9 +16,12 @@ class TechnicianRepairController extends Controller
 {
     private const TECHNICIAN_ALLOWED_STATUSES = [
         RepairStatusService::STATUS_DIAGNOSING,
+        RepairStatusService::STATUS_WAITING_CUSTOMER_APPROVAL,
         RepairStatusService::STATUS_WAITING_PARTS,
         RepairStatusService::STATUS_IN_PROGRESS,
         RepairStatusService::STATUS_TESTING,
+        RepairStatusService::STATUS_REPAIR_COMPLETED,
+        RepairStatusService::STATUS_READY_FOR_PICKUP,
         RepairStatusService::STATUS_CANNOT_REPAIR,
     ];
 
@@ -43,6 +46,7 @@ class TechnicianRepairController extends Controller
     public function accept(Request $request, RepairRequest $repair)
     {
         $actor = $request->user() ?? $request->user('sanctum');
+        $fromStatus = $repair->status;
 
         try {
             RepairStatusService::transition($repair, RepairStatusService::STATUS_ACCEPTED, $actor);
@@ -56,6 +60,14 @@ class TechnicianRepairController extends Controller
             'Repair #'.$repair->id.' was accepted by the assigned technician.',
             'assignment'
         );
+        RepairNotificationService::notify(
+            $repair->customer_id,
+            $repair->id,
+            'Repair accepted by technician',
+            'Technician accepted repair #'.$repair->id.' and will begin diagnosis.',
+            'status',
+            ['from_status' => $fromStatus, 'to_status' => RepairStatusService::STATUS_ACCEPTED, 'deep_link' => '/repairs/'.$repair->id]
+        );
 
         return new RepairRequestResource($repair->fresh(['customer', 'technician']));
     }
@@ -68,6 +80,7 @@ class TechnicianRepairController extends Controller
 
         $actor = $request->user() ?? $request->user('sanctum');
         $technician = Technician::where('user_id', $actor->id)->firstOrFail();
+        $fromStatus = $repair->status;
 
         try {
             RepairStatusService::transition(
@@ -92,6 +105,14 @@ class TechnicianRepairController extends Controller
             'Technician rejected job',
             'Repair #'.$repair->id.' was rejected: '.$validated['reason'],
             'assignment'
+        );
+        RepairNotificationService::notify(
+            $repair->customer_id,
+            $repair->id,
+            'Repair assignment update',
+            'Repair #'.$repair->id.' is waiting for reassignment.',
+            'assignment',
+            ['from_status' => $fromStatus, 'to_status' => RepairStatusService::STATUS_NEW, 'deep_link' => '/repairs/'.$repair->id]
         );
 
         return new RepairRequestResource($repair->fresh(['customer', 'technician']));

@@ -9,6 +9,8 @@ import '../../l10n/app_localizations.dart';
 import '../../services/api_service.dart';
 import '../../services/app_notification_service.dart';
 import '../../services/cart_service.dart';
+import '../../services/google_auth_config.dart';
+import '../../services/google_sign_in_error_message.dart';
 import '../../theme/app_palette.dart';
 import '../../widgets/circle_back_button.dart';
 import '../main_navigation_screen.dart';
@@ -694,10 +696,26 @@ class _RegisterScreenState extends State<RegisterScreen> {
     setState(() => _loading = true);
 
     try {
-      final googleSignIn = GoogleSignIn(scopes: ['email', 'profile']);
+      final googleSignIn = GoogleSignIn(
+        scopes: ['email', 'profile'],
+        serverClientId: GoogleAuthConfig.serverClientId,
+      );
       final account = await googleSignIn.signIn();
       if (account == null) {
         setState(() => _loading = false);
+        return;
+      }
+
+      final auth = await account.authentication;
+      final idToken = auth.idToken;
+      if (idToken == null || idToken.trim().isEmpty) {
+        if (!mounted) return;
+        setState(() => _loading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Google Sign-In could not be verified.'),
+          ),
+        );
         return;
       }
 
@@ -722,6 +740,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       }
 
       final error = await ApiService.loginWithGoogle(
+        idToken: idToken,
         email: email,
         firstName: firstName,
         lastName: lastName,
@@ -751,7 +770,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       if (mounted) {
         setState(() => _loading = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Google Sign-In failed: $error')),
+          SnackBar(content: Text(googleSignInErrorMessage(error))),
         );
       }
     }
@@ -763,11 +782,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     try {
       final LoginResult result = await FacebookAuth.instance.login(
-        permissions: ['public_profile', 'email'],
+        permissions: ['public_profile'],
       );
 
       if (result.status == LoginStatus.success) {
-        final userData = await FacebookAuth.instance.getUserData();
+        final userData = await FacebookAuth.instance.getUserData(
+          fields: 'id,name,first_name,last_name,picture.width(200)',
+        );
         final facebookId = userData['id'] as String? ?? '';
         if (facebookId.isEmpty) {
           setState(() => _loading = false);
@@ -809,7 +830,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
         if (error == null) {
           // Facebook accounts are already verified; no OTP needed.
-          await AppNotificationService.instance.syncTokenWithBackend(force: true);
+          await AppNotificationService.instance.syncTokenWithBackend(
+            force: true,
+          );
           unawaited(CartService.instance.loadFromApi());
           if (!mounted) return;
           Navigator.pushReplacement(
@@ -819,12 +842,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
           return;
         }
 
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error)));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error)));
       } else {
+        if (!mounted) return;
         setState(() => _loading = false);
         if (result.status == LoginStatus.failed) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(result.message ?? 'Facebook registration failed.')),
+            SnackBar(
+              content: Text(result.message ?? 'Facebook registration failed.'),
+            ),
           );
         }
       }

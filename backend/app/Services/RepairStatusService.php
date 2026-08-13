@@ -60,12 +60,25 @@ class RepairStatusService
         self::STATUS_CANCELLED,
     ];
 
+    public const TECHNICIAN_BUSY_STATUSES = [
+        self::STATUS_NEW,
+        self::STATUS_ASSIGNED,
+        self::STATUS_ACCEPTED,
+        self::STATUS_DIAGNOSING,
+        self::STATUS_WAITING_CUSTOMER_APPROVAL,
+        self::STATUS_APPROVED,
+        self::STATUS_IN_PROGRESS,
+        self::STATUS_WAITING_PARTS,
+        self::STATUS_TESTING,
+    ];
+
     public const ALLOWED_TRANSITIONS = [
         self::STATUS_NEW => [self::STATUS_ASSIGNED, self::STATUS_CANCELLED],
         self::STATUS_ASSIGNED => [self::STATUS_ACCEPTED, self::STATUS_NEW, self::STATUS_CANCELLED],
         self::STATUS_ACCEPTED => [self::STATUS_DIAGNOSING, self::STATUS_CANCELLED],
         self::STATUS_DIAGNOSING => [
             self::STATUS_WAITING_CUSTOMER_APPROVAL,
+            self::STATUS_IN_PROGRESS,
             self::STATUS_WAITING_PARTS,
             self::STATUS_CANNOT_REPAIR,
             self::STATUS_CANCELLED,
@@ -79,6 +92,7 @@ class RepairStatusService
         self::STATUS_IN_PROGRESS => [
             self::STATUS_WAITING_PARTS,
             self::STATUS_TESTING,
+            self::STATUS_REPAIR_COMPLETED,
             self::STATUS_CANNOT_REPAIR,
         ],
         self::STATUS_WAITING_PARTS => [self::STATUS_IN_PROGRESS, self::STATUS_CANNOT_REPAIR],

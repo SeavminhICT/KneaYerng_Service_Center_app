@@ -29,7 +29,7 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
-        if ($request->user()->canAccessAdminPanel()) {
+        if ($request->user()->canAccessAdminPanel() && ! $request->user()->isTechnician()) {
             $request->session()->flash('just_logged_in', true);
         }
 

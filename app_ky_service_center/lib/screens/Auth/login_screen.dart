@@ -8,6 +8,8 @@ import '../../l10n/app_localizations.dart';
 import '../../services/api_service.dart';
 import '../../services/app_notification_service.dart';
 import '../../services/cart_service.dart';
+import '../../services/google_auth_config.dart';
+import '../../services/google_sign_in_error_message.dart';
 import '../../theme/app_palette.dart';
 import '../main_navigation_screen.dart';
 import '../repair_tracking/track_repair_screen.dart';
@@ -63,6 +65,58 @@ class _LoginScreenState extends State<LoginScreen> {
 
     if (!request.ok) return;
 
+    // DEV MODE: show OTP code in a dialog when SMS delivery failed and
+    // the backend returned the code directly (local fallback only).
+    if (request.devOtp != null && mounted) {
+      await showDialog<void>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: const Color(0xFFFFF9C4),
+          title: const Row(
+            children: [
+              Icon(Icons.developer_mode, color: Color(0xFFF57F17)),
+              SizedBox(width: 8),
+              Text(
+                'DEV MODE — OTP Code',
+                style: TextStyle(color: Color(0xFFF57F17), fontSize: 16),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'SMS not delivered. Your OTP code is:',
+                style: TextStyle(color: Color(0xFF5D4037)),
+              ),
+              const SizedBox(height: 12),
+              SelectableText(
+                request.devOtp!,
+                style: const TextStyle(
+                  fontSize: 36,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 8,
+                  color: Color(0xFFE65100),
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                '(This dialog only appears in development)',
+                style: TextStyle(fontSize: 11, color: Color(0xFF8D6E63)),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('OK, Got it'),
+            ),
+          ],
+        ),
+      );
+      if (!mounted) return;
+    }
+
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -91,10 +145,26 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _loading = true);
 
     try {
-      final googleSignIn = GoogleSignIn(scopes: ['email', 'profile']);
+      final googleSignIn = GoogleSignIn(
+        scopes: ['email', 'profile'],
+        serverClientId: GoogleAuthConfig.serverClientId,
+      );
       final account = await googleSignIn.signIn();
       if (account == null) {
         setState(() => _loading = false);
+        return;
+      }
+
+      final auth = await account.authentication;
+      final idToken = auth.idToken;
+      if (idToken == null || idToken.trim().isEmpty) {
+        if (!mounted) return;
+        setState(() => _loading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Google Sign-In could not be verified.'),
+          ),
+        );
         return;
       }
 
@@ -119,6 +189,7 @@ class _LoginScreenState extends State<LoginScreen> {
       }
 
       final error = await ApiService.loginWithGoogle(
+        idToken: idToken,
         email: email,
         firstName: firstName,
         lastName: lastName,
@@ -142,7 +213,7 @@ class _LoginScreenState extends State<LoginScreen> {
       if (mounted) {
         setState(() => _loading = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Google Sign-In failed: $error')),
+          SnackBar(content: Text(googleSignInErrorMessage(error))),
         );
       }
     }
@@ -154,11 +225,13 @@ class _LoginScreenState extends State<LoginScreen> {
 
     try {
       final LoginResult result = await FacebookAuth.instance.login(
-        permissions: ['public_profile', 'email'],
+        permissions: ['public_profile'],
       );
 
       if (result.status == LoginStatus.success) {
-        final userData = await FacebookAuth.instance.getUserData();
+        final userData = await FacebookAuth.instance.getUserData(
+          fields: 'id,name,first_name,last_name,picture.width(200)',
+        );
         final facebookId = userData['id'] as String? ?? '';
         if (facebookId.isEmpty) {
           setState(() => _loading = false);
@@ -204,8 +277,11 @@ class _LoginScreenState extends State<LoginScreen> {
           return;
         }
 
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error)));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error)));
       } else {
+        if (!mounted) return;
         setState(() => _loading = false);
         if (result.status == LoginStatus.failed) {
           ScaffoldMessenger.of(context).showSnackBar(

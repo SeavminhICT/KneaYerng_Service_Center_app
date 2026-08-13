@@ -30,7 +30,7 @@
 			<key>CFBundleURLSchemes</key>
 			<array>
 				<string>$(REVERSED_CLIENT_ID)</string>
-				<string>fbYOUR_FACEBOOK_APP_ID</string>
+				<string>fb2251269949031256</string>
 			</array>
 		</dict>
 	</array>
@@ -40,6 +40,13 @@
 	<string>YOUR_GOOGLE_MAPS_API_KEY</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>fbapi</string>
+		<string>fb-messenger-share-api</string>
+		<string>fbauth2</string>
+		<string>fbshareextension</string>
+	</array>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsArbitraryLoads</key>
@@ -100,9 +107,9 @@
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 	<key>FacebookAppID</key>
-	<string>YOUR_FACEBOOK_APP_ID</string>
+	<string>2251269949031256</string>
 	<key>FacebookClientToken</key>
-	<string>YOUR_FACEBOOK_CLIENT_TOKEN</string>
+	<string>4a378fbc9ebcc95bd8cae94cd0b18ab3</string>
 	<key>FacebookDisplayName</key>
 	<string>KY Service Center</string>
 </dict>

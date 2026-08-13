@@ -8,9 +8,7 @@ use Illuminate\Support\Facades\Mail;
 class OtpDeliveryService
 {
     public function __construct(
-        private UnimatrixOtpService $unimatrix,
         private InfobipService $infobip,
-        private TwilioOtpService $twilio,
     ) {
     }
 
@@ -21,29 +19,7 @@ class OtpDeliveryService
         }
 
         if ($destinationType === 'phone') {
-            $provider = strtolower(trim((string) config('services.otp.sms_provider', 'unimatrix')));
-
-            if ($provider === 'infobip') {
-                return $this->sendViaInfobip($destination, $message);
-            }
-
-            if ($provider === 'twilio') {
-                $to = str_starts_with($destination, '+') ? $destination : '+'.$destination;
-
-                return $this->twilio->sendSms($to, $message);
-            }
-
-            $code = (string) ($context['code'] ?? '');
-            if ($code !== '') {
-                return $this->unimatrix->sendOtpCode(
-                    phone: $destination,
-                    code: $code,
-                    ttlSeconds: (int) ($context['ttl_seconds'] ?? config('otp.ttl_seconds', 300)),
-                    purpose: (string) ($context['purpose'] ?? 'otp')
-                );
-            }
-
-            return $this->unimatrix->sendSms($destination, $message);
+            return $this->sendViaInfobip($destination, $message);
         }
 
         Log::warning('Unsupported OTP destination type.', [
@@ -120,7 +96,7 @@ class OtpDeliveryService
         $text = $message;
         if ($code !== '') {
             $text = sprintf(
-                '[%s] Your OTP code is %s. It expires in %d minutes.',
+                'Your %s verification code is: %s. Valid for %d minutes. Do not share this code.',
                 $appName,
                 $code,
                 $expiresMinutes

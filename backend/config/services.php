@@ -65,9 +65,6 @@ return [
         'test_mode' => filter_var(env('KHPAY_TEST_MODE', true), FILTER_VALIDATE_BOOLEAN),
     ],
 
-
-
-
     'telegram' => [
         'bot_token' => env('TELEGRAM_BOT_TOKEN', ''),
         'group_chat_id' => env('TELEGRAM_GROUP_CHAT_ID', ''),
@@ -104,6 +101,13 @@ return [
     'firebase' => [
         'project_id' => env('FIREBASE_PROJECT_ID', ''),
         'credentials' => env('FIREBASE_CREDENTIALS', ''),
+    ],
+
+    'google' => [
+        'client_ids' => array_values(array_filter(array_map(
+            'trim',
+            explode(',', env('GOOGLE_CLIENT_IDS', env('GOOGLE_CLIENT_ID', '325660432558-38vc5uai6ohl1t8om25nv5s3tuqo14eo.apps.googleusercontent.com')))
+        ))),
     ],
 
     'otp' => [

@@ -12,6 +12,7 @@ class RepairProblemResource extends JsonResource
         return [
             'id' => $this->id,
             'name' => $this->name,
+            'service_fee' => (float) $this->service_fee,
             'sort_order' => $this->sort_order,
             'status' => $this->status,
             'created_at' => $this->created_at?->toISOString(),

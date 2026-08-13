@@ -137,6 +137,7 @@
                             <div class="mt-4 flex flex-wrap items-center gap-2">
                                 <input id="invoice-tax" type="number" step="0.01" placeholder="{{ __('Tax') }}" class="h-9 w-28 rounded-xl border border-slate-200 bg-white px-3 text-xs text-slate-600 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300" />
                                 <button id="generate-invoice" class="inline-flex h-9 items-center rounded-xl bg-primary-600 px-4 text-xs font-semibold text-white">{{ __('Generate') }}</button>
+                                <a href="{{ route('admin.repairs.invoice', $repairId) }}" class="inline-flex h-9 items-center rounded-xl border border-slate-200 bg-white px-4 text-xs font-semibold text-slate-700 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200">{{ __('Open Invoice') }}</a>
                                 <span id="invoice-status" class="text-xs text-slate-500"></span>
                             </div>
                         </div>
@@ -278,6 +279,11 @@
                     switchTab(tab.dataset.tab);
                 });
             });
+
+            var initialTab = new URLSearchParams(window.location.search).get('tab');
+            if (initialTab && Array.from(tabs).some(function (tab) { return tab.dataset.tab === initialTab; })) {
+                switchTab(initialTab);
+            }
 
             async function loadRepair() {
                 await safeEnsureCsrfCookie();

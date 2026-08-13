@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Replace with the real values from https://developers.facebook.com/apps -->
+    <string name="facebook_app_id">2251269949031256</string>
+    <string name="facebook_client_token">4a378fbc9ebcc95bd8cae94cd0b18ab3</string>
+    <string name="fb_login_protocol_scheme">fb2251269949031256</string>
+</resources>

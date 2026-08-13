@@ -8,9 +8,7 @@ use Illuminate\Support\Facades\RateLimiter;
 
 class OtpService
 {
-    public function __construct(private OtpDeliveryService $delivery)
-    {
-    }
+    public function __construct(private OtpDeliveryService $delivery) {}
 
     public function requestOtp(
         string $destinationType,
@@ -30,11 +28,13 @@ class OtpService
 
         if ($requestIp && RateLimiter::tooManyAttempts('otp:ip:'.$requestIp, $ipLimit)) {
             $retry = RateLimiter::availableIn('otp:ip:'.$requestIp);
+
             return ['ok' => false, 'status' => 429, 'message' => 'Too many OTP requests. Please retry later.', 'retry_in' => $retry, 'resend_in_sec' => $retry];
         }
 
         if (RateLimiter::tooManyAttempts('otp:dest:'.$destinationType.':'.$destination, $destLimit)) {
             $retry = RateLimiter::availableIn('otp:dest:'.$destinationType.':'.$destination);
+
             return ['ok' => false, 'status' => 429, 'message' => 'Too many OTP requests for this destination.', 'retry_in' => $retry, 'resend_in_sec' => $retry];
         }
 
@@ -93,7 +93,8 @@ class OtpService
         });
 
         $expiresMinutes = (int) ceil($ttl / 60);
-        $message = sprintf('Your OTP code is %s. It expires in %d minutes.', $otpCode, $expiresMinutes);
+        $appName = (string) config('app.name', 'KneaYerng');
+        $message = sprintf('Your %s verification code is: %s. Valid for %d minutes. Do not share this code.', $appName, $otpCode, $expiresMinutes);
         $sent = $this->delivery->send($destinationType, $destination, $message, [
             'code' => $otpCode,
             'expires_minutes' => $expiresMinutes,
@@ -102,11 +103,13 @@ class OtpService
         ]);
 
         $isLocalFallback = false;
+        $devOtp          = null;
         $fallbackAllowed = config('app.env') !== 'production'
             && (config('app.env') === 'local' || config('app.debug') || config('otp.local_fallback'));
         if (! $sent && $fallbackAllowed) {
-            $sent = true;
+            $sent            = true;
             $isLocalFallback = true;
+            $devOtp          = $otpCode;
             \Illuminate\Support\Facades\Log::info(sprintf(
                 '[LOCAL OTP FALLBACK] Destination: %s (%s). Purpose: %s. OTP Code: %s. Message: %s',
                 $destination,
@@ -127,15 +130,19 @@ class OtpService
         }
 
         return [
-            'ok' => $sent,
-            'status' => $sent ? 200 : 500,
-            'message' => $isLocalFallback 
+            'ok'             => $sent,
+            'status'         => $sent ? 200 : 500,
+            'message'        => $isLocalFallback
                 ? 'If this destination exists, an OTP was sent (local fallback enabled).'
                 : ($sent ? 'If this destination exists, an OTP was sent.' : 'OTP could not be sent. Please try again.'),
             'expires_in_sec' => $ttl,
-            'resend_in_sec' => $cooldown,
+            'resend_in_sec'  => $cooldown,
+            // dev_otp is ONLY included in non-production local-fallback mode.
+            // Never present in production; safe to return here.
+            ...($devOtp !== null ? ['dev_otp' => $devOtp] : []),
         ];
     }
+
 
     public function verifyOtp(string $destinationType, string $destination, string $purpose, string $otp): array
     {
@@ -165,6 +172,7 @@ class OtpService
         if (now()->gt($record->expires_at)) {
             $record->status = 'expired';
             $record->save();
+
             return ['ok' => false, 'status' => 422, 'message' => 'OTP expired. Please request a new code.'];
         }
 
@@ -175,6 +183,7 @@ class OtpService
                 $record->locked_until = now()->addSeconds(max(60, (int) config('otp.lock_seconds', 600)));
             }
             $record->save();
+
             return ['ok' => false, 'status' => 422, 'message' => 'Invalid OTP. Please try again.'];
         }
 
@@ -197,6 +206,7 @@ class OtpService
     public function normalizeType(string $type): string
     {
         $normalized = strtolower(trim($type));
+
         return $normalized === 'phone' ? 'phone' : 'email';
     }
 
@@ -227,6 +237,7 @@ class OtpService
     {
         $max = (10 ** $length) - 1;
         $min = 10 ** ($length - 1);
+
         return (string) random_int($min, $max);
     }
 

@@ -11,4 +11,8 @@ return [
     'email_subject' => env('OTP_EMAIL_SUBJECT', 'Your OTP Code'),
     'default_phone_country_code' => env('OTP_DEFAULT_PHONE_COUNTRY_CODE', '+855'),
     'local_fallback' => filter_var(env('OTP_LOCAL_FALLBACK', false), FILTER_VALIDATE_BOOLEAN),
+
+    // 2FA pin (separate from the OTP code above): shorter, template-based SMS.
+    'pin_length' => (int) env('OTP_PIN_LENGTH', 4),
+    'pin_sms_template' => env('OTP_PIN_SMS_TEMPLATE', 'Your pin is {{pin}}'),
 ];

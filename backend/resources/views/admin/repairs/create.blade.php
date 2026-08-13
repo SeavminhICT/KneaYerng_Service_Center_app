@@ -216,6 +216,8 @@
                             <option value="">{{ __('-- Keep Unassigned for Now --') }}</option>
                             <option value="auto">{{ __('⚡ Auto-Assign Available Technician with Lowest Workload') }}</option>
                         </select>
+                        <p class="mt-2 text-xs text-slate-500">{{ __('Only available technicians with no active repair jobs are shown.') }}</p>
+                        <button id="toggle-busy-technicians" type="button" class="hidden"></button>
                     </div>
                 </div>
 
@@ -257,6 +259,10 @@
                         <div class="flex justify-between border-b border-slate-100 pb-2 dark:border-slate-800">
                             <span class="text-slate-500">{{ __('Issue & Notes:') }}</span>
                             <span id="preview-issue" class="font-medium text-slate-900 text-right dark:text-white">-</span>
+                        </div>
+                        <div class="flex justify-between border-b border-slate-100 pb-2 dark:border-slate-800">
+                            <span class="text-slate-500">{{ __('Service Fee Total:') }}</span>
+                            <span id="preview-fee" class="font-bold text-primary-700 dark:text-primary-300">$0.00</span>
                         </div>
                         <div class="flex justify-between border-b border-slate-100 pb-2 dark:border-slate-800">
                             <span class="text-slate-500">{{ __('Technician:') }}</span>
@@ -338,6 +344,7 @@
             var previewCustomer = document.getElementById('preview-customer');
             var previewDevice = document.getElementById('preview-device');
             var previewIssue = document.getElementById('preview-issue');
+            var previewFee = document.getElementById('preview-fee');
             var previewTech = document.getElementById('preview-technician');
             var previewStatus = document.getElementById('preview-status');
 
@@ -357,9 +364,35 @@
                 appointmentDatetimeInput.value = getFormattedNow();
             });
 
-            function selectedProblemNames() {
+            function formatCurrency(value) {
+                return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(Number(value || 0));
+            }
+
+            function escapeHtml(value) {
+                return String(value ?? '').replace(/[&<>"']/g, function (char) {
+                    return {
+                        '&': '&amp;',
+                        '<': '&lt;',
+                        '>': '&gt;',
+                        '"': '&quot;',
+                        "'": '&#039;'
+                    }[char];
+                });
+            }
+
+            function selectedProblems() {
                 return Array.from(document.querySelectorAll('#problems-checklist input[type=checkbox]:checked'))
-                    .map(function (checkbox) { return checkbox.dataset.name; });
+                    .map(function (checkbox) {
+                        return {
+                            id: Number(checkbox.value),
+                            name: checkbox.dataset.name,
+                            service_fee: Number(checkbox.dataset.fee || 0),
+                        };
+                    });
+            }
+
+            function selectedProblemNames() {
+                return selectedProblems().map(function (problem) { return problem.name; });
             }
 
             function currentDeviceModelLabel() {
@@ -375,6 +408,9 @@
                 previewDevice.textContent = currentDeviceModelLabel() || '-';
 
                 var problemNames = selectedProblemNames();
+                var serviceFeeTotal = selectedProblems().reduce(function (total, problem) {
+                    return total + problem.service_fee;
+                }, 0);
                 var issueNotes = issueNotesInput.value.trim();
                 var issueLabel = problemNames.join(', ');
                 if (issueLabel && issueNotes) {
@@ -382,6 +418,7 @@
                 } else {
                     previewIssue.textContent = issueLabel || issueNotes || '-';
                 }
+                previewFee.textContent = formatCurrency(serviceFeeTotal);
 
                 var techVal = technicianSelect.value;
                 if (techVal === 'auto') {
@@ -478,11 +515,15 @@
                     problemsList = body.data || [];
                     var container = document.getElementById('problems-checklist');
                     container.innerHTML = problemsList.map(function (problem) {
-                        return '<label class="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50/70 px-2.5 py-1.5 text-xs font-medium text-slate-700 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200">' +
-                            '<input type="checkbox" value="' + problem.id + '" data-name="' + problem.name + '" class="rounded border-slate-300 text-primary-600 focus:ring-primary-500" />' +
-                            problem.name +
+                        var fee = Number(problem.service_fee || 0);
+                        return '<label class="flex items-center justify-between gap-2 rounded-lg border border-slate-200 bg-slate-50/70 px-2.5 py-1.5 text-xs font-medium text-slate-700 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200">' +
+                            '<span class="flex min-w-0 items-center gap-2">' +
+                                '<input type="checkbox" value="' + problem.id + '" data-name="' + escapeHtml(problem.name) + '" data-fee="' + fee.toFixed(2) + '" class="rounded border-slate-300 text-primary-600 focus:ring-primary-500" />' +
+                                '<span class="truncate">' + escapeHtml(problem.name) + '</span>' +
+                            '</span>' +
+                            '<span class="shrink-0 rounded-md bg-primary-50 px-1.5 py-0.5 font-bold text-primary-700 dark:bg-primary-950/50 dark:text-primary-300">' + formatCurrency(fee) + '</span>' +
                             '</label>';
-                    }).join('');
+                    }).join('') || '<p class="text-xs text-slate-400">{{ __('No active repair problems found.') }}</p>';
                     container.querySelectorAll('input[type=checkbox]').forEach(function (checkbox) {
                         checkbox.addEventListener('change', updatePreview);
                     });
@@ -646,20 +687,59 @@
             });
 
             // Load Technicians
+            var allTechnicians = [];
+            var showBusyTechnicians = false;
+            var toggleBusyBtn = document.getElementById('toggle-busy-technicians');
+
+            function isTechnicianFree(tech) {
+                var status = (tech.availability_status || 'available').toLowerCase();
+                var activeJobs = Number(tech.active_jobs_count || 0);
+                return status === 'available' && activeJobs === 0;
+            }
+
+            function renderTechnicianOptions() {
+                var previousValue = technicianSelect.value;
+                technicianSelect.innerHTML = '<option value="">{{ __('-- Keep Unassigned for Now --') }}</option>'
+                    + '<option value="auto">{{ __('⚡ Auto-Assign Available Technician with Lowest Workload') }}</option>';
+
+                var freeTechs = allTechnicians.filter(isTechnicianFree);
+                var busyTechs = [];
+                freeTechs.forEach(function (tech) {
+                    var opt = document.createElement('option');
+                    opt.value = tech.id;
+                    var statusText = tech.availability_status ? tech.availability_status.toUpperCase() : 'AVAILABLE';
+                    var jobsText = (tech.active_jobs_count || 0) + ' active jobs';
+                    opt.textContent = tech.name + ' (' + statusText + ' · ' + jobsText + ')';
+                    technicianSelect.appendChild(opt);
+                });
+
+                if (Array.from(technicianSelect.options).some(function (opt) { return opt.value === previousValue; })) {
+                    technicianSelect.value = previousValue;
+                }
+
+                if (busyTechs.length > 0) {
+                    toggleBusyBtn.classList.remove('hidden');
+                    toggleBusyBtn.textContent = showBusyTechnicians
+                        ? '{{ __('Hide busy technicians — show free only') }}'
+                        : '{{ __('Show busy technicians too') }} (' + busyTechs.length + ')';
+                } else {
+                    toggleBusyBtn.classList.add('hidden');
+                }
+            }
+
+            toggleBusyBtn.addEventListener('click', function () {
+                showBusyTechnicians = !showBusyTechnicians;
+                renderTechnicianOptions();
+                updatePreview();
+            });
+
             async function loadTechnicians() {
                 try {
-                    var res = await safeApiRequest('/api/technicians?per_page=100');
+                    var res = await safeApiRequest('/api/technicians?per_page=100&free_for_assignment=1');
                     if (!res.ok) return;
                     var body = await res.json();
-                    var techs = body.data || [];
-                    techs.forEach(function (tech) {
-                        var opt = document.createElement('option');
-                        opt.value = tech.id;
-                        var statusText = tech.availability_status ? tech.availability_status.toUpperCase() : 'AVAILABLE';
-                        var jobsText = (tech.active_jobs_count || 0) + ' active jobs';
-                        opt.textContent = tech.name + ' (' + statusText + ' · ' + jobsText + ')';
-                        technicianSelect.appendChild(opt);
-                    });
+                    allTechnicians = body.data || [];
+                    renderTechnicianOptions();
                 } catch (e) {
                     console.error('Failed to load technicians', e);
                 }
@@ -751,8 +831,8 @@
                 var deviceModelId = (!isCustomDevice && deviceModelSelect.value) ? Number(deviceModelSelect.value) : null;
                 var deviceModelText = isCustomDevice ? deviceModelCustomInput.value.trim() : '';
 
-                if ((!deviceModelId && !deviceModelText) || (!problemIds.length && !issueNotes)) {
-                    errorEl.textContent = '{{ __('Device model and at least one problem (or a note) are required.') }}';
+                if ((!deviceModelId && !deviceModelText) || !problemIds.length) {
+                    errorEl.textContent = '{{ __('Device model and at least one priced problem are required.') }}';
                     return;
                 }
 
@@ -794,7 +874,7 @@
 
                 var data = await response.json();
                 var repair = data.data || data;
-                window.location.href = '/admin/repairs/' + repair.id;
+                window.location.href = '/admin/repairs/' + repair.id + '/invoice';
             });
         })();
     </script>

@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\RepairRequestResource;
 use App\Http\Resources\RepairStatusLogResource;
 use App\Models\DeviceModel;
+use App\Models\Invoice;
 use App\Models\RepairProblem;
 use App\Models\RepairRequest;
 use App\Models\RepairStatusLog;
@@ -15,6 +16,7 @@ use App\Models\Technician;
 use App\Services\RepairNotificationService;
 use App\Services\RepairStatusService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 
 class RepairRequestController extends Controller
 {
@@ -96,10 +98,18 @@ class RepairRequestController extends Controller
             ? DeviceModel::find($validated['device_model_id'])
             : null;
 
-        $problemIds = $validated['problem_ids'] ?? [];
+        $problemIds = array_values(array_unique(array_map('intval', $validated['problem_ids'] ?? [])));
         $issueType = $validated['issue_type'] ?? null;
         if (! $issueType && $problemIds) {
             $issueType = RepairProblem::whereIn('id', $problemIds)->pluck('name')->implode(', ');
+        }
+
+        $technician = null;
+        if (! empty($validated['technician_id'])) {
+            $technician = Technician::find($validated['technician_id']);
+            if ($technician && ! $this->technicianIsFreeForAssignment($technician)) {
+                return response()->json(['message' => 'Selected technician already has an active repair job.'], 422);
+            }
         }
 
         $repair = RepairRequest::create([
@@ -116,14 +126,12 @@ class RepairRequestController extends Controller
 
         if ($problemIds) {
             $repair->problems()->sync($problemIds);
+            $this->createInitialInvoiceFromProblems($repair, $problemIds);
         }
 
         $this->logStatus($repair, $actor, $repair->status);
 
-        $technician = null;
-        if (! empty($validated['technician_id'])) {
-            $technician = Technician::find($validated['technician_id']);
-        } elseif (! empty($validated['auto_assign'])) {
+        if (! $technician && ! empty($validated['auto_assign'])) {
             $technician = $this->selectTechnician($repair);
         }
 
@@ -140,11 +148,12 @@ class RepairRequestController extends Controller
                 'assignment',
                 ['deep_link' => '/repairs/'.$repair->id]
             );
+            $this->notifyTechnicianAssignment($repair, $technician);
         }
 
         RepairNotificationService::notifyAdmin($repair->id, 'New repair request', 'Repair #'.$repair->id.' created.');
 
-        return new RepairRequestResource($repair->load(['customer', 'technician']));
+        return new RepairRequestResource($repair->load(['customer', 'technician', 'invoice', 'problems']));
     }
 
     public function my(Request $request)
@@ -197,6 +206,10 @@ class RepairRequestController extends Controller
         $actor = $request->user() ?? $request->user('sanctum');
         $technician = Technician::findOrFail($validated['technician_id']);
 
+        if (! $this->technicianIsFreeForAssignment($technician, $repair)) {
+            return response()->json(['message' => 'Selected technician already has an active repair job.'], 422);
+        }
+
         $this->applyTechnicianAssignment($repair, $technician);
 
         if ($repair->status === RepairStatusService::STATUS_NEW) {
@@ -211,6 +224,7 @@ class RepairRequestController extends Controller
             'assignment',
             ['deep_link' => '/repairs/'.$repair->id]
         );
+        $this->notifyTechnicianAssignment($repair, $technician);
 
         return new RepairRequestResource($repair->load(['technician', 'customer']));
     }
@@ -238,6 +252,7 @@ class RepairRequestController extends Controller
             'assignment',
             ['deep_link' => '/repairs/'.$repair->id]
         );
+        $this->notifyTechnicianAssignment($repair, $technician, true);
 
         return new RepairRequestResource($repair->load(['technician', 'customer']));
     }
@@ -339,12 +354,71 @@ class RepairRequestController extends Controller
         $technician->save();
     }
 
+    private function notifyTechnicianAssignment(RepairRequest $repair, Technician $technician, bool $autoAssigned = false): void
+    {
+        if (! $technician->user_id) {
+            return;
+        }
+
+        $verb = $autoAssigned ? 'auto-assigned' : 'assigned';
+
+        RepairNotificationService::notify(
+            $technician->user_id,
+            $repair->id,
+            'New repair assignment',
+            'Repair #'.$repair->id.' was '.$verb.' to you.',
+            'assignment',
+            [
+                'deep_link' => '/technician/repairs/'.$repair->id,
+                'assigned_technician_id' => $technician->id,
+                'assignment_source' => $autoAssigned ? 'auto' : 'manual',
+            ]
+        );
+    }
+
+    private function createInitialInvoiceFromProblems(RepairRequest $repair, array $problemIds): ?Invoice
+    {
+        if ($problemIds === []) {
+            return null;
+        }
+
+        $subtotal = (float) RepairProblem::query()
+            ->whereIn('id', $problemIds)
+            ->sum('service_fee');
+
+        $invoice = Invoice::firstOrNew(['repair_id' => $repair->id]);
+        if (! $invoice->exists) {
+            $invoice->invoice_number = 'INV-'.Str::upper(Str::random(8));
+            $invoice->payment_status = 'pending';
+        }
+
+        $invoice->subtotal = $subtotal;
+        $invoice->tax = 0;
+        $invoice->total = $subtotal;
+        $invoice->save();
+
+        RepairNotificationService::notify(
+            $repair->customer_id,
+            $repair->id,
+            'Invoice generated',
+            'Invoice '.$invoice->invoice_number.' ready for repair #'.$repair->id.'.',
+            'invoice',
+            ['deep_link' => '/repairs/'.$repair->id, 'invoice_id' => $invoice->id]
+        );
+
+        return $invoice;
+    }
+
     private function selectTechnician(RepairRequest $repair): ?Technician
     {
         $issueType = $repair->issue_type;
 
         $candidate = Technician::query()
             ->where('availability_status', 'available')
+            ->whereDoesntHave('repairs', function ($query) use ($repair) {
+                $query->whereIn('status', RepairStatusService::TECHNICIAN_BUSY_STATUSES)
+                    ->where('id', '!=', $repair->id);
+            })
             ->where(function ($query) use ($issueType) {
                 $query->whereNull('skill_set')
                     ->orWhereJsonContains('skill_set', $issueType);
@@ -358,7 +432,25 @@ class RepairRequestController extends Controller
 
         return Technician::query()
             ->where('availability_status', 'available')
+            ->whereDoesntHave('repairs', function ($query) use ($repair) {
+                $query->whereIn('status', RepairStatusService::TECHNICIAN_BUSY_STATUSES)
+                    ->where('id', '!=', $repair->id);
+            })
             ->orderBy('active_jobs_count')
             ->first();
+    }
+
+    private function technicianIsFreeForAssignment(Technician $technician, ?RepairRequest $currentRepair = null): bool
+    {
+        if (strtolower((string) $technician->availability_status) !== 'available') {
+            return false;
+        }
+
+        return ! $technician->repairs()
+            ->whereIn('status', RepairStatusService::TECHNICIAN_BUSY_STATUSES)
+            ->when($currentRepair, function ($query) use ($currentRepair) {
+                $query->where('id', '!=', $currentRepair->id);
+            })
+            ->exists();
     }
 }
